@@ -51,7 +51,7 @@ impl Wizard {
             if let Err(err) = result {
                 let _ = this.update(cx, |this, cx| {
                     this.session_error = Some(format!(
-                        "Your system keychain couldn\u{2019}t be reached, so this sign-in lasts until RbxNative closes. ({err})"
+                        "Your system keychain couldn\u{2019}t be reached, so the sign-in wasn\u{2019}t kept; sign in again from Settings \u{203a} Account. ({err})"
                     ));
                     cx.notify();
                 });
