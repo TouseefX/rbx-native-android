@@ -22,6 +22,8 @@ mod fixtures;
 mod home_window;
 mod key_check;
 mod publishing;
+pub(crate) mod setup;
+pub(crate) mod startup;
 pub(crate) mod ui;
 mod wizard;
 
@@ -77,10 +79,26 @@ pub(crate) fn cached_groups() -> Vec<rbx_cloud::Group> {
         .unwrap_or_default()
 }
 
-pub(crate) fn open_wizard(boot: Boot, cx: &mut App) {
-    let options = options("Set up publishing", (1040., 720.), None, cx);
+/// Runs when a setup opened over the editor finishes or is closed, in place
+/// of opening Home.
+pub(crate) type Finish = Rc<dyn Fn(&mut App)>;
+
+/// The setup wizard showing `plan`'s steps. With `on_finish`, it was opened
+/// over the editor: finishing or closing it runs that and only closes.
+pub(crate) fn open_wizard(
+    boot: Boot,
+    plan: setup::SetupPlan,
+    on_finish: Option<Finish>,
+    cx: &mut App,
+) {
+    let title = if plan.key {
+        "Set up publishing"
+    } else {
+        "Sign in to Roblox"
+    };
+    let options = options(title, (1040., 720.), None, cx);
     let _ = cx.open_window(options, move |window, cx| {
-        let view = cx.new(|cx| wizard::Wizard::new(boot, window, cx));
+        let view = cx.new(|cx| wizard::Wizard::new(boot, plan, on_finish, window, cx));
         cx.new(|cx| Root::new(view, window, cx))
     });
 }

@@ -118,6 +118,7 @@ mod input_actions;
 mod key_store;
 mod launcher;
 mod layers;
+mod login_flow;
 mod luau_lsp;
 mod mcp;
 mod menu_bar;
@@ -304,15 +305,24 @@ fn main() {
                 launch,
                 user,
             };
-            cx.update(|cx| match home::route(path, has_key && !setup) {
+            let plan = if path.is_none() {
+                let (key, session) = launcher::startup::credentials(has_key, cx).await;
+                launcher::setup::plan(key, session, setup)
+            } else {
+                None
+            };
+            cx.update(|cx| match home::route(path, plan) {
                 home::Route::Editor(path) => {
                     if let Err(failed) = open_editor(&path, boot, cx) {
                         let (message, _) = *failed;
                         eprintln!("rbxstudio: {message}");
                         std::process::exit(1);
                     }
+                    launcher::startup::check_in_background(has_key, cx);
                 }
-                home::Route::Wizard => launcher::open_wizard(Rc::new(RefCell::new(Some(boot))), cx),
+                home::Route::Wizard(plan) => {
+                    launcher::open_wizard(Rc::new(RefCell::new(Some(boot))), plan, None, cx)
+                }
                 home::Route::Home => launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx),
             });
         })

@@ -18,6 +18,7 @@ mod coedit;
 mod command;
 mod command_run;
 mod controller_emulator;
+mod credential_watch;
 mod debugging;
 mod device_sim;
 mod discord;
@@ -547,6 +548,9 @@ pub(crate) struct Shell {
     device_sim: device_sim::DeviceSim,
     /// The code sign-in window, while open, see `shell::roblox_login`.
     roblox_login: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// An expired sign-in or key, and the notice offering setup again —
+    /// see `shell::credential_watch`.
+    credential_watch: credential_watch::CredentialWatch,
     /// The page the next Settings window opens on; see `open_settings_on`.
     settings_open_on: Option<&'static str>,
     drag: Option<Drag>,
@@ -957,6 +961,7 @@ impl Shell {
                 device_keyboard_layout,
             ),
             roblox_login: None,
+            credential_watch: Default::default(),
             settings_open_on: None,
             drag: None,
             _subscriptions: [
@@ -1009,6 +1014,7 @@ impl Shell {
         shell.plugins_start(cx);
         // Beta Features › MCP server (see `shell::mcp`).
         shell.mcp_start(cx);
+        shell.start_credential_watch(cx);
 
         // `RBX_STUDIO_TOOL` (see `shell::toolbar`). Before the Command Bar
         // block below rather than after it: a script's reload rebuilds the
@@ -2081,6 +2087,7 @@ impl Render for Shell {
             )
             .children(self.theme_background(false))
             .child(self.topbar(cx))
+            .children(self.credential_notice(cx))
             .child(crate::menu_bar::bar(&self.menu_bar))
             .children(self.places_bar(cx))
             .child(self.document_tabs(cx))
