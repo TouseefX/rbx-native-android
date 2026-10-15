@@ -119,9 +119,8 @@ impl Wizard {
         Step::ALL
             .into_iter()
             .filter(|step| match step {
-                Step::Welcome | Step::Done => plan.key,
+                Step::Welcome | Step::Create | Step::Paste | Step::Done => plan.key,
                 Step::SignIn => plan.sign_in,
-                Step::Create | Step::Paste => true,
             })
             .collect()
     }
