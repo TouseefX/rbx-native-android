@@ -321,7 +321,7 @@ fn main() {
                     launcher::startup::check_in_background(has_key, cx);
                 }
                 home::Route::Wizard(plan) => {
-                    launcher::open_wizard(Rc::new(RefCell::new(Some(boot))), plan, None, cx)
+                    launcher::open_wizard(Rc::new(RefCell::new(Some(boot))), plan, None, cx);
                 }
                 home::Route::Home => launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx),
             });

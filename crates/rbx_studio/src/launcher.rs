@@ -90,17 +90,18 @@ pub(crate) fn open_wizard(
     plan: setup::SetupPlan,
     on_finish: Option<Finish>,
     cx: &mut App,
-) {
+) -> Option<WindowHandle<Root>> {
     let title = if plan.key {
         "Set up publishing"
     } else {
         "Sign in to Roblox"
     };
     let options = options(title, (1040., 720.), None, cx);
-    let _ = cx.open_window(options, move |window, cx| {
+    cx.open_window(options, move |window, cx| {
         let view = cx.new(|cx| wizard::Wizard::new(boot, plan, on_finish, window, cx));
         cx.new(|cx| Root::new(view, window, cx))
-    });
+    })
+    .ok()
 }
 
 /// Home (1440×900, resizable down to 1100×700).

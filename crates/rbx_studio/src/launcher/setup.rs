@@ -3,11 +3,14 @@
 
 /// One credential as a launch finds it. A check that could not reach
 /// Roblox counts as `Present`: only a definite refusal is `Expired`.
+/// `EnvRefused` is a key Roblox refused that came from `RBX_API_KEY`: it
+/// wins over the keychain, so saving a new key would change nothing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Cred {
     Missing,
     Present,
     Expired,
+    EnvRefused,
 }
 
 /// The setup steps to show, and why they are shown again.
@@ -19,6 +22,8 @@ pub(crate) struct SetupPlan {
     pub(crate) key: bool,
     pub(crate) session_expired: bool,
     pub(crate) key_expired: bool,
+    /// The key from `RBX_API_KEY` was refused; never true with `key_expired`.
+    pub(crate) env_key_refused: bool,
 }
 
 impl SetupPlan {
@@ -28,11 +33,13 @@ impl SetupPlan {
         key: true,
         session_expired: false,
         key_expired: false,
+        env_key_refused: false,
     };
 
     /// The short lines saying why setup opened again, in display order:
-    /// "Your Roblox sign-in expired." then "Your API key expired or was
-    /// revoked." Empty when nothing expired.
+    /// "Your Roblox sign-in expired.", "Your API key expired or was
+    /// revoked." then "The API key from RBX_API_KEY was refused." Empty when
+    /// nothing expired.
     pub(crate) fn reasons(&self) -> Vec<&'static str> {
         let mut lines = Vec::new();
         if self.session_expired {
@@ -40,6 +47,9 @@ impl SetupPlan {
         }
         if self.key_expired {
             lines.push("Your API key expired or was revoked.");
+        }
+        if self.env_key_refused {
+            lines.push("The API key from RBX_API_KEY was refused.");
         }
         lines
     }
@@ -50,12 +60,14 @@ impl SetupPlan {
 /// shows the key steps, with the sign-in step too unless the session is
 /// `Present`; a present key with an expired session shows the sign-in step
 /// alone; a present key with a present or missing session needs nothing
-/// (a never-signed-in user is not nagged). The `*_expired` flags mirror
-/// `Cred::Expired`.
+/// (a never-signed-in user is not nagged). `EnvRefused` routes like
+/// `Present`, since no saved key could replace it. The `*_expired` flags
+/// mirror `Cred::Expired`; `env_key_refused` mirrors `Cred::EnvRefused`.
 pub(crate) fn plan(key: Cred, session: Cred, forced: bool) -> Option<SetupPlan> {
     let session_expired = session == Cred::Expired;
     let key_expired = key == Cred::Expired;
-    let key_steps = key != Cred::Present || forced;
+    let env_key_refused = key == Cred::EnvRefused;
+    let key_steps = !matches!(key, Cred::Present | Cred::EnvRefused) || forced;
     let sign_in = if key_steps {
         session != Cred::Present
     } else {
@@ -66,13 +78,14 @@ pub(crate) fn plan(key: Cred, session: Cred, forced: bool) -> Option<SetupPlan> 
         key: key_steps,
         session_expired,
         key_expired,
+        env_key_refused,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Cred::{Expired, Missing, Present};
+    use Cred::{EnvRefused, Expired, Missing, Present};
 
     #[test]
     fn a_present_key_needs_nothing_unless_the_session_expired() {
@@ -105,6 +118,33 @@ mod tests {
         assert!(missing.key && missing.sign_in);
         let expired = plan(Present, Expired, true).unwrap();
         assert!(expired.key && expired.sign_in && expired.session_expired);
+    }
+
+    #[test]
+    fn an_env_refused_key_routes_like_a_present_one() {
+        assert_eq!(plan(EnvRefused, Present, false), None);
+        assert_eq!(plan(EnvRefused, Missing, false), None);
+        let sign_in = plan(EnvRefused, Expired, false).unwrap();
+        assert!(sign_in.sign_in && !sign_in.key);
+        assert!(sign_in.env_key_refused && !sign_in.key_expired);
+        let forced = plan(EnvRefused, Present, true).unwrap();
+        assert!(forced.key && forced.env_key_refused);
+    }
+
+    #[test]
+    fn env_refusal_reason_comes_last() {
+        let plan = SetupPlan {
+            session_expired: true,
+            env_key_refused: true,
+            ..SetupPlan::default()
+        };
+        assert_eq!(
+            plan.reasons(),
+            [
+                "Your Roblox sign-in expired.",
+                "The API key from RBX_API_KEY was refused."
+            ]
+        );
     }
 
     #[test]

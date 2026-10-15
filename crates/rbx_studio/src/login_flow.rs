@@ -266,6 +266,12 @@ impl LoginFlow {
                             .text_size(px(13.))
                             .text_color(tokens::text2())
                             .child("or scan it with the Roblox app"),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(13.))
+                            .text_color(tokens::text2())
+                            .child(message),
                     );
                 (
                     h_flex()
@@ -273,7 +279,7 @@ impl LoginFlow {
                         .child(image)
                         .child(right)
                         .into_any_element(),
-                    Some((message.to_owned(), false)),
+                    None,
                 )
             }
         };

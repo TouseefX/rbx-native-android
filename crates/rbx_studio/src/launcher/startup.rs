@@ -9,6 +9,7 @@ fn from_env(name: &str) -> Cred {
     match std::env::var(name).as_deref() {
         Ok("missing") => Cred::Missing,
         Ok("expired") => Cred::Expired,
+        Ok("env-refused") => Cred::EnvRefused,
         _ => Cred::Present,
     }
 }
@@ -44,8 +45,13 @@ pub(crate) async fn credentials(has_key: bool, cx: &mut AsyncApp) -> (Cred, Cred
             (key, session)
         })
         .await;
-    let key = key_result.map_or(Cred::Missing, from_health);
+    let mut key = key_result.map_or(Cred::Missing, from_health);
     let session = session_result.map_or(Cred::Missing, from_health);
+    if key == Cred::Expired && rbx_cloud::ApiKey::source() == "RBX_API_KEY" {
+        key = Cred::EnvRefused;
+        eprintln!("rbxstudio: the API key from RBX_API_KEY was refused");
+        rbx_cloud::expiry::report_key_refused();
+    }
     if key == Cred::Expired {
         if let Err(err) = crate::key_store::forget(cx).await {
             eprintln!("rbxstudio: the expired API key could not be removed: {err}");
@@ -64,7 +70,7 @@ pub(crate) async fn credentials(has_key: bool, cx: &mut AsyncApp) -> (Cred, Cred
 pub(crate) fn check_in_background(has_key: bool, cx: &mut App) {
     cx.spawn(async move |cx| {
         let (key, session) = credentials(has_key, cx).await;
-        if key == Cred::Expired {
+        if matches!(key, Cred::Expired | Cred::EnvRefused) {
             rbx_cloud::expiry::report_key_refused();
         }
         if session == Cred::Expired {
