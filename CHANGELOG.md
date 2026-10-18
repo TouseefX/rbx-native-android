@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-19
+
+- **Creator Roadmap catch-up against the live API dump.** Checked the
+  Renderer and GUI items against API dump version-4f087c32742644ab (the
+  live one, already embedded) and real Studio. `UIGradient` now draws the
+  `Elliptical` type the dump added, and the UI Editor's Fill section gets
+  type and tile toggles and a `Scale` field for a gradient, which Studio's
+  own Properties window hides. `SurfaceAppearance` draws its emissive mask,
+  strength and tint. A part `shape` this build does not know says so once
+  in Output instead of silently drawing as a block. The orthographic
+  `Camera` properties, `UIBlur` and `ParticleEmitter2D` are in the dump
+  but Studio does nothing with them yet, so they stay planned. — @chteau
+
 ## 2026-10-18
 
 - **Team Presence is end-to-end encrypted, and live co-editing is in beta.**
