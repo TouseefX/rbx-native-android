@@ -1378,6 +1378,7 @@ Roblox's own engine.
   DOM edit and undo path. Defaults (`Linear`, `Clamp`, 1) were read off a
   fresh `UIGradient` in Studio.
   ![Linear, Radial, Elliptical at 30°, Conical, Elliptical mirrored at scale 0.4, Radial repeated at 0.3](docs/screenshots/creator-roadmap/ui-gradient-types.png)
+  ![The design panel's Fill section with an elliptical gradient set to Mirror at scale 0.4](docs/screenshots/creator-roadmap/ui-editor-gradient-mirror.png)
 - [x] **Emissive `SurfaceAppearance`** (Creator Roadmap, Late 2026: emissive
   textures on UGC avatars, clothing and accessories). `EmissiveMaskContent`,
   `EmissiveStrength` and `EmissiveTint` are in API dump version-4f087c32742644ab; Studio's
