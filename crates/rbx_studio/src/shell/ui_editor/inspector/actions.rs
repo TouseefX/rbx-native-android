@@ -63,6 +63,28 @@ impl Shell {
         }
     }
 
+    /// The first inspected element's `UIGradient` enum `property`, by item name.
+    pub(super) fn gradient_choice(&self, property: &str, enum_name: &str) -> Option<String> {
+        let gradient = self.anchor_child("UIGradient")?;
+        self.enum_name(gradient, property, enum_name)
+    }
+
+    /// Sets `property` of every inspected element's `UIGradient` to `item`.
+    pub(super) fn set_gradient_choice(
+        &mut self,
+        property: &'static str,
+        item: &'static str,
+        cx: &mut Context<Self>,
+    ) {
+        let writes = self
+            .inspected()
+            .into_iter()
+            .filter_map(|r| self.child_of(r, "UIGradient"))
+            .map(|gradient| (gradient, property, item.to_owned()))
+            .collect();
+        self.write_all(writes, cx);
+    }
+
     /// Whether `property` is on for every inspected element — `None` where
     /// they disagree.
     pub(super) fn flag(&self, property: &str) -> Option<bool> {

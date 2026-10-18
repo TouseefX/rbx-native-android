@@ -195,6 +195,7 @@ mod tests {
             },
             origin: [0.0, 0.0],
             axis: [1.0, 0.0],
+            turn: [1.0, 0.0],
             kind: GuiGradientKind::Linear,
             tile: GuiTile::Clamp,
         }

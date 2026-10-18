@@ -63,6 +63,7 @@ fn a_rounded_stroked_shaded_element_draws_through_the_pipeline() {
             transparency: NumberSequence { keypoints: vec![] },
             origin: [0.0, 0.0],
             axis: [1.0 / 48.0, 0.0],
+            turn: [1.0, 0.0],
             kind: GuiGradientKind::Linear,
             tile: GuiTile::Clamp,
         }),

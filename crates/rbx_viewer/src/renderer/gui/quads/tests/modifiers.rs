@@ -40,6 +40,7 @@ fn gradient() -> GuiGradient {
         transparency: NumberSequence { keypoints: vec![] },
         origin: [10.0, -5.0],
         axis: [0.005, 0.0],
+        turn: [1.0, 0.0],
         kind: GuiGradientKind::Conical,
         tile: GuiTile::Repeat,
     }
