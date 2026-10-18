@@ -71,7 +71,7 @@ pub(crate) use particles::sequence::{eval_color, eval_number};
 pub(crate) use particles::{Emitter, Simulation};
 use resync::Standing;
 pub(crate) use resync::{Drawn, PartSync};
-pub(crate) use shape::{resolve as resolve_shape, ShapeKind};
+pub(crate) use shape::{resolve as resolve_shape, unknown_part_types, ShapeKind};
 pub(crate) use trail::{segments as trail_segments, Recorder as TrailRecorder, Trail};
 pub(crate) use union::fit as union_fit;
 // Read by the mesh export, which leaves such a union out too.

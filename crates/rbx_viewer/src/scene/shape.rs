@@ -8,8 +8,10 @@
 //! capital belongs to `ParticleEmitter`, a different property entirely);
 //! otherwise it is a plain box.
 
+use std::collections::BTreeSet;
+
 use glam::{Mat4, Vec3};
-use rbx_dom::{Instance, Variant, WeakDom};
+use rbx_dom::{Instance, Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
 use crate::shapes::{TrussAxis, TrussStyle};
@@ -125,6 +127,9 @@ pub(crate) fn resolve(
 }
 
 /// `Enum.PartType`: Ball=0, Block=1, Cylinder=2, Wedge=3, CornerWedge=4.
+///
+/// Any other value falls back to a box; [`unknown_part_types`] lists those
+/// values so the loader can say so in Output rather than drawing them silently.
 fn part_type(raw: u32) -> ShapeKind {
     match raw {
         0 => ShapeKind::Ball,
@@ -133,6 +138,25 @@ fn part_type(raw: u32) -> ShapeKind {
         4 => ShapeKind::CornerWedge,
         _ => ShapeKind::Box,
     }
+}
+
+/// The `shape` values, outside the `Enum.PartType` values [`part_type`]
+/// knows, that any instance in `dom` carries, sorted and without repeats.
+pub(crate) fn unknown_part_types(dom: &WeakDom) -> BTreeSet<u32> {
+    let mut pending: Vec<Ref> = dom.root_refs().to_vec();
+    let mut found = BTreeSet::new();
+    while let Some(referent) = pending.pop() {
+        let Some(instance) = dom.get(referent) else {
+            continue;
+        };
+        if let Some(&Variant::Enum(raw)) = instance.properties().get("shape") {
+            if !(0..=4).contains(&raw) {
+                found.insert(raw);
+            }
+        }
+        pending.extend_from_slice(instance.children());
+    }
+    found
 }
 
 /// A `TrussPart`'s shape: its long axis, how many 2-stud lattice repeats fit

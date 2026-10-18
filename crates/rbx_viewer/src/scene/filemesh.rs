@@ -191,11 +191,13 @@ impl Entry {
         let images = self
             .texture
             .iter()
-            .chain(
-                self.appearance
+            .chain(self.appearance.iter().flat_map(|appearance| {
+                appearance
+                    .maps
                     .iter()
-                    .flat_map(|appearance| appearance.maps.iter().flatten()),
-            )
+                    .flatten()
+                    .chain(appearance.emissive_mask.iter())
+            }))
             .chain(self.dressing.iter().flat_map(|dressing| dressing.images()))
             .chain(makeup::images(&self.makeup))
             .cloned()

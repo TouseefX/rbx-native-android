@@ -11,11 +11,14 @@
 @group(2) @binding(3) var appearance_roughness: texture_2d<f32>;
 @group(2) @binding(4) var appearance_sampler: sampler;
 @group(2) @binding(5) var<uniform> appearance: Appearance;
+@group(2) @binding(6) var appearance_emissive: texture_2d<f32>;
 
 struct Appearance {
     // xyz: `SurfaceAppearance.Color`, linear. w: 1 for AlphaMode Transparency,
     // 0 for Overlay.
     tint: vec4<f32>,
+    // xyz: emissive tint times strength, linear.
+    emissive: vec4<f32>,
 }
 
 struct VertexInput {
@@ -104,5 +107,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     mapped.roughness = roughness;
     mapped.kind = in.kind;
 
-    return vec4<f32>(mapped_shade(mapped), alpha);
+    let glow = textureSample(appearance_emissive, appearance_sampler, in.uv).r * appearance.emissive.rgb;
+
+    return vec4<f32>(mapped_shade(mapped) + mapped.albedo * glow, alpha);
 }
