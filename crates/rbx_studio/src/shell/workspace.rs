@@ -143,6 +143,7 @@ impl Shell {
             Panel::Collaborators => self.collaborators_dock(window, cx),
             Panel::PluginWidgets => self.plugin_widgets_dock(window, cx),
             Panel::InputActions => self.input_actions_dock(window, cx),
+            Panel::Playtests => self.playtests_dock(window, cx),
         }
     }
 

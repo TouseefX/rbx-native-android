@@ -360,6 +360,8 @@ impl Shell {
             .to_owned();
         let dom = self.dom.clone();
         let debug_requests = self.play_debug_requests();
+        let record_hz = self.playtests.rate_hz;
+        self.playtests_session_start();
         cx.spawn(async move |this, cx| {
             if close_first {
                 if !step(&this, cx, attempt, "Closing Roblox\u{2026}") {
@@ -444,7 +446,7 @@ impl Shell {
                 session: session.clone(),
             };
             let prepared = match cx
-                .background_spawn(async move { session::prepare(&dom, &probe, &debug_requests) })
+                .background_spawn(async move { session::prepare(&dom, &probe, &debug_requests, record_hz) })
                 .await
             {
                 Ok(prepared) => prepared,
@@ -697,7 +699,10 @@ impl Shell {
         let mut changed = false;
         while let Ok(event) = channel.events().try_recv() {
             changed = true;
-            if self.live_apply(&event, cx) || self.play_debug_event(&event, cx) {
+            if self.playtests_uplink(&event)
+                || self.live_apply(&event, cx)
+                || self.play_debug_event(&event, cx)
+            {
                 continue;
             }
             if let Uplink::Device(report) = event {
@@ -866,6 +871,7 @@ impl Shell {
         self.play.poll = None;
         self.live_end(cx);
         self.play_debug_end(cx);
+        self.playtests_session_end(cx);
         #[cfg(any(target_os = "linux", windows))]
         self.play.holes.clear();
         if let Some(running) = self.play.session.take() {

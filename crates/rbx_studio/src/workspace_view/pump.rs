@@ -104,6 +104,9 @@ enum Command {
     /// One layer of the world-space line segments drawn over the scene —
     /// see `Headless::set_lines`. An empty list clears that layer.
     Lines(usize, Vec<Segment>),
+    /// One layer of flat world-space quads drawn under the lines — see
+    /// `Headless::set_fills`. An empty list clears that layer.
+    Fills(usize, Vec<rbx_viewer::Fill>),
     /// A terrain edit in progress, as the chunks it changed — see
     /// `Headless::preview_terrain`.
     TerrainPreview(TerrainChunks),
@@ -296,6 +299,12 @@ impl Pump {
 
     pub(super) fn lines(&self, layer: usize, segments: Vec<Segment>) {
         let _ = self.commands.send(Command::Lines(layer, segments));
+    }
+
+    /// Fills one layer of flat quads under the lines — see
+    /// `Headless::set_fills`.
+    pub(super) fn fills(&self, layer: usize, fills: Vec<rbx_viewer::Fill>) {
+        let _ = self.commands.send(Command::Fills(layer, fills));
     }
 
     /// Shows or hides the transform tool's draggers over the selection.
@@ -743,7 +752,7 @@ fn coalesce(commands: Vec<Command>) -> Vec<Command> {
                 let open = folded
                     .iter_mut()
                     .rev()
-                    .find(|queued| !matches!(queued, Command::Lines(..)));
+                    .find(|queued| !matches!(queued, Command::Lines(..) | Command::Fills(..)));
                 if let Some(Command::Changes(snapshots, changes)) = open {
                     snapshots.extend(more);
                     changes.extend(further);
@@ -755,6 +764,11 @@ fn coalesce(commands: Vec<Command>) -> Vec<Command> {
                 folded
                     .retain(|queued| !matches!(queued, Command::Lines(held, _) if *held == layer));
                 folded.push(Command::Lines(layer, segments));
+            }
+            Command::Fills(layer, fills) => {
+                folded
+                    .retain(|queued| !matches!(queued, Command::Fills(held, _) if *held == layer));
+                folded.push(Command::Fills(layer, fills));
             }
             // Back to back, two previews are one: each carries whole chunks,
             // and the later copy of a chunk is the one that stands.
@@ -796,6 +810,7 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         Command::Hover(selected) => rendering.viewer.set_hover(selected),
         Command::Preview(boxes) => rendering.viewer.set_preview(boxes),
         Command::Lines(layer, segments) => rendering.viewer.set_lines(layer, segments),
+        Command::Fills(layer, fills) => rendering.viewer.set_fills(layer, fills),
         Command::TerrainPreview(chunks) => rendering.viewer.preview_terrain(chunks),
         Command::Gizmo(gizmo) => rendering.viewer.set_gizmo(gizmo),
         Command::GuiScreen(screen) => rendering.viewer.set_gui_screen(screen),

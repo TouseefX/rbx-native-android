@@ -165,6 +165,36 @@ pub(crate) fn structured_prints(copy: &mut WeakDom) -> Vec<String> {
     warnings
 }
 
+/// Game scripts that say `rbxnative` get the probe's `shared.rbxnative`
+/// set before their first line runs (see `rbx_play::record`). A script that
+/// cannot be rewritten keeps its source and is reported in the warnings.
+pub(crate) fn playtest_marks(copy: &mut WeakDom) -> Vec<String> {
+    let mut warnings = Vec::new();
+    for (script, name) in game_scripts(copy) {
+        let Some(source) = crate::script_editor::source::read(copy, script) else {
+            continue;
+        };
+        let result = rbx_play::record::rewrite(&source).and_then(|rewritten| match rewritten {
+            Some(new) => {
+                rbx_lua::compile_check(&new, &name).map_err(|err| err.to_string())?;
+                Ok(Some(new))
+            }
+            None => Ok(None),
+        });
+        match result {
+            Ok(Some(new)) => {
+                crate::script_editor::source::write(copy, script, &new);
+            }
+            Ok(None) => {}
+            Err(err) => warnings.push(format!(
+                "{name} could not be prepared for playtest marks ({err}); its \
+                 rbxnative.mark calls are skipped in this test."
+            )),
+        }
+    }
+    warnings
+}
+
 /// Game scripts' UserInputService goes through the probe's touch stand-in,
 /// so a game's own touch code runs on a simulated touch device (see
 /// `rbx_play::touch`). Scripts inside a forked PlayerModule are left alone.
@@ -223,10 +253,12 @@ pub(crate) fn prepare(
     dom: &WeakDom,
     probe: &ProbeConfig,
     debug: &[DebugRequest],
+    record_hz: f32,
 ) -> Result<Prepared, String> {
     let mut copy = dom.clone();
     let mut warnings = mock_purchases(&mut copy);
     warnings.extend(structured_prints(&mut copy));
+    warnings.extend(playtest_marks(&mut copy));
     warnings.extend(simulated_touches(&mut copy));
     let (debug, instrument_warnings) = instrument_scripts(&mut copy, debug);
     warnings.extend(instrument_warnings);
@@ -235,6 +267,7 @@ pub(crate) fn prepare(
             "The place has no instances, so there is nothing to play.".to_owned()
         }
     })?;
+    rbx_play::record::set_rate(&mut copy, record_hz);
     let bytes = crate::save::Format::Binary.encode(&copy)?;
     for finding in rbx_play::inject::preflight(&copy, bytes.len()) {
         match finding {

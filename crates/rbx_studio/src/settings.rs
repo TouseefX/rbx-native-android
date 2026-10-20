@@ -139,6 +139,9 @@ pub(crate) struct Settings {
     /// What Play names the sandbox while it runs a test; see
     /// `shell::play::copy_name`. Empty leaves the sandbox's name alone.
     pub(crate) play_copy_name: String,
+    /// Samples per second Play records playtests at; 0 is off. See
+    /// `shell::playtests`.
+    pub(crate) playtest_rate_hz: f32,
     /// The Network Simulator's saved presets; see `shell::play::network`.
     pub(crate) network_presets: Vec<SavedNetworkPreset>,
     /// The Animation Editor's bottom panel height, once its seam has been
@@ -245,6 +248,7 @@ impl Default for Settings {
             team_presence: TeamPresenceSettings::default(),
             play_sandbox: None,
             play_copy_name: crate::shell::PLAY_COPY_NAME_DEFAULT.to_owned(),
+            playtest_rate_hz: crate::shell::PLAYTEST_RATE_DEFAULT,
             network_presets: Vec::new(),
             anim_sheet_height: None,
             anim_names_width: None,
@@ -472,6 +476,12 @@ fn load_from(path: &Path) -> Settings {
             .and_then(|v| v.as_str())
             .unwrap_or(crate::shell::PLAY_COPY_NAME_DEFAULT)
             .to_owned(),
+        playtest_rate_hz: value
+            .get("playtest_rate_hz")
+            .and_then(|v| v.as_f64())
+            .map_or(crate::shell::PLAYTEST_RATE_DEFAULT, |hz| {
+                hz.clamp(0.0, 60.0) as f32
+            }),
         network_presets: network_presets::read(&value),
         anim_sheet_height: read_extent(&value, "anim_sheet_height"),
         anim_names_width: read_extent(&value, "anim_names_width"),
@@ -748,6 +758,7 @@ fn save_to(settings: &Settings, path: &Path) -> Result<(), SettingsError> {
     });
     // Outside the literal: `json!` hits the macro recursion limit at this size.
     value["play_copy_name"] = settings.play_copy_name.clone().into();
+    value["playtest_rate_hz"] = settings.playtest_rate_hz.into();
     value["network_presets"] = network_presets::json(&settings.network_presets);
     value["device_custom"] = settings.device_custom.json();
     value["device_scaling"] = settings.device_scaling.key().into();
