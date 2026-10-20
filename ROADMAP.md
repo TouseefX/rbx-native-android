@@ -1375,15 +1375,22 @@ both the plain fetch failure and the silent fall back to a default
   box's width and height times `Scale`, turned by `Rotation`, as the docs
   say. The design panel's Fill section shows a gradient's type and tile mode
   as icon toggles and its `Scale` as a field, written through the normal
-  DOM edit and undo path. Defaults (`Linear`, `Clamp`, 1) were read off a
-  fresh `UIGradient` in Studio.
+  DOM edit and undo path, one undo step per edit and one per scrub.
+  Defaults (`Linear`, `Clamp`, 1) were read off a fresh `UIGradient` in
+  Studio. Studio 0.743 itself still draws all four types as `Linear` and
+  ignores `TileMode` and `Scale` (same file opened in both on 2026-10-21),
+  so the docs are what this follows until Roblox turns it on.
   ![Linear, Radial, Elliptical at 30°, Conical, Elliptical mirrored at scale 0.4, Radial repeated at 0.3](docs/screenshots/creator-roadmap/ui-gradient-types.png)
   ![The design panel's Fill section with an elliptical gradient set to Mirror at scale 0.4](docs/screenshots/creator-roadmap/ui-editor-gradient-mirror.png)
 - [x] **Emissive `SurfaceAppearance`** (Creator Roadmap, Late 2026: emissive
   textures on UGC avatars, clothing and accessories). `EmissiveMaskContent`,
   `EmissiveStrength` and `EmissiveTint` are in API dump version-4f087c32742644ab; Studio's
   defaults are 1, white and no mask. The renderer samples the mask beside
-  the four PBR maps, and bloom carries the glow.
+  the four PBR maps, and bloom carries the glow. Checked on 2026-10-21
+  against Studio with a free creator-store model ("Pumpkins with emissive
+  textures", 88988847004674), which also showed that `Color` tints the
+  colour map only: where an `Overlay` map is clear the part's own colour
+  shows untinted, and so does the glow it lights.
 - [x] **Effects (drop shadows) in the UI Editor's design panel.** Figma's
   Effects section, and Sketch's, is a drop shadow per element, which Roblox
   now does with `UIShadow`. The embedded API dump is Roblox's current one

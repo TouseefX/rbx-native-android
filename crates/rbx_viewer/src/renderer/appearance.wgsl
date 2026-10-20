@@ -91,14 +91,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // The two alpha modes differ only in what the colour map's alpha does:
     // Overlay lets the part's own colour show through where it dips, while
-    // Transparency hands it to the blend instead.
+    // Transparency hands it to the blend instead. `Color` tints the map
+    // only: in Studio a clear texel shows the part's colour as it is, and a
+    // tint with no colour map changes nothing.
     let blends = appearance.tint.w > 0.5;
-    let painted = select(mix(in.color.rgb, map.rgb, map.a), map.rgb, blends);
+    let tinted = map.rgb * appearance.tint.rgb;
+    let painted = select(mix(in.color.rgb, tinted, map.a), tinted, blends);
     let alpha = select(in.color.a, map.a * in.color.a, blends);
 
     var mapped: Mapped;
     mapped.base_albedo = in.color.rgb;
-    mapped.albedo = painted * appearance.tint.rgb;
+    mapped.albedo = painted;
     mapped.geometric_normal = in.normal;
     mapped.normal = vertex_tangent_normal(normal, in.normal, in.tangent);
     mapped.world_position = in.world_position;
