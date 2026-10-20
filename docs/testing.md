@@ -156,3 +156,5 @@ Run all from its header, or one file, describe or test from its row's play
 button; a failure shows its message under the test, and clicking it opens
 the script at the line it was raised on. **Rerun on save** runs the whole
 suite again after each Ctrl+S.
+
+![The Tests dock after a run, one test failed](screenshots/luau-tests/tests-dock.png)

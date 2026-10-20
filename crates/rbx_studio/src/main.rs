@@ -37,6 +37,10 @@
 //! Viewport › Advanced open under `RBX_STUDIO_SETTINGS_ADVANCED=1` and the
 //! page scrolled `RBX_STUDIO_SETTINGS_SCROLL=<px>` down — the same aid, for
 //! the Settings window (see `shell::settings_window`).
+//!
+//! `RBX_STUDIO_TESTS=1|run` opens the Tests dock, and with `run` runs every
+//! spec at once (see `shell::tests_dock`).
+//!
 //! `RBX_STUDIO_OPEN_SCRIPT=<name>[,<name>...]` opens each named
 //! `Script`/`LocalScript`/`ModuleScript` in the Script Editor panel exactly as
 //! double-clicking its Explorer row would — the same aid, for the script

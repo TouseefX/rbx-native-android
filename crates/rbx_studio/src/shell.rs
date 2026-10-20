@@ -1080,6 +1080,7 @@ impl Shell {
         // `StyleRule` they selected.
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
+        shell.apply_debug_tests(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.

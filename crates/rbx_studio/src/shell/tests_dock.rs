@@ -306,6 +306,18 @@ impl Shell {
         .detach();
     }
 
+    /// `RBX_STUDIO_TESTS=1|run`: see the crate's doc comment.
+    pub(super) fn apply_debug_tests(&mut self, cx: &mut Context<Self>) {
+        let Ok(spec) = std::env::var("RBX_STUDIO_TESTS") else {
+            return;
+        };
+        self.set_panel_open(Panel::Tests, true, cx);
+        if spec == "run" {
+            let files = test_runner::discover(self.edit_dom(), &[]).unwrap_or_default();
+            self.run_tests(files, Options::default(), cx);
+        }
+    }
+
     pub(super) fn rerun_tests_on_save(&mut self, cx: &mut Context<Self>) {
         if !self.tests.rerun_on_save {
             return;

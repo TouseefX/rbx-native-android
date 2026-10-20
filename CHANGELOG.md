@@ -2,6 +2,19 @@
 
 ## 2026-10-20
 
+- **A built-in Luau test runner.** A place's TestEZ specs (ModuleScripts
+  named `*.spec`/`*.test`) run headlessly in the command bar's sandbox,
+  each file over its own fresh copy of the place, on a simulated clock so
+  `task.wait(30)` takes no time. `describe`/`it`/`expect` with TestEZ's
+  matchers, hooks, `SKIP`/`FOCUS`, and Jest-Lua's `toBe`-style names
+  beside them. A failure names the script and line it was raised on.
+  `rbxlua test place.rbxl [--filter] [--root] [--format json] [--junit]`
+  exits 1 on a failure; the Script Editor's new **Tests** dock shows the
+  specs as a tree, runs all or one, opens a failure at its line and can
+  rerun after each save; `.github/actions/rbxlua-test` runs it in CI.
+  `docs/testing.md` lists what the sandbox lacks (HTTP, data stores,
+  RunService frames, physics) and how each behaves. — @chteau
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its
