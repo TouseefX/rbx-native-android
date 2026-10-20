@@ -9,7 +9,7 @@
 //! place against.
 //!
 //! The store is a directory the caller owns (the editor's config dir); files
-//! are keyed by place id. The snapshot bytes are opaque here — the editor
+//! are keyed by place id. The snapshot bytes are opaque here, the editor
 //! serialises its own DOM however it likes. Every function takes the
 //! directory, so the whole module is hermetic and tested against a temp dir.
 

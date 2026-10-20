@@ -87,7 +87,7 @@ fn test_place_rbxl_nests_spawn_location_under_workspace() {
 // Golden dumps: each fixture's full rendering, checked in under
 // `assets/tests/dumps/`. The API dump only reaches this output through enum
 // names, so the nightly API-dump sync reruns this against Studio's newest dump
-// before committing it — a renamed or dropped enum item fails here rather than
+// before committing it, a renamed or dropped enum item fails here rather than
 // in a user's place. `UPDATE_DUMPS=1 cargo test -p rbx_parser_cli` rewrites
 // them after an intended change.
 #[test]

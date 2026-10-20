@@ -314,7 +314,7 @@ fn an_angle_step_always_goes_the_short_way_round() {
     }
 }
 
-/// A part of `size` studs standing at `centre`, axis-aligned — the matrix
+/// A part of `size` studs standing at `centre`, axis-aligned, the matrix
 /// `pick::model_of` builds for one.
 fn part(centre: Vec3, size: Vec3) -> glam::Mat4 {
     glam::Mat4::from_scale_rotation_translation(size, glam::Quat::IDENTITY, centre)
@@ -524,7 +524,7 @@ fn the_origin_ball_is_grabbed_at_the_origin_and_nowhere_near_an_arm() {
     assert!(!handles.grab_origin(looking(0.3, 0.0)));
     assert_eq!(handles.grab(looking(0.3, 0.0)), Some(Axis::X));
     // An arm pointing nearly at the eye is drawn right over the ball, so both
-    // answer dead on — which is why the view tries the arms first.
+    // answer dead on, which is why the view tries the arms first.
     let tilted = Ray::new(
         Vec3::new(1.0, 0.0, 10.0),
         Vec3::new(-1.0, 0.0, -10.0).normalize(),

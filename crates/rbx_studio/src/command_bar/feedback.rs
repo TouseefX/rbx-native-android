@@ -1,5 +1,5 @@
 //! What the label above the input shows: the outcome of the last run, and
-//! nothing before that — Studio's own bar keeps no scrollback either.
+//! nothing before that, Studio's own bar keeps no scrollback either.
 
 use gpui_kit::SharedString;
 
@@ -15,13 +15,13 @@ pub(crate) enum Feedback {
     Idle,
     Output(String),
     Error(String),
-    /// A warning pushed by something other than a Command Bar run — see
+    /// A warning pushed by something other than a Command Bar run, see
     /// `shell::output::OutputLog::push_warning`. Never produced by
     /// [`Feedback::from_run`]: nothing about a script's own result is a
     /// warning today, only what the Output dock's other callers push.
     Warning(String),
     /// An info line from the running game (`LogService`'s `MessageInfo`,
-    /// what `TestService:Message` prints) — see `shell::play::session`.
+    /// what `TestService:Message` prints), see `shell::play::session`.
     Info(String),
 }
 
@@ -29,8 +29,8 @@ impl Feedback {
     /// Turns one run's outcome into feedback; the live Command Bar builds its
     /// feedback per step (see `stream`), so only tests assemble one this way.
     /// A successful run with nothing
-    /// printed is kept distinct from [`Feedback::Idle`] — it did run, it just
-    /// had nothing to say — which is why the label still changes.
+    /// printed is kept distinct from [`Feedback::Idle`], it did run, it just
+    /// had nothing to say, which is why the label still changes.
     #[cfg(test)]
     pub(crate) fn from_run(result: Result<Vec<String>, String>) -> Self {
         match result {
@@ -58,7 +58,7 @@ impl Feedback {
     }
 
     /// [`Feedback::label`] cut at `max_len` characters instead of the bar's
-    /// own [`MAX_LEN`] — the Output dock wraps its rows, so it has room for
+    /// own [`MAX_LEN`], the Output dock wraps its rows, so it has room for
     /// more.
     pub(crate) fn label_within(&self, max_len: usize) -> SharedString {
         match self {

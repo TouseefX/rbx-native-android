@@ -36,8 +36,8 @@ impl Span {
 #[derive(Clone)]
 pub(in crate::scene::gui) struct Node {
     /// What this node was read from, so a property that names a *sibling*
-    /// rather than describing the instance itself — `UIPageLayout.CurrentPage`
-    /// — can be matched back to the node it points at.
+    /// rather than describing the instance itself, `UIPageLayout.CurrentPage`
+    /// can be matched back to the node it points at.
     pub(in crate::scene::gui) referent: Ref,
     /// Only read for `SortOrder.Name` under a [`List`].
     pub(in crate::scene::gui) name: String,
@@ -45,7 +45,7 @@ pub(in crate::scene::gui) struct Node {
     pub(in crate::scene::gui) position: Span,
     pub(in crate::scene::gui) size: Span,
     pub(in crate::scene::gui) anchor: [f32; 2],
-    /// `Rotation`, in degrees around the element's own centre — Roblox gives
+    /// `Rotation`, in degrees around the element's own centre, Roblox gives
     /// no way to move the pivot, so `AnchorPoint` plays no part in this.
     pub(in crate::scene::gui) rotation: f32,
     pub(in crate::scene::gui) background: [f32; 3],
@@ -88,7 +88,7 @@ pub(in crate::scene::gui) struct Node {
     pub(in crate::scene::gui) group: Option<GroupTint>,
     pub(in crate::scene::gui) children: Vec<Node>,
     /// The non-`GuiObject` containers among this node's children, and what
-    /// they hold — see [`Group`].
+    /// they hold, see [`Group`].
     pub(in crate::scene::gui) groups: Vec<Group>,
 }
 
@@ -115,14 +115,14 @@ impl Node {
     }
 }
 
-/// What one non-`GuiObject` instance inside a GUI tree — a `Folder`, or a
-/// `Configuration`, a `ModuleScript`, anything — contributes to the picture.
+/// What one non-`GuiObject` instance inside a GUI tree, a `Folder`, or a
+/// `Configuration`, a `ModuleScript`, anything, contributes to the picture.
 ///
 /// Roblox draws a `GuiObject` whose ancestry reaches a `ScreenGui`/
 /// `BillboardGui`/`SurfaceGui` however many plain instances sit in between,
 /// so such an instance is walked *through* rather than being an end to the
 /// tree. It has no box of its own, so its contents resolve against the
-/// container above it — the nearest `GuiBase2d` — and they paint where it
+/// container above it, the nearest `GuiBase2d`, and they paint where it
 /// sits among its siblings.
 ///
 /// It is not simply transparent, though. Roblox's `Folder` page: "Each
@@ -143,7 +143,7 @@ pub(in crate::scene::gui) struct Group {
     /// contents against the container's rect.
     pub(in crate::scene::gui) layout: Option<Layout>,
     pub(in crate::scene::gui) children: Vec<Node>,
-    /// Non-`GuiObject` containers nested inside this one — a `Folder` in a
+    /// Non-`GuiObject` containers nested inside this one, a `Folder` in a
     /// `Folder` is a layout scope inside a layout scope.
     pub(in crate::scene::gui) groups: Vec<Group>,
 }
@@ -166,12 +166,12 @@ impl Group {
 #[derive(Clone)]
 pub(crate) struct Screen {
     pub(crate) referent: Ref,
-    /// `Enabled`. A disabled screen is still planned — an editor laying one
-    /// out on its own needs it — but the overlay leaves it out.
+    /// `Enabled`. A disabled screen is still planned, an editor laying one
+    /// out on its own needs it, but the overlay leaves it out.
     pub(crate) enabled: bool,
     /// A `BillboardGui`/`SurfaceGui`'s tree, planned the same way for an
     /// editor's canvas, and the pixel size its canvas has when the scene
-    /// does not place it on a part — see `super::gather`. Never drawn by the
+    /// does not place it on a part, see `super::gather`. Never drawn by the
     /// overlay: the scene draws these in the world (`super::super::space`).
     pub(crate) space: Option<[f32; 2]>,
     pub(in crate::scene::gui) display_order: i32,
@@ -203,7 +203,7 @@ impl Screen {
         collect_fonts_of(&self.roots, &self.groups, into);
     }
 
-    /// Every `ViewportFrame` part on the screen — see `viewport::each_part`.
+    /// Every `ViewportFrame` part on the screen, see `viewport::each_part`.
     pub(crate) fn viewport_parts(&mut self, apply: &mut impl FnMut(&mut Part)) {
         for root in &mut self.roots {
             viewport::each_part(root, apply);

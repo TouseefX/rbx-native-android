@@ -7,9 +7,9 @@
 //! changed is written back exactly as it was ([`Origins`]); only the
 //! statements an edit touched are generated.
 //!
-//! A graph that cannot compile — an input left unwired that has no
+//! A graph that cannot compile, an input left unwired that has no
 //! literal, a run that loops into itself, a value used outside the run
-//! that gives it — gives back every problem instead, each pinned to its
+//! that gives it, gives back every problem instead, each pinned to its
 //! node, and nothing is written.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};

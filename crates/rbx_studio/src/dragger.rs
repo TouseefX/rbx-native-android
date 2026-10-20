@@ -6,7 +6,7 @@
 //! Everything here is Studio's own behaviour, read out of the
 //! `DraggerFramework` and `DraggerSchemaCore` packages Studio ships (client
 //! 0.739), with the constants those packages use. It follows the legacy
-//! visuals — Studio's default, with the `NextGenDraggers` beta off. Where a
+//! visuals, Studio's default, with the `NextGenDraggers` beta off. Where a
 //! detail had to be inferred rather than read, the comment at that spot says
 //! so. Pure geometry, no GPU and no DOM: the view and `Shell` feed in what
 //! each of them knows, and the renderer draws the [`Guides`] that come out.
@@ -200,7 +200,7 @@ fn sign(value: f32) -> f32 {
     }
 }
 
-/// `floor(v/g + 0.5)*g`, the rounding every Studio snap uses — halves round
+/// `floor(v/g + 0.5)*g`, the rounding every Studio snap uses, halves round
 /// up, not away from zero. No grid (`g <= 0`) passes the value through.
 fn snap_to(value: f32, grid: f32) -> f32 {
     if grid > 0.0 {

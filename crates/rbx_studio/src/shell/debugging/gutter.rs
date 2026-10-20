@@ -26,7 +26,7 @@ const MARK: f32 = 10.;
 
 impl Shell {
     /// Re-installs every open tab's gutter from the breakpoints and the
-    /// pause. Called after anything that changes either — never per frame,
+    /// pause. Called after anything that changes either, never per frame,
     /// since installing one re-renders the editor.
     pub(in crate::shell) fn sync_gutters(&mut self, cx: &mut Context<Self>) {
         let scripts: Vec<Ref> = self.scripts.open.keys().copied().collect();

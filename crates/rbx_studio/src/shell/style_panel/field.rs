@@ -11,7 +11,7 @@ use crate::style_editor;
 
 impl Shell {
     /// One cell's live `Input`, created the first time it renders and reused
-    /// afterwards so a keystroke survives the panel rebuilding around it —
+    /// afterwards so a keystroke survives the panel rebuilding around it,
     /// the same cache, for the same reason, as `shell::edit::edit_row`.
     pub(super) fn style_field(
         &mut self,
@@ -55,7 +55,7 @@ impl Shell {
 
     /// Writes one field's text, then drops its widget so the next render
     /// reseeds it from what actually landed in the DOM (a clamped colour, a
-    /// rounded offset) — again the way `shell::edit::commit_row` does.
+    /// rounded offset), again the way `shell::edit::commit_row` does.
     pub(super) fn commit_style_field(&mut self, key: &SharedString, cx: &mut Context<Self>) {
         let Some(field) = self.style_edits.fields.get(key) else {
             return;
@@ -104,7 +104,7 @@ impl Shell {
 
     /// The one path every Style Editor write takes: `self.dom` handed out and
     /// back the way `shell::command` does it, snapshotted for undo first, and
-    /// the resulting `Change` log handed to the viewport — which now rebuilds
+    /// the resulting `Change` log handed to the viewport, which now rebuilds
     /// the GUI for a styling instance too (see `rbx_viewer`'s
     /// `changes::role`), so an edited rule is visible without a reload.
     pub(super) fn apply_style_edit(

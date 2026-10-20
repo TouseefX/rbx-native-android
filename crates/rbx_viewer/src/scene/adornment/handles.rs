@@ -2,9 +2,9 @@
 //! grab handles around an adornee rather than drawing one shape of their
 //! own.
 //!
-//! Neither is interactive here — the docs are explicit that handles listen
+//! Neither is interactive here, the docs are explicit that handles listen
 //! for input only under a player's `PlayerGui` or the `CoreGui`, and this
-//! viewer runs no scripts to listen with — so what is drawn is their
+//! viewer runs no scripts to listen with, so what is drawn is their
 //! appearance: "the shape of the handles can be set to either arrows or
 //! spheres" for `Handles`, and one arc per enabled axis for `ArcHandles`.
 //!
@@ -35,8 +35,8 @@ const ARC_CLEARANCE: f32 = 1.1;
 const ARC_TUBE: f32 = 0.012;
 /// Each ring's grab sphere, as a fraction of the ring.
 const ARC_GRIP: f32 = 0.06;
-/// Studio colours each ring by its axis whatever `Color3` says — X red,
-/// Y green, Z blue (sampled from Studio, sRGB) — with one sphere on each
+/// Studio colours each ring by its axis whatever `Color3` says, X red,
+/// Y green, Z blue (sampled from Studio, sRGB), with one sphere on each
 /// ring to grab: X's toward the front, Y's to the left, Z's on top.
 const ARC_COLORS: [[f32; 3]; 3] = [
     [178.0 / 255.0, 34.0 / 255.0, 42.0 / 255.0],
@@ -168,7 +168,7 @@ fn arc_handles(context: &Context<'_>) -> Vec<Piece> {
         .collect()
 }
 
-/// A frame whose own -Z points along `direction`, placed at `at` — the
+/// A frame whose own -Z points along `direction`, placed at `at`, the
 /// orientation every length-bearing shape in this family is built in (see
 /// [`Mesh`]).
 fn aim(direction: Vec3, at: Vec3) -> Mat4 {
@@ -188,7 +188,7 @@ fn aim(direction: Vec3, at: Vec3) -> Mat4 {
     )
 }
 
-/// A frame whose XY plane is the plane `normal` is perpendicular to — where
+/// A frame whose XY plane is the plane `normal` is perpendicular to, where
 /// an [`Mesh::Arc`] is drawn.
 fn ring_plane(normal: Vec3) -> Mat4 {
     let z = normal.normalize_or_zero();

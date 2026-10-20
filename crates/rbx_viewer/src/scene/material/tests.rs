@@ -68,7 +68,7 @@ fn slot(catalog: &mut Catalog, properties: &BTreeMap<String, Variant>) -> Slot {
 /// Needed by any test that asserts a layer is `Textured`: whether it is or
 /// not is read off the images that actually resolved (see `Catalog::slot`),
 /// so a catalog nothing has been resolved into shades every one of them as
-/// plain plastic — which is exactly what the viewer draws at that moment.
+/// plain plastic, which is exactly what the viewer draws at that moment.
 fn resolve_all(catalog: &mut Catalog) {
     let images = catalog
         .asset_refs()
@@ -248,7 +248,7 @@ fn a_name_property_equal_to_its_own_material_overrides_nothing() {
 fn a_layer_whose_pack_never_downloaded_falls_back_to_plastic() {
     let mut catalog = built(&WeakDom::new());
     let wood = slot(&mut catalog, &material_of("Wood"));
-    // Nothing resolved yet, so nothing is textured yet — a load draws plain
+    // Nothing resolved yet, so nothing is textured yet, a load draws plain
     // plastic until the pack lands, and says so here.
     assert_eq!(wood.kind, Kind::Plastic);
 
@@ -288,7 +288,7 @@ fn a_resolved_layer_hands_its_images_out_by_map_kind() {
 
 // What a scene rebuild compares before keeping the texture arrays it already
 // uploaded: the same materials, resolved to the same downloads, must read
-// back identical — layer for layer, map for map.
+// back identical, layer for layer, map for map.
 #[test]
 fn resolved_maps_agree_between_two_catalogs_of_the_same_materials() {
     let build = || {
@@ -311,7 +311,7 @@ fn resolved_maps_agree_between_two_catalogs_of_the_same_materials() {
 }
 
 // A map that never downloaded is uploaded as the neutral fill, exactly as a
-// layer without that map is — so the key says `None` for both, and a catalog
+// layer without that map is, so the key says `None` for both, and a catalog
 // whose download failed does not read as different from one that never had
 // the map.
 #[test]

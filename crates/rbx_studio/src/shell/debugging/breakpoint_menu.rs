@@ -1,4 +1,4 @@
-//! The gutter's right-click menu and the Edit Breakpoint popup — Studio's
+//! The gutter's right-click menu and the Edit Breakpoint popup, Studio's
 //! Insert Breakpoint / Conditional / Logpoint / Temporary, and the window
 //! that edits a breakpoint's Condition, Log Message, Continue Execution,
 //! Remove Breakpoint on Hit and Enabled.

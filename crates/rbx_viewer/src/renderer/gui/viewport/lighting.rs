@@ -27,7 +27,7 @@ pub(super) struct StandIns {
     pub(super) shadow: wgpu::Texture,
     pub(super) local_shadow: wgpu::Texture,
     /// A `ViewportFrame`'s parts are drawn with no shadows at all, so this
-    /// is a single unread texel like `local_shadow` above — the frame bind
+    /// is a single unread texel like `local_shadow` above, the frame bind
     /// group still has to point somewhere.
     pub(super) point_shadow: wgpu::Texture,
     pub(super) point_faces: wgpu::Buffer,

@@ -30,16 +30,16 @@ use crate::scene::{gui_span_face, GuiText, GuiTextMeasure};
 /// Roblox does not say where the ratio comes from, and it is not the face's
 /// own ascent plus descent: against Studio captures of the fixtures, Source
 /// Sans Pro at `TextSize` 24 draws "Button" 53 px wide with a 13 px cap
-/// height, which is a 20 px em — 1.2 — where its hhea metrics (1.257) give
+/// height, which is a 20 px em, 1.2, where its hhea metrics (1.257) give
 /// 51 px and 12 px and its typographic ones (1.0) a fifth too much. Gotham
 /// SSm (hhea 1.2) lands on Studio's 14 px x-height at 29 and its `TextScaled`
 /// sizes with the same 1.2; Fredoka One's hhea 1.21 is too close to tell
 /// apart at the sizes the fixtures draw it. One constant fits all three.
 const LINE_EM: f32 = 1.2;
 
-/// `Enum.FontWeight.SemiBold`: from here up a face is bold — Roblox's docs on
+/// `Enum.FontWeight.SemiBold`: from here up a face is bold, Roblox's docs on
 /// `Font.Bold` say it "becomes `true` if the weight is `SemiBold` or thicker"
-/// — so a request at or past it on a family whose nearest face falls short
+/// so a request at or past it on a family whose nearest face falls short
 /// is served by dilating that face's outlines. The docs say nothing about
 /// how Studio serves such a weight; that it synthesises one is measured
 /// (Fredoka One, a single-face family, at 600: strokes half again as thick).
@@ -86,9 +86,9 @@ pub(super) struct Typesetter {
 /// over rather than growing without end across edits that change the text.
 const MEASURED_CAP: usize = 16_384;
 
-/// Everything a measurement depends on — the runs and the face, the size
+/// Everything a measurement depends on, the runs and the face, the size
 /// the spans scale from, the spacing, the wrapping, and the size and width
-/// asked for — and nothing it does not (colour, alignment, the stroke).
+/// asked for, and nothing it does not (colour, alignment, the stroke).
 fn measure_key(text: &GuiText, size: f32, max_width: Option<f32>) -> String {
     let spans: Vec<_> = text
         .spans
@@ -112,7 +112,7 @@ fn measure_key(text: &GuiText, size: f32, max_width: Option<f32>) -> String {
 
 impl Typesetter {
     /// Starts from the system's fonts: text in a family that has not landed
-    /// yet — or never will, a face behind a cloud id with no API key — shapes
+    /// yet, or never will, a face behind a cloud id with no API key, shapes
     /// in the locale's sans-serif rather than vanishing.
     pub(super) fn new() -> Self {
         Typesetter {
@@ -196,8 +196,8 @@ impl Typesetter {
 
     /// Shapes `text` at `size` pixels per line, wrapping at `width` where the
     /// text wraps at all, with every line aligned left: the quads align each
-    /// line themselves, which is the only way an unwrapped line — one with no
-    /// box width to align inside — can be centred.
+    /// line themselves, which is the only way an unwrapped line, one with no
+    /// box width to align inside, can be centred.
     ///
     /// `size` is a line box, `LINE_EM` ems tall, and `LineHeight` scales the
     /// spacing between lines on top of that (the docs' "multiple of the
@@ -263,7 +263,7 @@ impl Typesetter {
     }
 
     /// [`Typesetter::shape`], reusing the buffer an identical call shaped
-    /// before — a layout follows every edit, and most text on a screen is
+    /// before, a layout follows every edit, and most text on a screen is
     /// not what the edit touched.
     pub(super) fn shape_cached(
         &mut self,
@@ -298,8 +298,8 @@ impl Typesetter {
         self.atlas.insert(key, image)
     }
 
-    /// The glyph as `SwashCache` would draw it — same sources, hinting and
-    /// synthesised slant — with every outline pushed out `FAKE_BOLD_EM` of
+    /// The glyph as `SwashCache` would draw it, same sources, hinting and
+    /// synthesised slant, with every outline pushed out `FAKE_BOLD_EM` of
     /// the em first. Roblox's own faces are static, so the variable-weight
     /// axis cosmic-text would also set is left alone.
     ///
@@ -360,7 +360,7 @@ fn metrics(size: f32, line_height: f32) -> Metrics {
 }
 
 /// The attributes one face shapes with: the family by the name fontdb knows
-/// it under, at the weight of the face that landed nearest the request —
+/// it under, at the weight of the face that landed nearest the request,
 /// cosmic-text serves a weight only from a face of exactly that weight, so
 /// asked for the 700 a family lacks it would pass over the family's lone 400
 /// face for a system font. What that face cannot give is synthesised, as

@@ -19,7 +19,7 @@
 //! its suggestion strip and the language. They are typical heights of the
 //! stock keyboard with its suggestion strip and the home indicator or
 //! navigation bar below it, rounded, and good for checking that controls
-//! clear a keyboard-sized cover — not for pixel work. Studio's own default
+//! clear a keyboard-sized cover, not for pixel work. Studio's own default
 //! is 0, no cover.
 
 use super::{Density, Device, Insets, Os, Platform, Tier};

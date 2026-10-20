@@ -1,7 +1,7 @@
 //! Group/ungroup: wrap the selection in one new `Model`, or unwind a `Model`
 //! back into its own parent. Both push through the same take/put-back path
 //! `shell::keys`' insert and delete, and `shell::reparent`'s drag, already
-//! use — one `push_history`/`take_changes` pair per call, however many
+//! use, one `push_history`/`take_changes` pair per call, however many
 //! instances move, so one Group or Ungroup is one `Ctrl+Z`.
 
 use gpui_kit::{Context, Keystroke, Modifiers};
@@ -18,7 +18,7 @@ pub(crate) const GROUP_VARIABLE: &str = "RBX_STUDIO_GROUP";
 pub(crate) const UNGROUP_VARIABLE: &str = "RBX_STUDIO_UNGROUP";
 
 /// What one keystroke does at the window level, or `None` if it means
-/// something else — see [`action_for`].
+/// something else, see [`action_for`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Action {
     Group,
@@ -47,7 +47,7 @@ pub(super) fn action_for(key: &str, modifiers: Modifiers) -> Option<Action> {
 
 /// The one parent every entry of `selected` could move under, or `None` to
 /// refuse the whole thing: nothing selected, a referent that no longer
-/// resolves, a service among them (services cannot be reparented at all —
+/// resolves, a service among them (services cannot be reparented at all,
 /// the same rule `explorer::reparent`'s drag-and-drop already enforces), or
 /// a selection that does not share one common parent (real Studio requires
 /// a single common parent too).
@@ -71,11 +71,11 @@ fn common_parent(
         .then_some(first)
 }
 
-/// What ungrouping `reference` would do — its own parent, to hand its
-/// children to, and the children themselves — or `None` to refuse it: not a
+/// What ungrouping `reference` would do, its own parent, to hand its
+/// children to, and the children themselves, or `None` to refuse it: not a
 /// `Model` or a subclass of one, a service (`Workspace` is a `Model`
 /// subclass in Roblox's own class hierarchy, so this is what rules it back
-/// out — the same reasoning `common_parent` above applies), or a `Model`
+/// out, the same reasoning `common_parent` above applies), or a `Model`
 /// with nothing inside it to unwrap.
 fn ungroupable(
     dom: &WeakDom,
@@ -93,7 +93,7 @@ fn ungroupable(
 
 /// Whether Group would wrap anything: [`common_parent`]'s own answer, which
 /// is what `group_selected` returns early on. Asked by the ribbon so the
-/// tile is greyed exactly when the command would do nothing — the selection
+/// tile is greyed exactly when the command would do nothing, the selection
 /// is empty, holds a service, or straddles two parents.
 pub(super) fn has_groupable(
     dom: &WeakDom,
@@ -104,7 +104,7 @@ pub(super) fn has_groupable(
 }
 
 /// Whether Ungroup would unwrap anything. `ungroup_selected` unwraps every
-/// `Model` in the selection and ignores the rest, so *one* is enough — the
+/// `Model` in the selection and ignores the rest, so *one* is enough, the
 /// same "skip what cannot follow along rather than refuse the whole call"
 /// rule the handler itself follows.
 pub(super) fn has_ungroupable(
@@ -150,7 +150,7 @@ fn apply_ungroup(dom: &mut WeakDom, groups: &[(Ref, Option<Ref>, Vec<Ref>)]) -> 
 impl Shell {
     /// The window-level `on_key_down` handler's group/ungroup half; called
     /// from `Shell::handle_shell_key` alongside `shell::save`/
-    /// `shell::history`'s own checks — see [`action_for`] for why this runs
+    /// `shell::history`'s own checks, see [`action_for`] for why this runs
     /// at the window level rather than only while the Explorer has focus.
     pub(super) fn handle_group_key(&mut self, keystroke: &Keystroke, cx: &mut Context<Self>) {
         match action_for(&keystroke.key, keystroke.modifiers) {
@@ -161,8 +161,8 @@ impl Shell {
     }
 
     /// Wraps the current selection in one new `Model`, parented exactly
-    /// where the selection itself was. A no-op — refused cleanly rather than
-    /// doing something surprising — unless [`common_parent`] finds one
+    /// where the selection itself was. A no-op, refused cleanly rather than
+    /// doing something surprising, unless [`common_parent`] finds one
     /// shared parent for the whole selection. `pub(crate)`: also
     /// `menu_bar`'s Group item's entry point, so a menu click runs the exact
     /// same path `Ctrl+G` does.
@@ -172,7 +172,7 @@ impl Shell {
             return;
         };
         // `GuiObject`s on the UI editor's canvas group into a `Frame`
-        // fitted round them — see `shell::ui_editor::arrange`.
+        // fitted round them, see `shell::ui_editor::arrange`.
         if self.group_gui(&selected, parent, cx) {
             return;
         }
@@ -193,13 +193,13 @@ impl Shell {
     /// Unwraps every selected `Model` (or subclass) back into its own
     /// parent, removing it once its children are out. A selected instance
     /// that is not one of those is skipped rather than refusing the whole
-    /// call — ungrouping a mixed selection still does whatever part of it
-    /// makes sense — and a selection with nothing groupable in it is a clean
+    /// call, ungrouping a mixed selection still does whatever part of it
+    /// makes sense, and a selection with nothing groupable in it is a clean
     /// no-op. `pub(crate)`: also `menu_bar`'s Ungroup item's entry point.
     pub(crate) fn ungroup_selected(&mut self, cx: &mut Context<Self>) {
         let selected = self.selected_all().to_vec();
         // Grouping `Frame`s on the UI editor's canvas come apart where
-        // they stand — see `shell::ui_editor::arrange`.
+        // they stand, see `shell::ui_editor::arrange`.
         if self.ungroup_gui(&selected, cx) {
             return;
         }
@@ -230,7 +230,7 @@ impl Shell {
     /// `RBX_STUDIO_GROUP=1` / `RBX_STUDIO_UNGROUP=1`: documented in `main`'s
     /// module doc comment. A screenshot aid, applied once right after the
     /// Explorer delete/insert debug aids (see `Shell::new`), through the
-    /// exact path `Ctrl+G`/`Ctrl+Shift+G` would — nothing else can send the
+    /// exact path `Ctrl+G`/`Ctrl+Shift+G` would, nothing else can send the
     /// window a keystroke on the editor's behalf.
     pub(super) fn apply_debug_group(&mut self, cx: &mut Context<Self>) {
         if std::env::var(GROUP_VARIABLE).is_ok() {

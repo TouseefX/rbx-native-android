@@ -1,5 +1,5 @@
-//! Envelope types for Argon's wire protocol — `Message`, `Project`,
-//! `Snapshot`, `Changes` — decoded from an [`rmpv::Value`] tree by field
+//! Envelope types for Argon's wire protocol, `Message`, `Project`,
+//! `Snapshot`, `Changes`: decoded from an [`rmpv::Value`] tree by field
 //! name, the shapes `argon-roblox`'s `src/Types.luau` defines. Property
 //! *values* are left undecoded here (`Vec<(String, Value)>`): turning an
 //! `EncodedValue` into an `rbx_dom::Variant` is [`super::value`]'s job, kept
@@ -10,7 +10,7 @@ use rmpv::Value;
 /// Argon's own instance identity: 16 random bytes
 /// (`argon-roblox/src/Helpers/generateRef.luau`), sent as a raw MsgPack
 /// `bin`. Distinct from `rbx_dom::Ref`, which is a small integer local to
-/// one `WeakDom` — `shell::argon_sync` bridges the two with an id map.
+/// one `WeakDom`: `shell::argon_sync` bridges the two with an id map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct ArgonRef(pub(crate) [u8; 16]);
 
@@ -44,7 +44,7 @@ impl ArgonRef {
 }
 
 // No `rand` dependency for 16 bytes a session only needs to be locally
-// unique against a HashMap key, not cryptographically unbiased — a tiny
+// unique against a HashMap key, not cryptographically unbiased, a tiny
 // xorshift seeded from the system clock is plenty and costs no new crate.
 fn rand_byte() -> u8 {
     use std::cell::Cell;
@@ -77,7 +77,7 @@ fn get_str(value: &Value, key: &str) -> Option<String> {
 }
 
 /// The project a `GET details` (or an inbound `SyncDetails` message)
-/// reports — `argon-roblox`'s `Types.Project`.
+/// reports, `argon-roblox`'s `Types.Project`.
 pub(crate) struct Project {
     pub(crate) name: String,
     pub(crate) version: String,
@@ -103,7 +103,7 @@ impl Project {
 }
 
 /// One instance, and (for `additions`) where it attaches. `meta` (a mesh
-/// source override, mostly) isn't acted on in this client yet — decoded and
+/// source override, mostly) isn't acted on in this client yet, decoded and
 /// dropped, same as an unrecognized property tag falls to
 /// `rbx_dom::Variant::Unknown` rather than refusing the whole snapshot.
 pub(crate) struct Snapshot {
@@ -148,7 +148,7 @@ impl Snapshot {
 }
 
 /// A sparse update: only `id` is guaranteed present, matching
-/// `argon-roblox`'s `Types.UpdatedSnapshot` — everything else is `None`
+/// `argon-roblox`'s `Types.UpdatedSnapshot`: everything else is `None`
 /// when that instance's update didn't touch it.
 pub(crate) struct UpdatedSnapshot {
     pub(crate) id: ArgonRef,
@@ -168,7 +168,7 @@ impl UpdatedSnapshot {
     }
 }
 
-/// One `properties` map decoded into `(name, EncodedValue)` pairs — with
+/// One `properties` map decoded into `(name, EncodedValue)` pairs, with
 /// the `ArgonEmpty` sentinel key (`argon-roblox`'s workaround for an empty
 /// Luau table serializing as an array, not a map) dropped, since it names
 /// no real property.
@@ -299,14 +299,14 @@ impl UpdatedSnapshot {
 }
 
 /// One `/read` response: a single-key map, `{"SyncChanges": Changes}` and
-/// the like — confirmed against `argon-roblox`'s actual consumer
+/// the like, confirmed against `argon-roblox`'s actual consumer
 /// (`Core.luau`'s `next(message)`), not just its type alias, since the
 /// alias's `ExecuteCode`/`Disconnect` shapes look unwrapped on paper but
 /// aren't on the wire.
 pub(crate) enum Message {
     SyncChanges(Changes),
     SyncDetails(Project),
-    /// Decoded, never acted on — see `argon_client`'s module doc: running
+    /// Decoded, never acted on, see `argon_client`'s module doc: running
     /// server-sent code is a boundary this client refuses to cross.
     ExecuteCode,
     Disconnect(String),

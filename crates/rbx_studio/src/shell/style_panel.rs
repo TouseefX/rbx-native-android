@@ -16,7 +16,7 @@
 //! and a screenshot catches the live preview rather than this panel. A
 //! debugging aid, like the other `RBX_STUDIO_*` variables: the panel starts
 //! stacked behind the Viewport, and nothing else can click its tab on the
-//! editor's behalf (see `AGENTS.md`'s safety rules).
+//! editor's behalf.
 
 mod field;
 mod rule;
@@ -42,8 +42,8 @@ pub(crate) const STYLE_EDITOR_VARIABLE: &str = "RBX_STUDIO_STYLE_EDITOR";
 /// What committing one of the panel's text fields writes.
 #[derive(Clone)]
 enum Target {
-    /// A plain property of a styling instance — a rule's `Selector` or
-    /// `Priority` — committed through `properties::edit::commit`, the same
+    /// A plain property of a styling instance, a rule's `Selector` or
+    /// `Priority`: committed through `properties::edit::commit`, the same
     /// path a Properties row takes.
     Instance { referent: Ref, property: String },
     /// One entry of a rule's `PropertiesSerialize` blob.
@@ -244,8 +244,8 @@ impl Shell {
             .child(body)
     }
 
-    /// Opens what a new selection lands on, so selecting a rule anywhere —
-    /// the Explorer, this tab, or by adding one — shows its properties
+    /// Opens what a new selection lands on, so selecting a rule anywhere,
+    /// the Explorer, this tab, or by adding one, shows its properties
     /// without a second click. Only on a change: a rule closed by hand while
     /// selected stays closed.
     fn follow_selection(&mut self, selected: Option<Ref>) {
@@ -280,7 +280,7 @@ impl Shell {
     }
 
     /// Brings the style sheets to the front: the UI Editor document, on its
-    /// Stylesheet sub-tab — the View menu's Style Editor item (see
+    /// Stylesheet sub-tab, the View menu's Style Editor item (see
     /// `crate::menu_bar`).
     pub(crate) fn reveal_style_editor(&mut self, cx: &mut Context<Self>) {
         self.set_document(super::chrome::Document::UiEditor, cx);
@@ -289,7 +289,7 @@ impl Shell {
 
     /// `RBX_STUDIO_STYLE_EDITOR=1|Prop=value`: documented in this module's
     /// doc comment. A selection that is not a `StyleRule`, or a rejected
-    /// value, does nothing — this is a screenshot aid, not user input, and
+    /// value, does nothing, this is a screenshot aid, not user input, and
     /// must never crash a debugging session.
     pub(super) fn apply_debug_style_editor(&mut self, cx: &mut Context<Self>) {
         let Ok(spec) = std::env::var(STYLE_EDITOR_VARIABLE) else {

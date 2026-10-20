@@ -63,14 +63,14 @@ pub(crate) enum Anchor {
     /// is expressed in that same basis.
     Billboard {
         origin: Vec3,
-        /// World width and height in studs — see [`studs`].
+        /// World width and height in studs, see [`studs`].
         size: [f32; 2],
         /// `StudsOffset`, in the camera's own right/up/forward basis.
         view_offset: Vec3,
         /// `StudsOffsetWorldSpace`, along the global axes.
         world_offset: Vec3,
         /// `SizeOffset`: a shift in units of the billboard's own size, along
-        /// the camera's right and up axes — "a 2D offset in size-relative
+        /// the camera's right and up axes, "a 2D offset in size-relative
         /// units that acts like an anchor point" (`BillboardGui.SizeOffset`).
         size_offset: [f32; 2],
     },
@@ -87,7 +87,7 @@ pub(crate) enum Anchor {
 pub(crate) struct SpaceGui {
     /// The `BillboardGui`/`SurfaceGui` itself.
     pub(crate) referent: Ref,
-    /// What the canvas hangs off (see [`adornee`]) — so an edit that moves
+    /// What the canvas hangs off (see [`adornee`]), so an edit that moves
     /// that part knows to re-place the canvas, wherever in the tree the
     /// container itself sits.
     pub(crate) adornee: Ref,
@@ -96,7 +96,7 @@ pub(crate) struct SpaceGui {
     pub(crate) canvas: [f32; 2],
     /// `AlwaysOnTop`: drawn without a depth test, over the whole scene.
     pub(crate) always_on_top: bool,
-    /// What the canvas' colour is scaled by before it is composited — see
+    /// What the canvas' colour is scaled by before it is composited, see
     /// [`brightness`].
     pub(crate) brightness: f32,
     /// `MaxDistance`: how far the eye may be before the canvas stops being
@@ -122,7 +122,7 @@ impl SpaceGui {
         collect_fonts_of(&self.roots, &self.groups, into);
     }
 
-    /// Every `ViewportFrame` part on the canvas — see `Screen::viewport_parts`.
+    /// Every `ViewportFrame` part on the canvas, see `Screen::viewport_parts`.
     pub(crate) fn viewport_parts(&mut self, apply: &mut impl FnMut(&mut Part)) {
         for root in &mut self.roots {
             super::plan::each_viewport_part(root, apply);
@@ -171,13 +171,13 @@ struct Context<'a> {
     placements: &'a HashMap<Ref, Placement>,
     /// Each class met so far, as `(billboard, surface)`: the walk asks the
     /// question of every instance in the place, and a superclass chain is
-    /// several hash lookups per answer — memoised, a place of tens of
+    /// several hash lookups per answer, memoised, a place of tens of
     /// thousands of instances asks it a few dozen times.
     kinds: &'a RefCell<HashMap<String, (bool, bool)>>,
 }
 
 /// Its own recursion rather than [`crate::scene::descendants`] for the same
-/// reason [`super::plan::plan`] walks itself — paint order is tree order —
+/// reason [`super::plan::plan`] walks itself, paint order is tree order,
 /// and because a container's *parent* is what it hangs off when `Adornee` is
 /// unset, which a flat iterator cannot hand back.
 ///
@@ -195,7 +195,7 @@ fn gather(
         return;
     };
     // "The contents of `StarterGui`" a hidden development GUI covers is the
-    // whole subtree, canvases included — see `plan::starter`.
+    // whole subtree, canvases included, see `plan::starter`.
     if hides_contents(context.database, instance) {
         return;
     }
@@ -212,7 +212,7 @@ fn gather(
     }
 }
 
-/// Whether `class` is a `BillboardGui`, a `SurfaceGui`, or neither — see
+/// Whether `class` is a `BillboardGui`, a `SurfaceGui`, or neither, see
 /// `Context::kinds`.
 fn kind_of(context: Context<'_>, class: &str) -> (bool, bool) {
     if let Some(&known) = context.kinds.borrow().get(class) {
@@ -342,7 +342,7 @@ fn max_distance(properties: &BTreeMap<String, Variant>, billboard: bool) -> f32 
 }
 
 /// What the canvas hangs off: `Adornee` where it points at a live instance,
-/// the parent otherwise — Roblox's own rule is that the property *overrides*
+/// the parent otherwise, Roblox's own rule is that the property *overrides*
 /// the parent rather than complementing it.
 pub(super) fn adornee(
     dom: &WeakDom,
