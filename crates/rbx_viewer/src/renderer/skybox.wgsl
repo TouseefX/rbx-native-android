@@ -16,7 +16,7 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) uv: vec2<f32>,
     // The panels sit on a cube centred on the eye, so a vertex position *is*
-    // the direction it is seen along — which is what the haze thickens with.
+    // the direction it is seen along, which is what the haze thickens with.
     @location(1) direction: vec3<f32>,
 }
 

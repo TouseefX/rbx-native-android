@@ -3,7 +3,7 @@
 //!
 //! Keypoint `envelope` (a per-keypoint random spread) is not applied: it is a
 //! per-particle-per-keypoint detail that has no visible effect on the steady
-//! state this viewer renders, so it is left at its base value — a documented
+//! state this viewer renders, so it is left at its base value, a documented
 //! TODO rather than a silent approximation.
 
 use rbx_dom::{ColorSequence, NumberSequence};
@@ -35,7 +35,7 @@ pub(crate) fn eval_number(seq: &NumberSequence, t: f32) -> f32 {
 /// Same rule as [`eval_number`], but for a colour gradient.
 ///
 /// Interpolated in the sequence's own (sRGB) space, like Roblox's own
-/// `ColorSequence`, then linearized once at the end — see [`srgb_to_linear`] —
+/// `ColorSequence`, then linearized once at the end, see [`srgb_to_linear`],
 /// rather than linearizing each keypoint first, which would shift the gradient.
 pub(crate) fn eval_color(seq: &ColorSequence, t: f32) -> [f32; 3] {
     let t = t.clamp(0.0, 1.0);

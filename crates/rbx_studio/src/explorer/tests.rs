@@ -16,7 +16,7 @@ fn node(class: &str, name: &str) -> Node {
     }
 }
 
-/// No place ever tags a folder in these tests — a fixed empty store and an
+/// No place ever tags a folder in these tests, a fixed empty store and an
 /// arbitrary place path, since nothing here exercises tag lookup itself
 /// (that's `explorer_folder_tint_tests` below).
 fn no_tags() -> (FolderColors, PathBuf) {
@@ -402,7 +402,7 @@ fn a_path_matches_children_only_never_deeper_descendants() {
     let (dom, _, _) = ambiguous_place();
 
     // `Part` is a grandchild of Workspace through `Model`, not a child of it,
-    // so this path has no match at all — and no bare name to fall back to.
+    // so this path has no match at all, and no bare name to fall back to.
     assert_eq!(resolve(&dom, "Workspace.Model.Model.Part"), None);
     assert_eq!(resolve(&dom, "Model.Part"), None);
 }
@@ -453,7 +453,7 @@ fn the_tiles_authored_beyond_roblox_own_sheet_resolve_to_sprites() {
 #[test]
 fn the_picker_and_the_tree_resolve_one_class_to_one_tile() {
     // `shell::explorer_edit::picker` lists classes and the tree lists
-    // instances, but both go through `resolve_icon` — so the same class has
+    // instances, but both go through `resolve_icon`: so the same class has
     // to come back as the very same rasterized tile, not a second copy of
     // an equal one.
     let mut dom = WeakDom::new();
@@ -471,8 +471,8 @@ fn the_picker_and_the_tree_resolve_one_class_to_one_tile() {
     }
 }
 
-// The UI editor's Explorer: the UI roots wherever they sit — under
-// `StarterGui` or on a part — each with its whole subtree, and not one row
+// The UI editor's Explorer: the UI roots wherever they sit, under
+// `StarterGui` or on a part, each with its whole subtree, and not one row
 // of the rest of the place.
 #[test]
 fn the_ui_view_lists_only_ui_roots_and_what_is_under_them() {

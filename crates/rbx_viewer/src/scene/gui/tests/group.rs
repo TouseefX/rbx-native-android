@@ -1,5 +1,5 @@
 //! `CanvasGroup`: its forced clip, and the subtree run it hands the renderer
-//! to flatten — only under `ZIndexBehavior.Sibling`.
+//! to flatten, only under `ZIndexBehavior.Sibling`.
 
 use super::super::plan::GroupTint as Group;
 use super::super::Grouped;

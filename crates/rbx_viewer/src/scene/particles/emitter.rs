@@ -1,6 +1,6 @@
 //! Reads a `ParticleEmitter` instance and the `BasePart` or `Attachment` it
 //! hangs off into the static definition [`sim`](super::sim) advances every
-//! frame, and walks a DOM for every emitter a place holds — the
+//! frame, and walks a DOM for every emitter a place holds, the
 //! preconfigured `Fire`/`Smoke`/`Sparkles` classes included, which
 //! [`legacy`](super::legacy) reads into emitters of this same shape.
 
@@ -33,9 +33,9 @@ pub(crate) const TOTAL_CAP: u32 = 20_000;
 /// Where an emitter spawns and which way it points.
 ///
 /// Two matrices rather than one: a `BasePart` parent emits from anywhere
-/// inside its own volume, while an `Attachment` parent — documented on every
+/// inside its own volume, while an `Attachment` parent, documented on every
 /// one of these classes as the way to move the emission position and
-/// direction off the part's centre — is a single point with a frame of its
+/// direction off the part's centre, is a single point with a frame of its
 /// own and no volume at all.
 #[derive(Clone, Copy)]
 pub(crate) struct Origin {
@@ -73,7 +73,7 @@ impl Origin {
 
     /// Where a preconfigured effect spawns. `Fire`, `Smoke` and `Sparkles`
     /// all document emission from the *centre* of the parent part rather
-    /// than from anywhere inside it, so the volume collapses to that point —
+    /// than from anywhere inside it, so the volume collapses to that point,
     /// or, for an `Attachment` parent, to the attachment's own.
     pub(super) fn centre(&self) -> Mat4 {
         self.frame * Mat4::from_scale(Vec3::ZERO)
@@ -112,7 +112,7 @@ pub(crate) struct Emitter {
     /// own flame image (`textures/particles/fire_main.dds`) is a dark
     /// detail map the engine multiplies by a colour ramp, and drawn through
     /// this renderer's plain `image.rgb * colour` it would be a grey wisp
-    /// rather than a flame. The figure is this renderer's own — nothing
+    /// rather than a flame. The figure is this renderer's own, nothing
     /// about the engine's own ramp is published.
     pub(crate) gain: f32,
     /// `TimeScale`, clamped to the `[0, 1]` its docs give: the whole effect
@@ -129,7 +129,7 @@ pub(crate) struct Emitter {
     pub(crate) seed: u64,
     /// The instance this was read from, which is how a re-planned list (see
     /// `Scene::replan_effect`) is matched back to the renderer's running
-    /// simulations — `seed` alone is not reversible.
+    /// simulations, `seed` alone is not reversible.
     pub(crate) referent: Ref,
     /// Which of that instance's emitters this is: a `ParticleEmitter` is one,
     /// a `Fire` is documented as two. Part of the identity a re-plan matches
@@ -142,7 +142,7 @@ pub(crate) struct Emitter {
 }
 
 impl Emitter {
-    /// What a re-plan matches a running simulation by — see [`Emitter::slot`].
+    /// What a re-plan matches a running simulation by, see [`Emitter::slot`].
     pub(crate) fn id(&self) -> (Ref, u8) {
         (self.referent, self.slot)
     }
@@ -199,7 +199,7 @@ pub(crate) fn plan(
 
 /// Where the instance at `referent` emits from: its parent part's volume, or
 /// the point of the `Attachment` it hangs off. `None` for a parent that is
-/// neither — a `Folder`, or a part outside the Workspace, neither of which
+/// neither, a `Folder`, or a part outside the Workspace, neither of which
 /// this viewer draws anything for.
 fn origin_of(
     dom: &WeakDom,

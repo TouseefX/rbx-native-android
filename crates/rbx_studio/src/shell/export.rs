@@ -14,7 +14,7 @@
 //! Export as glTF does (its export of a place has `Workspace` as its root).
 //!
 //! `RBX_STUDIO_EXPORT_DIR=<dir>` skips the save dialog and writes
-//! `<dir>/<name>.<extension>` — a debugging aid for driving an export
+//! `<dir>/<name>.<extension>`: a debugging aid for driving an export
 //! headlessly, where no file chooser portal may answer.
 
 use std::path::{Path, PathBuf};

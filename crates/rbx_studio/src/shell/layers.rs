@@ -1,7 +1,7 @@
 //! The shell's half of editor layers and 3D notes (`crate::layers`,
 //! `crate::notes`): every edit to them as one undoable step, this viewer's
 //! [`LayerView`] kept per place in the editor's config, and what the
-//! viewport is told — the roots it leaves undrawn or isolates to, and the
+//! viewport is told, the roots it leaves undrawn or isolates to, and the
 //! note billboards it draws. The Layers dock (`shell::layers_panel`) and the
 //! Explorer row menu call in here.
 
@@ -103,7 +103,7 @@ impl Shell {
 
     /// [`Shell::sync_layers`] for one reflected edit. Finding the hidden
     /// roots walks the whole tree, so it is left out for an edit that only
-    /// wrote ordinary properties — every move of a drag is one — and only
+    /// wrote ordinary properties, every move of a drag is one, and only
     /// the notes are placed again, while there are any: one may be pinned
     /// to what moved.
     pub(super) fn sync_layers_after(&mut self, changes: &[Change], cx: &mut Context<Self>) {

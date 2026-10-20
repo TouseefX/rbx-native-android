@@ -1,4 +1,4 @@
-//! §6 — the hover label an icon-only button needs to be more than a
+//! §6, the hover label an icon-only button needs to be more than a
 //! pictogram.
 //!
 //! A thin wrapper over the toolkit's own tooltip rather than a hand-rolled
@@ -24,7 +24,7 @@ pub(crate) fn text(label: impl Into<SharedString>, window: &mut Window, cx: &mut
 /// Re-checks hover after a wheel scroll, for whatever window this is a
 /// child of.
 ///
-/// GPUI only re-evaluates hover — highlights and tooltips both — when the
+/// GPUI only re-evaluates hover, highlights and tooltips both, when the
 /// pointer moves, and a wheel scroll moves the content instead. It does drop
 /// a tooltip that is already showing on a scroll, but not one still waiting
 /// out its delay: that one opens afterwards with the old row's name, over

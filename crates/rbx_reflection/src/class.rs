@@ -7,14 +7,14 @@ pub struct PropertyDescriptor {
     pub value_type: String,
     /// The dump's `Category` field (e.g. `"Data"`, `"Appearance"`,
     /// `"Part"`), used to group properties the way Studio's own Properties
-    /// panel does. Always present in the dump — no `Option` needed.
+    /// panel does. Always present in the dump, no `Option` needed.
     pub category: String,
     /// The dump's per-property `Tags` (e.g. `Hidden`, `Deprecated`,
     /// `ReadOnly`, `NotReplicated`). Empty when the property carries none.
     pub tags: Vec<String>,
-    /// The dump's `Serialization.CanLoad`/`CanSave` — whether Studio can
+    /// The dump's `Serialization.CanLoad`/`CanSave`: whether Studio can
     /// read/write this property to a file. Always present for a Property
-    /// member in the dump — no `Option` needed.
+    /// member in the dump, no `Option` needed.
     pub can_load: bool,
     pub can_save: bool,
 }
@@ -35,8 +35,8 @@ impl PropertyDescriptor {
     }
 
     /// Whether the property should render with no edit affordance. The dump
-    /// sets `ReadOnly` and `Serialization.CanSave: false` independently —
-    /// many `ReadOnly` properties still report `CanSave: true` — so both
+    /// sets `ReadOnly` and `Serialization.CanSave: false` independently,
+    /// many `ReadOnly` properties still report `CanSave: true`: so both
     /// signals feed the one read-only treatment rather than two separate
     /// checks in callers.
     pub fn is_read_only(&self) -> bool {

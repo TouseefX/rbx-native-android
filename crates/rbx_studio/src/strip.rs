@@ -1,6 +1,6 @@
-//! The editor-only data a place carries for this editor — layer membership
+//! The editor-only data a place carries for this editor, layer membership
 //! and the layer table (`crate::layers`), the notes folder (`crate::notes`)
-//! — taken out of a copy before it leaves: Save/Publish to Roblox while
+//! taken out of a copy before it leaves: Save/Publish to Roblox while
 //! Studio Settings' "Strip editor-only data on publish" is on (the
 //! default), and File › Export Clean Copy…. The open place and its local
 //! file keep everything.

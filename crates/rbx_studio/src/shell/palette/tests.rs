@@ -172,7 +172,7 @@ fn every_live_ribbon_command_is_a_row() {
         .collect();
     assert_eq!(ribbon.len(), palette_entries().len());
     // The Part menu's five shapes, the live UI inserts, both sun bodies and
-    // all four gestures — read from the same lists the ribbon builds its
+    // all four gestures, read from the same lists the ribbon builds its
     // menus and tiles from.
     let has = |wanted: RibbonCommand| {
         ribbon

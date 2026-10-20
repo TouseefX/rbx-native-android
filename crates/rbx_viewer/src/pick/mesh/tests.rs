@@ -115,7 +115,7 @@ fn a_surface_hit_on_the_slanted_face_faces_back_up_the_ray() {
 }
 
 /// A mesh of `triangles`, given by their corners, every one with vertices of
-/// its own — split, as an exported mesh's are
+/// its own, split, as an exported mesh's are
 /// at every UV seam, so the walk has to join them by position.
 fn soup(triangles: &[[[f32; 3]; 3]]) -> Mesh {
     let vertices: Vec<Vertex> = triangles
@@ -211,7 +211,7 @@ fn a_lone_triangle_between_sharp_edges_snaps_to_its_corners() {
 }
 
 /// The triangles of a band round the y axis, radius 0.5 and a stud tall,
-/// `segments` facets of `step` degrees either side of +z — each split along
+/// `segments` facets of `step` degrees either side of +z, each split along
 /// its diagonal.
 fn band(segments: i32, step: f32) -> Vec<[[f32; 3]; 3]> {
     let at = |k: i32, y: f32| {

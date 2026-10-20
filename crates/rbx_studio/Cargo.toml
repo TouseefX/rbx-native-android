@@ -71,7 +71,7 @@ serde_json = "1"
 # Decodes the place files embedded in an `rbxmerge` sidecar.
 base64 = "0.22"
 # This project's own class icons (`class_icons::DefaultIcons`), embedded at
-# compile time from `assets/icons/default/dark` — same version gpui-kit-assets
+# compile time from `assets/icons/default/dark`: same version gpui-kit-assets
 # already pins for its own Lucide catalog, so this adds no new dependency
 # version to the tree.
 rust-embed = { version = "8", features = ["interpolate-folder-path"] }
@@ -86,7 +86,7 @@ raw-window-handle = "0.6"
 # `randr` is where the display's refresh rate comes from.
 x11rb = { version = "0.13", features = ["randr", "xfixes"] }
 
-# Dock layout state serialization — uses same version serde_json brings in.
+# Dock layout state serialization, uses same version serde_json brings in.
 serde = { version = "1", features = ["derive"] }
 # The Argon dock's HTTP client (`shell::argon_sync`/`argon_client`): blocking
 # by design, already the tree's one HTTP crate via `rbx_cloud`/`rbx_assets`,
@@ -99,7 +99,7 @@ ureq = { version = "3", features = ["json"] }
 # in the tree (under `ureq`), at this version.
 url = "2"
 # Argon's wire protocol is MsgPack, tagged dynamically (`{TypeName: payload}`)
-# rather than shaped for a fixed struct — `rmpv`'s `Value` tree is decoded by
+# rather than shaped for a fixed struct, `rmpv`'s `Value` tree is decoded by
 # tag the same way `rbx_xml::value` dispatches by tag name, not through serde.
 rmpv = "1"
 # The Wally dock's package fetch (`shell::wally_sync`/`wally_client`): a
@@ -108,7 +108,7 @@ rmpv = "1"
 # dependency version to the tree.
 zip = { version = "8", default-features = false, features = ["deflate"] }
 # Wally's own dependency requirements are ordinary Cargo-style semver
-# (`^0.3`, `>=1.0`, ...) — already in the tree transitively, so this adds no
+# (`^0.3`, `>=1.0`, ...), already in the tree transitively, so this adds no
 # new dependency version either; used the same way Wally's own resolver
 # uses it, `VersionReq::matches` against each candidate `Version`.
 semver = "1"

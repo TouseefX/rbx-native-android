@@ -24,7 +24,7 @@ impl WorkspaceView {
     }
 
     /// Leaves the instances under `hidden` undrawn and unpickable, and with
-    /// `only`, draws nothing but what is under those roots — on the place's
+    /// `only`, draws nothing but what is under those roots, on the place's
     /// own sky and lighting, unlike the Animation Editor's isolation (see
     /// `rbx_viewer::Headless::set_layer_filter`).
     pub(crate) fn set_layer_filter(&mut self, only: Option<Vec<Ref>>, hidden: Vec<Ref>) {

@@ -1,5 +1,5 @@
-//! Editor-only layers: named, coloured groups an instance can belong to —
-//! at most one — so a part of a large place can be hidden, locked, soloed
+//! Editor-only layers: named, coloured groups an instance can belong to,
+//! at most one, so a part of a large place can be hidden, locked, soloed
 //! or isolated in the edit viewport the way every 3D tool's layers can.
 //!
 //! What a layer *is* travels with the place, so co-editing, merge and a
@@ -9,8 +9,8 @@
 //! ([`DEF_PREFIX`]`<id>` = `"rrggbb name"`). One attribute per layer rather
 //! than one table: `rbx_dom::merge` merges attributes by name, so two people
 //! adding a layer each merge cleanly instead of conflicting on one blob.
-//! Attributes are plain engine data — both file formats round-trip them
-//! and Roblox ignores them — and the publish path strips them anyway (see
+//! Attributes are plain engine data, both file formats round-trip them
+//! and Roblox ignores them, and the publish path strips them anyway (see
 //! `crate::strip`).
 //!
 //! What a layer *shows* ([`LayerView`]: hidden, locked, solo, isolate) is
@@ -178,7 +178,7 @@ pub(crate) fn own_layer(dom: &WeakDom, referent: Ref) -> Option<String> {
 }
 
 /// The layer `referent` is drawn as part of: its own, or else the nearest
-/// ancestor's — a `Model` put on a layer takes its parts with it.
+/// ancestor's, a `Model` put on a layer takes its parts with it.
 pub(crate) fn layer_of(dom: &WeakDom, referent: Ref) -> Option<String> {
     let mut current = Some(referent);
     while let Some(r) = current {

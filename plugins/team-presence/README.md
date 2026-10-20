@@ -69,10 +69,10 @@ Collaborators do not configure anything: they open the plugin and switch on
 **Share my presence**. Everything the connection needs lives in the place itself, on the
 folder `RbxNativePresence` in `ServerStorage`:
 
-- `PresenceSecret` — the shared secret (64 lower-case hex digits). The first
+- `PresenceSecret`: the shared secret (64 lower-case hex digits). The first
   person to connect mints it automatically; everyone else reads it. The room
   and signing key are derived from it and the `PlaceId`.
-- `RelayKind` / `RelayUrl` — which relay the team uses (see below). Unset
+- `RelayKind` / `RelayUrl`: which relay the team uses (see below). Unset
   means **Auto**, which needs nothing. A place **owner** who runs their own
   relay sets these once under "Show advanced"; every collaborator reads them
   from the place.
@@ -87,7 +87,7 @@ place leaks it. Treat the secret as team-wide, not as strong access control.
 
 Three transports, all official:
 
-- **hosted** (Auto, the default) — no account and no server. The first
+- **hosted** (Auto, the default), no account and no server. The first
   rbx-native user sharing presence in the place runs the relay itself behind a
   Cloudflare quick tunnel (from the `cloudflared` bundled with rbx-native) and
   announces the tunnel's address, signed with the place key, on the room's
@@ -95,9 +95,9 @@ Three transports, all official:
   plugin reads the newest announcement and connects. Studio cannot host, so
   with nobody in rbx-native the widget says it is waiting; Studio users see
   each other through Team Create anyway.
-- **worker** — the signed-WebSocket relay in `relay/` (a Cloudflare Worker),
+- **worker**: the signed-WebSocket relay in `relay/` (a Cloudflare Worker),
   which keeps the room in memory and fans out snapshots. Self-hosted.
-- **ntfy** — a plain [ntfy](https://ntfy.sh) pub/sub server, which needs no code
+- **ntfy**: a plain [ntfy](https://ntfy.sh) pub/sub server, which needs no code
   of ours. Each client publishes its signed presence to a topic derived from
   the room (`rbxnp-<room>`) and rebuilds the room from the message stream.
   Peers trust each other by HMAC, never the server. Only for a **self-hosted**

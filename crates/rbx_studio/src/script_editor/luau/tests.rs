@@ -1,7 +1,7 @@
 use super::{tokenize, TokenKind};
 
 /// Every token as `(text, kind)`, which is what the assertions below are
-/// actually about — a raw byte range says nothing to a reader.
+/// actually about, a raw byte range says nothing to a reader.
 fn lexed(source: &str) -> Vec<(&str, TokenKind)> {
     tokenize(source)
         .into_iter()
@@ -151,7 +151,7 @@ fn decimal_hex_binary_and_exponent_numbers_all_lex_whole() {
 
 #[test]
 fn a_concatenation_of_two_numbers_is_not_one_number() {
-    // `1..2` must lex as number, `..`, number — consuming the second dot into
+    // `1..2` must lex as number, `..`, number, consuming the second dot into
     // the first number would swallow the operator.
     assert_eq!(
         lexed("1..2"),
@@ -323,7 +323,7 @@ end
 #[test]
 fn no_arrangement_of_luaus_nastiest_tokens_breaks_the_range_contract() {
     // The highlighter contracts on ranges that are ordered, non-overlapping
-    // and sliceable, and the editor hands this lexer a buffer mid-edit — which
+    // and sliceable, and the editor hands this lexer a buffer mid-edit, which
     // is to say usually not valid Luau. Two of the passes are recursive
     // (interpolation holes re-enter the lexer; a type walks itself), so a
     // malformed nesting is the shape most likely to run one off the end or

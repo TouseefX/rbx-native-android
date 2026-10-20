@@ -2,7 +2,7 @@
 //! result into a [`Palette`].
 //!
 //! A colour is `#RRGGBB`, `#RRGGBBAA`, or a reference to another colour
-//! token — `@dock`, or `@check_on/0.12` for the same colour at another
+//! token, `@dock`, or `@check_on/0.12` for the same colour at another
 //! alpha. References resolve *after* the theme is layered over Default, so
 //! a theme that only changes `dock` also changes `tile` and `chrome`, which
 //! Default defines as `@dock`.
@@ -107,7 +107,7 @@ pub(super) fn parse(json: &str) -> Result<ThemeFile, String> {
 
 /// `theme` layered over Default, with its effects' paths resolved against
 /// `dir`. A token Default does not have is skipped and named in the
-/// warnings — a theme written for a newer editor should still load — but a
+/// warnings, a theme written for a newer editor should still load, but a
 /// value that does not parse is an error: guessing a colour is worse than
 /// saying which one is wrong.
 pub(super) fn build(

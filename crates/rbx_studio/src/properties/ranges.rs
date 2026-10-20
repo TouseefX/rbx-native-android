@@ -1,7 +1,7 @@
 //! Which properties a slider can span, and how far.
 //!
-//! The reflection dump carries no bounds — `Transparency` and `Brightness`
-//! are both a bare `float` to it — so the floors and ceilings here are
+//! The reflection dump carries no bounds, `Transparency` and `Brightness`
+//! are both a bare `float` to it, so the floors and ceilings here are
 //! named by hand, from what the value *means* rather than from what the
 //! engine will accept.
 //!
@@ -9,13 +9,13 @@
 //! how far the rail reaches: the number beside it still commits through
 //! `edit::parse` like any typed value, so a `GuiObject` really can be
 //! rotated 400° and a light really can be brighter than 10. Getting a range
-//! wrong costs reach, never correctness — which is why a property whose
+//! wrong costs reach, never correctness, which is why a property whose
 //! sensible span is genuinely open-ended (`FogEnd`, a `Size`) is simply
 //! absent rather than given a guess.
 //!
 //! Matched on the property's name alone, with no class beside it. Every
-//! name below means the same thing wherever it appears — a `Transparency`
-//! is 0–1 on a `BasePart`, a `Decal` and a `UIStroke` alike — and the one
+//! name below means the same thing wherever it appears, a `Transparency`
+//! is 0–1 on a `BasePart`, a `Decal` and a `UIStroke` alike, and the one
 //! name that spans two classes, `Rotation`, wants the same 0–360 on a
 //! `GuiObject` as on a `UIGradient`.
 
@@ -33,7 +33,7 @@ pub(crate) struct SliderSpan {
     /// hundredth of a `ClockTime` is thirty-six seconds.
     ///
     /// It never goes below a thousandth, which is what the field beside the
-    /// rail prints (see `shell::scrub::format`) — a step finer than that
+    /// rail prints (see `shell::scrub::format`), a step finer than that
     /// moves a value nobody can see and commits a write nobody asked for.
     pub(crate) step: f32,
 }
@@ -74,7 +74,7 @@ const RANGES: &[(&str, f32, f32, f32)] = &[
     ("Angle", 0., 180., 1.),
     ("GeographicLatitude", -90., 90., 1.),
     // An hour of the day, which is the one range Roblox itself wraps rather
-    // than clamps — a `ClockTime` of 25 is 1am. The rail stops at 24 so a
+    // than clamps, a `ClockTime` of 25 is 1am. The rail stops at 24 so a
     // drag walks one day; typing past it still wraps the way it always did.
     ("ClockTime", 0., 24., 0.1),
     // Open-ended in the engine, but not in practice: past these the scene
@@ -92,7 +92,7 @@ mod tests {
     use super::*;
 
     /// A slider is offered for the values that have a real ceiling and for
-    /// nothing else — a `Size` or a `FogEnd` has no end to put one at.
+    /// nothing else, a `Size` or a `FogEnd` has no end to put one at.
     #[test]
     fn only_bounded_properties_get_a_range() {
         assert_eq!(
@@ -128,7 +128,7 @@ mod tests {
     }
 
     /// Every range runs upward, and every step fits inside it without
-    /// going under what the field beside the rail can print — a `step` left
+    /// going under what the field beside the rail can print, a `step` left
     /// at the toolkit's own default of 1 would turn a `Transparency` into a
     /// two-position switch.
     #[test]

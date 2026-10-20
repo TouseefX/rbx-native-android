@@ -27,7 +27,7 @@ pub(crate) struct Defaults {
 }
 
 /// A spelling a file may use for a property, the name Roblox saves it
-/// under, and the property itself — `("Color", "Color3uint8", "Color")`,
+/// under, and the property itself, `("Color", "Color3uint8", "Color")`,
 /// or `("size", "size_xml", "Size")` for a `Fire`.
 #[derive(Debug, Clone)]
 pub(crate) struct Rename {
@@ -61,7 +61,7 @@ struct RawFile {
 }
 
 impl Defaults {
-    /// `weight` names a `FontWeight` member's value — the file spells a
+    /// `weight` names a `FontWeight` member's value, the file spells a
     /// font's weight by name, the DOM stores the number.
     pub(crate) fn parse(
         json: &str,
@@ -87,8 +87,8 @@ impl Defaults {
 impl ReflectionDatabase {
     /// The value `property` holds on a freshly created `class`, as Studio
     /// reports it. Only a class Studio can create has any: an abstract
-    /// `BasePart` holds nothing, while every `Part` default — inherited ones
-    /// included — is recorded under `Part` itself.
+    /// `BasePart` holds nothing, while every `Part` default, inherited ones
+    /// included, is recorded under `Part` itself.
     pub fn default_value(&self, class: &str, property: &str) -> Option<&Variant> {
         self.defaults.classes.get(class)?.values.get(property)
     }
@@ -102,7 +102,7 @@ impl ReflectionDatabase {
     }
 
     /// Every name a file may hold `name`'s value under, the one Roblox saves
-    /// first — `["size", "Size"]` for `BasePart.Size`. A value that has none
+    /// first, `["size", "Size"]` for `BasePart.Size`. A value that has none
     /// of these stored is its class default.
     pub fn stored_names<'a>(&'a self, class: &str, name: &'a str) -> Vec<&'a str> {
         let canonical = self.canonical_name(class, name);

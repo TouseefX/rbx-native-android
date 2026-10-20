@@ -1,6 +1,6 @@
-//! Isolation: a scene that draws only what hangs under a few roots — the
+//! Isolation: a scene that draws only what hangs under a few roots, the
 //! Animation Editor's one rig on a plain backdrop, the way Blender's
-//! animation workspace shows a single armature — while every instance keeps
+//! animation workspace shows a single armature, while every instance keeps
 //! its `Ref`, its slot and its GPU record.
 //!
 //! Nothing is taken out of the scene for it. A part outside the roots is
@@ -45,7 +45,7 @@ pub(crate) struct Isolation {
     /// which of the fresh instances stand under a root.
     inside: HashSet<Ref>,
     /// The particle emitters, beams, trails and in-world GUIs that belong to
-    /// the isolated roots and so still draw — see [`Scene::sweep_effects`].
+    /// the isolated roots and so still draw, see [`Scene::sweep_effects`].
     effects: HashSet<Ref>,
 }
 
@@ -136,7 +136,7 @@ impl Scene {
     /// beam or trail spans does, or when the part a `BillboardGui`/
     /// `SurfaceGui` hangs off does. A sword's trail is parented to the
     /// sword but stretched between attachments on it; a nametag lives in
-    /// `PlayerGui` but adorns the head — both belong to the rig.
+    /// `PlayerGui` but adorns the head, both belong to the rig.
     ///
     /// Run after [`Scene::isolate`] and after every replan of an effect list
     /// (see `Scene::replan_effect`), which is the only time those lists
@@ -186,7 +186,7 @@ impl Scene {
 
     /// What an isolated view's sun shadow is fitted to: the parts still
     /// drawn, joined with a [`STAGE_REACH`] square of floor around their
-    /// centre at their lowest point — the stage grid the rig stands on.
+    /// centre at their lowest point, the stage grid the rig stands on.
     /// `None` while nothing is isolated, or when no part is left drawn; the
     /// renderer then fits to the whole place as usual.
     ///
@@ -219,7 +219,7 @@ impl Scene {
             .is_none_or(|isolation| isolation.effects.contains(&referent))
     }
 
-    /// [`Scene::particle_emitters`] less the ones an isolation hides — what
+    /// [`Scene::particle_emitters`] less the ones an isolation hides, what
     /// the renderer builds from. The full list stays for asset collection.
     pub(crate) fn drawn_particle_emitters(&self) -> Cow<'_, [Emitter]> {
         self.drawn(&self.emitters, |emitter| emitter.referent)
@@ -237,8 +237,8 @@ impl Scene {
 
     /// Every `BillboardGui`/`SurfaceGui` this scene could place, each already
     /// carrying the pixel size of the canvas its tree is painted into, less
-    /// the ones an isolation hides. The renderer owns that canvas — a `Scene`
-    /// has no GPU handle — and finishes a billboard's quad, which only exists
+    /// the ones an isolation hides. The renderer owns that canvas, a `Scene`
+    /// has no GPU handle, and finishes a billboard's quad, which only exists
     /// once an eye does.
     pub(crate) fn drawn_gui_spaces(&self) -> Cow<'_, [SpaceGui]> {
         self.drawn(&self.gui_spaces, |gui| gui.referent)
@@ -263,7 +263,7 @@ impl Scene {
     }
 
     /// Whether `referent` is to be hidden by the isolation as it stands,
-    /// asked of `dom` itself and remembered for the next sweep — what a
+    /// asked of `dom` itself and remembered for the next sweep, what a
     /// single-part edit uses, since the part may have just been moved under
     /// a root or out from under one. Always `false` while nothing is
     /// isolated.
@@ -279,7 +279,7 @@ impl Scene {
         !inside
     }
 
-    /// Writes the isolation onto every part and resolved instance — after
+    /// Writes the isolation onto every part and resolved instance, after
     /// [`Scene::isolate`], and after anything that rebuilt or appended to
     /// either list without a DOM to ask (a streaming landing, a union's
     /// recovered pieces).

@@ -1,5 +1,5 @@
 //! Routing one attribute's current value through the Properties panel's
-//! existing per-type editors — the piece [`super`]'s module doc calls out as
+//! existing per-type editors, the piece [`super`]'s module doc calls out as
 //! the one thing here that must never grow a second implementation.
 
 use std::rc::Rc;
@@ -19,7 +19,7 @@ impl Shell {
     /// The attribute's value, routed through the exact per-type widget an
     /// ordinary property of that type would get
     /// (`properties::attributes::edit_kind` wraps the same
-    /// `properties::value_edit_kind` `Properties::edit_kind` uses) — a
+    /// `properties::value_edit_kind` `Properties::edit_kind` uses), a
     /// `Bool` becomes the panel's own checkbox exactly as it does for a real
     /// property (see `shell::panels::properties`), because a checkbox needs
     /// no persistent widget entity either way. A type with no editor at all
@@ -92,7 +92,7 @@ impl Shell {
         });
         // Attributes are never `Faces`/`Axes` (not one of the types
         // `Instance:SetAttribute` accepts), so `RowEditor::Flags` never
-        // reaches this factory — it exists only to satisfy `render_editor`'s
+        // reaches this factory, it exists only to satisfy `render_editor`'s
         // signature. Its return type is left to inference (rather than
         // spelled out on the closure) to dodge clippy's `type_complexity`.
         // A sequence attribute's row opens the same graph an ordinary
@@ -122,7 +122,7 @@ impl Shell {
     }
 }
 
-/// A control with its last commit's error underneath — the same shape
+/// A control with its last commit's error underneath, the same shape
 /// `shell::rows::property_row_control`'s composite path renders, kept small
 /// here since this section never needs the rest of that function.
 fn v_flex_error(control: AnyElement, message: String) -> AnyElement {

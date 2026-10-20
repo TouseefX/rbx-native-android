@@ -13,15 +13,15 @@ use super::bsp::Polygon;
 /// Groups `polygons` by shared-edge adjacency (union-find), then keeps: the
 /// largest group with positive signed volume (the main shell), every other
 /// positive group that lies inside `bake` (the extent Studio's own bake gave
-/// the union, centred on its frame — `None` keeps them all), and *every*
+/// the union, centred on its frame, `None` keeps them all), and *every*
 /// group with non-positive volume, however small.
 ///
 /// A union of separate parts is separate pieces in Studio too (a keyboard's
 /// keys, a row of bricks), so a piece is only debris when it lies where
 /// Studio's own result has nothing: a sliver the BSP left outside the real
-/// shape. A negative-volume group is a surface facing inward — a fully
+/// shape. A negative-volume group is a surface facing inward, a fully
 /// enclosed cavity, like a negation sitting entirely inside the additive
-/// solid — which is a topologically required complement to the shell it
+/// solid, which is a topologically required complement to the shell it
 /// hollows out; dropping it would silently undo the carve it represents.
 /// `is_watertight` still holds afterward: every discarded group is its own
 /// individually closed piece, so removing it only removes matched edge
@@ -64,7 +64,7 @@ pub(super) fn discard_disconnected_debris(
             }
         }
     }
-    // A negative-volume component is an inward-facing surface — a fully
+    // A negative-volume component is an inward-facing surface, a fully
     // enclosed cavity (the classic case: a negation entirely inside the
     // additive solid, like a bubble) rather than a piece of the outer shell.
     // It is topologically required, however small: dropping it would silently
@@ -151,8 +151,8 @@ fn grid(v: DVec3) -> GridPoint {
 /// three corners.
 ///
 /// Roblox's own coordinates carry about 1e-5 of float noise, so two faces
-/// meant to meet can sit 2–4e-5 apart — just past the BSP's split
-/// tolerance — and the boolean leaves slivers that thin between them. They
+/// meant to meet can sit 2–4e-5 apart, just past the BSP's split
+/// tolerance, and the boolean leaves slivers that thin between them. They
 /// have no visible area, but their edges read as doubled or zero-length to
 /// [`is_watertight`]; on real places that was most of what failed it.
 /// Neighbouring cells are searched as well as a vertex's own, so two noisy
@@ -208,7 +208,7 @@ pub(super) fn clean(polygons: Vec<Polygon>) -> Vec<Polygon> {
 }
 
 /// A fragment is finalized as soon as `clip_polygons` confirms it lies in
-/// front of just one of the other solid's planes — correct, since that alone
+/// front of just one of the other solid's planes, correct, since that alone
 /// proves it is outside a convex cutter, but it means a neighboring fragment
 /// that needed more plane tests can have their shared boundary edge
 /// subdivided on its side and not on this one. Splits every polygon edge at
@@ -275,7 +275,7 @@ pub(super) fn weld_t_junctions(polygons: Vec<Polygon>) -> Vec<Polygon> {
         .collect()
 }
 
-/// A lone stray edge stays invisible at render distance — the risk this
+/// A lone stray edge stays invisible at render distance, the risk this
 /// guards against is a shattered, hole-ridden mesh, not a single hairline
 /// sliver. Anything past this fraction of the mesh's own edges reads as
 /// broken rather than merely imperfect (the additive-only fallback is safer
@@ -284,7 +284,7 @@ pub(super) fn weld_t_junctions(polygons: Vec<Polygon>) -> Vec<Polygon> {
 const MAX_LEAK_FRACTION: f64 = 0.02;
 
 /// Every directed polygon edge in a correctly closed, consistently-wound
-/// solid is matched by as many of its reverse — the invariant a leak (an
+/// solid is matched by as many of its reverse, the invariant a leak (an
 /// open edge) breaks. As many, not exactly one: two parts a builder set
 /// touching only along an edge (a door frame's jambs and lintel) meet in a
 /// legitimately non-manifold edge that four faces share. Called once, by
@@ -321,8 +321,8 @@ const MAX_SLIVER_EDGES: usize = 512;
 
 /// Whether every open edge in `bad` borders a gap no wider than
 /// [`SLIVER_GAP`]: either it is that short itself, or another open edge runs
-/// back alongside it within that distance. Such a gap — a cylinder's facet
-/// corner landing a few ten-thousandths off a box's edge — has no area
+/// back alongside it within that distance. Such a gap, a cylinder's facet
+/// corner landing a few ten-thousandths off a box's edge, has no area
 /// anyone could see, however many of a small mesh's edges it touches.
 pub(super) fn only_slivers(bad: &[DirectedEdge]) -> bool {
     // Pairwise: past this many open edges the mesh is broken anyway, and

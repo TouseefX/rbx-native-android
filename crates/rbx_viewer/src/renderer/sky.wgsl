@@ -10,7 +10,7 @@
 // Fitted on the red channel of the same capture, the one Studio does not run
 // out of headroom in: its sky is a third of the way to the haze colour two
 // degrees up and barely a twentieth at twenty-six, which is a far steeper
-// profile than the eye expects — the white band is narrow and the zenith keeps
+// profile than the eye expects, the white band is narrow and the zenith keeps
 // the panel's own blue.
 const ATMOSPHERE_SKY_DEPTH: f32 = 42.0;
 const ATMOSPHERE_SKY_FLOOR: f32 = 0.013;
@@ -22,7 +22,7 @@ const HAZE_AIR_MASS_GAIN: f32 = 0.5;
 // `Atmosphere.Glare`, approximated: the property brightens and widens the halo
 // around the sun, so it is one power lobe about the light direction, tightest
 // at Glare 0 and broad at Studio's own maximum. Nothing here is Roblox's own
-// formula — the engine computes its glare in screen space over the finished
+// formula, the engine computes its glare in screen space over the finished
 // frame, which this pass has no access to.
 const GLARE_TIGHT_EXPONENT: f32 = 200.0;
 const GLARE_WIDE_EXPONENT: f32 = 8.0;
@@ -32,7 +32,7 @@ const GLARE_FULL: f32 = 10.0;
 const GLARE_HORIZON_FADE: f32 = 8.0;
 
 // `Clouds`: a flat deck at a fixed height above the eye, read through the view
-// direction the way an infinite ground plane is — `direction.xz / direction.y`
+// direction the way an infinite ground plane is, `direction.xz / direction.y`
 // is where that ray crosses a plane one unit up, so scaling it by a height in
 // studs gives a 2D coordinate on the deck without ever touching a texture.
 // Chosen purely by eye: big enough that a full sky sweep shows several cloud
@@ -53,7 +53,7 @@ const CLOUD_NOISE_SCALE: f32 = 0.01;
 // continuous at the octave boundaries.
 const CLOUD_EDGE_SOFTNESS: f32 = 0.12;
 // `Clouds.Density`, approximated: Roblox's own docs describe it as "mainly
-// affecting transparency", heavy at 1 and "light, semi-translucent" toward 0 —
+// affecting transparency", heavy at 1 and "light, semi-translucent" toward 0,
 // so it drives most of the blend weight, with this floor keeping even the
 // thinnest cloud somewhat visible rather than vanishing outright.
 const CLOUD_MIN_OPACITY: f32 = 0.35;
@@ -109,7 +109,7 @@ fn cloud_field(point: vec2<f32>) -> f32 {
 
 /// `Clouds`, blended over the sky wherever the noise field clears its own
 /// `Cover` threshold. `Cover = 0` (Roblox's own "sparse" end of the slider) is
-/// this renderer's stand-in for `Enabled = false` too — see
+/// this renderer's stand-in for `Enabled = false` too, see
 /// `renderer::lighting`, which packs both to the same zero.
 fn clouds(sky: vec3<f32>, direction: vec3<f32>) -> vec3<f32> {
     let cover = lighting.clouds_extra.x;
@@ -156,7 +156,7 @@ fn glare(direction: vec3<f32>) -> vec3<f32> {
 
 /// The same atmosphere, over the sky itself: a skybox panel is infinitely far
 /// away, so its haze is set by the air mass along the view ray rather than by
-/// any distance. Studio hazes its sky exactly like this — the horizon of a
+/// any distance. Studio hazes its sky exactly like this, the horizon of a
 /// default Atmosphere is white, not blue.
 fn shade_sky(color: vec3<f32>, direction: vec3<f32>) -> vec3<f32> {
     // One set of panels covers the whole day, so the night comes from here:

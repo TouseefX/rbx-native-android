@@ -1,8 +1,8 @@
 //! The text half of a `TextLabel`/`TextButton`/`TextBox`, read into a
 //! resolution-independent [`Text`]: what to draw, in which face, colour and
 //! size, and how to fit it into the box `super::super::layout` resolves. The
-//! string itself is already split into styled [`Span`]s here — one for plain
-//! text, several once `RichText` markup is parsed (see [`rich`]) — so nothing
+//! string itself is already split into styled [`Span`]s here, one for plain
+//! text, several once `RichText` markup is parsed (see [`rich`]), so nothing
 //! downstream ever sees a tag.
 
 mod rich;
@@ -16,7 +16,7 @@ use super::props::{alpha, color, enum_of, flag, float, integer, string};
 use super::Align;
 use crate::fonts::Face;
 
-/// Roblox's own default `TextColor3`, `Color3.fromRGB(27, 42, 53)` — the
+/// Roblox's own default `TextColor3`, `Color3.fromRGB(27, 42, 53)`: the
 /// same as its default `BorderColor3`. A place file serializes the property,
 /// so this only shows on a tree built in code.
 const DEFAULT_TEXT: [f32; 3] = [27.0 / 255.0, 42.0 / 255.0, 53.0 / 255.0];
@@ -34,7 +34,7 @@ const Y_CENTER: u32 = 1;
 const Y_BOTTOM: u32 = 2;
 /// `TextTruncate.None`; `AtEnd` (1) and `SplitWord` (2) both end in `...`.
 const TRUNCATE_NONE: u32 = 0;
-/// `AutomaticSize`: None = 0, X = 1, Y = 2, XY = 3 — a bit per axis.
+/// `AutomaticSize`: None = 0, X = 1, Y = 2, XY = 3, a bit per axis.
 const AUTOMATIC_X: u32 = 1;
 const AUTOMATIC_Y: u32 = 2;
 
@@ -81,7 +81,7 @@ impl Span {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Text {
     pub(crate) spans: Vec<Span>,
-    /// `TextColor3` — or `PlaceholderColor3` while a `TextBox` shows its
+    /// `TextColor3`: or `PlaceholderColor3` while a `TextBox` shows its
     /// placeholder.
     pub(crate) color: [f32; 3],
     /// `1 - TextTransparency`.

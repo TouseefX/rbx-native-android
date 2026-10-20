@@ -12,10 +12,10 @@
 //! Empirically (see the `#[ignore]`d download test), a node's own `CFrame`
 //! property is not useful on its own when its parent is a `NegateOperation`:
 //! it always carries a zero position with the *operation's own* rotation, a
-//! redundant echo of the parent rather than a further local offset — `walk`'s
+//! redundant echo of the parent rather than a further local offset, `walk`'s
 //! `echo` parameter skips composing it in that case. Everywhere else, placing
 //! every part is standard CFrame-parenting composition of each operation
-//! node's `CFrame` down from the union's own frame — every [`Leaf::cframe`]
+//! node's `CFrame` down from the union's own frame, every [`Leaf::cframe`]
 //! is that composed result, in the union's local space so one tree serves
 //! every instance.
 
@@ -36,7 +36,7 @@ const NEGATE_OPERATION: &str = "NegateOperation";
 const ASSET_CLASS: &str = "PartOperationAsset";
 const CHILD_DATA_PROPERTIES: [&str; 2] = ["ChildData", "ChildData2"];
 // `ChildData` is a nested .rbxm, so it is never valid UTF-8 and always decodes
-// to `Variant::Unknown` — but its wire type is still String (0x01): Roblox's
+// to `Variant::Unknown`: but its wire type is still String (0x01): Roblox's
 // BinaryString shares String's wire encoding. See
 // `rbx_binary::chunks::prop::scalar::string_value`. `rbx_xml` reports a
 // non-UTF-8 `SharedString` under the same id.
@@ -47,10 +47,10 @@ const SHARED_STRING_TYPE_ID: u8 = 0x1c;
 /// One original `BasePart` of a union, in the union's own frame.
 pub(super) struct Leaf {
     /// Whether the leaf itself is a `NegateOperation` with no children of its
-    /// own — a shape to carve rather than to add.
+    /// own, a shape to carve rather than to add.
     pub(super) negate: bool,
     pub(super) geometry: Geometry,
-    /// Composed placement in the union's frame — see the module doc.
+    /// Composed placement in the union's frame, see the module doc.
     pub(super) cframe: Mat4,
     /// The leaf's own properties (colour, material, transparency…), kept so a
     /// fallback box can be built through the normal part pipeline later.
@@ -94,12 +94,12 @@ impl Node {
 
     /// The additive-only reading of the tree, one `Part` per surviving leaf:
     /// what draws when the boolean itself cannot be computed. `negate` latches
-    /// under any `NegateOperation` ancestor — a compound shape subtracted from
+    /// under any `NegateOperation` ancestor, a compound shape subtracted from
     /// another subtracts every one of its own pieces, not just the top one.
     ///
-    /// Every piece stands in for the same union instance — that `Ref`, rather
+    /// Every piece stands in for the same union instance, that `Ref`, rather
     /// than the leaf's own, which is only unique within its transient nested
-    /// DOM — and is told apart from its siblings by its position in this
+    /// DOM, and is told apart from its siblings by its position in this
     /// walk. That position depends on the tree and nothing else, and the tree
     /// is a function of the union's asset bytes alone, so reading the same
     /// asset again hands the same leaf the same [`PartId`] however the union
@@ -159,7 +159,7 @@ impl Node {
 /// point at by `AssetId` (see [`Parsed::missing`]); an empty entry is one that
 /// could not be fetched, drawn as the box it stands for.
 ///
-/// `None` means the bytes did not parse at all — the caller keeps the box in
+/// `None` means the bytes did not parse at all, the caller keeps the box in
 /// that case. A tree with no additive leaf (all negated) is still a tree: the
 /// caller hides the box regardless, an empty union being a better guess than
 /// a solid one.
@@ -172,7 +172,7 @@ pub(super) fn parse(
 }
 
 /// [`parse`], every part's stored `size` raised to at least `min_size` on
-/// each axis first — the smallest part the engine built when the union was
+/// each axis first, the smallest part the engine built when the union was
 /// baked (see `super::legacy`).
 pub(super) fn parse_at_least(
     bytes: &[u8],
@@ -256,7 +256,7 @@ impl Context<'_> {
     /// `NegateOperation` is restricted by the engine to exactly one child, and
     /// that child's own `CFrame` is not a further local offset but a verbatim
     /// copy of the `NegateOperation`'s own rotation with position zeroed out
-    /// (empirically — see the module doc); composing it in as if it were a
+    /// (empirically, see the module doc); composing it in as if it were a
     /// real relative transform silently double-applies that rotation. When
     /// `echo` is set, `referent`'s own `CFrame` is ignored and `parent` (the
     /// `NegateOperation`'s already-composed frame) is used as-is.
@@ -342,7 +342,7 @@ fn resize(properties: &BTreeMap<String, Variant>) -> Vec3 {
 
 /// A union's own nested operation document: `ChildData` (a `BinaryString`)
 /// or `ChildData2` (the `SharedString` newer files keep it in), whichever is
-/// filled. `None` when neither holds anything, or only valid UTF-8 — which
+/// filled. `None` when neither holds anything, or only valid UTF-8, which
 /// can only mean no nested document at all.
 pub(super) fn child_data(properties: &BTreeMap<String, Variant>) -> Option<&[u8]> {
     CHILD_DATA_PROPERTIES

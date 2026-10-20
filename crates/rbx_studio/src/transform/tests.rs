@@ -74,7 +74,7 @@ fn a_modified_digit_is_not_a_tool() {
 #[test]
 fn shift_two_jumps_to_the_move_scale_increment_field() {
     // creator-docs: "To quickly jump to the move/scale increment input, press
-    // Shift+2" — so it must not quietly mean Move instead.
+    // Shift+2", so it must not quietly mean Move instead.
     assert_eq!(
         action_for("2", shift()),
         Some(Action::FocusIncrement(SnapKind::Translate))
@@ -287,7 +287,7 @@ fn a_target_reads_a_parts_placement_out_of_the_dom() {
     assert_eq!(target.referent, part);
     assert!((target.position() - Vec3::new(3.0, 4.0, -5.0)).length() < 1e-4);
     // The part's own X axis points along world -Z after that turn, and still
-    // carries its 4-stud size — which is why the gizmo normalizes it.
+    // carries its 4-stud size, which is why the gizmo normalizes it.
     let rotation = target.rotation();
     assert!((rotation.x_axis.normalize() - Vec3::NEG_Z).length() < 1e-4);
     assert!((rotation.x_axis.length() - 4.0).abs() < 1e-4);
@@ -433,7 +433,7 @@ fn several_selected_parts_centre_the_gizmo_between_them_not_on_the_anchor() {
         "{centre}"
     );
 
-    // And it is deliberately *not* the anchor, which is still `a` — the two
+    // And it is deliberately *not* the anchor, which is still `a`, the two
     // answer different questions (see `Targets`' own doc comment).
     let anchor = targets.anchor().expect("three parts");
     assert_eq!(anchor.referent, a);
@@ -456,8 +456,8 @@ fn the_centre_does_not_depend_on_selection_order() {
 }
 
 /// The whole point of `Targets::translate`: every part in a group drag moves
-/// by the exact same offset, so their positions relative to each other —
-/// and to the anchor — never change.
+/// by the exact same offset, so their positions relative to each other,
+/// and to the anchor, never change.
 #[test]
 fn translating_moves_every_target_by_the_same_offset_and_preserves_their_layout() {
     let (dom, a, b, c) = three_parts();
@@ -473,13 +473,13 @@ fn translating_moves_every_target_by_the_same_offset_and_preserves_their_layout(
     }
 
     // The relative offsets between the three parts are exactly what they
-    // were before the drag — nothing rearranged itself.
+    // were before the drag, nothing rearranged itself.
     let after: Vec<Vec3> = targets.iter().map(Target::position).collect();
     assert!(((after[1] - after[0]) - (before[1] - before[0])).length() < 1e-4);
     assert!(((after[2] - after[0]) - (before[2] - before[0])).length() < 1e-4);
 
     // And a second call keeps moving from where the parts now stand, not
-    // from where they started — exactly what a drag gesture's repeated
+    // from where they started, exactly what a drag gesture's repeated
     // `drag_to` calls need.
     let more = targets.translate(delta);
     for (&(_, position), original) in more.iter().zip(&after) {
@@ -511,7 +511,7 @@ fn unit_cube_at(dom: &mut WeakDom, parent: Option<Ref>, x: f32) -> Ref {
 }
 
 /// A `Model` holding two unit cubes four studs apart, one of them buried in a
-/// `Folder` — the shape of a real prop, and what a viewport click actually
+/// `Folder`: the shape of a real prop, and what a viewport click actually
 /// selects (see `rbx_viewer::pick::outermost_model`).
 fn model_of_two_parts() -> (WeakDom, Ref, Ref, Ref) {
     let mut dom = WeakDom::new();
@@ -522,8 +522,8 @@ fn model_of_two_parts() -> (WeakDom, Ref, Ref, Ref) {
     (dom, model, near, far)
 }
 
-/// The bug this resolution exists for: selecting a `Model` — which is what
-/// clicking any part inside one does — used to leave the gizmo with nothing
+/// The bug this resolution exists for: selecting a `Model`, which is what
+/// clicking any part inside one does, used to leave the gizmo with nothing
 /// to stand on at all.
 #[test]
 fn a_selected_model_targets_every_part_beneath_it() {
@@ -543,7 +543,7 @@ fn a_selected_model_targets_every_part_beneath_it() {
     );
 
     // Scale and Rotate write a `Size` and a `CFrame`, which a `Model` has
-    // neither of — so the anchor is a real part beneath it.
+    // neither of, so the anchor is a real part beneath it.
     let anchor = targets.anchor().expect("a model with parts under it");
     assert_ne!(anchor.referent, model);
     assert!(anchor.referent == near || anchor.referent == far);
@@ -768,7 +768,7 @@ fn a_lone_parts_pivot_moves_as_a_scaled_point_of_its_resize() {
     let mut targets = with_pivot();
     let anchor = targets.anchor().unwrap();
     // Doubled in Y with its bottom face (y = -1) held: the pivot two studs
-    // above the centre stretches to four, standing at y = 5 — where y = 2
+    // above the centre stretches to four, standing at y = 5, where y = 2
     // lands when everything is scaled by two about y = -1.
     targets.set_anchor(anchor.resized_to(Vec3::new(2.0, 4.0, 2.0), Vec3::new(0.0, 1.0, 0.0)));
     assert!((pivot_at(&targets) - Vec3::new(0.0, 5.0, 0.0)).length() < 1e-5);
