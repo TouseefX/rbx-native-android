@@ -36,7 +36,7 @@ fn a_placeholder_item_is_exactly_the_set_of_disabled_items() {
 }
 
 /// The four titles the rest of this module's doc comment describes, in the
-/// order Studio itself puts them — a reordering here changes what F10 lands
+/// order Studio itself puts them, a reordering here changes what F10 lands
 /// on, so it is worth being deliberate about.
 #[test]
 fn the_bar_holds_the_four_titles_in_order() {
@@ -111,7 +111,7 @@ fn file_closes_the_place_under_open() {
     )));
 }
 
-/// Save and Publish to Roblox are two live, distinct commands — not one
+/// Save and Publish to Roblox are two live, distinct commands, not one
 /// placeholder, and not the local Save under another name.
 #[test]
 fn file_saves_and_publishes_to_roblox_as_two_live_commands() {

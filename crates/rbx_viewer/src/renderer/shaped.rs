@@ -2,7 +2,7 @@
 //! Anything with a `Transparency` above zero goes to `super::translucent`
 //! instead.
 //!
-//! Every kind — the cube included — goes through the same lit pipeline: the
+//! Every kind, the cube included, goes through the same lit pipeline: the
 //! vertex and instance layouts are identical, so only the mesh and the instance
 //! buffer change between groups.
 
@@ -16,7 +16,7 @@ use super::slots::Roster;
 use crate::scene::{of_part, Part, PartId, ShapeKind};
 
 /// One world-space bounding sphere (center, radius) per instance, kept
-/// beside the GPU record — what [`Shaped::draw`]'s cull test checks each one
+/// beside the GPU record, what [`Shaped::draw`]'s cull test checks each one
 /// against without ever touching the buffer itself.
 type Sphere = (Vec3, f32);
 
@@ -44,7 +44,7 @@ impl Shaped {
     /// Draws every batch, skipping whatever `cull` rules out before it ever
     /// costs a draw call: each batch is split into the maximal runs of
     /// consecutive visible instances (see `super::cull::visible_runs`) and
-    /// only those are drawn, in the buffer's existing order — reordering it
+    /// only those are drawn, in the buffer's existing order, reordering it
     /// would break the per-instance slots [`Shaped::sync`] writes into.
     ///
     /// The caller must already have the lit pipeline and the camera bind
@@ -82,17 +82,17 @@ impl Shaped {
     pub(super) fn sync(&mut self, device: &wgpu::Device, part: &Part) {
         let wanted = belongs(part).then(|| (part.kind, InstanceRaw::from_part(part), sphere(part)));
         // A unit shape's batch needs no payload, so a new one can always be
-        // made — the `false` case never happens here.
+        // made, the `false` case never happens here.
         self.batches.sync(device, part.id, wanted, |_| Some(()));
     }
 
-    /// Takes one box out of whichever batch holds it — it stopped drawing
+    /// Takes one box out of whichever batch holds it, it stopped drawing
     /// as one, or is gone. A no-op for an id no batch holds.
     pub(super) fn remove(&mut self, id: PartId) {
         self.batches.remove(id);
     }
 
-    /// Uploads what the edits since the last frame owe the buffers — see
+    /// Uploads what the edits since the last frame owe the buffers, see
     /// `slots::Slots::flush`.
     pub(super) fn flush(&mut self, queue: &wgpu::Queue) {
         self.batches.flush(queue);

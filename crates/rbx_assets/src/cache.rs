@@ -65,8 +65,8 @@ fn default_cache_dir() -> Result<PathBuf, CacheError> {
         .ok_or(CacheError::NoCacheDir)
 }
 
-/// This project's per-user cache folder — `$XDG_CACHE_HOME/rbx-native`,
-/// `%LOCALAPPDATA%\rbx-native`, or `~/.cache/rbx-native` — which the asset
+/// This project's per-user cache folder, `$XDG_CACHE_HOME/rbx-native`,
+/// `%LOCALAPPDATA%\rbx-native`, or `~/.cache/rbx-native`: which the asset
 /// cache and anything else disposable live under.
 pub fn cache_root() -> Option<PathBuf> {
     if let Some(xdg) = non_empty_env("XDG_CACHE_HOME") {
@@ -166,7 +166,7 @@ mod tests {
     fn default_dir_honors_xdg_cache_home() {
         // SAFETY: env var mutation is process-global; guarded by ENV_LOCK so
         // this can't interleave with the other tests below that also mutate
-        // XDG_CACHE_HOME/LOCALAPPDATA/HOME — scope the check to the
+        // XDG_CACHE_HOME/LOCALAPPDATA/HOME, scope the check to the
         // pure-computation helper instead of asserting on the process-wide
         // environment.
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());

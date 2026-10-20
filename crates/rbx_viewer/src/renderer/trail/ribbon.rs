@@ -1,11 +1,11 @@
 //! Turns one `Trail`'s ribbon points (`crate::scene::trail_segments`) into
-//! final world-space vertices — the GPU-facing half of the pass; see
+//! final world-space vertices, the GPU-facing half of the pass; see
 //! `crate::scene::trail` for the eye-independent half (segment recording,
 //! sequence sampling by age).
 //!
 //! `FaceCamera` is implicit for every trail (see `scene::trail::Trail`'s
 //! doc), so every point's width axis is built the same way
-//! `renderer::beam::ribbon::face_camera_width` builds a `Beam`'s one —
+//! `renderer::beam::ribbon::face_camera_width` builds a `Beam`'s one,
 //! duplicated here rather than reused since that function is `pub(super)`,
 //! scoped to `renderer::beam` only.
 
@@ -17,7 +17,7 @@ use crate::scene::{trail_segments, Trail, TrailRecorder};
 /// Builds one trail's ribbon vertices from its recorded history.
 ///
 /// Fewer than two ribbon points (this viewer's own case whenever nothing has
-/// moved — see `scene::trail`'s module doc) returns an empty vector: there is
+/// moved, see `scene::trail`'s module doc) returns an empty vector: there is
 /// no segment to draw, so nothing is appended to the shared vertex buffer and
 /// no draw call ever names this trail.
 pub(super) fn vertices(
@@ -66,7 +66,7 @@ pub(super) fn vertices(
 
 /// Appends `next`'s vertices to `into`, bridging two trails sharing one
 /// texture group with two degenerate triangles rather than a second draw
-/// call — identical trick to `renderer::beam::ribbon::append`.
+/// call, identical trick to `renderer::beam::ribbon::append`.
 pub(super) fn append(into: &mut Vec<VertexRaw>, next: &[VertexRaw]) {
     if let (Some(&last), Some(&first)) = (into.last(), next.first()) {
         into.push(last);
@@ -87,13 +87,13 @@ fn travel_tangent(midpoints: &[Vec3], i: usize) -> Vec3 {
     }
     // Every recorded position along the trail coincides (only possible with
     // `MinLength` at 0 and no real movement): no direction of travel is
-    // defined, so pick a stable arbitrary one rather than NaN — matching
+    // defined, so pick a stable arbitrary one rather than NaN, matching
     // `scene::beam::curve::Curve::tangent`'s identical fallback.
     Vec3::Z
 }
 
 /// Width axis: perpendicular to both the direction of travel and the eye, so
-/// the ribbon always turns to face the camera — identical formula to
+/// the ribbon always turns to face the camera, identical formula to
 /// `renderer::beam::ribbon::face_camera_width`.
 fn face_camera_width(tangent: Vec3, to_camera: Vec3) -> Vec3 {
     let dir = tangent.cross(to_camera);

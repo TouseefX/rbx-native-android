@@ -1,5 +1,5 @@
 //! The launcher: the three windows a bare `rbxstudio` opens before any
-//! place is loaded — the API key setup wizard (first launch), Home (every
+//! place is loaded, the API key setup wizard (first launch), Home (every
 //! launch after), and Roblox publishing (the key, from Home's sidebar card).
 //! What they stand on is
 //! `crate::home` and `crate::key_store`.
@@ -30,7 +30,7 @@ pub(crate) use key_check::{
     summary as key_summary, KeyCheck, Summary as KeySummary, Tag as KeyTag,
 };
 
-/// A check of the stored key, started now — Settings › Account's card.
+/// A check of the stored key, started now, Settings › Account's card.
 pub(crate) fn check_stored_key(cx: &mut App) -> Entity<KeyCheck> {
     cx.new(|cx| KeyCheck::with_key(key_check::stored_secret(), cx))
 }

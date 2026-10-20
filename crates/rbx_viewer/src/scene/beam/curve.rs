@@ -1,6 +1,6 @@
 //! A `Beam`'s cubic Bézier curve: `P0`/`P3` are the two attachments' world
 //! positions, `P1`/`P2` sit `CurveSize0`/`CurveSize1` studs from them along
-//! their own **X** axis (`Attachment.Axis`) — see the `Beam` docs' "Beam
+//! their own **X** axis (`Attachment.Axis`), see the `Beam` docs' "Beam
 //! Curvature" section, which the task brief's "look vector" was a
 //! simplification of.
 
@@ -74,7 +74,7 @@ mod tests {
     fn zero_curve_sizes_trace_the_straight_chord() {
         // P1 = P0 and P2 = P3 collapse the curve onto the P0-P3 segment, just
         // reached at a smoothstep pace (`t^2(3-2t)`) rather than a linear one
-        // — see `Curve::tangent`'s doc comment.
+        // see `Curve::tangent`'s doc comment.
         let curve = Curve::new(
             Vec3::ZERO,
             Vec3::X,

@@ -68,7 +68,7 @@ impl Gpu {
     }
 }
 
-/// One adornment pipeline: blended, unculled, depth-tested or — `on_top` —
+/// One adornment pipeline: blended, unculled, depth-tested or, `on_top`,
 /// drawn over everything.
 fn build(
     device: &wgpu::Device,
@@ -91,7 +91,7 @@ fn build(
             // over the scene, not part of it.
             translucent: true,
             // Reversed-Z, so `GreaterEqual` is the ordinary "in
-            // front of, or exactly on, what is already there" test —
+            // front of, or exactly on, what is already there" test,
             // the tie matters for a `SurfaceSelection` slab, which
             // lies on the very surface it highlights. `Always` is
             // what `AlwaysOnTop` means.

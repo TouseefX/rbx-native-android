@@ -21,7 +21,7 @@ pub struct Asset {
 /// The network side of resolving a numeric asset id.
 ///
 /// This crate never talks to the network itself for `rbxassetid://`
-/// references — the real implementation lives in the viewer, backed by
+/// references, the real implementation lives in the viewer, backed by
 /// `rbx_cloud`. Kept as a trait so this crate stays testable offline via
 /// [`MemoryFetcher`].
 ///
@@ -99,7 +99,7 @@ const SUBSTITUTES: [(&str, u64); 2] = [
     ("textures/ui/GuiImagePlaceholder.png", 6293578665),
 ];
 
-/// The catalogue asset that stands in for `path`, if any — see [`SUBSTITUTES`].
+/// The catalogue asset that stands in for `path`, if any, see [`SUBSTITUTES`].
 /// Case-blind, like `rbxasset://` paths in Studio.
 pub fn substitute_for(path: &str) -> Option<u64> {
     SUBSTITUTES

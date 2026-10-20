@@ -111,8 +111,8 @@ impl Renderer {
     /// The translucent geometry, over the opaque half: a pass of its own
     /// because it holds the depth buffer *read-only*, which is what lets the
     /// same texture be bound for a `ForceField` to measure itself against
-    /// (see `renderer::scene_depth`). Nothing drawn here writes depth — every
-    /// blended pipeline is built with depth writes off — so it loses nothing.
+    /// (see `renderer::scene_depth`). Nothing drawn here writes depth, every
+    /// blended pipeline is built with depth writes off, so it loses nothing.
     pub(super) fn translucent_pass(
         &self,
         encoder: &mut wgpu::CommandEncoder,
@@ -214,7 +214,7 @@ impl Renderer {
         // sit on top of. Hover after selection: `Shell` never sends a hover
         // for an already-selected referent, so the two never contest the
         // same box, but drawing hover second is still the more sensible
-        // order if that ever changes — the "about to click" cue reading as
+        // order if that ever changes, the "about to click" cue reading as
         // the top layer rather than being hidden under the selection box.
         self.selection.draw(&mut pass, &self.frame.bind_group);
         self.hover.draw(&mut pass, &self.frame.bind_group);

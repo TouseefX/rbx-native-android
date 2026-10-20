@@ -61,7 +61,7 @@ pub(crate) fn part(value: &Value) -> mlua::Result<PrintPart> {
 }
 
 /// The text `print` writes for these parts: what `tostring` gives each one,
-/// space-separated — the shape a plain log reader sees.
+/// space-separated, the shape a plain log reader sees.
 pub(crate) fn text(parts: &[PrintPart]) -> String {
     let words: Vec<String> = parts
         .iter()
@@ -129,7 +129,7 @@ fn dump(table: &Table, open: &mut HashSet<usize>, depth: usize) -> mlua::Result<
 }
 
 /// Numbers first, ascending, then strings alphabetically, then everything
-/// else in the order `next` gave it — an array reads `[1]`, `[2]`, … and a
+/// else in the order `next` gave it, an array reads `[1]`, `[2]`, … and a
 /// record reads alphabetically, whatever the hash order was.
 fn key_order(a: &Value, b: &Value) -> std::cmp::Ordering {
     use std::cmp::Ordering;

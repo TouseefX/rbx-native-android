@@ -1,4 +1,4 @@
-//! Bringing a built renderer in line with one changed instance at a time —
+//! Bringing a built renderer in line with one changed instance at a time,
 //! what `Headless::apply_changes` drives, once per instance a change log
 //! names, instead of rebuilding every batch from the scene.
 
@@ -26,7 +26,7 @@ impl Renderer {
     /// built here (see `Meshes::ensure`).
     ///
     /// `false` when a mesh batch the instance now belongs in would need a
-    /// mesh or texture `resolved` never downloaded — the scene's own check
+    /// mesh or texture `resolved` never downloaded, the scene's own check
     /// already refused that, so this is a defensive answer rather than a
     /// case a caller has to reason about.
     pub(crate) fn sync_part(
@@ -56,13 +56,13 @@ impl Renderer {
             }
             Drawn::Pieces { placement, pieces } => {
                 // The union's own box is suppressed behind its pieces, so
-                // whatever record it had as a box of its own goes — it had
+                // whatever record it had as a box of its own goes, it had
                 // one if this edit is what pointed it at a carved asset.
                 self.drop_box(whole);
                 for piece in pieces {
                     self.sync_box(device, piece);
                 }
-                // The union is outlined as the one box its pieces fill —
+                // The union is outlined as the one box its pieces fill,
                 // exactly the entry `Scene::placements` keeps for it, down to
                 // the tree that recovered nothing at all: a union drawing no
                 // piece is placed by neither a rebuild nor this.
@@ -85,8 +85,8 @@ impl Renderer {
             Drawn::Mesh { index, placement } => {
                 let instance = &resolved.instances[*index];
                 self.drop_box(whole);
-                // A mesh part keeps a placement in both outline maps — its own
-                // oriented bounding box — so it still outlines on hover and
+                // A mesh part keeps a placement in both outline maps, its own
+                // oriented bounding box, so it still outlines on hover and
                 // selection and still carries a gizmo, rather than losing all
                 // three the moment its mesh finishes downloading and it stops
                 // drawing as a box.
@@ -119,8 +119,8 @@ impl Renderer {
         }
     }
 
-    /// Re-uploads the vertices of `meshes` — skinned meshes `Scene::pose_skins`
-    /// just re-posed — in the main mesh pass and the shadow casters. Nothing
+    /// Re-uploads the vertices of `meshes`: skinned meshes `Scene::pose_skins`
+    /// just re-posed, in the main mesh pass and the shadow casters. Nothing
     /// is re-batched and every other mesh is untouched. The highlight and
     /// cue masks keep the rest pose (their silhouettes are re-derived on
     /// their own next rebuild).
@@ -155,7 +155,7 @@ impl Renderer {
         self.cues.refresh_meshes(queue, resolved, meshes);
     }
 
-    /// Whether skinned meshes are posed on the GPU here — see
+    /// Whether skinned meshes are posed on the GPU here, see
     /// `renderer::skinning`. The scene is told so through
     /// `Scene::set_skins_on_gpu`, and keeps their rest mesh when it is.
     pub(crate) fn skins_on_gpu(&self) -> bool {
@@ -177,7 +177,7 @@ impl Renderer {
         skinner.run(device, queue, targets);
     }
 
-    /// One box — an instance's own or one piece of it — rewritten, moved,
+    /// One box, an instance's own or one piece of it, rewritten, moved,
     /// added or dropped across the three passes that draw boxes.
     fn sync_box(&mut self, device: &wgpu::Device, part: &Part) {
         self.meshes.ensure(device, part.kind);
@@ -197,7 +197,7 @@ impl Renderer {
         self.cues.remove_part(id);
     }
 
-    /// Rewrites, moves or adds one `Decal`/`Texture`'s projection — see
+    /// Rewrites, moves or adds one `Decal`/`Texture`'s projection, see
     /// `textured::Textured::sync`. `false` when `reference` is an image this
     /// renderer never uploaded, which only a reload fetches.
     pub(crate) fn sync_face(
@@ -209,7 +209,7 @@ impl Renderer {
         self.textured.sync(device, reference, face)
     }
 
-    /// Drops one `Decal`/`Texture`'s projection — its part stopped drawing
+    /// Drops one `Decal`/`Texture`'s projection, its part stopped drawing
     /// as a box, or the instance itself is gone. A no-op for a referent no
     /// batch holds.
     pub(crate) fn remove_face(&mut self, referent: Ref) {
@@ -217,7 +217,7 @@ impl Renderer {
     }
 
     /// Uploads every instance record the edits since the last frame left
-    /// owed to a batch buffer, one write per buffer touched — see
+    /// owed to a batch buffer, one write per buffer touched, see
     /// `slots::Slots::flush`. [`Renderer::draw`] runs it before any pass
     /// reads a buffer; nothing else needs to.
     pub(super) fn flush_writes(&mut self, queue: &wgpu::Queue) {
@@ -225,7 +225,7 @@ impl Renderer {
         self.shadows.flush(queue);
         self.filemesh.flush(queue);
         self.textured.flush(queue);
-        // Every edit that moves a part — a drag, a typed `CFrame`, an undo —
+        // Every edit that moves a part, a drag, a typed `CFrame`, an undo,
         // reaches the highlight and cue masks through `sync_part` too.
         self.highlights.flush(queue);
         self.cues.flush(queue);
@@ -240,7 +240,7 @@ impl Renderer {
         self.post.set_effects(lighting.effects);
     }
 
-    /// Replaces the place's local lights with `lights` — rewritten into the
+    /// Replaces the place's local lights with `lights`: rewritten into the
     /// buffer they already have where the level's cap leaves the count the
     /// same, or into a freshly sized one where a light came or went, which
     /// every camera bind group then has to be told about (the buffer is
@@ -267,7 +267,7 @@ impl Renderer {
     /// Hands the renderer `scene`'s freshly re-planned effects of `kind` (see
     /// `crate::scene::Scene::replan_effect`), keeping every texture already
     /// uploaded and every running simulation or recorder that still applies
-    /// — see each pass's own `replace` for exactly what survives.
+    /// see each pass's own `replace` for exactly what survives.
     ///
     /// Always serves the edit: a definition naming a texture this renderer has
     /// no upload for draws that effect's own fallback until the loader lands
@@ -307,10 +307,10 @@ impl Renderer {
     }
 
     /// Rebuilds the GUI passes around `world`'s re-planned trees (see
-    /// `Scene::replan_gui`) — the canvases are baked again, the atlas keeps
+    /// `Scene::replan_gui`), the canvases are baked again, the atlas keeps
     /// every image it already holds and takes on any `ImageLabel` image the
     /// edit first named, as far as `world.images` already has an answer for
-    /// it — see `renderer::gui::atlas`.
+    /// it, see `renderer::gui::atlas`.
     pub(crate) fn refresh_gui(
         &mut self,
         device: &wgpu::Device,

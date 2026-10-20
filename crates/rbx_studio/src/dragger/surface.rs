@@ -3,7 +3,7 @@
 //!
 //! Its origin is the corner of the face under the cursor nearest the cursor,
 //! so a grid measured in it starts from that corner and runs along the face's
-//! own edges — not from the world origin, and not along world axes. This is
+//! own edges, not from the world origin, and not along world axes. This is
 //! the box's face; every other kind of part is `super::target`'s.
 
 use glam::{Mat4, Vec2, Vec3};

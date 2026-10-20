@@ -1,7 +1,7 @@
 //! Pulls the painted surfaces out of a DOM: `Decal`/`Texture` faces on parts,
 //! and a `Sky`'s six panels plus its sun and moon discs.
 //!
-//! Everything here is pure geometry — [`plan`] never touches the network. The
+//! Everything here is pure geometry, [`plan`] never touches the network. The
 //! images themselves are fetched separately by [`crate::assets`], and the two
 //! halves are joined by [`Decor::assemble`].
 
@@ -45,7 +45,7 @@ pub(crate) struct Quad {
 /// lands on it ([`Projection`]).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FaceInstance {
-    /// The `Decal`/`Texture` instance this was built from — not read when
+    /// The `Decal`/`Texture` instance this was built from, not read when
     /// drawing, only so a Properties-panel edit to its part can find and
     /// rewrite this one instance's GPU record again (see
     /// `renderer::textured::Textured::sync`) instead of only ever getting it
@@ -62,7 +62,7 @@ pub(crate) struct FaceInstance {
 /// it lands on that part's unit mesh.
 ///
 /// The part is carried alongside because a plan outlives the moment it was
-/// made — see [`Decor::assemble`], which drops a face whose part has stopped
+/// made, see [`Decor::assemble`], which drops a face whose part has stopped
 /// drawing its box, and [`Plan::replace_faces`], which re-projects one part's
 /// faces after it moves.
 #[derive(Debug, Clone, PartialEq)]
@@ -106,7 +106,7 @@ impl Plan {
     ///
     /// In place, not appended: the order the faces are planned in is the order
     /// [`Decor::assemble`] groups them in, which is the order the renderer
-    /// builds and draws its decal batches in — a moved part that jumped to the
+    /// builds and draws its decal batches in, a moved part that jumped to the
     /// end of the plan would redraw the scene's translucent decals in a
     /// different order than a build from the same DOM would.
     pub(crate) fn replace_faces(&mut self, part: Ref, faces: Vec<(AssetRef, FaceInstance)>) {
@@ -130,7 +130,7 @@ impl Plan {
 /// Walking the DOM rather than `placements` keeps the asset order stable from
 /// one run to the next, which a hash map would not. Workspace-scoped, same as
 /// `Scene::from_dom`'s own part build: `placements` only ever carries
-/// `Workspace` parts, so this would filter out anything else anyway — scoping
+/// `Workspace` parts, so this would filter out anything else anyway, scoping
 /// the walk itself just skips visiting it in the first place.
 pub(crate) fn plan(
     dom: &WeakDom,
@@ -166,7 +166,7 @@ pub(crate) fn plan(
 }
 
 /// Re-derives one part's face instances against a freshly patched
-/// [`Placement`] — the Properties-panel fast path's decal counterpart to
+/// [`Placement`], the Properties-panel fast path's decal counterpart to
 /// [`plan`], called for exactly the one part `Scene::resync_part` just
 /// recomputed rather than walking the whole DOM again.
 pub(crate) fn faces(
@@ -340,7 +340,7 @@ mod tests {
     // An edit's own re-derivation: `Headless::apply_changes` hands `faces`
     // the part's new `Placement`, not a fresh DOM walk, and the
     // renderer finds the instance to rewrite again by this same referent (see
-    // `renderer::textured::Textured::sync`) — so a patch that moved the part
+    // `renderer::textured::Textured::sync`), so a patch that moved the part
     // has to keep naming the same Decal, not a fresh one.
     #[test]
     fn faces_re_derives_the_same_decal_against_a_patched_placement() {
@@ -364,7 +364,7 @@ mod tests {
     }
 
     // A `Shape` edit is one of the three the live-edit patch path has to
-    // carry a decal through (`CFrame`/`Size`/`Shape`) — the new unit mesh has
+    // carry a decal through (`CFrame`/`Size`/`Shape`), the new unit mesh has
     // to follow too, not just the matrix.
     #[test]
     fn faces_re_derives_a_patched_shape_change_too() {

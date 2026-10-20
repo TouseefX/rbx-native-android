@@ -17,11 +17,11 @@
 use gpui_kit::Modifiers;
 use rbx_dom::{Change, WeakDom};
 
-/// How many undo steps are kept before the oldest is dropped — bounds memory
+/// How many undo steps are kept before the oldest is dropped, bounds memory
 /// rather than growing the stack for the length of a whole editing session.
 pub(crate) const DEFAULT_CAP: usize = 50;
 
-/// What Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z do — the window-level shortcuts this
+/// What Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z do, the window-level shortcuts this
 /// module owns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Action {
@@ -32,7 +32,7 @@ pub(crate) enum Action {
 /// Maps one keystroke to an undo/redo action. Mirrors `save::action_for`'s
 /// pure-function shape: the mapping is testable without a window, and
 /// `shell::history` only has to call it. Both `Ctrl+Y` and `Ctrl+Shift+Z` redo
-/// — Studio uses the former, most other editors the latter.
+/// Studio uses the former, most other editors the latter.
 pub(crate) fn action_for(key: &str, modifiers: Modifiers) -> Option<Action> {
     let keystroke = gpui_kit::Keystroke {
         key: key.into(),
@@ -50,13 +50,13 @@ pub(crate) fn action_for(key: &str, modifiers: Modifiers) -> Option<Action> {
 
 /// One snapshot on either stack: the DOM as it stood at that point, plus the
 /// `Change` log the mutation right after it went on to produce. Handed by
-/// `shell::history::install` to `shell::command`'s `reflect_changes` — the
-/// same path an ordinary edit's viewport reflection takes — so the viewport
+/// `shell::history::install` to `shell::command`'s `reflect_changes`: the
+/// same path an ordinary edit's viewport reflection takes, so the viewport
 /// patches exactly the instances the step touched, without re-diffing two
 /// `WeakDom` trees to find them.
 ///
 /// `changes` starts empty and is filled in once, after the fact, by
-/// [`History::record_changes`] — `push` runs *before* the mutation it
+/// [`History::record_changes`], `push` runs *before* the mutation it
 /// snapshots, so the log it produces isn't known yet. An entry whose
 /// mutation never actually changed anything (a Properties-panel commit that
 /// failed validation, say) simply keeps the empty log `push` left it with,
@@ -72,8 +72,8 @@ pub(crate) struct History {
     undo: Vec<Entry>,
     redo: Vec<Entry>,
     cap: usize,
-    /// Moves on every push, undo and redo — every way the DOM changes goes
-    /// through one of the three — so a reader that only needs to know
+    /// Moves on every push, undo and redo, every way the DOM changes goes
+    /// through one of the three, so a reader that only needs to know
     /// *whether* the tree moved since it last looked (`luau-lsp`'s copy of
     /// the place) can compare one number instead of two trees.
     revision: u64,
@@ -109,7 +109,7 @@ impl History {
         self.revision
     }
 
-    /// Attaches `changes` to the entry `push` most recently added — see
+    /// Attaches `changes` to the entry `push` most recently added, see
     /// [`Entry`]'s doc comment. A no-op if nothing has been pushed yet
     /// (should not happen given `Shell::push_history`'s own call sites, but
     /// costs nothing to guard).
@@ -119,11 +119,11 @@ impl History {
         }
     }
 
-    /// Pops the last snapshot, pushes `current` onto the redo stack — paired
+    /// Pops the last snapshot, pushes `current` onto the redo stack, paired
     /// with the same `Change` log, since redoing this step reapplies exactly
-    /// the mutation undoing it just reverted — and returns the popped DOM
+    /// the mutation undoing it just reverted, and returns the popped DOM
     /// plus that log, for the caller to classify and install. `None` with
-    /// nothing to undo — a no-op that leaves both stacks untouched.
+    /// nothing to undo, a no-op that leaves both stacks untouched.
     pub(crate) fn undo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
         let previous = self.undo.pop()?;
         self.revision += 1;

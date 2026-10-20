@@ -1,5 +1,5 @@
 //! The Explorer tree and Properties list content, split out of `shell.rs`
-//! (kept under 400 lines per `AGENTS.md`) since both are self-contained
+//! (kept under 400 lines) since both are self-contained
 //! render methods called back into from `shell::dock`'s panel builder.
 
 use crate::shell::chrome::ScrollbarY as _;
@@ -20,17 +20,17 @@ use super::Shell;
 impl Shell {
     /// The instance tree, built on the unstyled `gpui_base` element rather than
     /// the styled `tree()` wrapper: that wrapper also paints a right-click
-    /// style and a popup menu hook, and the Explorer has neither — a click
+    /// style and a popup menu hook, and the Explorer has neither, a click
     /// selects a row, and its chevron expands it (see `rows::row`).
     ///
     /// `on_key_down` sits on this outer div rather than inside `base::Tree`
     /// itself (out of reach, in `gpui_base`): GPUI dispatches a key event
     /// bubbling up from whatever holds focus, and `Tree`'s own rows are the
-    /// only thing in the Explorer that ever does — see `shell::keys`.
+    /// only thing in the Explorer that ever does, see `shell::keys`.
     pub(super) fn instance_tree(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let explorer = self.explorer.clone();
         // Every row's drop handler mutates the DOM, and its `can_drop` has to
-        // ask the DOM what it would do — neither runs while this render holds
+        // ask the DOM what it would do, neither runs while this render holds
         // `self`, so both reach the shell back through its own handle.
         let shell = cx.entity();
         let scroll_handle = self.tree.read(cx).scroll_handle().clone();
@@ -45,7 +45,7 @@ impl Shell {
             tree.set_selected_ids(selected.iter().map(|&r| explorer::item_id(r)))
         });
         // Every tagged `Folder`'s colour, resolved once up front rather than
-        // per row — see `shell::folder_color::folder_tints`.
+        // per row, see `shell::folder_color::folder_tints`.
         let tints = self.folder_tints();
         // §3.2's guides are a property of the whole visible list, not of one
         // row: computed once here, read per row below.
@@ -105,8 +105,8 @@ impl Shell {
                         .item(move |index, entry, state, window, cx| {
                             // The keyboard cursor, apart from the selection
                             // (see `shell::tree_keys`), while the Explorer
-                            // holds focus — its door or the tree inside it,
-                            // since Tab lands on the door — and only once the
+                            // holds focus, its door or the tree inside it,
+                            // since Tab lands on the door, and only once the
                             // keyboard is what moved it: a click never rings.
                             let ringed = state.is_focused()
                                 && !renaming
@@ -163,10 +163,10 @@ impl Shell {
 
     /// The dock's displayed title for the Properties panel (see
     /// `shell::dock`): what is selected (see `properties::Properties::title`),
-    /// or the plain section name when nothing is — the inner header this used
+    /// or the plain section name when nothing is, the inner header this used
     /// to feed is gone, the dock's own title bar shows it instead.
     /// The reference's line under the filter: the anchor instance's class
-    /// icon in an accent box, its name, then "— Parent" muted. Absent with
+    /// icon in an accent box, its name, then ", Parent" muted. Absent with
     /// nothing selected, and for a multi-selection, which has no one name.
     fn properties_breadcrumb(&self) -> Option<AnyElement> {
         let [reference] = self.selected_all() else {
@@ -250,8 +250,8 @@ impl Shell {
             self.properties
                 .rows_matching(&self.dom, self.selected_all(), &filter, folder_color);
 
-        // Built up front — needs `&mut self` to create or reuse each row's
-        // widget entity (see `shell::edit::edit_row`) — so the `Accordion`
+        // Built up front, needs `&mut self` to create or reuse each row's
+        // widget entity (see `shell::edit::edit_row`), so the `Accordion`
         // item closures below only ever move already-built elements around,
         // never borrow `self` again.
         let mut sections: Vec<(String, Vec<AnyElement>)> = Vec::new();
@@ -265,7 +265,7 @@ impl Shell {
 
         // Built before `self.properties_nav.finish()` so its own header and
         // buttons take the next indices in the same single Tab stop the rest
-        // of the panel shares — see `shell::attributes_panel`.
+        // of the panel shares, see `shell::attributes_panel`.
         let attributes_and_tags = self.attributes_and_tags(&filter, window, cx);
         self.properties_nav.finish();
         let handle = cx.entity();
@@ -346,7 +346,7 @@ impl Shell {
                                     })
                             }))
                             // Custom attributes and `CollectionService` tags,
-                            // after every reflected category — Roblox's own
+                            // after every reflected category, Roblox's own
                             // Properties window puts both "at the bottom of
                             // the window" too (see `shell::attributes_panel`).
                             .child(attributes_and_tags),

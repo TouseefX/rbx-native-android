@@ -31,7 +31,7 @@ pub(in crate::workspace_view) fn measurement_box(border: Rgba) -> Div {
 }
 
 /// `element` centred on `at`: a slot wider and taller than any box, centred
-/// on the anchor, with the box centred inside it — GPUI places a child by
+/// on the anchor, with the box centred inside it, GPUI places a child by
 /// its corner, not its middle.
 pub(in crate::workspace_view) fn centred_on(
     at: Point<Pixels>,

@@ -29,7 +29,7 @@ fn level_color(color: RowColor, cx: &App) -> Option<Hsla> {
 
 /// One row of the log: a per-kind icon (see `row_kind::RowKind`), optionally
 /// that entry's timestamp, the truncated source that was run, and the result
-/// label — clicking anywhere on the row recalls that source into the Command
+/// label, clicking anywhere on the row recalls that source into the Command
 /// Bar. A run that printed a table draws its `print` lines with each table
 /// as an expandable tree instead of the flat label, unless Log Mode is on.
 pub(super) fn output_row(

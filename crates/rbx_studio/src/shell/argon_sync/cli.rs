@@ -1,4 +1,4 @@
-//! Where the `argon` CLI is on this machine, by looking for the file —
+//! Where the `argon` CLI is on this machine, by looking for the file,
 //! never by running it. Auto Connect asks this before trying anything,
 //! so a place opened on a machine without Argon stays quietly
 //! disconnected instead of failing red on every launch.

@@ -1,6 +1,6 @@
 name: CI
 
-# No branch filter on `push`: every branch is checked, not just main/PRs —
+# No branch filter on `push`: every branch is checked, not just main/PRs,
 # a broken branch should be visible before it becomes a PR, not after.
 on:
   push:
@@ -53,8 +53,8 @@ jobs:
       # it. clippy is not: `dead_code` depends on which items a `cfg` leaves
       # a caller for, and `useless_conversion` on type widths that differ by
       # target (a C `unsigned long` is 32 bits here and 64 on Linux). Code
-      # behind a `target_os` gate can pass clippy on Linux and fail it here —
-      # rbx_studio's X11-only helpers did — so it runs on this target too.
+      # behind a `target_os` gate can pass clippy on Linux and fail it here,
+      # rbx_studio's X11-only helpers did, so it runs on this target too.
       - name: cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
@@ -80,7 +80,7 @@ jobs:
 
       # Same reasoning as the Windows job: clippy's verdict depends on the
       # target, and nothing else builds the workspace on macOS. macOS is not
-      # a supported target yet — this keeps it from silently rotting until
+      # a supported target yet, this keeps it from silently rotting until
       # it is.
       - name: cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings

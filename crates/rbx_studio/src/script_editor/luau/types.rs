@@ -1,14 +1,14 @@
 //! Telling a type annotation's names apart from an expression's.
 //!
 //! `local n: Vector3` and `local n = Vector3` put the same identifier either
-//! side of the same token, so nothing local to one token decides this — but a
+//! side of the same token, so nothing local to one token decides this, but a
 //! full parse is not needed either. What is needed is only enough structure to
 //! find where a type *starts* (the four places Luau lets one: after a `local`
 //! name, after a parameter name, after a parameter list for a return type, and
 //! after `type Name =`, plus the `::` cast operator) and to walk one type
 //! expression to its end. That is a small recursive descent over the token
 //! stream the lexer already produced, run before the holes of any interpolated
-//! string are expanded — a hole re-enters the lexer, so it gets its own pass.
+//! string are expanded, a hole re-enters the lexer, so it gets its own pass.
 //!
 //! Nothing outside those four entry points is ever looked at, which is what
 //! keeps an ordinary `obj:method()` from reading as an annotation: its `:` is
@@ -56,7 +56,7 @@ struct Pass<'a> {
 
 impl Pass<'_> {
     /// `local a: T, b: U = ...`. Stops at the `=`, or at the first thing that
-    /// is not part of a name list — `local function f()` among them, whose
+    /// is not part of a name list, `local function f()` among them, whose
     /// signature the driver reaches on its own next step.
     fn local_statement(&mut self, at: usize) -> usize {
         let mut at = at + 1;
@@ -76,7 +76,7 @@ impl Pass<'_> {
         at
     }
 
-    /// `type Name<A, B> = T`, and the `export type` spelling of it — `export`
+    /// `type Name<A, B> = T`, and the `export type` spelling of it, `export`
     /// is a keyword of its own, so the driver arrives here either way.
     ///
     /// Returns immediately for the other uses of a word Luau only makes a
@@ -102,7 +102,7 @@ impl Pass<'_> {
     }
 
     /// `function a.b:c<T>(x: U, y: V): W`. The name path is skipped rather
-    /// than inspected — `mark_definitions` has already dealt with it — and the
+    /// than inspected, `mark_definitions` has already dealt with it, and the
     /// generic list, parameter list and return type each have their own rule.
     fn function_signature(&mut self, at: usize) -> usize {
         let mut cursor = at + 1;
@@ -203,7 +203,7 @@ impl Pass<'_> {
                 }
                 let mut end = at;
                 self.mark_type(end);
-                // A qualified name — `Roact.Element` — is one type name in
+                // A qualified name, `Roact.Element`, is one type name in
                 // two halves, so both halves are painted as one.
                 while self.is_delimiter(end + 1, b'.')
                     && matches!(
@@ -245,7 +245,7 @@ impl Pass<'_> {
         }
     }
 
-    /// `{ T }`, `{ name: T }`, `{ [K]: V }` — a field's name is not a type,
+    /// `{ T }`, `{ name: T }`, `{ [K]: V }`, a field's name is not a type,
     /// and everything else between the braces is.
     fn table_type(&mut self, open: usize) -> usize {
         let mut at = open + 1;
@@ -277,7 +277,7 @@ impl Pass<'_> {
     }
 
     /// `<A, B>`, whether it declares type parameters or supplies type
-    /// arguments — every name in one is a type either way.
+    /// arguments, every name in one is a type either way.
     ///
     /// Bails at anything a generic list cannot contain, so a `<` that turned
     /// out to be a comparison cannot paint the rest of the file as types.

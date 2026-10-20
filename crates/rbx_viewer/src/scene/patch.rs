@@ -12,7 +12,7 @@ use super::{filemesh, union};
 /// One re-planned entry of either kind. The two are answered apart rather
 /// than behind one interface: a file mesh has one instance to rebuild, while
 /// a union may have a mesh, a set of recovered pieces or nothing but its own
-/// box, depending on what its asset carved to — see `Scene::resync_union`.
+/// box, depending on what its asset carved to, see `Scene::resync_union`.
 pub(super) enum Replanned {
     Mesh(Box<filemesh::Entry>),
     Union(union::Entry),
@@ -34,7 +34,7 @@ impl Replanned {
     }
 
     /// Every mesh, union and image asset this entry needs, whether or not
-    /// this session has them yet — what `Headless::apply_changes` asks the
+    /// this session has them yet, what `Headless::apply_changes` asks the
     /// background loader for after `Scene::resync_part` patches onto a box
     /// fallback, so a missing asset does not stay missing forever. Mesh and
     /// union assets are answered apart because they are fetched apart: a

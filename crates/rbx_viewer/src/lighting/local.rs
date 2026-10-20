@@ -2,7 +2,7 @@
 //! can loop over: a position, a linear radiance, a reach and a cone.
 //!
 //! Entry point: [`local_lights`]. Roblox splats these into a voxel light grid,
-//! so nothing here matches how the engine computes them — every light is
+//! so nothing here matches how the engine computes them, every light is
 //! evaluated analytically per fragment instead, with no occlusion at all (a
 //! light shines through walls, and `Light.Shadows` is ignored).
 
@@ -32,7 +32,7 @@ const MAX_ANGLE_DEGREES: f32 = 180.0;
 /// Calibrated by eye rather than read off Roblox, which keeps these in a voxel
 /// grid no place file carries: the sun lamp lands on `SUN_BASE * Brightness`
 /// (see [`super`]), i.e. 1.35 in a default place, and a Roblox `PointLight` at
-/// Brightness 1 is visibly a *local* light — it picks a lantern's surroundings
+/// Brightness 1 is visibly a *local* light, it picks a lantern's surroundings
 /// out of the night without reading as a second sun, and at noon it barely
 /// shows. Half the sun is what lands both: a grey part four studs from a
 /// Range 8 lamp is unmistakably lit at midnight and still plainly sunlit at
@@ -54,7 +54,7 @@ const MIN_CONE_GAP: f32 = 1e-3;
 
 /// How many lights reach the GPU. Past this the buffer is capped rather than
 /// grown: the shader loops over every light for every fragment, so a place with
-/// thousands of them is already hopeless — and the ones nearest the scene centre
+/// thousands of them is already hopeless, and the ones nearest the scene centre
 /// are the ones a screenshot is looking at.
 pub(crate) const MAX_LOCAL_LIGHTS: usize = 1024;
 
@@ -91,7 +91,7 @@ pub(crate) struct LocalLight {
 ///
 /// Walks parts down to their children rather than lights up to their parents:
 /// `WeakDom` has no parent lookup, and a light only counts when the part it
-/// hangs on is one this renderer draws anyway — which, same as `Scene::from_dom`,
+/// hangs on is one this renderer draws anyway, which, same as `Scene::from_dom`,
 /// means a part actually parented under `Workspace`.
 pub(crate) fn local_lights(
     dom: &WeakDom,
@@ -133,7 +133,7 @@ fn on_part(dom: &WeakDom, database: &ReflectionDatabase, part: &Instance) -> Vec
         };
         if database.is_subclass_of(instance.class(), ATTACHMENT_CLASS) {
             // An attachment carries no extent of its own, so a `SurfaceLight`
-            // on one gets no near field — it is a plain spot at that point.
+            // on one gets no near field, it is a plain spot at that point.
             let Some(local) = frame_of(instance) else {
                 continue;
             };
@@ -196,7 +196,7 @@ fn read(
     light.direction = frame.transform_vector3(axis).normalize_or(Vec3::Y);
     (light.cos_outer, light.cos_inner) = cone(value("Angle"));
     if surface {
-        // The whole face emits, not the part's centre — the reach
+        // The whole face emits, not the part's centre, the reach
         // `SurfaceLight`'s guide draws: every point of the face shining the
         // cone, out to `Range` (see `guides`).
         let (normal, u, v) = face.axes();

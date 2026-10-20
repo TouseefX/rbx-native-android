@@ -334,7 +334,7 @@ fn the_local_light_count_reaches_the_shader_as_a_float() {
 
 // No `Clouds` at all has to reach the shader as `Cover = 0`, the same value a
 // disabled or absent instance already collapses to on the CPU side (see
-// `crate::lighting::clouds`) — one value for the sky shader's whole "draw
+// `crate::lighting::clouds`), one value for the sky shader's whole "draw
 // nothing" case.
 #[test]
 fn no_clouds_packs_to_a_zeroed_cover() {
