@@ -128,6 +128,12 @@ impl Renderer {
         self.lines.set(device, layer, segments);
     }
 
+    /// Replaces one layer of the editor's filled quads — see
+    /// `renderer::lines`. An empty list clears it.
+    pub(crate) fn set_fills(&mut self, device: &wgpu::Device, layer: usize, fills: &[super::Fill]) {
+        self.lines.set_fills(device, layer, fills);
+    }
+
     /// Shows or hides the transform tool's draggers over whatever is
     /// selected. Their geometry is rebuilt inside [`Renderer::draw`] rather
     /// than here: the arms are scaled to hold a constant size on screen, so

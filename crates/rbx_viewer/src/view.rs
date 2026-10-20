@@ -24,7 +24,7 @@ use glam::Mat4;
 
 use crate::gizmo::Gizmo;
 use crate::pick::Selected;
-use crate::renderer::{OverlayColors, Segment};
+use crate::renderer::{Fill, OverlayColors, Segment};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct View {
@@ -53,6 +53,9 @@ pub(crate) struct View {
     /// must not drop them while whatever they are drawn for is still
     /// selected.
     pub(crate) lines: Vec<Vec<Segment>>,
+    /// The editor's filled quads, layer by layer (see `Headless::set_fills`),
+    /// carried for the lines' reason.
+    pub(crate) fills: Vec<Vec<Fill>>,
     /// Whether a part standing in front of the selection hides its outline.
     /// `false` — the box shows through everything, which is what Studio
     /// draws — unless the embedder asks otherwise; `rbxview` never does.
@@ -94,6 +97,14 @@ impl View {
             self.lines.resize(layer + 1, Vec::new());
         }
         self.lines[layer] = segments;
+    }
+
+    /// Replaces one layer's filled quads — empty to clear it.
+    pub(crate) fn set_fills(&mut self, layer: usize, fills: Vec<Fill>) {
+        if self.fills.len() <= layer {
+            self.fills.resize(layer + 1, Vec::new());
+        }
+        self.fills[layer] = fills;
     }
 
     pub(crate) fn set_gizmo(&mut self, gizmo: Option<Gizmo>) {

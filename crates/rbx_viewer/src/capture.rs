@@ -13,7 +13,7 @@ use crate::gizmo::Gizmo;
 use crate::gpu;
 use crate::pick::Selected;
 use crate::quality::QualityProfile;
-use crate::renderer::{Renderer, Segment, World};
+use crate::renderer::{Fill, Renderer, Segment, World};
 use crate::scene::{Bounds, Scene};
 use crate::view::View;
 use readback::{Pending, Target, FORMAT};
@@ -100,6 +100,9 @@ impl Offscreen {
         for (layer, segments) in view.lines.iter().enumerate() {
             offscreen.set_lines(layer, segments);
         }
+        for (layer, fills) in view.fills.iter().enumerate() {
+            offscreen.set_fills(layer, fills);
+        }
         offscreen.set_gizmo(view.gizmo);
         offscreen.set_isolated(view.isolated());
         offscreen.set_stage(world.scene.stage_bounds());
@@ -121,6 +124,9 @@ impl Offscreen {
         self.set_preview(&view.preview);
         for (layer, segments) in view.lines.iter().enumerate() {
             self.set_lines(layer, segments);
+        }
+        for (layer, fills) in view.fills.iter().enumerate() {
+            self.set_fills(layer, fills);
         }
         self.set_gizmo(view.gizmo);
         self.set_isolated(view.isolated());
@@ -197,6 +203,11 @@ impl Offscreen {
     /// Replaces the editor's line segments.
     pub(crate) fn set_lines(&mut self, layer: usize, segments: &[Segment]) {
         self.renderer.set_lines(&self.device, layer, segments);
+    }
+
+    /// Replaces the editor's filled quads.
+    pub(crate) fn set_fills(&mut self, layer: usize, fills: &[Fill]) {
+        self.renderer.set_fills(&self.device, layer, fills);
     }
 
     /// Shows or hides the transform tool's draggers over the selection.
