@@ -1,7 +1,7 @@
 //! A step of a UI editor canvas drag: one `GuiObject`'s `Position` nudged,
 //! handed over as the editor hands it (a snapshot mirrored into the render
-//! thread's DOM), patched through `Headless::apply_changes`, and — for the
-//! frame time — the canvas drawn and read back with `Headless::render_gui`,
+//! thread's DOM), patched through `Headless::apply_changes`, and, for the
+//! frame time, the canvas drawn and read back with `Headless::render_gui`,
 //! which is what the canvas waits on before it shows the step.
 //!
 //! The element moved is in the place's largest `ScreenGui`: the

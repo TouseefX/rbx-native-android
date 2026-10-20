@@ -14,8 +14,8 @@ impl Post {
     /// Builds the bloom and full-frame blur chains where each is enabled, then
     /// writes the graded, tone-mapped frame to `target`.
     ///
-    /// The resolve always runs — it is the only pass that writes the final
-    /// image — but the chains in front of it are skipped where nothing would
+    /// The resolve always runs, it is the only pass that writes the final
+    /// image, but the chains in front of it are skipped where nothing would
     /// come of them: the resolve reads whatever an untouched (so zeroed or
     /// stale) first level holds, and gates both on the uniform's own flags.
     pub(in crate::renderer) fn resolve(
@@ -56,7 +56,7 @@ impl Post {
 
         // The full-frame blur reuses `fs_downsample` with no threshold, seeded
         // straight from the sharp scene rather than from `first.view`: unlike
-        // bloom, it never walks back up the chain — the deepest, blurriest
+        // bloom, it never walks back up the chain, the deepest, blurriest
         // level is sampled directly in the resolve, where the sampler's own
         // bilinear filtering stretches it back to the frame's size. That is
         // cheaper than a tent-upsample walk and reads as a legitimate blur
@@ -100,7 +100,7 @@ impl Post {
         );
     }
 
-    /// Downsamples `chain[0]` into each following level in turn — the part of
+    /// Downsamples `chain[0]` into each following level in turn, the part of
     /// the pyramid bloom and the full-frame blur build identically, once each
     /// has its own way of seeding `chain[0]`.
     fn downsample_chain(&self, encoder: &mut wgpu::CommandEncoder, label: &str, chain: &[Level]) {

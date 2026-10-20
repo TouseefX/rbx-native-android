@@ -10,8 +10,8 @@ use std::collections::VecDeque;
 ///
 /// A fixed count rather than a wall-clock time budget: actual GPU upload
 /// cost depends on driver/hardware in a way this crate can't observe without
-/// a blocking readback — which would itself stall the very frame this budget
-/// exists to protect — while a count is exactly what a caller (and a test)
+/// a blocking readback, which would itself stall the very frame this budget
+/// exists to protect, while a count is exactly what a caller (and a test)
 /// can reason about deterministically. Paired with the existing
 /// `quality::MAX_TEXTURE_SIZE` cap on any single texture, this bounds
 /// worst-case per-frame upload cost without needing to measure it directly.
@@ -24,8 +24,8 @@ pub(in crate::renderer) const PER_FRAME: usize = 8;
 ///
 /// Each item carries its own destination (a texture slot index, in
 /// [`Textured`](super::super::textured::Textured)) rather than relying on
-/// queue position to mean anything downstream, so draining out of order — or
-/// only partially, frame after frame — never mismatches an image with the
+/// queue position to mean anything downstream, so draining out of order, or
+/// only partially, frame after frame, never mismatches an image with the
 /// wrong GPU resource.
 pub(in crate::renderer) struct Pending<T> {
     items: VecDeque<T>,
@@ -43,7 +43,7 @@ impl<T> Pending<T> {
     }
 
     /// Removes and returns up to `budget` items, oldest first. Pass
-    /// [`usize::MAX`] to drain everything at once — what a caller with no
+    /// [`usize::MAX`] to drain everything at once, what a caller with no
     /// next frame to spread the rest across (the single-shot `--screenshot`
     /// path) needs instead of a half-finished load.
     pub(in crate::renderer) fn take(&mut self, budget: usize) -> Vec<T> {

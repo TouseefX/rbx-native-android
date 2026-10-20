@@ -1,5 +1,5 @@
 //! `blackboxFindClosestMeshEdge`: the edge of a mesh face nearest a hit,
-//! found the way Studio finds it — not from the mesh's triangles, which its
+//! found the way Studio finds it, not from the mesh's triangles, which its
 //! Lua cannot read, but by probing the part with raycasts. Walking out across
 //! the face in four directions until the surface falls away or a wall rises
 //! finds the neighbouring face; the two faces' planes meet in the edge's
@@ -7,7 +7,7 @@
 //! Every raycast is against the one part, as Studio's whitelist has it.
 //!
 //! ponytail: each probe walks every triangle of the mesh, and a target frame
-//! takes 25-100 of them — at most 0.95 ms per hover on the largest mesh of the
+//! takes 25-100 of them, at most 0.95 ms per hover on the largest mesh of the
 //! fixture places (release, `target::cost`). A per-mesh BVH is the upgrade if
 //! a denser mesh pushes that past a frame's budget.
 

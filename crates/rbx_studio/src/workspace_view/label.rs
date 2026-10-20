@@ -23,7 +23,7 @@ pub(super) fn quality(mode: QualityLevel, level: u8) -> SharedString {
 }
 
 /// The last second's frame rate and its frame time, or a placeholder while
-/// the first second since sampling started is still being counted — `0.0` is
+/// the first second since sampling started is still being counted, `0.0` is
 /// "not measured yet", never a real rate.
 pub(super) fn frame_rate(fps: f32, resting: bool) -> SharedString {
     if resting {

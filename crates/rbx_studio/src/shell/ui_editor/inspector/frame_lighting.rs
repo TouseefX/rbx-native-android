@@ -1,7 +1,7 @@
 //! The frame sheet's Lighting and Image sections: a `ViewportFrame`'s
 //! `Ambient`, `LightColor`, `LightDirection`, `ImageColor3` and
 //! `ImageTransparency` as the design panel's own fields, so a typed or
-//! dragged value takes the same path — and the same one undo step — as
+//! dragged value takes the same path, and the same one undo step, as
 //! every other field here, and the picture follows live.
 
 use gpui_kit::assets::IconName;

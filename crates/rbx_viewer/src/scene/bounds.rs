@@ -64,7 +64,7 @@ pub(crate) fn of<'a>(parts: impl IntoIterator<Item = &'a Part>) -> Option<Bounds
         .fold(None, grow)
 }
 
-/// One part's own axis-aligned extent — the same corner construction as
+/// One part's own axis-aligned extent, the same corner construction as
 /// [`of`], stopped at a single part instead of folded across a whole scene.
 /// This is what a cull test checks a drawable against: cheaper than
 /// intersecting the part's actual (possibly rotated) shape, and still tight
@@ -73,7 +73,7 @@ pub(crate) fn of_part(part: &Part) -> Bounds {
     of_transform(part.transform)
 }
 
-/// [`of_part`] without needing a whole [`Part`] — what a caller holding only a
+/// [`of_part`] without needing a whole [`Part`], what a caller holding only a
 /// model matrix (a shadow caster's patched transform, say) can still use.
 pub(crate) fn of_transform(transform: Mat4) -> Bounds {
     unit_cube_corners(transform)
@@ -82,7 +82,7 @@ pub(crate) fn of_transform(transform: Mat4) -> Bounds {
 }
 
 /// The eight corners of the unit cube `[-0.5, 0.5]^3`, transformed into world
-/// space — every part's unit mesh fits inside this cube regardless of
+/// space, every part's unit mesh fits inside this cube regardless of
 /// `ShapeKind`, so it bounds any of them conservatively.
 fn unit_cube_corners(transform: Mat4) -> impl Iterator<Item = Vec3> {
     [-0.5f32, 0.5].into_iter().flat_map(move |x| {

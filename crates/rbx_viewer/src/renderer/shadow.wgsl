@@ -1,7 +1,7 @@
 // The sun's shadow map: every caster in the scene, drawn depth-only from the
 // lamp's own orthographic view (see `renderer::shadow::fit`).
 //
-// No fragment stage at all — the pass writes nothing but depth — and no normals,
+// No fragment stage at all, the pass writes nothing but depth, and no normals,
 // UVs or materials: a caster only has to say where it is. Both pipelines share
 // this shader and differ solely in the stride of the vertex buffer they read a
 // position out of (24 bytes for the shared unit shapes, 12 for a file mesh's

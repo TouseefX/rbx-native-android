@@ -5,14 +5,14 @@
 //! colour passes: a depth pass needs positions and a model matrix and nothing
 //! else, so the unit shapes are re-instanced against the meshes
 //! [`super::geometry`] already holds, and a file mesh gets a position-only copy
-//! of its vertices — smaller than the textured copy it is drawn from, and it
+//! of its vertices, smaller than the textured copy it is drawn from, and it
 //! spares every colour-pass batch a caster-only instance buffer of its own.
 //!
 //! Acne is kept off with a slope-scaled depth bias rather than by culling front
 //! faces: downloaded meshes do not all agree on their winding (see
 //! `renderer::filemesh`), so "front" is not a face this renderer can name.
-//! The receiving side adds a normal offset — see `lamp_visibility` in
-//! `lighting.wgsl` — which is what keeps the PCF kernel from shadowing the very
+//! The receiving side adds a normal offset, see `lamp_visibility` in
+//! `lighting.wgsl`: which is what keeps the PCF kernel from shadowing the very
 //! surface it is filtering.
 
 pub(in crate::renderer) mod casters;
@@ -54,7 +54,7 @@ fn point_cap(quality: &QualityProfile) -> usize {
 /// small, the receiver's normal offset picking up what the PCF kernel adds on
 /// top: this bias is measured in depth-buffer units, so on a place whose bounds
 /// span thousands of studs one extra unit of `slope_scale` is worth a foot of
-/// world — enough to eat the whole shadow of a one-stud-thick spawn pad.
+/// world, enough to eat the whole shadow of a one-stud-thick spawn pad.
 const DEPTH_BIAS: wgpu::DepthBiasState = wgpu::DepthBiasState {
     constant: 2,
     slope_scale: 1.0,
@@ -81,7 +81,7 @@ pub(super) struct Shadows {
     bind_group: wgpu::BindGroup,
     shapes: wgpu::RenderPipeline,
     meshes: wgpu::RenderPipeline,
-    /// The unit-shape casters, then the file-mesh ones — each keyed the way
+    /// The unit-shape casters, then the file-mesh ones, each keyed the way
     /// its colour pass is, with their own referent index so
     /// [`Shadows::sync_caster`]/[`Shadows::sync_mesh_caster`] can move one
     /// between batches.
@@ -104,12 +104,12 @@ pub(super) struct Shadows {
     local_buffers: Vec<wgpu::Buffer>,
     local_bind_groups: Vec<wgpu::BindGroup>,
     /// The `PointLight` cubes: the same three arrays as the cone lights
-    /// above, six layers to a light — see `renderer::shadow::point`.
+    /// above, six layers to a light, see `renderer::shadow::point`.
     point_view: wgpu::TextureView,
     point_layers: Vec<wgpu::TextureView>,
     point_buffers: Vec<wgpu::Buffer>,
     point_bind_groups: Vec<wgpu::BindGroup>,
-    /// Every selected cube's six matrices, as the shader reads them back —
+    /// Every selected cube's six matrices, as the shader reads them back,
     /// one entry per layer of [`Shadows::point_view`], rewritten whenever
     /// the selection changes.
     point_faces: wgpu::Buffer,
@@ -118,7 +118,7 @@ pub(super) struct Shadows {
     ///
     /// The cone maps redraw every frame because one pass is cheap; six per
     /// light is not, and nothing in this viewer moves a light or a caster
-    /// without saying so — a caster edit sets this back to `None`.
+    /// without saying so, a caster edit sets this back to `None`.
     point_state: Option<Vec<usize>>,
 }
 
@@ -221,7 +221,7 @@ impl Shadows {
     }
 
     /// Replaces every caster with `scene`'s, keeping the maps, the pipelines
-    /// and the per-light buffers — none of which a scene decides — and the
+    /// and the per-light buffers, none of which a scene decides, and the
     /// position-only copy of every file mesh the new scene still casts with
     /// (see [`casters::mesh_batches`]).
     pub(super) fn rebuild(&mut self, device: &wgpu::Device, scene: &Scene) {
@@ -245,7 +245,7 @@ impl Shadows {
         casters::sync_shape(device, &mut self.shape_batches, part);
     }
 
-    /// [`Shadows::sync_caster`] for a part drawn as a resolved file mesh —
+    /// [`Shadows::sync_caster`] for a part drawn as a resolved file mesh,
     /// the shadow-map half of `Renderer::sync_part`'s mesh case. `false` only
     /// when a new batch would need a mesh `resolved` never downloaded.
     pub(super) fn sync_mesh_caster(
@@ -266,7 +266,7 @@ impl Shadows {
     }
 
     /// Re-uploads the caster geometry of `meshes`, skinned meshes whose pose
-    /// changed — see `casters::refresh`.
+    /// changed, see `casters::refresh`.
     pub(super) fn refresh_meshes(
         &mut self,
         queue: &wgpu::Queue,
@@ -303,7 +303,7 @@ impl Shadows {
     }
 
     /// Uploads what the edits since the last frame owe both caster buffers
-    /// — see `slots::Slots::flush`.
+    /// see `slots::Slots::flush`.
     pub(super) fn flush(&mut self, queue: &wgpu::Queue) {
         self.shape_batches.flush(queue);
         self.mesh_batches.flush(queue);
@@ -317,19 +317,19 @@ impl Shadows {
         &self.sampler
     }
 
-    /// The whole local shadow array, for `lights.wgsl`'s comparison sampling —
+    /// The whole local shadow array, for `lights.wgsl`'s comparison sampling,
     /// read through the very same [`Shadows::sampler`] the sun map is.
     pub(super) fn local_view(&self) -> &wgpu::TextureView {
         &self.local_view
     }
 
-    /// How many `SpotLight`/`SurfaceLight`s can cast a shadow this frame — the
+    /// How many `SpotLight`/`SurfaceLight`s can cast a shadow this frame, the
     /// array's own layer count, and so the cap `local::select` must be given.
     pub(super) fn local_cap(&self) -> usize {
         self.local_layers.len()
     }
 
-    /// The whole `PointLight` cube array, for `lights.wgsl` to sample —
+    /// The whole `PointLight` cube array, for `lights.wgsl` to sample,
     /// through the same comparison sampler everything else here is.
     pub(super) fn point_view(&self) -> &wgpu::TextureView {
         &self.point_view
@@ -341,7 +341,7 @@ impl Shadows {
         &self.point_faces
     }
 
-    /// How many `PointLight`s can cast at once — the cap
+    /// How many `PointLight`s can cast at once, the cap
     /// `renderer::shadow::point::select` must be given.
     pub(super) fn point_cap(&self) -> usize {
         self.point_layers.len() / point::FACES
@@ -391,7 +391,7 @@ impl Shadows {
     }
 
     /// Redraws the whole map for this frame's fit. Cheap enough to do every
-    /// frame — the fit is snapped to texels, so a still camera redraws the same
+    /// frame, the fit is snapped to texels, so a still camera redraws the same
     /// depths rather than subtly different ones.
     pub(super) fn render(
         &self,
@@ -413,7 +413,7 @@ impl Shadows {
     /// layer, sharing the very same depth-only pipelines and casters the sun
     /// pass draws with (see [`Shadows::draw_casters`]).
     ///
-    /// `selected` must not hold more entries than [`Shadows::local_cap`] — the
+    /// `selected` must not hold more entries than [`Shadows::local_cap`], the
     /// caller gets that cap from here in the first place (see
     /// `Renderer::draw`), so a mismatch would be this module's own bug rather
     /// than a place file's.
@@ -465,14 +465,14 @@ impl Shadows {
     }
 
     /// Every caster in the scene, from whichever light `bind_group`'s own
-    /// buffer currently holds the view-projection of — the sun's or one local
+    /// buffer currently holds the view-projection of, the sun's or one local
     /// light's, the pass and the geometry being identical either way.
     ///
     /// `cull` is `Some` only for the sun pass, whose own map can cover a huge
     /// area: it skips shape casters [`Fit::visible`] says cannot land in it,
     /// same as `shaped::Shaped::draw` does for the main pass but against a
     /// deliberately wider test. A local light's own map is small and close by
-    /// construction, so its casters are drawn unfiltered (`None`) — see
+    /// construction, so its casters are drawn unfiltered (`None`), see
     /// `Renderer::draw`'s call to [`Shadows::render_local`].
     fn draw_casters<'p>(
         &'p self,
@@ -561,7 +561,7 @@ fn map(device: &wgpu::Device, side: u32) -> wgpu::TextureView {
     texture.create_view(&wgpu::TextureViewDescriptor::default())
 }
 
-/// The local shadow texture array — one whole-array view for sampling, and one
+/// The local shadow texture array, one whole-array view for sampling, and one
 /// single-layer view per slot for `render_local` to draw into.
 ///
 /// Allocated at `cap.max(1)` layers even when `cap` is 0, for the reason
@@ -699,8 +699,8 @@ fn pipeline(
 /// Which lamp `lighting.wgsl` has to darken, and whether there is one at all.
 ///
 /// Roblox keeps one directional lamp above the horizon at a time: the sun by
-/// day, the moon — which this renderer draws as the fill lamp at `-L`, see
-/// `crate::lighting` — once it has set. Whichever is up is the one that casts.
+/// day, the moon, which this renderer draws as the fill lamp at `-L`, see
+/// `crate::lighting`: once it has set. Whichever is up is the one that casts.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum Lamp {
     None,

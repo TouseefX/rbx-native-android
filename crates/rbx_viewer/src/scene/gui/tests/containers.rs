@@ -1,6 +1,6 @@
 //! Non-`GuiObject` instances inside a GUI tree: a `Folder` (or anything else
 //! that is not drawable) is walked through rather than ending the tree, and
-//! its contents behave as the container's own children — see
+//! its contents behave as the container's own children, see
 //! [`super::super::plan::elements`].
 
 use super::*;
@@ -78,7 +78,7 @@ fn a_frame_under_a_folder_takes_the_enclosing_frames_rect_and_clip() {
 
     let elements = resolve(&screens(&dom), VIEWPORT);
 
-    // Half of the *frame*, offset from the frame's corner — the folder is not
+    // Half of the *frame*, offset from the frame's corner, the folder is not
     // the nearest `GuiBase2d`, the frame is.
     assert_eq!(
         elements[1].rect,
@@ -161,7 +161,7 @@ fn a_ui_list_layout_under_a_folder_arranges_the_folders_contents() {
     }
 
     // "Each `Folder` in your UI hierarchy can define its own `UILayout`": the
-    // two frames stack, centred in the screen — the box the folder's layout
+    // two frames stack, centred in the screen, the box the folder's layout
     // works in is the container's, the folder having none of its own.
     let origins: Vec<[f32; 2]> = rects(&dom).iter().map(|rect| [rect.x, rect.y]).collect();
     assert_eq!(origins, [[375.0, 250.0], [375.0, 300.0]]);
@@ -240,7 +240,7 @@ fn a_folders_contents_do_not_grow_an_automatic_size_container() {
     );
 
     // `AutomaticSize` is documented as fitting "child contents", and a
-    // folder's contents are not children of the box — nor are they part of
+    // folder's contents are not children of the box, nor are they part of
     // the run a layout would report as `AbsoluteContentSize`, which is "how
     // much space the elements of the grid are taking up". So the box keeps
     // its own 10 x 10 and the content simply overflows it, the way an

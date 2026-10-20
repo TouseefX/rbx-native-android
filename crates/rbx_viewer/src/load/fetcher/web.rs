@@ -1,8 +1,8 @@
 //! The browser's [`Fetcher`]: the same `request`/`drain` contract as the
 //! native pool, with each request a `fetch()` against `rbxview --serve` (see
 //! `crate::serve`) instead of a worker thread. A page has no threads to put a
-//! blocking resolver on, and could not reach Roblox's CDNs from one anyway —
-//! they answer with no CORS headers — so the server resolves the bytes (disk
+//! blocking resolver on, and could not reach Roblox's CDNs from one anyway,
+//! they answer with no CORS headers, so the server resolves the bytes (disk
 //! cache, anonymous delivery first, Open Cloud key after, Studio's own
 //! `rbxasset://` content) and the page decodes them itself, through the very
 //! decoders the native workers use.
@@ -97,7 +97,7 @@ pub(crate) fn path(reference: &AssetRef) -> Option<String> {
 /// The resolved bytes of `reference`. The server's status carries the
 /// native resolver's verdict: 404 for the asset's own failure (final, the
 /// same as `assets::Failure`'s non-transient kind), anything else for the
-/// moment's — which includes the server not running at all.
+/// moment's, which includes the server not running at all.
 async fn get(base: &str, reference: &AssetRef) -> Result<Vec<u8>, Failure> {
     let Some(path) = path(reference) else {
         return Err(Failure {

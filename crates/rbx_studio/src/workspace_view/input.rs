@@ -2,7 +2,7 @@
 //!
 //! The windowed viewer reads physical key codes straight from winit, which is
 //! what makes WASD land on ZQSD on a French keyboard. GPUI 0.3.4's `Keystroke`
-//! carries no key code at all — only the character the layout produced — so the
+//! carries no key code at all, only the character the layout produced, so the
 //! same physical mapping has to be rebuilt from that character plus the layout
 //! GPUI reports (see [`Layout`]).
 
@@ -34,7 +34,7 @@ pub(crate) enum Layout {
 
 impl Layout {
     /// Classifies the layout name GPUI reports (`App::keyboard_layout`), which
-    /// on Linux is the xkb name of the group in effect — "French", "Belgian",
+    /// on Linux is the xkb name of the group in effect, "French", "Belgian",
     /// "English (US)".
     pub(crate) fn of(name: &str) -> Self {
         let name = name.to_lowercase();
@@ -99,7 +99,7 @@ pub(crate) fn camera_key(key: &str, layout: Layout) -> Option<CameraKey> {
 /// shortcuts are the digits `1`-`5` and `Shift`+`2`. Studio binds the
 /// physical key, and on an AZERTY keyboard the digits sit on the *shifted*
 /// row: unshifted, the keys type `&`, `é`, `"`, `'` and `(`, which GPUI
-/// reports as those characters — `é`, having no ASCII form, under its keysym
+/// reports as those characters, `é`, having no ASCII form, under its keysym
 /// name. A digit, then, means `Shift` was down, though GPUI drops `Shift`
 /// from any key that has no case; it is put back, so `Shift`+`2` reaches the
 /// increment field. On QWERTY the same drop turns `Shift`+`2` into the bare
@@ -126,7 +126,7 @@ pub(crate) fn tool_key(key: &str, modifiers: Modifiers, layout: Layout) -> (&str
     }
 }
 
-/// Whether a keystroke is a chord — a command modifier is down — rather than
+/// Whether a keystroke is a chord, a command modifier is down, rather than
 /// a key the camera may read. `Shift` is not one: it is the camera's own
 /// precision modifier, and `Shift`+`W` still means forward.
 pub(crate) fn chorded(modifiers: Modifiers) -> bool {
@@ -151,7 +151,7 @@ pub(crate) struct Wheel {
 }
 
 /// An ordinary wheel scrolls down the canvas; a sideways wheel or touchpad
-/// swipe scrolls across, and so does `Shift` with the ordinary wheel — the
+/// swipe scrolls across, and so does `Shift` with the ordinary wheel, the
 /// desktop convention, since most mice have no second wheel.
 pub(crate) fn wheel_scroll(delta: ScrollDelta, shift: bool) -> Wheel {
     let (x, y) = match delta {
@@ -295,7 +295,7 @@ mod tests {
     }
 
     // The bug this exists for: Ctrl+Z with the viewport focused is an undo,
-    // and on AZERTY `z` is also the forward key — it must not be both.
+    // and on AZERTY `z` is also the forward key, it must not be both.
     #[test]
     fn a_command_modifier_makes_a_chord_but_shift_does_not() {
         let control = Modifiers {
@@ -349,7 +349,7 @@ mod tests {
 
     // A frame reads the same event on the axis it moves: down by default,
     // across for a sideways wheel, and across for Shift with the ordinary
-    // wheel — on the wheel's own notches, not the (absent) sideways ones.
+    // wheel, on the wheel's own notches, not the (absent) sideways ones.
     #[test]
     fn a_frame_reads_the_wheel_on_the_axis_it_moves() {
         let down = wheel_scroll(ScrollDelta::Lines(point(0.0, -3.0)), false);

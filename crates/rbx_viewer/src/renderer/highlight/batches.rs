@@ -105,7 +105,7 @@ pub(super) fn claim_runs<K, G, T: Pod, Id: Copy>(
 /// The order the mask draws the claims in: the depth modes as they always
 /// went, `AlwaysOnTop` first, and within each the highlights from the last to
 /// the first. A pixel two highlights both reach is the last one drawn's, so
-/// the first highlight listed wins it — which is what lets the editor's
+/// the first highlight listed wins it, which is what lets the editor's
 /// selection cue, listed before its hover cue, keep its outline in front of
 /// a hovered part behind it.
 pub(super) fn draw_order(claims: impl Iterator<Item = Claim>) -> Vec<Claim> {

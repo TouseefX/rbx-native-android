@@ -3,7 +3,7 @@
 //!
 //! Four mask pipelines rather than one because two things vary independently
 //! and neither can be a uniform: the vertex stride (a unit shape carries a
-//! normal beside its position, a file mesh carries the position alone — the
+//! normal beside its position, a file mesh carries the position alone, the
 //! same split `renderer::shadow` has) and the depth test that
 //! `Enum.HighlightDepthMode` picks between.
 //!
@@ -56,7 +56,7 @@ impl MaskInstance {
     }
 }
 
-/// One highlight's two colours as the composite reads them — `Paint` in
+/// One highlight's two colours as the composite reads them, `Paint` in
 /// `highlight_composite.wgsl`. The alphas are already `1 - Transparency`;
 /// see `scene::highlight::Highlight`.
 #[repr(C)]
@@ -243,7 +243,7 @@ impl Composite {
 }
 
 /// The mask texture itself, at the frame's size and the scene's sample count
-/// — it shares a render pass with the scene's own depth buffer, which fixes
+/// it shares a render pass with the scene's own depth buffer, which fixes
 /// both.
 pub(super) fn mask_texture(
     device: &wgpu::Device,
@@ -311,7 +311,7 @@ fn mask_pipeline(
             depth_compare: Some(match mode {
                 // Reversed-Z (see `camera.rs`) puts nearer surfaces at the
                 // larger depth, so "nothing in front of it" is `GreaterEqual`
-                // — equal because this re-draws the very geometry that wrote
+                // equal because this re-draws the very geometry that wrote
                 // the value it is testing against.
                 DepthMode::Occluded => wgpu::CompareFunction::GreaterEqual,
                 DepthMode::AlwaysOnTop => wgpu::CompareFunction::Always,

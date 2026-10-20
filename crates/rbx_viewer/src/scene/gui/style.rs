@@ -3,8 +3,8 @@
 //!
 //! A `StyleLink` names one `StyleSheet` and applies it to the tree rooted at
 //! the link's own parent (`StyleLink`, creator-docs). The sheet's `StyleRule`
-//! children — plus those of every sheet it derives from, through `StyleDerive`
-//! — each carry a selector and a bag of property overrides, and the ones whose
+//! children, plus those of every sheet it derives from, through `StyleDerive`
+//! each carry a selector and a bag of property overrides, and the ones whose
 //! selector matches an instance overwrite that instance's properties.
 //!
 //! # What a saved file cannot say
@@ -43,7 +43,7 @@ impl Styled {
 
     /// [`Styled::new`] for one tree alone: the instances under `root`
     /// (itself included) come out exactly as the whole-DOM pass would leave
-    /// them, and nothing else is walked but the path down to `root` — a
+    /// them, and nothing else is walked but the path down to `root`, a
     /// link applies to its parent's tree, so only one on `root`'s path or
     /// inside it can reach it. The walk keeps the whole pass's order, which
     /// is what decides which of two colliding links wins.
@@ -126,7 +126,7 @@ impl Styled {
     }
 
     /// [`Styled::apply`] over `start`'s tree alone, inside a link scoped to
-    /// `root` — the selectors still read their ancestry from `root`.
+    /// `root`: the selectors still read their ancestry from `root`.
     fn apply_from(&mut self, dom: &WeakDom, root: Ref, start: Ref, rules: &[cascade::Rule]) {
         let mut stack = vec![start];
         while let Some(referent) = stack.pop() {

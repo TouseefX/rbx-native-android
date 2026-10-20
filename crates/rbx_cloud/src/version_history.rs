@@ -2,7 +2,7 @@
 //! `GET /v1/{placeId}/history` and `/contributors` (`creator-docs`,
 //! `reference/cloud/openapi.json`, both scope `universe.place:read`), and
 //! one version's place file through the keyed asset-delivery route with
-//! `/version/{n}` — what restoring one starts from. Open Cloud has no
+//! `/version/{n}`: what restoring one starts from. Open Cloud has no
 //! "revert a place" call: Roblox's own restore makes a new version out of the
 //! old one's file (`creator-docs`, `projects/version-history.md`), which is
 //! `Client::publish_place` with these bytes.
