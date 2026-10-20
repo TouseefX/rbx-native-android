@@ -86,9 +86,18 @@ fn spawn(command: &mut Command, opts: &RunOpts) -> RunResult {
                 .stdout(ProcessStdio::piped())
                 .stderr(ProcessStdio::piped());
         }
-        Stdio::Inherit => {}
+        // `output()` pipes whatever is not set explicitly; a shared terminal has to be asked for.
+        Stdio::Inherit => {
+            command
+                .stdin(ProcessStdio::inherit())
+                .stdout(ProcessStdio::inherit())
+                .stderr(ProcessStdio::inherit());
+        }
         Stdio::InheritOutput => {
-            command.stdin(ProcessStdio::null());
+            command
+                .stdin(ProcessStdio::null())
+                .stdout(ProcessStdio::inherit())
+                .stderr(ProcessStdio::inherit());
         }
     }
     match command.output() {
