@@ -6610,6 +6610,7 @@ name = "rbx_parser_cli"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "rbx_audit",
  "rbx_binary",
  "rbx_dom",
  "rbx_lua",
@@ -6692,6 +6693,7 @@ dependencies = [
  "raw-window-handle",
  "rbx_animation",
  "rbx_assets",
+ "rbx_audit",
  "rbx_autorig",
  "rbx_binary",
  "rbx_cloud",

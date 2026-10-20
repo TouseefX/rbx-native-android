@@ -76,6 +76,7 @@ This builds the whole workspace. Individual binaries:
 |---|---|---|
 | `rbxdump` | `rbx_parser_cli` | Reads a `.rbxm`/`.rbxl`/`.rbxlx`/`.rbxmx` file and prints its instance tree; `--roundtrip <file>` is a continuous-verification tool that re-serializes a file and diffs the result against the original. |
 | `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file from the command line (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`). |
+| `rbxaudit` | `rbx_parser_cli` | Audits a place file's scripts for remote-security problems (`rbxaudit place.rbxl`); prints one line per finding and exits 1 when any is High, for CI. |
 | `rbxview` | `rbx_viewer` | A standalone 3D viewer for a place/model file (`rbxview place.rbxl [--screenshot out.png]`), and the server for its browser build (`rbxview --serve`, below). |
 | `rbxstudio` | `rbx_studio` | The desktop editor (`rbxstudio [--select <name-or-path>] [--run <script.luau>] [--verbose] <place>`; `--help` lists them all). |
 | `rbxcloud` | `rbx_cloud` | An Open Cloud CLI (`whoami`/`list`/`download`/`asset`). |
@@ -123,7 +124,8 @@ offscreen frame are both too slow to use otherwise — don't be surprised that
 | `rbx_cloud` | Open Cloud API client and the `rbxcloud` CLI. |
 | `rbx_viewer` | The wgpu renderer and the `rbxview` binary (desktop and WebGPU). |
 | `rbx_studio` | The desktop editor (`rbxstudio`), built on GPUI Kit. |
-| `rbx_parser_cli` | The `rbxdump` and `rbxlua` command-line tools. |
+| `rbx_audit` | A whole-place script security audit: unvalidated remote arguments, missing remotes, bad requires and similar. |
+| `rbx_parser_cli` | The `rbxdump`, `rbxlua`, `rbxmerge` and `rbxaudit` command-line tools. |
 
 ## Testing
 
