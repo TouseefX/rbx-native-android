@@ -26,7 +26,12 @@ fn place(specs: &[(&str, &str)]) -> WeakDom {
 
 fn run_all(dom: &WeakDom) -> Report {
     let files = discover(dom, &[]).unwrap();
-    run(dom, &files, ReflectionDatabase::shared(), &Options::default())
+    run(
+        dom,
+        &files,
+        ReflectionDatabase::shared(),
+        &Options::default(),
+    )
 }
 
 fn find<'a>(report: &'a Report, path: &[&str]) -> &'a TestResult {
@@ -50,15 +55,28 @@ fn failures_carry_message_and_script_line() {
     let report = run_all(&dom);
     let failed = find(&report, &["failures", "a failed expectation"]);
     assert_eq!(failed.status, Status::Failed);
-    assert_eq!(failed.message.as_deref(), Some("Expected 3 (number), got 2 (number)"));
+    assert_eq!(
+        failed.message.as_deref(),
+        Some("Expected 3 (number), got 2 (number)")
+    );
     let at = failed.location.as_ref().unwrap();
-    assert_eq!((at.name.as_str(), at.line), ("ReplicatedStorage.Specs.fail.spec", 4));
+    assert_eq!(
+        (at.name.as_str(), at.line),
+        ("ReplicatedStorage.Specs.fail.spec", 4)
+    );
 
     let errored = find(&report, &["failures", "an error"]);
-    assert!(errored.message.as_deref().unwrap().contains("attempt to index nil"));
+    assert!(errored
+        .message
+        .as_deref()
+        .unwrap()
+        .contains("attempt to index nil"));
     assert_eq!(errored.location.as_ref().unwrap().line, 9);
     assert!(errored.stack.as_deref().unwrap().contains("fail.spec:9"));
-    assert_eq!(find(&report, &["failures", "passes"]).status, Status::Passed);
+    assert_eq!(
+        find(&report, &["failures", "passes"]).status,
+        Status::Passed
+    );
 }
 
 #[test]
@@ -66,11 +84,17 @@ fn hook_errors_fail_the_tests_they_guard() {
     let dom = place(&[("hooks.spec", include_str!("fixtures/hooks.spec.luau"))]);
     let report = run_all(&dom);
     let message = |path: &[&str]| find(&report, path).message.clone().unwrap();
-    assert!(message(&["beforeEach fails", "never gets to run"]).starts_with("beforeEach hook failed:"));
+    assert!(
+        message(&["beforeEach fails", "never gets to run"]).starts_with("beforeEach hook failed:")
+    );
     assert!(message(&["beforeAll fails", "first"]).starts_with("beforeAll hook failed:"));
     assert!(message(&["beforeAll fails", "second"]).contains("suite setup broke"));
-    assert!(message(&["afterEach fails", "ran but its teardown failed"]).starts_with("afterEach hook failed:"));
-    assert_eq!(find(&report, &["afterAll fails", "passes before it"]).status, Status::Passed);
+    assert!(message(&["afterEach fails", "ran but its teardown failed"])
+        .starts_with("afterEach hook failed:"));
+    assert_eq!(
+        find(&report, &["afterAll fails", "passes before it"]).status,
+        Status::Passed
+    );
     assert!(message(&["afterAll fails", "afterAll"]).contains("suite teardown broke"));
     assert!(message(&["describe body fails"]).contains("declaring broke"));
     assert_eq!(report.count(Status::Passed), 1);
@@ -102,7 +126,10 @@ fn focus_in_one_file_skips_every_other_test() {
 fn each_file_gets_a_fresh_place_and_jest_style_works() {
     let dom = place(&[
         ("jest.test", include_str!("fixtures/jest.test.luau")),
-        ("isolation.spec", include_str!("fixtures/isolation.spec.luau")),
+        (
+            "isolation.spec",
+            include_str!("fixtures/isolation.spec.luau"),
+        ),
     ]);
     let report = run_all(&dom);
     assert!(report.passed(), "{}", human(&report));
@@ -115,7 +142,11 @@ fn a_test_waiting_forever_fails_instead_of_hanging() {
     let report = run_all(&dom);
     let hung = find(&report, &["waits on an event nothing fires"]);
     assert_eq!(hung.status, Status::Failed);
-    assert!(hung.message.as_deref().unwrap().contains("never finished"), "{}", human(&report));
+    assert!(
+        hung.message.as_deref().unwrap().contains("never finished"),
+        "{}",
+        human(&report)
+    );
 }
 
 #[test]
@@ -154,7 +185,10 @@ fn plan_lists_describes_and_tests_with_lines() {
     let plan = plan(&dom, file, ReflectionDatabase::shared());
     assert!(plan.error.is_none());
     let first = &plan.nodes[0];
-    assert_eq!((first.kind, first.path.clone(), first.line), (NodeKind::Describe, vec!["skips".to_string()], Some(2)));
+    assert_eq!(
+        (first.kind, first.path.clone(), first.line),
+        (NodeKind::Describe, vec!["skips".to_string()], Some(2))
+    );
     let skipped = &plan.nodes[1];
     assert_eq!((skipped.line, skipped.skip), (Some(3), true));
     assert_eq!(plan.nodes.len(), 9);
@@ -168,10 +202,17 @@ fn discovery_skips_vendored_packages_and_honours_roots() {
     let index = dom.new_instance("Folder", "_Index", Some(packages));
     dom.new_instance("ModuleScript", "vendored.spec", Some(index));
     let names = |roots: &[String]| -> Vec<String> {
-        discover(&dom, roots).unwrap().into_iter().map(|f| f.name).collect()
+        discover(&dom, roots)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.name)
+            .collect()
     };
     assert_eq!(names(&[]), ["ReplicatedStorage.Specs.a.spec"]);
-    assert_eq!(names(&["ReplicatedStorage.Specs".into()]), ["ReplicatedStorage.Specs.a.spec"]);
+    assert_eq!(
+        names(&["ReplicatedStorage.Specs".into()]),
+        ["ReplicatedStorage.Specs.a.spec"]
+    );
     assert!(names(&["Workspace".into()]).is_empty());
     assert!(discover(&dom, &["Nowhere".into()]).is_err());
 }
@@ -181,7 +222,9 @@ fn junit_and_json_carry_every_test() {
     let dom = place(&[("fail.spec", include_str!("fixtures/fail.spec.luau"))]);
     let report = run_all(&dom);
     let xml = junit(&report);
-    assert!(xml.contains("<testsuite name=\"ReplicatedStorage.Specs.fail.spec\" tests=\"3\" failures=\"2\""));
+    assert!(xml.contains(
+        "<testsuite name=\"ReplicatedStorage.Specs.fail.spec\" tests=\"3\" failures=\"2\""
+    ));
     assert!(xml.contains("<failure message=\"Expected 3 (number), got 2 (number)\">"));
     let value: serde_json::Value = serde_json::from_str(&json(&report)).unwrap();
     assert_eq!(value["failed"], 2);
@@ -190,8 +233,39 @@ fn junit_and_json_carry_every_test() {
 
 #[test]
 fn a_test_still_waiting_past_the_time_limit_fails() {
-    let dom = place(&[("slow.spec", "return function() it('sleeps', function() task.wait(3600) end) end")]);
+    let dom = place(&[(
+        "slow.spec",
+        "return function() it('sleeps', function() task.wait(3600) end) end",
+    )]);
     let report = run_all(&dom);
     let slow = find(&report, &["sleeps"]);
-    assert!(slow.message.as_deref().unwrap().contains("simulated time"), "{}", human(&report));
+    assert!(
+        slow.message.as_deref().unwrap().contains("simulated time"),
+        "{}",
+        human(&report)
+    );
+}
+
+#[test]
+fn a_runaway_loop_fails_its_test_and_the_file_goes_on() {
+    let dom = place(&[(
+        "loop.spec",
+        "return function() it('spins', function() while true do end end) it('after', function() end) end",
+    )]);
+    let report = run_all(&dom);
+    assert!(
+        find(&report, &["spins"])
+            .message
+            .as_deref()
+            .unwrap()
+            .contains("Script timeout"),
+        "{}",
+        human(&report)
+    );
+    assert_eq!(
+        find(&report, &["after"]).status,
+        Status::Passed,
+        "{}",
+        human(&report)
+    );
 }

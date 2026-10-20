@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use mlua::{IntoLua, Lua, MultiValue, Table, Value};
+use mlua::{IntoLua, Lua, MultiValue, Table, Value, VmState};
 use rbx_dom::{Ref, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
@@ -42,6 +42,10 @@ const HARNESS_NAME: &str = "TestRunner";
 
 /// How much simulated time one file's threads may wait in all.
 const TIME_LIMIT: Duration = Duration::from_secs(600);
+
+/// How long one test (with its hooks) may run before it fails, as the
+/// command bar's budget is per resume and a file's tests share one.
+const TEST_BUDGET: Duration = Duration::from_secs(if cfg!(test) { 1 } else { 10 });
 
 /// Wally vendors each dependency, specs and all, under `Packages._Index`:
 /// those are the packages' tests, not the place's.
@@ -171,7 +175,8 @@ pub fn discover(dom: &WeakDom, roots: &[String]) -> Result<Vec<SpecFile>, String
             continue;
         }
         let name = instance.name();
-        if instance.class() == "ModuleScript" && (name.ends_with(".spec") || name.ends_with(".test"))
+        if instance.class() == "ModuleScript"
+            && (name.ends_with(".spec") || name.ends_with(".test"))
         {
             found.push(SpecFile {
                 module: at,
@@ -424,6 +429,10 @@ fn harness_args(
         env.set_metatable(Some(meta))?;
         compile_in(lua, &module, env)
     })?;
+    let rearm = lua.create_function(|lua, ()| {
+        arm(lua);
+        Ok(())
+    })?;
     let report = lua.create_function(move |_, (kind, data): (String, Table)| {
         events.borrow_mut().push(event(&kind, &data)?);
         Ok(())
@@ -434,11 +443,32 @@ fn harness_args(
         Value::Function(load),
         Value::Function(report),
         Value::Table(options(lua)?),
+        Value::Function(rearm),
     ]))
 }
 
+/// Gives the running test [`TEST_BUDGET`], in place of what is left of
+/// the resume's. A timeout re-arms it, so the harness that catches the
+/// error has a budget of its own to report it and go on with.
+fn arm(lua: &Lua) {
+    let deadline = Cell::new(Instant::now() + TEST_BUDGET);
+    lua.set_interrupt(move |_| {
+        if Instant::now() < deadline.get() {
+            return Ok(VmState::Continue);
+        }
+        deadline.set(Instant::now() + TEST_BUDGET);
+        Err(mlua::Error::runtime(format!(
+            "Script timeout: the test ran for over {} s",
+            TEST_BUDGET.as_secs()
+        )))
+    });
+}
+
 fn event(kind: &str, data: &Table) -> mlua::Result<Event> {
-    let path = || data.get::<Option<Vec<String>>>("path").map(Option::unwrap_or_default);
+    let path = || {
+        data.get::<Option<Vec<String>>>("path")
+            .map(Option::unwrap_or_default)
+    };
     Ok(match kind {
         "node" => {
             let mode: Option<String> = data.get("mode")?;

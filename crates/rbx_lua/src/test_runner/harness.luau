@@ -1,9 +1,10 @@
 -- The test runner's harness: TestEZ's describe/it/expect, with Jest-Lua's
 -- matcher names and `.skip`/`.only` beside them. Rust passes the spec
 -- module, a loader that compiles it with `env` in front of the globals,
--- a `report(kind, data)` callback and the run's options; see
+-- a `report(kind, data)` callback, the run's options and `rearm()`, which
+-- gives the next test a fresh time budget; see
 -- `test_runner::run_file` for what each report means.
-local spec, specName, loadSpec, report, options = ...
+local spec, specName, loadSpec, report, options, rearm = ...
 
 local HOOKS = { "beforeAll", "afterAll", "beforeEach", "afterEach" }
 
@@ -348,6 +349,7 @@ local function runTest(node)
 		result(node.path, "skipped", nil, node.line)
 		return
 	end
+	rearm()
 	report("start", { path = node.path })
 	local started = os.clock()
 	local chain = {}
@@ -386,6 +388,7 @@ local function runDescribe(node)
 	for _, test in tests(node, {}) do
 		live = live or (test.fn ~= nil and not skipped(test))
 	end
+	rearm()
 	local failure = if live then runHooks(node.beforeAll, "beforeAll") else nil
 	if failure then
 		for _, test in tests(node, {}) do
@@ -403,6 +406,7 @@ local function runDescribe(node)
 		end
 	end
 	if live then
+		rearm()
 		local after = runHooks(node.afterAll, "afterAll")
 		if after then
 			local path = table.clone(node.path)

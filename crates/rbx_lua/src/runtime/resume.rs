@@ -39,7 +39,10 @@ impl Runtime {
             // The chunk runs under a wrapper, so a chunk that returns
             // `false, x` is not taken for a failed callback (see
             // `scheduler::resume`).
-            let main = self.lua.load("local f = ...; f(select(2, ...))").set_name("=Command bar");
+            let main = self
+                .lua
+                .load("local f = ...; f(select(2, ...))")
+                .set_name("=Command bar");
             let thread = self.lua.create_thread(main.into_function()?)?;
             Ok((thread, chunk))
         });
