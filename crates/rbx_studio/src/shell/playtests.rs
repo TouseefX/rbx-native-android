@@ -12,8 +12,8 @@
 //! if rbxnative then rbxnative.mark("boss_down", { boss = "Golem" }) end
 //! ```
 //!
-//! `RBX_STUDIO_PLAYTESTS=<presence|deaths|stuck|on>`, read at the dock's
-//! first render, shows every recording at 60% of the longest one with that
+//! `RBX_STUDIO_PLAYTESTS=<presence|deaths|stuck|on>` opens the dock at
+//! startup and, at its first render, shows every recording at 60% of the longest one with that
 //! heat map (`on`: none) — a screenshot aid.
 
 mod dock;
@@ -33,6 +33,9 @@ use crate::playtests::heat::{self, HeatKind};
 use crate::playtests::recorder::Recorder;
 use crate::playtests::{replay, store, Recording, Summary};
 
+/// See this module's doc comment.
+pub(super) const DEBUG_VARIABLE: &str = "RBX_STUDIO_PLAYTESTS";
+
 /// The recording rate a fresh settings file starts with; 0 turns
 /// recording off.
 pub(crate) const DEFAULT_RATE_HZ: f32 = 10.0;
@@ -40,8 +43,15 @@ pub(crate) const DEFAULT_RATE_HZ: f32 = 10.0;
 pub(super) const RATES: [f32; 4] = [0.0, 5.0, 10.0, 20.0];
 /// The replay speeds the dock offers.
 pub(super) const SPEEDS: [f32; 4] = [0.5, 1.0, 2.0, 4.0];
-/// Heat cell size, in studs.
-pub(super) const HEAT_CELL: f32 = 4.0;
+/// Heat cell size, in studs: time spent is dense enough for a fine grid;
+/// deaths and stuck spots are a handful of points, which a fine grid would
+/// draw as specks under their own markers.
+fn heat_cell(kind: HeatKind) -> f32 {
+    match kind {
+        HeatKind::Presence => 4.0,
+        HeatKind::Deaths | HeatKind::Stuck => 8.0,
+    }
+}
 
 /// One recording of the open place, as the dock lists it.
 pub(super) struct Entry {
@@ -212,7 +222,7 @@ impl Shell {
             let fills = match self.playtests.heat {
                 Some(kind) => {
                     let recs: Vec<&Recording> = shown.iter().map(|(_, rec)| rec.as_ref()).collect();
-                    replay::fills(&heat::grid(&recs, kind, HEAT_CELL), kind)
+                    replay::fills(&heat::grid(&recs, kind, heat_cell(kind)), kind)
                 }
                 None => Vec::new(),
             };

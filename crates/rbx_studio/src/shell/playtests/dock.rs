@@ -59,6 +59,14 @@ fn toggle(id: impl Into<ElementId>, label: impl Into<SharedString>, on: bool) ->
     )
 }
 
+/// "1 player", "2 players".
+fn counted(n: usize, noun: &str) -> String {
+    match n {
+        1 => format!("1 {noun}"),
+        _ => format!("{n} {noun}s"),
+    }
+}
+
 fn small_text(text: impl Into<SharedString>) -> Div {
     div()
         .flex_none()
@@ -103,8 +111,8 @@ impl Shell {
             .child(self.playtests_toolbar(cx))
             .child(self.playtests_rows(cx));
         (
-            Some(body.into_any_element()),
             Some(overflow.into_any_element()),
+            Some(body.into_any_element()),
         )
     }
 
@@ -341,8 +349,8 @@ impl Shell {
                 .child(name)
                 .child(small_text(date))
                 .child(small_text(clock(summary.duration)))
-                .child(small_text(format!("{} pl", summary.players)))
-                .child(small_text(format!("{} deaths", summary.deaths)))
+                .child(small_text(counted(summary.players, "player")))
+                .child(small_text(counted(summary.deaths, "death")))
                 .child(
                     chrome::icon_button(("playtests-rename", i), IconName::Pencil, "Rename")
                         .on_click(cx.listener(move |shell, _, window, cx| {

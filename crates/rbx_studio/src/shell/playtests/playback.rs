@@ -159,7 +159,7 @@ impl Shell {
             return;
         }
         self.playtests.env_applied = true;
-        let Ok(value) = std::env::var("RBX_STUDIO_PLAYTESTS") else {
+        let Ok(value) = std::env::var(super::DEBUG_VARIABLE) else {
             return;
         };
         let heat = match value.trim() {

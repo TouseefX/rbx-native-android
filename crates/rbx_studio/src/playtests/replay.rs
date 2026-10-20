@@ -181,7 +181,7 @@ fn ramp(x: f32) -> [f32; 3] {
 
 /// Each cell as a square on its floor, raised 0.05 studs, inset 3% per
 /// side; colour from a blue → yellow → red ramp of `weight / max`, alpha
-/// 0.25 + 0.45 × that share. Empty for an empty grid. `kind` only picks
+/// 0.35 + 0.5 × that share. Empty for an empty grid. `kind` only picks
 /// the ramp: Deaths and Stuck start at yellow rather than blue.
 pub(crate) fn fills(grid: &HeatGrid, kind: HeatKind) -> Vec<Fill> {
     let inset = grid.cell * 0.03;
@@ -207,7 +207,7 @@ pub(crate) fn fills(grid: &HeatGrid, kind: HeatKind) -> Vec<Fill> {
                     Vec3::new(x1, y, z1),
                     Vec3::new(x0, y, z1),
                 ],
-                color: rgba(ramp(x), 0.25 + 0.45 * share),
+                color: rgba(ramp(x), 0.35 + 0.5 * share),
             }
         })
         .collect()
