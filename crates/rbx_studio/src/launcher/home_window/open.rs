@@ -149,6 +149,11 @@ impl HomeWindow {
     }
 
     pub(super) fn new_loren_project(&mut self, cx: &mut Context<Self>) {
+        // The folder picker is a desktop portal, which a nested test X
+        // server doesn't have.
+        if let Some(folder) = std::env::var_os(crate::launcher::fixtures::FOLDER_VARIABLE) {
+            return self.create_loren_in(Path::new(&folder), cx);
+        }
         let picked = cx.prompt_for_paths(PathPromptOptions {
             files: false,
             directories: true,
@@ -163,18 +168,7 @@ impl HomeWindow {
             let _ = this.update(cx, |this, cx| match picked {
                 Ok(Some(paths)) => {
                     if let Some(folder) = paths.into_iter().next() {
-                        match create_loren_project(&folder) {
-                            Ok(place) => this.open_path_later(place, cx),
-                            Err(reason) => {
-                                this.dialog = Some(Dialog::Error {
-                                    experience: None,
-                                    title: "Couldn\u{2019}t create the Loren project".to_string(),
-                                    status: None,
-                                    reason,
-                                });
-                                cx.notify();
-                            }
-                        }
+                        this.create_loren_in(&folder, cx);
                     }
                 }
                 Ok(None) => {}
@@ -190,6 +184,21 @@ impl HomeWindow {
             });
         })
         .detach();
+    }
+
+    fn create_loren_in(&mut self, folder: &Path, cx: &mut Context<Self>) {
+        match create_loren_project(folder) {
+            Ok(place) => self.open_path_later(place, cx),
+            Err(reason) => {
+                self.dialog = Some(Dialog::Error {
+                    experience: None,
+                    title: "Couldn\u{2019}t create the Loren project".to_string(),
+                    status: None,
+                    reason,
+                });
+                cx.notify();
+            }
+        }
     }
 
     pub(super) fn open_file(&mut self, cx: &mut Context<Self>) {
@@ -350,5 +359,57 @@ fn download_reason(status: Option<u16>, message: &str) -> String {
         Some(401 | 403) => "legacy-asset:manage is not granted for this experience".to_string(),
         Some(404) => "The place doesn\u{2019}t exist any more".to_string(),
         _ => message.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Not a glob: `gpui::test` would shadow the `#[test]` attribute.
+    use super::{create_loren_project, loren_target};
+    use std::path::PathBuf;
+
+    fn scratch(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("rbx-loren-home-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn empty_folder_becomes_the_project() {
+        let dir = scratch("empty");
+        assert_eq!(loren_target(&dir), dir);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn busy_folder_gets_the_first_free_loren_game() {
+        let dir = scratch("busy");
+        std::fs::create_dir(dir.join("LorenGame")).unwrap();
+        assert_eq!(loren_target(&dir), dir.join("LorenGame2"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn creates_a_place_with_loren_in_it() {
+        let dir = scratch("create");
+        std::fs::write(dir.join("notes.txt"), "").unwrap();
+        let place = create_loren_project(&dir).unwrap();
+        assert_eq!(place, dir.join("LorenGame/LorenGame.rbxl"));
+        assert!(dir.join("LorenGame/default.project.json").is_file());
+        let dom = rbx_binary::deserialize(&std::fs::read(&place).unwrap()).unwrap();
+        for name in [
+            "LorenRuntime",
+            "LorenServer",
+            "LorenPackages",
+            "Shared",
+            "Client",
+        ] {
+            assert!(
+                crate::explorer::find_by_name(&dom, name).is_some(),
+                "{name}"
+            );
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

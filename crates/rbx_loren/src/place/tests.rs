@@ -56,6 +56,22 @@ fn builds_server_and_client() {
         &["StarterPlayerScripts", "Client", "Client"],
     );
     assert_eq!(class(&dom, client), "LocalScript");
+    let scripts = at(
+        &dom,
+        service(&dom, "StarterPlayer"),
+        &["StarterPlayerScripts"],
+    );
+    assert_eq!(class(&dom, scripts), "StarterPlayerScripts");
+}
+
+#[test]
+fn fills_the_places_own_player_scripts() {
+    let mut dom = WeakDom::new();
+    let player = dom.new_instance("StarterPlayer", "StarterPlayer", None);
+    let scripts = dom.new_instance("StarterPlayerScripts", "StarterPlayerScripts", Some(player));
+    apply_project(&mut dom, &project_dir()).unwrap();
+    assert_eq!(dom.get(player).unwrap().children(), [scripts]);
+    at(&dom, scripts, &["Client", "Client"]);
 }
 
 #[test]
