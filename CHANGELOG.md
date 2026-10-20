@@ -10,8 +10,8 @@
   tree narrows to the matches with a count under the field, and Enter
   selects them all, the viewport outlines them and one Properties edit
   changes every one as a single undo step. A query that doesn't parse says
-  what and where. The Command Bar takes `:select <query>` too. Studio's own
-  Explorer only searches names. (@chteau)
+  what and where, and a misspelt enum item suggests the closest one. The
+  Command Bar takes `:select <query>` too. (@chteau)
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
