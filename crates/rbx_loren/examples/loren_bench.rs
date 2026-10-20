@@ -34,9 +34,8 @@ fn run(filter: Option<String>) -> Result<String, String> {
     let bench = Path::new(env!("CARGO_MANIFEST_DIR")).join("bench/LorenBench.luau");
     insert_path(&mut dom, storage, "LorenBench", &bench)?;
     let filter = filter.map_or_else(|| "nil".to_string(), |f| lua_string(&f));
-    let source = format!(
-        "require(game:GetService(\"ServerStorage\").LorenBench)({{ filter = {filter} }})"
-    );
+    let source =
+        format!("require(game:GetService(\"ServerStorage\").LorenBench)({{ filter = {filter} }})");
     run_script(dom, &source)
 }
 

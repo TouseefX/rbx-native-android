@@ -2,6 +2,8 @@
 //! read a Service's shape, the per-file checks, and `loren doctor`'s pass.
 
 mod analyze;
+mod colon;
+mod decl;
 mod doctor;
 mod scan;
 mod syntax;
