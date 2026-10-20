@@ -643,7 +643,8 @@ impl Shell {
             }
         });
 
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(query_select::placeholder(false)));
         let searched = cx.subscribe(
             &search,
             |shell, input, event: &InputEvent, cx| match event {

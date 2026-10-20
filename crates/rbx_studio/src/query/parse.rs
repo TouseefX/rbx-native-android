@@ -43,7 +43,8 @@ pub(super) enum Expr {
     HasAttribute(String),
     Test {
         target: Target,
-        compare: Option<(Op, Value)>,
+        /// The operator, the value and the value's span.
+        compare: Option<(Op, Value, Range<usize>)>,
     },
 }
 
@@ -320,7 +321,7 @@ impl Parser<'_> {
         }
     }
 
-    fn compare(&mut self) -> Result<Option<(Op, Value)>, QueryError> {
+    fn compare(&mut self) -> Result<Option<(Op, Value, Range<usize>)>, QueryError> {
         let Some(token) = self.peek().cloned() else {
             return Ok(None);
         };
@@ -330,8 +331,9 @@ impl Parser<'_> {
             _ => return Ok(None),
         };
         self.pos += 1;
+        let start = self.peek().map_or(self.end(), |t| t.span.clone()).start;
         match self.value() {
-            Some(value) => Ok(Some((op, value))),
+            Some(value) => Ok(Some((op, value, start..self.tokens[self.pos - 1].span.end))),
             None => {
                 let shown = &self.source[token.span.clone()];
                 Err(error(

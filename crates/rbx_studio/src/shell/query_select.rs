@@ -56,8 +56,11 @@ impl Shell {
         }
     }
 
-    fn toggle_query_mode(&mut self, cx: &mut Context<Self>) {
+    fn toggle_query_mode(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.query.enabled = !self.query.enabled;
+        let hint = placeholder(self.query.enabled);
+        self.search
+            .update(cx, |state, cx| state.set_placeholder(hint, window, cx));
         self.push_root_rows(cx);
     }
 
@@ -98,7 +101,7 @@ impl Shell {
                 .text_color(tokens::check_on()),
             false => button,
         }
-        .on_click(cx.listener(|shell, _, _, cx| shell.toggle_query_mode(cx)))
+        .on_click(cx.listener(|shell, _, window, cx| shell.toggle_query_mode(window, cx)))
     }
 
     /// The line under the field in query mode: the match count with a
@@ -123,10 +126,25 @@ impl Shell {
                 .into_any_element(),
             Err(error) => line
                 .text_color(tokens::text_error())
-                .child(SharedString::from(error.to_string()))
+                // Wraps: a suggestion is longer than the dock is wide.
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .child(SharedString::from(error.to_string())),
+                )
                 .into_any_element(),
         };
         Some(element)
+    }
+}
+
+/// The search field's hint: an example query in query mode, so the mode
+/// shows in the empty field and not only in the lit toggle.
+pub(super) fn placeholder(query_mode: bool) -> &'static str {
+    match query_mode {
+        true => "Part where Anchored = false",
+        false => "Search",
     }
 }
 
@@ -134,5 +152,17 @@ fn count(matches: usize) -> String {
     match matches {
         1 => "1 match".to_owned(),
         n => format!("{n} matches"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::placeholder;
+
+    #[test]
+    fn the_placeholder_shows_an_example_query_in_query_mode() {
+        assert_eq!(placeholder(false), "Search");
+        let example = placeholder(true);
+        assert!(crate::query::parse(example).is_ok(), "{example}");
     }
 }

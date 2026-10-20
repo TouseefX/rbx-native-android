@@ -37,6 +37,9 @@ pub(super) fn select(
         },
         None => None,
     };
+    if let Some(filter) = &ast.filter {
+        super::check::enum_items(filter, class, db)?;
+    }
     let scope: Vec<Ref> = match &ast.under {
         Some(under) => {
             let found = crate::explorer::resolve(dom, &under.path)
@@ -94,7 +97,7 @@ fn holds(expr: &Expr, instance: &Instance, db: &ReflectionDatabase) -> bool {
             match (found, compare) {
                 (None, _) => false,
                 (Some(val), None) => truthy(&val),
-                (Some(val), Some((op, value))) => compare_values(*op, &val, value),
+                (Some(val), Some((op, value, _))) => compare_values(*op, &val, value),
             }
         }
     }

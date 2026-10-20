@@ -140,12 +140,10 @@ mod tests {
     use super::*;
     use rbx_dom::Instance;
     use std::sync::atomic::{AtomicU64, Ordering};
-    use std::sync::Mutex;
+
+    use crate::settings::ENV_LOCK;
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    /// Guards every test that mutates `XDG_CONFIG_HOME` — see the identical
-    /// guard in `settings.rs`'s tests.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn temp_config_dir() -> PathBuf {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
