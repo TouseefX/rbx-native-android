@@ -263,7 +263,7 @@ fn a_whole_drag_is_one_undo_step() {
     assert!(sun.opens_step(), "the next drag opens its own step");
 }
 
-/// A placement as `rbx_viewer::sun::place` would report it — only the two
+/// A placement as `rbx_viewer::sun::place` would report it, only the two
 /// numbers matter to what a step writes.
 fn at(clock_time: f32, geographic_latitude: f32) -> Placement {
     Placement {

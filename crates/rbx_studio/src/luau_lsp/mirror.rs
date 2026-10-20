@@ -57,7 +57,7 @@ impl Mirror {
     }
 
     /// Brings the folder in line with `dom`, returning every file it created,
-    /// changed or deleted — what the server has to be told about, since it
+    /// changed or deleted, what the server has to be told about, since it
     /// only rereads a file it has not opened when told the file moved.
     pub(crate) fn sync(
         &mut self,
@@ -111,7 +111,7 @@ fn file_name(reference: Ref) -> String {
 }
 
 /// The whole tree under a `DataModel` root, collecting every script's source
-/// into `scripts` on the way. Non-scripts are kept too — they are what gives
+/// into `scripts` on the way. Non-scripts are kept too, they are what gives
 /// `workspace.Part` a type (Rojo's `--include-non-scripts`).
 fn sourcemap(dom: &WeakDom, db: &ReflectionDatabase, scripts: &mut HashMap<Ref, String>) -> Value {
     let children: Vec<Value> = dom

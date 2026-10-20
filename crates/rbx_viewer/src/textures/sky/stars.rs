@@ -1,8 +1,8 @@
 //! The star field `Sky.StarCount` asks for: a fixed set of directions on the
 //! unit sphere, with a brightness each.
 //!
-//! Roblox's own stars are a fixed field too — they do not move between runs of
-//! the same place — so these are generated from a constant seed rather than
+//! Roblox's own stars are a fixed field too, they do not move between runs of
+//! the same place, so these are generated from a constant seed rather than
 //! from the clock, and the same count always yields the same sky.
 
 use glam::Vec3;

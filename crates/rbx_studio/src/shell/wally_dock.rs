@@ -5,8 +5,8 @@
 //! `_Index` folders back; Updates lists what the registry has newer.
 //! The data and the install path live in `shell::wally_sync`.
 //!
-//! Shown only while the Script Editor document is up — see
-//! `Shell::hidden_panels` — since it means nothing over the 3D view or
+//! Shown only while the Script Editor document is up, see
+//! `Shell::hidden_panels`: since it means nothing over the 3D view or
 //! the UI Editor's canvas.
 
 use std::cell::Cell;

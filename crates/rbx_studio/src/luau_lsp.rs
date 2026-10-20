@@ -45,8 +45,8 @@ pub(crate) fn workspace_root() -> PathBuf {
 }
 
 /// Starts the server over the mirror at `root` and completes the
-/// `initialize` handshake. Blocking — unpacks the server and may download
-/// Roblox's API files — so it belongs on a background thread.
+/// `initialize` handshake. Blocking, unpacks the server and may download
+/// Roblox's API files, so it belongs on a background thread.
 pub(crate) fn start(root: &Path) -> Result<Client, String> {
     let cache = rbx_assets::cache_root()
         .unwrap_or_else(std::env::temp_dir)

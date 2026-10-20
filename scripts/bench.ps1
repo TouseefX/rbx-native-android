@@ -6,7 +6,7 @@
 # reports a number rather than a pass or a fail. BENCHMARKS.md at the repo root
 # holds the recorded baseline.
 #
-# Native Windows equivalent of bench.sh — no PowerShell analogue of Linux's
+# Native Windows equivalent of bench.sh, no PowerShell analogue of Linux's
 # ionice/nice is attempted here, see check.ps1's own note. Untested on a real
 # Windows machine (see README's Platform support table).
 $ErrorActionPreference = "Stop"

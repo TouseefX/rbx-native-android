@@ -1,5 +1,5 @@
-//! The inbound half of `shell::argon_sync`: writing a server batch —
-//! the initial snapshot, or a later `Changes` — into the DOM as one undo
+//! The inbound half of `shell::argon_sync`: writing a server batch,
+//! the initial snapshot, or a later `Changes`: into the DOM as one undo
 //! step, with the id table kept in step.
 
 use gpui_kit::Context;
@@ -114,7 +114,7 @@ impl Shell {
 
     /// One `additions` entry: resolves its `parent` id against what this
     /// client already knows, and drops the entry (rather than guessing) if
-    /// that parent hasn't been seen yet — a later full resync (or the
+    /// that parent hasn't been seen yet, a later full resync (or the
     /// parent's own addition, if it's in the same batch and ordered first,
     /// which `argon-roblox` itself doesn't guarantee) will bring it in.
     pub(super) fn apply_addition(&mut self, dom: &mut WeakDom, node: argon_client::Snapshot) {
@@ -131,7 +131,7 @@ impl Shell {
     }
 
     /// One instance, recursively. With no local parent given, this is a
-    /// root-level entry — reused against an existing service of the same
+    /// root-level entry, reused against an existing service of the same
     /// class rather than duplicated, the same special case
     /// `argon-roblox`'s own `Processor.Write` makes for `game:
     /// FindFirstChildOfClass`.
@@ -189,7 +189,7 @@ impl Shell {
         // v1 simplification: properties present in the update are written;
         // ones the update omits are left as they stand rather than reset
         // to their class default (which `argon-roblox`'s own non-initial
-        // sync path does) — see the Argon sync plan's known simplifications.
+        // sync path does), see the Argon sync plan's known simplifications.
         if let Some(properties) = &update.properties {
             for (name, encoded) in properties {
                 if let Some(variant) = argon_client::decode_value(encoded) {

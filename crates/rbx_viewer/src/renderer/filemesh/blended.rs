@@ -20,7 +20,7 @@ pub(super) struct Blended {
     pub(super) instances: wgpu::Buffer,
     pub(super) capacity: usize,
     /// Each instance's referent, world-space centre and GPU record, in the
-    /// order [`FileMeshes::prepare`] last sorted them — the referent is what
+    /// order [`FileMeshes::prepare`] last sorted them, the referent is what
     /// an edit finds an item by, since that order changes.
     pub(super) items: Vec<(Ref, Vec3, InstanceRaw)>,
     /// This frame's distance to the furthest instance in the batch.

@@ -94,7 +94,7 @@ pub(super) fn upload_with(
 
 /// Whether `err` means Roblox definitely didn't take the upload: no key to
 /// send it with, or a 4xx answer. A 5xx is left out with the network
-/// errors — a gateway timing out may sit in front of a publish that landed.
+/// errors, a gateway timing out may sit in front of a publish that landed.
 pub(super) fn refused(err: &CloudError) -> bool {
     match err {
         CloudError::NoApiKey | CloudError::RateLimited { .. } => true,

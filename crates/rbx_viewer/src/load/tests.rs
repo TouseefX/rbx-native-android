@@ -2,7 +2,7 @@ use super::*;
 use rbx_dom::{CFrameData, Instance, Variant, Vector3Data};
 
 /// A `Workspace` with one `Part` carrying a `Decal` whose `Texture` names a
-/// package `rbxasset://` never groups its content under — resolving it
+/// package `rbxasset://` never groups its content under, resolving it
 /// fails locally (`AssetError::UnknownNativePackage`, see
 /// `rbx_assets::native::package_candidates_for_path`) before any network
 /// call would be attempted, which is what keeps this test offline-safe.
@@ -100,8 +100,8 @@ fn from_dom_surfaces_a_warning_for_a_decal_that_cannot_resolve() {
     assert!(loaded.take_warnings().is_empty());
 }
 
-/// An emitter's texture reaches the pass as `Some(None)` — "tried, and there
-/// is no image" — with the reason already thrown away, so if the warning is
+/// An emitter's texture reaches the pass as `Some(None)`: "tried, and there
+/// is no image", with the reason already thrown away, so if the warning is
 /// not carried out of `resolve_effect_images` it is lost for good and the
 /// dock shows nothing at all for a texture that will never resolve.
 #[test]
@@ -121,8 +121,8 @@ fn from_dom_surfaces_a_warning_for_an_emitter_texture_that_cannot_resolve() {
     );
 }
 
-// The failure that is nobody's in particular — no resolver could be built
-// at all — still has to land in the dock, not only on stderr.
+// The failure that is nobody's in particular, no resolver could be built
+// at all, still has to land in the dock, not only on stderr.
 #[test]
 fn from_dom_surfaces_a_warning_when_no_resolver_can_be_built() {
     let _failure = crate::assets::tests::ResolverFailure::new("cache dir is a file");
@@ -141,7 +141,7 @@ fn from_dom_surfaces_a_warning_when_no_resolver_can_be_built() {
 
 // A transient failure is retried by the next load, not remembered for the
 // life of the `Resident`: once the machine is fixed, the reload fetches what
-// the load could not — here the warning changes from "no resolver" to the
+// the load could not, here the warning changes from "no resolver" to the
 // asset's own, which only a second fetch can produce.
 #[test]
 fn a_reload_retries_what_the_previous_load_failed_to_fetch() {
@@ -383,7 +383,7 @@ fn dom_with_a_text_label() -> WeakDom {
     dom
 }
 
-// A font is two fetches deep — the family's JSON, then the face it names —
+// A font is two fetches deep, the family's JSON, then the face it names,
 // and a streaming loader has to carry the request across two landings: the
 // first resolve asks for the family, the resolve after it lands asks for the
 // face, and only the resolve after *that* has bytes for the renderer.
@@ -480,7 +480,7 @@ fn an_image_a_gui_edit_first_named_is_asked_for() {
 
 // A `Decal`'s own properties edited: the renderer is patched with the face
 // straight away, but the decor plan is what every later asset landing
-// re-assembles the decals from — a plan still naming the image the file was
+// re-assembles the decals from, a plan still naming the image the file was
 // read with would undo the edit the moment anything lands, including the
 // image the edit itself just asked for.
 #[test]
@@ -528,7 +528,7 @@ fn a_decals_own_edits_reach_the_decor_plan() {
     );
 }
 
-/// The decor plan a fresh read of `dom` would build — the bar a patched one
+/// The decor plan a fresh read of `dom` would build, the bar a patched one
 /// has to meet, since it is what every later asset landing re-assembles the
 /// decals from.
 fn rebuilt_plan(

@@ -109,7 +109,7 @@ fn closing_a_script_that_has_no_tab_does_nothing() {
 #[test]
 fn reopening_a_closed_script_opens_a_fresh_tab() {
     // Its editor must be seeded from the DOM again, so this has to report
-    // New — a stale editor is exactly what the roadmap item warns against.
+    // New, a stale editor is exactly what the roadmap item warns against.
     let mut tabs = Tabs::default();
     tabs.open(script(1));
     tabs.close(script(1));

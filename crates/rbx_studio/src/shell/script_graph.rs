@@ -3,8 +3,8 @@
 //! defines.
 //!
 //! `Source` is the only copy that counts, as it is for code. Opening the
-//! side imports the script; every finished edit — a drop, a wire, a typed
-//! literal — compiles the graph and, when that differs from `Source`,
+//! side imports the script; every finished edit, a drop, a wire, a typed
+//! literal, compiles the graph and, when that differs from `Source`,
 //! writes it as one undo step, then imports it again so the graph on screen
 //! is what the code says. A change to `Source` from anywhere else (typing in
 //! Code, undo, a sync) rebuilds the graph the same way. Positions, groups
@@ -120,7 +120,7 @@ pub(super) struct GraphEditor {
     gesture: Option<Gesture>,
     /// Space is held: a drag pans whatever the tool.
     space: bool,
-    /// The last pointer position over the canvas, in panel pixels — where
+    /// The last pointer position over the canvas, in panel pixels, where
     /// Shift+A opens the menu.
     pointer: [f32; 2],
     menu: Option<add_menu::AddMenu>,
@@ -332,8 +332,8 @@ impl Shell {
     /// `Source` holds, writes it (one undo step) and imports it again,
     /// carrying positions, groups and the selection over. A graph that does
     /// not compile is left on screen with its problems and writes nothing.
-    /// Compiling to what `Source` already is — a move, a loose node, a
-    /// group — keeps the graph as it is.
+    /// Compiling to what `Source` already is, a move, a loose node, a
+    /// group, keeps the graph as it is.
     fn commit_graph(&mut self, reference: Ref, cx: &mut Context<Self>) {
         // Typing still on its debounce in the Code side belongs to the
         // state of the script before this write, not after it.

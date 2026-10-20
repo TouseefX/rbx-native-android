@@ -21,7 +21,7 @@ pub(super) struct Painter {
     viewport_buffer: wgpu::Buffer,
     viewport_bind_group: wgpu::BindGroup,
     vertices: Option<wgpu::Buffer>,
-    /// Grown, never shrunk — same reasoning as `renderer::trail::Trails`.
+    /// Grown, never shrunk, same reasoning as `renderer::trail::Trails`.
     vertex_capacity: usize,
     runs: Vec<Run>,
     /// Bind group 2: the `UIGradient` ramps the last build baked.
@@ -135,7 +135,7 @@ impl Painter {
     }
 
     /// [`Painter::draw`] for a layout made at `layout` pixels onto a target
-    /// `target` pixels across — a screen emulated in a smaller view. The
+    /// `target` pixels across, a screen emulated in a smaller view. The
     /// vertices need nothing: [`Painter::prepare`]'s viewport maps `layout`
     /// onto the whole target whatever its size. The clip rectangles are in
     /// the layout's pixels, and are taken to the target's here.

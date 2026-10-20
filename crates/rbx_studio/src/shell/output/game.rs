@@ -4,7 +4,7 @@
 //!
 //! Roblox's `LogService.MessageOut` hands an error over as one message: the
 //! error itself (`ServerScriptService.Main:2: boom`, the script's full name
-//! and line in front) and then its stack, indented —
+//! and line in front) and then its stack, indented,
 //!
 //! ```text
 //! ServerScriptService.Main:2: boom

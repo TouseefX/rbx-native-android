@@ -1,4 +1,4 @@
-# Roblox Binary & Place Parser — Technical Specs & Architecture
+# Roblox Binary & Place Parser: Technical Specs & Architecture
 
 Technical architecture guide in Rust for developing a Roblox archive parser (`.rbxm` / `.rbxl`).
 
@@ -56,7 +56,7 @@ jobs:
 
 > **Official Reference:**
 > - [Roblox Setup CDN (versionQTStudio)](https://setup.rbxcdn.com/versionQTStudio)
-> - [GitHub Actions — Workflow syntax for GitHub Actions](https://docs.github.com/en/actions/writing-workflows)
+> - [GitHub Actions, Workflow syntax for GitHub Actions](https://docs.github.com/en/actions/writing-workflows)
 
 ---
 
@@ -133,8 +133,8 @@ pub fn parse_header(input: &[u8]) -> Result<BinaryHeader, ParseError> {
 ```
 
 > **Official References:**
-> - [The Cargo Book — Workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)
-> - [nom crate — Parser Combinators](https://docs.rs/nom)
+> - [The Cargo Book, Workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)
+> - [nom crate, Parser Combinators](https://docs.rs/nom)
 
 ---
 
@@ -179,4 +179,4 @@ cargo clippy --workspace -- -D warnings
 ```
 
 > **Official Reference:**
-> - [The Rust Programming Language — Chapter 11: Writing Automated Tests](https://doc.rust-lang.org/book/ch11-00-writing-automated-tests.html)
+> - [The Rust Programming Language, Chapter 11: Writing Automated Tests](https://doc.rust-lang.org/book/ch11-00-writing-automated-tests.html)

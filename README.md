@@ -37,6 +37,13 @@ animate rigs and playtest. A lot is still approximated or missing though.
 [ROADMAP.md](ROADMAP.md) has the full list of what's done, what's faked and
 what's out of scope on purpose.
 
+## About AI
+
+I use AI coding tools a lot on this project, and I'd rather say it than hide
+it. That said, nothing lands without me going through the code myself, and
+every PR gets tested against real Roblox Studio before it's merged. If
+something's broken anyway, open an issue.
+
 ## Platform support
 
 | Platform | State |
@@ -285,48 +292,13 @@ include, how to report a bug, and the rules about Roblox assets.
   and dock layout rules for anything that changes how `rbx_studio` looks.
 - [THEMES.md](THEMES.md): installing and making editor themes. Folder
   layout, `manifest.json`, every token, effects and icon packs.
+- [docs/](docs/): design notes and research behind some of the bigger
+  features.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to propose a change.
 - [CHANGELOG.md](CHANGELOG.md): a log of what landed and why.
 - [BENCHMARKS.md](BENCHMARKS.md): load, reload and frame timings, the
   machine they were measured on, and how `./scripts/bench.sh` reproduces
   them.
-- [agents/](agents/): rules for coding agents working in this repo, plus a
-  step by step workflow
-  ([agents/workflows/roadmap-task.md](agents/workflows/roadmap-task.md)) for
-  picking up a `ROADMAP.md` item on their own.
-
-## Using a coding agent
-
-Code written with a coding agent is fine here, even a fully autonomous one
-that picks a roadmap item and opens the pull request itself. It's held to the
-same bar as everything else:
-
-- `./scripts/check.sh` has to pass. No exceptions.
-- It follows [GUIDELINES.md](GUIDELINES.md) and [SPECS.md](SPECS.md) like any
-  other change.
-- Someone who didn't write it has to be able to maintain it. Comments explain
-  *why*, not what the code already says. No magic numbers nobody explains, no
-  abstraction that's only there to look smart.
-- I review every pull request before it merges, however it was written.
-
-If you want to point an agent at the repo, clone it, `cd` into it and give
-it something like this:
-
-```
-Read agents/AGENTS.md in this repository for the standing rules, then
-follow agents/workflows/roadmap-task.md end to end: pick one concrete
-📋 item from ROADMAP.md's "What's planned" section, check for an existing
-branch or open PR on the same item first, implement it with real tests,
-verify with ./scripts/check.sh, and open a pull request that quotes the
-exact ROADMAP.md bullet you picked and includes a screenshot or short
-recording per the PR template. Work through this autonomously without
-asking me to confirm each step, but stop and ask if you hit a genuine
-ambiguity the roadmap and the linked docs don't resolve.
-```
-
-The actual rules are in [`agents/AGENTS.md`](agents/AGENTS.md), and the
-workflow is in
-[`agents/workflows/roadmap-task.md`](agents/workflows/roadmap-task.md).
 
 ## Thanks
 
@@ -383,9 +355,3 @@ workflow is in
 ## License
 
 MIT, see [LICENSE](LICENSE).
-
----
-
-> If you're a coding agent working in this repo, read
-> [`agents/AGENTS.md`](agents/AGENTS.md) first. It has the rules every
-> automated change here has to follow.

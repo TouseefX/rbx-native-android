@@ -32,7 +32,7 @@ use crate::instance::LuaInstance;
 ///   `AddSeparator`, `AddMenu`, `Clear`, `Title`, `Icon`, yielding
 ///   `ShowAsync()` (→ `PromptKind::Menu`, returns the chosen action or nil);
 /// - `CreateDockWidgetPluginGui(id, info)` (and `CreateDockWidgetPluginGuiAsync`,
-///   its current name — the same, without yielding) → a `DockWidgetPluginGui`
+///   its current name, the same, without yielding) → a `DockWidgetPluginGui`
 ///   instance under `Env::plugin_gui_service` (`Title` = id until set,
 ///   `Enabled` from the info), registered as a `Widget` (same id twice
 ///   returns the same widget); global `DockWidgetPluginGuiInfo.new(
@@ -383,7 +383,7 @@ fn json_to_arg(value: &serde_json::Value) -> Arg {
 }
 
 /// Roblox values in a settings file the way Studio writes them: an object
-/// tagged `serializedType` — `{"name": "Grass", "serializedType":
+/// tagged `serializedType`: `{"name": "Grass", "serializedType":
 /// "Material"}` for an enum item, `{"x", "y", "z", "serializedType":
 /// "Vector3"}` and the like (read from Studio's own plugin settings).
 fn serialized_to_arg(map: &serde_json::Map<String, serde_json::Value>) -> Option<Arg> {

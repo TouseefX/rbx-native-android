@@ -66,7 +66,7 @@ fn ruler(origin: Vec3, x: Vec3, z: Vec3, size: (f32, f32), grid: f32) -> Vec<[Ve
     lines
 }
 
-/// The frame's in-plane axes, each flipped towards `local` — the quadrant of
+/// The frame's in-plane axes, each flipped towards `local`: the quadrant of
 /// the face the point is in, seen from the corner.
 fn towards(frame: &SurfaceFrame, local: Vec3) -> (Vec3, Vec3) {
     let x = if 0.0 < local.x { frame.x } else { -frame.x };

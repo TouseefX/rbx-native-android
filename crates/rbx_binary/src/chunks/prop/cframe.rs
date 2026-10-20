@@ -31,8 +31,8 @@ pub(super) fn cframes(reader: &mut Reader<'_>, count: usize) -> Result<PropValue
 ///
 /// The payload is a complete CFrame array sandwiched between two inline type ids:
 /// `0x10` (CFrame) opens it and `0x02` (Bool) introduces a trailing presence byte
-/// per instance. Absent values are still written as a full CFrame — Roblox emits the
-/// identity — so the array cannot be shortened and the bytes must be consumed.
+/// per instance. Absent values are still written as a full CFrame, Roblox emits the
+/// identity, so the array cannot be shortened and the bytes must be consumed.
 pub(super) fn optional_cframes(
     reader: &mut Reader<'_>,
     count: usize,
