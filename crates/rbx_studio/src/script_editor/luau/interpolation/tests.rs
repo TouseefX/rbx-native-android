@@ -116,8 +116,8 @@ fn an_unclosed_hole_leaves_the_rest_of_its_line_as_string_text() {
 #[test]
 fn the_call_sugar_still_reads_an_interpolated_string_as_its_argument() {
     // Why holes are expanded only after call position is settled: `f` is
-    // being called, and `name` — an identifier ending a hole, with a string
-    // run right after it — is not.
+    // being called, and `name`: an identifier ending a hole, with a string
+    // run right after it, is not.
     let source = "f`hi {name}`";
     assert_eq!(of_kind(source, TokenKind::Function), ["f"]);
     assert_eq!(of_kind(source, TokenKind::Identifier), ["name"]);

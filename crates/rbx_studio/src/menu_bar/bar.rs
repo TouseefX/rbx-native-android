@@ -136,9 +136,8 @@ impl MenuBar {
 
     /// `RBX_STUDIO_MENU=1` reaches into the bar exactly as F10 does, and
     /// `RBX_STUDIO_MENU=<title>` (File/Edit/Model/View) goes on to open that
-    /// menu — a debugging aid for a screenshot, since nothing else on this
-    /// machine can send a keystroke to the editor on its behalf (see
-    /// `agents/AGENTS.md`'s safety rules).
+    /// menu, a debugging aid for a screenshot, since nothing else on this
+    /// machine can send a keystroke to the editor on its behalf.
     pub(crate) fn apply_debug_entry(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Ok(spec) = std::env::var(MENU_VARIABLE) else {
             return;
@@ -153,7 +152,7 @@ impl MenuBar {
         }
     }
 
-    /// Anything that is not a modifier change, arriving while Alt is held —
+    /// Anything that is not a modifier change, arriving while Alt is held,
     /// see [`AltTap`] for why a tap has to be cancellable at all.
     pub(crate) fn interrupt_alt_tap(&mut self) {
         self.alt.interrupt();
@@ -213,7 +212,7 @@ impl MenuBar {
         }
     }
 
-    /// True while a title — not the open dropdown — holds focus. The keys
+    /// True while a title, not the open dropdown, holds focus. The keys
     /// that mean "open this menu" only mean that there; inside the dropdown
     /// the same keys belong to the items.
     fn title_focused(&self, window: &Window) -> bool {
@@ -225,7 +224,7 @@ impl MenuBar {
     fn step(&mut self, back: bool, window: &mut Window, cx: &mut Context<Self>) {
         let next = next_title(self.current, self.menus.len(), back);
         // Walking sideways with a menu open opens the next one rather than
-        // just moving the highlight — every desktop menu bar does this, and
+        // just moving the highlight, every desktop menu bar does this, and
         // it is why `PopupMenu` propagates Left/Right up here at all.
         if self.open.is_some() {
             self.open_menu(next, cx);
@@ -267,7 +266,7 @@ impl MenuBar {
         }
     }
 
-    /// A dropdown dismissing itself — an item clicked, a click outside, its
+    /// A dropdown dismissing itself, an item clicked, a click outside, its
     /// own Escape. Focus goes back to the title only if the keyboard was what
     /// put it here; a mouse user is not chasing focus around.
     fn on_dismiss(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -299,7 +298,7 @@ impl MenuBar {
     /// The focus handle is on the wrapper rather than on the `Button`: the
     /// toolkit's button makes its own handle internally, which nothing
     /// outside it can focus. `tab_stop(false)` on both is what keeps the bar
-    /// out of GPUI's own Tab sequence — and it has to go on the *handle*,
+    /// out of GPUI's own Tab sequence, and it has to go on the *handle*,
     /// since an element carrying `track_focus` ignores the element-level
     /// setting (see `shell::roving::Roving::item`).
     fn title(&self, index: usize, window: &Window, cx: &mut Context<Self>) -> AnyElement {
@@ -309,7 +308,7 @@ impl MenuBar {
         // The ring is conditioned on `restore` rather than left to GPUI's
         // `focus_visible`, which paints only for focus GPUI itself moved with
         // a key. Focus gets here by this module calling `.focus()`, which does
-        // not count — and a focused control with no ring is WCAG 2.4.7. There
+        // not count, and a focused control with no ring is WCAG 2.4.7. There
         // is no ambiguity to resolve either way: `restore` is set only by
         // F10/Alt, so it *is* "the keyboard put us here".
         let keyboard = self.restore.is_some() && self.handles[index].is_focused(window);

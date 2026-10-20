@@ -2,8 +2,8 @@
 //!
 //! Everything here is plain CPU geometry with no GPU handle, built once per
 //! plan rather than per frame (the one exception is [`ring`], which faces
-//! the camera and so is rebuilt with it). Nothing is culled by winding — see
-//! [`super::Adornments`] for why — so these builders only have to put the
+//! the camera and so is rebuilt with it). Nothing is culled by winding, see
+//! [`super::Adornments`] for why, so these builders only have to put the
 //! corners in the right places, not agree on an order.
 
 use glam::{Mat4, Vec2, Vec3};
@@ -43,7 +43,7 @@ pub(super) fn solid(mesh: AdornMesh, frame: Mat4, color: [f32; 4], out: &mut Vec
     }
 }
 
-/// A textured quad in the frame's own XY plane — an `ImageHandleAdornment`.
+/// A textured quad in the frame's own XY plane, an `ImageHandleAdornment`.
 pub(super) fn picture_quad(picture: &AdornPicture, alpha: f32, out: &mut Vec<ImageVertex>) {
     let half = picture.size * 0.5;
     let corner = |x: f32, y: f32| picture.frame.transform_point3(Vec3::new(x, y, 0.0));
@@ -72,7 +72,7 @@ pub(super) fn picture_quad(picture: &AdornPicture, alpha: f32, out: &mut Vec<Ima
 }
 
 /// One line as a screen-space quad, expanded to `pixels` across in the
-/// vertex shader — the same trick `renderer::outline` uses for the
+/// vertex shader, the same trick `renderer::outline` uses for the
 /// selection box, with the width and colour carried per vertex here because
 /// an adornment picks both.
 pub(in crate::renderer) fn line(
@@ -103,7 +103,7 @@ pub(in crate::renderer) fn line(
     ]);
 }
 
-/// A circle of `radius` around `centre`, drawn in the plane facing `eye` —
+/// A circle of `radius` around `centre`, drawn in the plane facing `eye`,
 /// the silhouette a `SelectionSphere` outlines itself with.
 pub(super) fn ring(
     centre: Vec3,

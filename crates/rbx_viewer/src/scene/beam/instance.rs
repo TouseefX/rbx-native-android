@@ -36,7 +36,7 @@ pub(crate) enum TextureMode {
     ///
     /// `Static` (ordinal 2) folds into this too: the two only differ once a
     /// beam's length changes between frames, which never happens in this
-    /// viewer — no script or physics moves an `Attachment` — so treating them
+    /// viewer, no script or physics moves an `Attachment`, so treating them
     /// alike is exact here rather than an approximation, and is a documented
     /// v1 scope note, not a bug.
     Wrap,
@@ -60,18 +60,18 @@ pub(crate) struct Beam {
     pub(crate) texture_speed: f32,
     pub(crate) light_emission: f32,
     /// `Beam.LightInfluence`: 0 draws the beam at full brightness (its own
-    /// colour, unlit), 1 lets the scene's light tint it — see `beam.wgsl`.
+    /// colour, unlit), 1 lets the scene's light tint it, see `beam.wgsl`.
     pub(crate) light_influence: f32,
     pub(crate) face_camera: bool,
     /// World-space `Attachment0`/`Attachment1` **Y** axis (`SecondaryAxis`),
-    /// used to orient the ribbon when `face_camera` is false — see the task
+    /// used to orient the ribbon when `face_camera` is false, see the task
     /// brief's "plane given by the attachments' secondary axes".
     pub(crate) secondary_axis0: Vec3,
     pub(crate) secondary_axis1: Vec3,
     pub(crate) segments: u32,
     pub(crate) z_offset: f32,
     /// The `Beam` instance this was read from, and the two attachments it
-    /// spans — what an isolated scene asks to decide whether the beam belongs
+    /// spans, what an isolated scene asks to decide whether the beam belongs
     /// to the isolated rig (see `Scene::drawn_beams`).
     pub(crate) referent: Ref,
     pub(crate) attachments: [Ref; 2],
@@ -81,7 +81,7 @@ pub(crate) struct Beam {
 ///
 /// A `Beam` whose `Attachment0`/`Attachment1` cannot be resolved to a world
 /// CFrame (dangling ref, missing `CFrame`, or a parent-less attachment) is
-/// dropped outright, mirroring `Enabled = false` — Roblox itself simply does
+/// dropped outright, mirroring `Enabled = false`: Roblox itself simply does
 /// not display such a beam.
 pub(crate) fn plan(dom: &WeakDom, database: &ReflectionDatabase) -> Vec<Beam> {
     let parents = ParentMap::build(dom);

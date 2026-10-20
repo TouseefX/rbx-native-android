@@ -4,8 +4,8 @@
 //! what lets a neon face or a blown-out sky carry a value above 1 as far as the
 //! bloom. This module owns that target (and the depth buffer beside it, which
 //! `DepthOfFieldEffect` reads back per pixel), builds the bloom from it, grades
-//! the result with the place's `ColorCorrectionEffect` and resolves the lot —
-//! `SunRaysEffect`'s god-rays included — into whatever the caller is presenting
+//! the result with the place's `ColorCorrectionEffect` and resolves the lot,
+//! `SunRaysEffect`'s god-rays included, into whatever the caller is presenting
 //! to.
 
 mod bloom;
@@ -35,7 +35,7 @@ const SHADER: &str = include_str!("post.wgsl");
 /// scene's depth buffer at once, and what it becomes above one sample.
 ///
 /// WGSL types a multisampled depth texture as a different type entirely, so the
-/// resolve is compiled twice from the same source with this substituted — far
+/// resolve is compiled twice from the same source with this substituted, far
 /// less machinery than a second shader file kept in step with the first by hand,
 /// and the resolve is the only entry point that reads depth at all.
 const DEPTH_BINDING: &str = "var scene_depth: texture_depth_2d";
@@ -46,7 +46,7 @@ const MULTISAMPLED_DEPTH_BINDING: &str = "var scene_depth: texture_depth_multisa
 const FIRST_LEVEL_DIVISOR: u32 = 2;
 
 /// Radius of the one blurred copy of the frame `DepthOfFieldEffect` mixes in, in
-/// pixels at 1080p — the unit `BlurEffect.Size` and `BloomEffect.Size` are both
+/// pixels at 1080p, the unit `BlurEffect.Size` and `BloomEffect.Size` are both
 /// quoted in, and scaled to the frame by the same function.
 ///
 /// A true depth of field varies its radius per pixel with the distance from the
@@ -95,7 +95,7 @@ pub(super) struct Post {
     samples: u32,
     targets: Option<Targets>,
     /// One texel, bound wherever a pass wants the refraction copy and the
-    /// frame has none — a bind group entry cannot be left empty, and most
+    /// frame has none, a bind group entry cannot be left empty, and most
     /// places hold no glass to copy the scene for.
     empty_refraction: wgpu::TextureView,
     /// What the resolve writes, which is not always the target's own format:
@@ -241,7 +241,7 @@ impl Post {
         self.samples
     }
 
-    /// Swaps in a freshly read `Lighting.Effects` — a `PostEffect` edit's fast
+    /// Swaps in a freshly read `Lighting.Effects`: a `PostEffect` edit's fast
     /// path (see `Renderer::set_lighting`). Safe with no rebuild: every
     /// pipeline here is built once and reads `self.effects` fresh every
     /// `prepare`, so nothing pins the old value but this field.
@@ -252,7 +252,7 @@ impl Post {
     /// Follows the quality level: which post passes run, and how many samples the
     /// scene is drawn at. The HDR target and the bloom chain are sized by the
     /// frame rather than by the level, so a change of level reallocates them only
-    /// where it changes the sample count — which the next [`Post::prepare`] does.
+    /// where it changes the sample count, which the next [`Post::prepare`] does.
     ///
     /// Answers the sample count the surface pipelines now have to match.
     pub(super) fn set_quality(&mut self, device: &wgpu::Device, quality: &QualityProfile) -> u32 {
@@ -266,13 +266,13 @@ impl Post {
     /// the resolve reads. `None` where the frame has no pixels at all.
     ///
     /// `sun_screen` is this frame's answer from
-    /// [`super::sun::sun_screen_position`] — `None` silences `SunRaysEffect`
+    /// [`super::sun::sun_screen_position`], `None` silences `SunRaysEffect`
     /// outright regardless of what the place's own `Intensity` says, which is
     /// how a place with the effect enabled still draws nothing on a frame
     /// where the moon is out or the sun is off-screen.
     ///
     /// `orthographic` is `Camera::orthographic_range`'s own answer:
-    /// `Some(range)` on an orthographic frame, `None` on a perspective one —
+    /// `Some(range)` on an orthographic frame, `None` on a perspective one,
     /// `post.wgsl`'s `view_distance` needs it to pick the right
     /// depth-of-field distance reconstruction, since the two projections
     /// write depth by different formulas (see `camera.rs`'s
@@ -287,7 +287,7 @@ impl Post {
     }
 
     /// Asks for (or gives up) the refraction copy, answering whether the view
-    /// behind [`Post::refraction`] changed — see
+    /// behind [`Post::refraction`] changed, see
     /// `Targets::want_refraction`.
     pub(super) fn want_refraction(&mut self, device: &wgpu::Device, wanted: bool) -> bool {
         self.targets
@@ -344,7 +344,7 @@ impl Post {
     /// `BlurEffect` reuses the exact same resolution-aware chain sizing as
     /// `BloomEffect`, just on the whole frame instead of the thresholded part of
     /// it, and `DepthOfFieldEffect` mixes in that same copy at its own fixed
-    /// radius — so where both are enabled the deeper of the two wins and the
+    /// radius, so where both are enabled the deeper of the two wins and the
     /// blur reads wider than its `Size` asked for. That costs nothing visible: a
     /// `BlurEffect` already replaces the frame outright, which leaves the depth
     /// of field mixing a blurred frame into itself.
@@ -364,7 +364,7 @@ impl Post {
     /// The bloom intensity this level allows, 0 being "no glow at all".
     ///
     /// Roblox's own docs for `BloomEffect.Size`: "a value of 0 will disable
-    /// the bleed (but not the color adjustment)" — the bleed is exactly this
+    /// the bleed (but not the color adjustment)", the bleed is exactly this
     /// additive spread, so `Size <= 0` zeroes it regardless of `Intensity`.
     /// The "color adjustment" the doc leaves a residual for is not specified
     /// anywhere beyond that one clause, so it is not reproduced here.

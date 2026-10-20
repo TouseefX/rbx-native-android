@@ -1,6 +1,6 @@
 //! Roblox's API as `luau-lsp` reads it: a Luau definitions file for the
-//! types and Roblox's reference text for the descriptions — the same two
-//! files its VS Code extension uses — cached under this project's cache
+//! types and Roblox's reference text for the descriptions, the same two
+//! files its VS Code extension uses, cached under this project's cache
 //! folder.
 //!
 //! The cache remembers which Studio release it was fetched for and asks for
@@ -67,7 +67,7 @@ pub(super) fn files(dir: &Path) -> Result<Files, String> {
 }
 
 /// Whether to ask the network again: always without a copy, never when
-/// Roblox's version could not be read (offline — the copy is what there
+/// Roblox's version could not be read (offline, the copy is what there
 /// is), and otherwise only when the release moved since the copy.
 fn needs_refresh(current: Option<&str>, cached: Option<&str>, have_copy: bool) -> bool {
     match (have_copy, current) {

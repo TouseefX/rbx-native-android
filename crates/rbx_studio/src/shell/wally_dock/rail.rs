@@ -29,7 +29,7 @@ const PAGES: [(Page, &str, IconName); 3] = [
 
 impl Shell {
     /// The rail row (or band segment) drawn as current: the page, except
-    /// while a search is on screen, when none is — a result isn't Home.
+    /// while a search is on screen, when none is, a result isn't Home.
     fn wally_current_row(&self) -> Option<Page> {
         (self.wally.query.is_empty()).then_some(self.wally_page())
     }

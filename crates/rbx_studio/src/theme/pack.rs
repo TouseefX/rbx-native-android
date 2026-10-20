@@ -9,8 +9,8 @@
 //! <config>/themes/<id>/icons/*.svg     optional: an icon pack (see `packs::IconOverlay`)
 //! ```
 //!
-//! A plain `<config>/themes/<id>.json` — the widgets-only theme file this
-//! editor read before theme folders existed — still loads, as a theme with
+//! A plain `<config>/themes/<id>.json`: the widgets-only theme file this
+//! editor read before theme folders existed, still loads, as a theme with
 //! only a `widgets.json`.
 
 use std::fs;
@@ -58,7 +58,7 @@ pub(crate) fn is_reserved(id: &str) -> bool {
     id == DEFAULT_ID || EMBEDDED.iter().any(|(embedded, ..)| *embedded == id)
 }
 
-/// Who made a theme and what it is — what a theme chooser shows.
+/// Who made a theme and what it is, what a theme chooser shows.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub(crate) struct Manifest {
     pub(crate) name: String,
@@ -197,7 +197,7 @@ impl ThemePack {
         Self::read(id, &dir)
     }
 
-    /// The theme in `dir`, installed under `id` — also how the installer
+    /// The theme in `dir`, installed under `id`: also how the installer
     /// checks a download before it replaces anything.
     pub(super) fn read(id: &str, dir: &Path) -> Result<Self, String> {
         let dir = dir.to_path_buf();
@@ -251,7 +251,7 @@ impl ThemePack {
 /// own order.
 ///
 /// Applied straight to `Theme::dark_theme` (or `light_theme`) rather than
-/// through the kit's registry, which ignores a name it already holds — and
+/// through the kit's registry, which ignores a name it already holds, and
 /// a theme being edited, or switched back to, always has a name it already
 /// holds.
 pub(super) fn widgets_config(json: &str, mode: ThemeMode) -> Result<ThemeConfig, String> {

@@ -192,7 +192,7 @@ fn a_mesh_not_downloaded_snaps_onto_its_probed_edge_only() {
 
 /// What `measure_from_handle` relies on: a ray moved by the offset between
 /// two parallel lines meets the first where the unmoved ray meets the
-/// second — and, under perspective, not where it meets the first line
+/// second, and, under perspective, not where it meets the first line
 /// itself, which is the error moving it corrects.
 #[test]
 fn a_moved_ray_measures_against_the_part_as_the_real_one_against_the_handle() {
@@ -211,7 +211,7 @@ fn a_moved_ray_measures_against_the_part_as_the_real_one_against_the_handle() {
 }
 
 /// What `summon_handles` relies on to place the handles on a fresh hover: an
-/// event emitted, then a callback deferred, from the same handler — the
+/// event emitted, then a callback deferred, from the same handler, the
 /// subscriber (`Shell` answering the hover) runs before the deferred
 /// placement does, so the placement reads the new answer, not the stale one.
 #[gpui_kit::test]

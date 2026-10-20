@@ -1,5 +1,5 @@
 //! The Performance view's section: which measure tints the viewport, the
-//! colour ramp's legend, the place's total, and the costliest parts —
+//! colour ramp's legend, the place's total, and the costliest parts,
 //! each a row that selects its part and puts the camera on it.
 
 use gpui_kit::assets::IconName;

@@ -176,8 +176,8 @@ fn run_download(client: &Client, args: &mut Args) -> Result<(), String> {
     Ok(())
 }
 
-/// `save <universeId> <placeId> <file>`: uploads `file` as a Saved version —
-/// it does not go live — and prints the version number or Roblox's refusal.
+/// `save <universeId> <placeId> <file>`: uploads `file` as a Saved version,
+/// it does not go live, and prints the version number or Roblox's refusal.
 fn run_save(client: &Client, args: &mut Args) -> Result<(), String> {
     let universe_id = next_u64_arg(args, "universeId")?;
     let place_id = next_u64_arg(args, "placeId")?;

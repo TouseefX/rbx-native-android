@@ -553,7 +553,7 @@ pub(crate) fn place_new(graph: &mut Graph, fixed: &BTreeSet<NodeId>) {
 
 /// Where `id` wants to go by one placed neighbour: right of what runs into
 /// it, left of what reads it, left of what it runs into, right of what
-/// feeds it — level with the wire's pin in each case.
+/// feeds it, level with the wire's pin in each case.
 fn anchor(graph: &Graph, placed: &BTreeSet<NodeId>, id: NodeId) -> Option<(f32, f32)> {
     let me = graph.node(id)?;
     let size = rect(graph, me);

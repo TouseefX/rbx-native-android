@@ -70,7 +70,7 @@ pub(crate) fn device(adapter: &wgpu::Adapter) -> Result<(wgpu::Device, wgpu::Que
         // Small allocator blocks rather than wgpu's default 128-256 MB ones:
         // the renderer's own allocations are a few large textures made at
         // load, and the default left a small place holding ~4x what it
-        // actually used — hundreds of megabytes a low-end GPU does not have.
+        // actually used, hundreds of megabytes a low-end GPU does not have.
         memory_hints: wgpu::MemoryHints::MemoryUsage,
         ..Default::default()
     }))
@@ -78,7 +78,7 @@ pub(crate) fn device(adapter: &wgpu::Adapter) -> Result<(wgpu::Device, wgpu::Que
 }
 
 /// A device for a unit test that builds real GPU state, or `None` where the
-/// machine has no adapter at all (CI, say) — such a test reports itself
+/// machine has no adapter at all (CI, say), such a test reports itself
 /// skipped rather than failing, since what it checks is not the GPU.
 #[cfg(test)]
 pub(crate) fn for_tests() -> Option<(wgpu::Device, wgpu::Queue)> {

@@ -1,8 +1,8 @@
 //! Which spelling Roblox uses for a `Content` column's source tags, settled
 //! from a real place rather than from either written source.
 //!
-//! rbx-dom's `docs/binary.md` types `SourceTypes` as `Array(Enum)` — plain
-//! big-endian `u32`s, interleaved — while rbx-dom's own serializer writes
+//! rbx-dom's `docs/binary.md` types `SourceTypes` as `Array(Enum)`: plain
+//! big-endian `u32`s, interleaved, while rbx-dom's own serializer writes
 //! them with `write_interleaved_i32_array`, which also zigzags them (so a
 //! `Uri` tag `1` lands as `2`). Each tag consumes one entry of its source's
 //! pool, so only one reading can make the tag counts match the pool counts

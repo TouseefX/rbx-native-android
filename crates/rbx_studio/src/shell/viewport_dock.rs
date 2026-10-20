@@ -1,5 +1,5 @@
 //! The Viewport dock: the graphics quality, the emulated screen, every
-//! view setting, and the live frame rate — kept in a dock so that nothing
+//! view setting, and the live frame rate, kept in a dock so that nothing
 //! persistent sits over the scene being edited. Four sections (Rendering,
 //! Camera, Overlays, Dragging & snapping) as fixed columns when the dock
 //! is wide, a 2×2 grid at a middling width, one column when narrow.
@@ -102,12 +102,12 @@ impl Shell {
     }
 
     /// Samples the frame rate while this dock is on screen and not otherwise
-    /// — or throughout, when `RBX_STUDIO_STATS=1` asked for the numbers on
+    /// or throughout, when `RBX_STUDIO_STATS=1` asked for the numbers on
     /// stderr. The variable never opens the dock: it speaks for one run, and
     /// a layout it changed would be written back at the next settings save.
     ///
-    /// Asked every render rather than at each place the layout changes — a
-    /// drop, a tab click, a close, Reset Layout, a torn-out window shut — so
+    /// Asked every render rather than at each place the layout changes, a
+    /// drop, a tab click, a close, Reset Layout, a torn-out window shut, so
     /// that no way of moving a dock can forget to; when nothing changed it
     /// is one atomic swap.
     pub(super) fn sync_stats(&self, cx: &App) {
@@ -147,7 +147,7 @@ impl Shell {
     ///
     /// The quality select is one Tab stop and the switches are one more:
     /// a roving group, the way the Properties panel's checkboxes are, so
-    /// arrows walk the list in reading order and Tab leaves it — not ten
+    /// arrows walk the list in reading order and Tab leaves it, not ten
     /// stops to press through on the way to the next dock.
     pub(super) fn viewport_dock(
         &mut self,

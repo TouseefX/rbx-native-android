@@ -2,8 +2,8 @@
 //! often.
 //!
 //! Both used to be answered the wrong way. Suppression checked
-//! `PointerLock::holds` — whether the OS-level pointer lock actually
-//! engaged — rather than whether a look gesture was in progress, which is
+//! `PointerLock::holds`: whether the OS-level pointer lock actually
+//! engaged, rather than whether a look gesture was in progress, which is
 //! wrong on Wayland: `holds` sits `false` for the whole gesture there (see
 //! `pointer_lock`'s own module doc for why), so every move during a Wayland
 //! orbit fell through to resolving a new hover instead of being suppressed.
@@ -14,7 +14,7 @@
 
 use std::time::Duration;
 
-/// Whether hover resolution should be skipped for this move — an actual look
+/// Whether hover resolution should be skipped for this move, an actual look
 /// gesture in progress, never `PointerLock::holds`. See this module's doc
 /// comment for why the two disagree on Wayland.
 pub(super) fn suppressed(looking: bool) -> bool {
@@ -22,7 +22,7 @@ pub(super) fn suppressed(looking: bool) -> bool {
 }
 
 /// Whether enough time has passed since the last resolve to pay for another
-/// one — at most once per rendered frame, so a burst of raw mouse-move
+/// one, at most once per rendered frame, so a burst of raw mouse-move
 /// events landing between two frames only repeats `pick::parts_along`'s
 /// full-scene walk once. `None` (nothing resolved yet) is always due.
 pub(super) fn due(elapsed_since_resolved: Option<Duration>, interval: Duration) -> bool {

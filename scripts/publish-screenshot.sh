@@ -6,7 +6,7 @@
 # anything with a visible effect.
 #
 # `gh gist create` itself only accepts text files (its underlying API takes
-# gist content as a JSON string) — it refuses anything it sniffs as binary.
+# gist content as a JSON string), it refuses anything it sniffs as binary.
 # A gist is a real git repository underneath, though, so the actual trick is:
 # create a placeholder gist to get one, clone it, `git add`/push the image(s)
 # as ordinary binary blobs (which plain git handles natively), then read back
@@ -16,7 +16,7 @@
 # private: anyone who gets the link can view it. Fine for an ordinary viewport
 # screenshot; don't publish anything sensitive this way.
 #
-# Needs only `gh` and `git` (no separate `jq` — `gh api --jq` has its own
+# Needs only `gh` and `git` (no separate `jq`: `gh api --jq` has its own
 # built in). See publish-screenshot.ps1 for the native Windows equivalent.
 set -euo pipefail
 
@@ -62,7 +62,7 @@ for image in "$@"; do
   name=$(basename "$image")
   # `gh api --jq` takes exactly one filter argument, so the filename is
   # interpolated straight into it rather than passed as a jq --arg (gh
-  # doesn't forward extra jq flags) — fine for the plain filenames this
+  # doesn't forward extra jq flags), fine for the plain filenames this
   # script deals with, which never contain a `"` or `\`.
   raw_url=$(gh api "gists/$gist_id" --jq ".files[\"$name\"].raw_url")
   echo "![${name}](${raw_url})"

@@ -7,8 +7,8 @@
 //! how the CPU thread happens to wake up relative to vblank under `ControlFlow::Poll`.
 //! Feeding that noisy sample straight into `velocity * dt` position integration turns
 //! ordinary scheduling jitter into visible per-frame camera jitter, even though the
-//! frames themselves land on an even beat and the FPS counter — which only ever sees an
-//! average — never moves.
+//! frames themselves land on an even beat and the FPS counter, which only ever sees an
+//! average, never moves.
 //!
 //! [`SmoothedDt`] is a light exponential low-pass filter over `dt`, with a clamp that
 //! keeps one wild outlier (a real stutter or an alt-tab stall) from yanking the estimate
@@ -68,7 +68,7 @@ mod tests {
     /// Feeds a smoother and the old raw-`dt` path the same jittery-but-fixed-mean
     /// frame-time sequence a noisy vsync clock actually produces (alternating +/-12%
     /// around a 60Hz mean, not a single outlier), then checks the smoothed path's
-    /// per-step displacement varies meaningfully less — a concrete, numeric claim
+    /// per-step displacement varies meaningfully less, a concrete, numeric claim
     /// about jitter, not just that the fix changes some numbers.
     #[test]
     fn smoothing_meaningfully_reduces_displacement_variance_under_vsync_jitter() {
@@ -108,7 +108,7 @@ mod tests {
     }
 
     /// A held key shouldn't feel like it's dragging a lagging camera forever after a
-    /// real, sustained frame-rate change — only vsync-scale jitter should be filtered.
+    /// real, sustained frame-rate change, only vsync-scale jitter should be filtered.
     #[test]
     fn a_sustained_frame_rate_change_is_absorbed_within_a_few_dozen_frames() {
         let mut smoother = SmoothedDt::new();

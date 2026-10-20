@@ -42,7 +42,7 @@ fn a_first_build_reuses_nothing() {
 /// The rebuild decision that keeps a scene edit from re-uploading every
 /// decal in the place: an asset the previous scene already uploaded is
 /// found by reference, wherever its slot was, and a group's slot is its
-/// position in the new list — the same rule `upload_pending` lands deferred
+/// position in the new list, the same rule `upload_pending` lands deferred
 /// uploads by.
 #[test]
 fn a_rebuild_takes_over_the_previous_upload_of_the_same_asset() {
@@ -68,8 +68,8 @@ fn an_upload_still_queued_is_not_taken_over() {
     assert_eq!(reuse_plan(&previous, &[1], &groups), vec![Some(0), None]);
 }
 
-/// `count` distinct, procedurally generated `side`x`side` images — no
-/// network, no committed asset (see `agents/AGENTS.md`'s asset rules), just
+/// `count` distinct, procedurally generated `side`x`side` images, no
+/// network, no committed asset (see `CONTRIBUTING.md`), just
 /// plain RGBA bytes standing in for what `assets::load` would otherwise have
 /// decoded from real `Decal`/`Texture` downloads. Each pixel differs by
 /// group so a real, non-degenerate mip chain gets built and uploaded for
@@ -93,7 +93,7 @@ fn synthetic_groups(count: usize, side: u32) -> Vec<Group> {
 
 /// Waits for every GPU write queued so far, so the elapsed time measured
 /// around it is the real upload cost rather than just the time it took the
-/// CPU to enqueue it — `Queue::write_texture` returns as soon as the copy is
+/// CPU to enqueue it, `Queue::write_texture` returns as soon as the copy is
 /// recorded, well before the GPU has actually moved the bytes.
 fn wait_for_gpu(device: &wgpu::Device) {
     device
@@ -106,13 +106,13 @@ fn wait_for_gpu(device: &wgpu::Device) {
 
 /// Manual profiling harness, not part of the regular gate: run with
 /// `cargo test --release -p rbx_viewer --lib renderer::textured::tests::profile_texture_upload_spread -- --ignored --nocapture`
-/// to see the shape of loading a place with many `Decal`/`Texture` images —
+/// to see the shape of loading a place with many `Decal`/`Texture` images,
 /// a burst before this module existed versus a bounded upload spread across
 /// several `Renderer::draw` calls after. `upload_pending`'s budget argument
 /// is what actually changes shape here: `usize::MAX` reproduces the old
 /// `Textured::new` behaviour of uploading everything inline before the
 /// renderer was usable at all (what `Renderer::finish_loading` now uses
-/// deliberately for the single-shot `--screenshot` path — see its doc
+/// deliberately for the single-shot `--screenshot` path, see its doc
 /// comment), while `texture::PER_FRAME` is what every other call site gets
 /// automatically through `Renderer::draw`.
 #[test]

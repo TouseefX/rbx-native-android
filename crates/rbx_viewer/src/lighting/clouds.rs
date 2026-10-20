@@ -29,7 +29,7 @@ pub(crate) struct Clouds {
 /// The first enabled `Clouds` child of the place's `Terrain`, if any.
 ///
 /// Roblox's own "Dynamic Clouds" guide is explicit that the object "only
-/// render[s] if you parent [it] under the `Class.Terrain` class" — one is
+/// render[s] if you parent [it] under the `Class.Terrain` class", one is
 /// otherwise inert wherever else it sits. `Terrain` itself is only ever
 /// meaningful as a child of `Workspace` (Studio never lets it live anywhere
 /// else), so looking it up through `workspace_descendants` rather than the

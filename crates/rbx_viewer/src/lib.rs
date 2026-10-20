@@ -1,6 +1,6 @@
 //! Viewer for Roblox place and model files: every BasePart is drawn as a small
 //! procedural mesh matching its shape (box, ball, cylinder, wedge or corner
-//! wedge — see [`shapes`]), `MeshPart`/`SpecialMesh` FileMesh instances get
+//! wedge, see [`shapes`]), `MeshPart`/`SpecialMesh` FileMesh instances get
 //! their real downloaded geometry (see `scene::filemesh`), and decals,
 //! textures and the sky are painted on top. Everything is then lit by the
 //! place's own `Lighting` service (see [`lighting`]).
@@ -14,11 +14,11 @@
 //! A place or model file is either Roblox's binary format or its XML one
 //! (`.rbxlx`/`.rbxmx`); [`read_place`] sniffs the bytes and dispatches to
 //! `rbx_binary` or `rbx_xml` accordingly, so every entry point that opens a
-//! file — including embedders such as `rbxstudio` — shares the one dispatch.
+//! file, including embedders such as `rbxstudio`, shares the one dispatch.
 
 // The browser build (`web`) draws and streams, and nothing more: the editor's
-// half of this crate — edits patched in place, picking, the screenshot and
-// batch paths — has no caller there.
+// half of this crate, edits patched in place, picking, the screenshot and
+// batch paths, has no caller there.
 #![cfg_attr(target_arch = "wasm32", allow(dead_code, unused_imports))]
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -2,12 +2,12 @@
 //! Installed, Updates), its search, what the registry sent back, the
 //! realm and version picked on a result card, and installing a picked
 //! package's whole resolved dependency graph into the DOM as one undo
-//! step — reusing the exact `push_history`/mutate/`take_changes`/
+//! step, reusing the exact `push_history`/mutate/`take_changes`/
 //! `rebuild_explorer`/`reflect_changes`/`record_history_change`/
 //! `cx.notify()` skeleton every other mutation in this editor already uses
 //! (`shell::command::run_command` is the closest twin). If a live Argon
 //! session happens to be connected, the result reaches it automatically
-//! through the write-back hook `shell::argon_sync` already built — nothing
+//! through the write-back hook `shell::argon_sync` already built, nothing
 //! here is Argon-aware.
 //!
 //! **Install layout.** Matches `wally install`'s own real on-disk shape,
@@ -18,7 +18,7 @@
 //! containing `return require(script.Parent.Parent["<dep>"]["<dep_name>"])`),
 //! and only the package the user actually picked gets a top-level alias,
 //! `<Root>/<name>.lua`. Reproducing this exactly is why a package's own
-//! `require(script.Parent.X)` calls keep working once installed — a
+//! `require(script.Parent.X)` calls keep working once installed, a
 //! transitively-pulled dependency has no top-level alias of its own,
 //! matching what a real `wally install` would produce for the same graph.
 //! The same `_Index` slots are what the Installed page reads back
@@ -45,7 +45,7 @@ const SEARCH_DEBOUNCE: Duration = Duration::from_millis(400);
 pub(super) const RESULT_LIMIT: usize = 12;
 
 /// `RBX_STUDIO_WALLY_INSTALL=<scope>/<name>` installs that package on the
-/// editor's behalf at startup — the same screenshot-aid reason every other
+/// editor's behalf at startup, the same screenshot-aid reason every other
 /// `RBX_STUDIO_*` var in `shell.rs` exists (see `main`'s module doc
 /// comment): a result row is a dynamically-populated click target, nothing
 /// else can drive the dock's own search-then-click flow deterministically.

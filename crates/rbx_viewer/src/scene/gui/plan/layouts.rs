@@ -82,7 +82,7 @@ pub(in crate::scene::gui) struct List {
 /// sibling's share of the line's free space.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(in crate::scene::gui) struct FlexItem {
-    /// `FlexMode` as the grow:shrink ratio pair the docs define it by —
+    /// `FlexMode` as the grow:shrink ratio pair the docs define it by,
     /// Grow 1:0, Shrink 0:1, Fill 1:1, None 0:0, Custom the two ratios.
     pub(in crate::scene::gui) grow: f32,
     pub(in crate::scene::gui) shrink: f32,
@@ -114,8 +114,8 @@ pub(in crate::scene::gui) struct Table {
     /// `UITableLayout` also inherits `FillDirection`, which the docs describe
     /// as controlling the very same thing ("the default FillDirection of
     /// Vertical means that siblings are first positioned into rows"). With no
-    /// documented tie-break between the two, `MajorAxis` — the property the
-    /// class defines for exactly this — wins and `FillDirection` is ignored.
+    /// documented tie-break between the two, `MajorAxis`: the property the
+    /// class defines for exactly this, wins and `FillDirection` is ignored.
     pub(in crate::scene::gui) row_major: bool,
     /// `Padding`, a `UDim2` between cells on both axes.
     pub(in crate::scene::gui) padding: Span,
@@ -129,14 +129,14 @@ pub(in crate::scene::gui) struct Table {
 /// A `UIPageLayout`: "positions sibling UI elements as full-size pages in a
 /// single row or column" (`UIPageLayout`), one of which is on screen.
 ///
-/// Everything else the class carries — `Animated`, `EasingStyle`,
-/// `EasingDirection`, `TweenTime`, `Circular` and the three input switches —
+/// Everything else the class carries, `Animated`, `EasingStyle`,
+/// `EasingDirection`, `TweenTime`, `Circular` and the three input switches,
 /// only shapes a transition between pages, and a still frame catches none.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(in crate::scene::gui) struct Page {
     pub(in crate::scene::gui) vertical: bool,
     /// `Padding`, a `UDim` resolved against the parent's extent along the
-    /// fill direction — the gap between one page and the next.
+    /// fill direction, the gap between one page and the next.
     pub(in crate::scene::gui) padding: (f32, f32),
     pub(in crate::scene::gui) by_name: bool,
     /// `CurrentPage`'s referent. `None` where the property names nothing,
@@ -161,7 +161,7 @@ const SORT_LAYOUT_ORDER: u32 = 2;
 ///
 /// Roblox honours the first instance of a given layout class; where a
 /// container somehow holds two different ones this settles it in tree order,
-/// which is as good a rule as any — the docs describe no such case at all.
+/// which is as good a rule as any, the docs describe no such case at all.
 pub(in crate::scene::gui) fn layout_of(
     dom: &WeakDom,
     database: &ReflectionDatabase,
@@ -190,7 +190,7 @@ pub(in crate::scene::gui) fn layout_of(
 ///
 /// The name is checked first because the bundled API dump is a snapshot: a
 /// class newer than it is not a subclass of anything. Every class matched here is a leaf in Roblox's own hierarchy, so
-/// the name alone would in fact do — the database lookup only keeps a future
+/// the name alone would in fact do, the database lookup only keeps a future
 /// subclass working.
 fn is(database: &ReflectionDatabase, class: &str, target: &str) -> bool {
     class == target || database.is_subclass_of(class, target)
@@ -282,7 +282,7 @@ fn table(properties: &BTreeMap<String, Variant>) -> Table {
 fn page(dom: &WeakDom, properties: &BTreeMap<String, Variant>) -> Page {
     Page {
         // Unlike every other `UIGridStyleLayout`, a page layout's own default
-        // fill direction is Horizontal — a row of pages.
+        // fill direction is Horizontal, a row of pages.
         vertical: enum_of(properties, "FillDirection", 0) == FILL_VERTICAL,
         padding: udim(properties, "Padding"),
         by_name: by_name(properties),

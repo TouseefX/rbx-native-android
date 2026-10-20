@@ -1,7 +1,7 @@
 //! What the canvas shows of an auto layout while one element in it (or the
 //! element holding it) is selected: the container, its children numbered
 //! in the order the layout puts them, and the gaps between them and the
-//! padding round them as bands — each of which a drag widens or narrows,
+//! padding round them as bands, each of which a drag widens or narrows,
 //! making the `UIPadding` a side's band stands for when there is none.
 
 use rbx_dom::{Ref, Variant};
@@ -15,7 +15,7 @@ const LIST: &str = "UIListLayout";
 const GRID: &str = "UIGridLayout";
 
 /// A strip of the layout a drag resizes: `key` grows by the pointer's
-/// travel along `axis`, times `sign` — a right or bottom side's padding
+/// travel along `axis`, times `sign`: a right or bottom side's padding
 /// grows the other way.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct Band {
@@ -43,7 +43,7 @@ pub(super) struct Shown {
 impl Shell {
     /// The auto layout the selection shows: the selected element's own, or
     /// the one its parent lays it out by. Only for one element, and only
-    /// where the container is square to the screen — a band on a turned
+    /// where the container is square to the screen, a band on a turned
     /// container has no edge on the canvas's axes to be dragged along.
     pub(super) fn shown_layout(&self, root: &GuiBox, boxes: &[GuiBox]) -> Option<Shown> {
         let [selected] = self.selected_all() else {

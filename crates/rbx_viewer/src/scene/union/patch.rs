@@ -1,7 +1,7 @@
 //! The union half of `Scene::resync_part`: re-reading one legacy
 //! `UnionOperation`/`NegateOperation` off the DOM and rebuilding whatever it
-//! draws as — a computed mesh or the additive pieces recovered from its
-//! operation tree — against a boolean this place has already carved.
+//! draws as, a computed mesh or the additive pieces recovered from its
+//! operation tree, against a boolean this place has already carved.
 //!
 //! Nothing here evaluates anything: a boolean is a function of the asset's
 //! bytes alone, so the tree and mesh [`super::resolve`] carved are kept by
@@ -16,7 +16,7 @@ use super::super::material::Catalog;
 use super::super::{Part, Resolved, ResolvedInstance};
 use super::{csg, from_operation, Entry, Evaluated, Evaluations};
 
-/// The single-instance counterpart of [`super::plan`] — see
+/// The single-instance counterpart of [`super::plan`], see
 /// `filemesh::patch::replan`.
 pub(in crate::scene) fn replan(
     dom: &WeakDom,
@@ -31,7 +31,7 @@ impl Evaluations {
     /// What this place carved for `asset`, or `None` when nothing was: its
     /// bytes never downloaded, or they did not parse as an operation tree.
     /// Either way a fresh [`super::resolve`] leaves the union drawing as its
-    /// own box, which is what makes both answerable without a reload — see
+    /// own box, which is what makes both answerable without a reload, see
     /// [`Evaluations::is_known`] for the one case that is not.
     pub(in crate::scene) fn of(&self, asset: &AssetRef) -> Option<&Evaluated> {
         self.known.get(asset)?.as_deref()
@@ -58,7 +58,7 @@ impl Entry {
     }
 
     /// Whether a fresh [`super::resolve`] would drop this union's *mesh* as
-    /// fully transparent — see `filemesh::Entry::is_invisible`. Says nothing
+    /// fully transparent, see `filemesh::Entry::is_invisible`. Says nothing
     /// about a union drawn as its pieces: those carry the transparency of the
     /// parts they were recovered from, and `resolve` draws them whatever the
     /// union's own `Transparency` says.
@@ -67,7 +67,7 @@ impl Entry {
     }
 
     /// The instance [`super::resolve`] would build for this entry against
-    /// `evaluated`'s computed mesh — `None` where a fresh resolution would
+    /// `evaluated`'s computed mesh, `None` where a fresh resolution would
     /// drop it (fully transparent) or would need a mesh `resolved` does not
     /// hold, which only a load computes and uploads.
     ///
@@ -99,7 +99,7 @@ impl Entry {
 
     /// The pieces [`super::resolve`] would draw this union as when its
     /// boolean failed: the tree's additive leaves, each placed by this
-    /// entry's own placement, in the tree's order — see `tree::Node::pieces`
+    /// entry's own placement, in the tree's order, see `tree::Node::pieces`
     /// for why that order is what keeps a piece's identity stable.
     pub(in crate::scene) fn pieces(
         &self,
