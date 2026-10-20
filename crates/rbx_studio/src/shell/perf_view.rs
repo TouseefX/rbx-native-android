@@ -160,7 +160,8 @@ impl Shell {
         };
         let bins = report.bins.clone();
         perf.report = Some(Arc::new(report));
-        self.viewport.update(cx, |viewport, _| viewport.set_heat(bins));
+        self.viewport
+            .update(cx, |viewport, _| viewport.set_heat(bins));
         cx.notify();
         true
     }
@@ -194,11 +195,9 @@ impl Shell {
             return;
         };
         let centre = match properties.get("CFrame") {
-            Some(Variant::CFrame(cframe)) => glam::Vec3::new(
-                cframe.position.x,
-                cframe.position.y,
-                cframe.position.z,
-            ),
+            Some(Variant::CFrame(cframe)) => {
+                glam::Vec3::new(cframe.position.x, cframe.position.y, cframe.position.z)
+            }
             _ => return,
         };
         let reach = match properties.get("size") {

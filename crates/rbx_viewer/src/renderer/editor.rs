@@ -120,8 +120,13 @@ impl Renderer {
         bins: &[crate::scene::perf::HeatBin],
         scene: &Scene,
     ) {
-        self.cues
-            .set_heat(device, queue, &self.frame_layout, bins, Self::cue_source(scene));
+        self.cues.set_heat(
+            device,
+            queue,
+            &self.frame_layout,
+            bins,
+            Self::cue_source(scene),
+        );
     }
 
     /// Replaces the ghost boxes a tool is previewing — see

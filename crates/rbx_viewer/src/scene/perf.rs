@@ -309,8 +309,10 @@ impl Metrics {
             }
         }
         // A removal names the instance, not the part it hung under.
-        self.entries.retain(|referent, _| dom.get(*referent).is_some());
-        self.joints.retain(|referent, _| dom.get(*referent).is_some());
+        self.entries
+            .retain(|referent, _| dom.get(*referent).is_some());
+        self.joints
+            .retain(|referent, _| dom.get(*referent).is_some());
 
         let mut owners = HashSet::new();
         for &referent in shallow.iter().chain(&deep) {
@@ -398,9 +400,7 @@ impl Metrics {
         let legend = RAMP
             .iter()
             .enumerate()
-            .map(|(step, &color)| {
-                (color, metric.short(unscale(step as f32 / steps as f32)))
-            })
+            .map(|(step, &color)| (color, metric.short(unscale(step as f32 / steps as f32))))
             .collect();
 
         let mut ranked: Vec<(Ref, f32)> = values
@@ -448,10 +448,7 @@ impl Metrics {
                 let count = cells[&entry.cell];
                 details.insert(
                     referent,
-                    format!(
-                        "in its {CELL_STUDS}-stud cell, {} its own",
-                        entry.instances
-                    ),
+                    format!("in its {CELL_STUDS}-stud cell, {} its own", entry.instances),
                 );
                 (referent, count as f32)
             })
@@ -649,7 +646,10 @@ impl Metrics {
                     referent,
                     match n {
                         1 => "a batch of its own".to_string(),
-                        n => format!("shares one batch with {} other parts", grouped(u64::from(n - 1))),
+                        n => format!(
+                            "shares one batch with {} other parts",
+                            grouped(u64::from(n - 1))
+                        ),
                     },
                 );
                 (referent, 1.0 / n as f32)
@@ -740,7 +740,9 @@ impl Metrics {
         let mut textures = Vec::new();
         let mut pending: Vec<Ref> = instance.children().to_vec();
         while let Some(child) = pending.pop() {
-            let Some(child) = dom.get(child) else { continue };
+            let Some(child) = dom.get(child) else {
+                continue;
+            };
             if is_drawable(dom, database, child.referent()) {
                 continue;
             }
@@ -787,14 +789,16 @@ impl Metrics {
         }
 
         let collides = bool_or(properties, "CanCollide", true);
-        let queried = bool_or(properties, "CanTouch", true) || bool_or(properties, "CanQuery", true);
+        let queried =
+            bool_or(properties, "CanTouch", true) || bool_or(properties, "CanQuery", true);
         let fidelity = (union || database.is_subclass_of(instance.class(), "MeshPart"))
             .then(|| Fidelity::of(properties));
         let material = match properties.get("Material") {
             Some(&Variant::Enum(raw)) => raw,
             _ => 256,
         };
-        let translucent = matches!(properties.get("Transparency"), Some(&Variant::Float32(t)) if t > 0.0);
+        let translucent =
+            matches!(properties.get("Transparency"), Some(&Variant::Float32(t)) if t > 0.0);
 
         let mut hasher = DefaultHasher::new();
         match &geometry {

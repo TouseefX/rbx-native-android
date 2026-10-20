@@ -23,7 +23,9 @@ use crate::assets::Image;
 use crate::textures::asset_uri;
 
 pub(crate) use appearance::{of as appearance_of, AlphaMode, Appearance};
-pub(crate) use fit::{mesh_part as mesh_part_asset, of as fit_of, special_mesh as special_mesh_asset, Fit};
+pub(crate) use fit::{
+    mesh_part as mesh_part_asset, of as fit_of, special_mesh as special_mesh_asset, Fit,
+};
 
 use super::material::{Catalog, Slot};
 

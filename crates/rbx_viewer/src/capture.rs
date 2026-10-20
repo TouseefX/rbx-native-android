@@ -193,7 +193,8 @@ impl Offscreen {
 
     /// Tints parts by cost — see [`Renderer::set_heat`].
     pub(crate) fn set_heat(&mut self, bins: &[crate::perf::HeatBin], scene: &Scene) {
-        self.renderer.set_heat(&self.device, &self.queue, bins, scene);
+        self.renderer
+            .set_heat(&self.device, &self.queue, bins, scene);
     }
 
     /// Replaces the ghost boxes a tool is previewing.

@@ -90,7 +90,14 @@ fn triangles_count_primitives_unions_and_missing_meshes() {
         "MeshPart",
         vec![
             at(0.0),
-            ("size", Variant::Vector3(Vector3Data { x: 1.0, y: 1.0, z: 1.0 })),
+            (
+                "size",
+                Variant::Vector3(Vector3Data {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                }),
+            ),
             ("MeshId", Variant::String("rbxassetid://5".to_string())),
         ],
     );
@@ -214,7 +221,11 @@ fn draw_cost_divides_a_batch_among_its_parts() {
         assert!((value(&report, referent) - 1.0 / 3.0).abs() < 1e-6);
     }
     assert_eq!(value(&report, other), 1.0);
-    assert!(report.summary.contains("about 2 batches"), "{}", report.summary);
+    assert!(
+        report.summary.contains("about 2 batches"),
+        "{}",
+        report.summary
+    );
 }
 
 #[test]
@@ -236,10 +247,7 @@ fn every_part_lands_in_one_bin_and_the_worst_list_is_capped_and_sorted() {
     binned.sort_unstable();
     binned.dedup();
     assert_eq!(binned.len(), 28);
-    assert_eq!(
-        report.bins.iter().map(|b| b.parts.len()).sum::<usize>(),
-        28
-    );
+    assert_eq!(report.bins.iter().map(|b| b.parts.len()).sum::<usize>(), 28);
     assert_eq!(report.worst.len(), WORST);
     let values: Vec<f32> = report.worst.iter().map(|&r| value(&report, r)).collect();
     assert!(values.windows(2).all(|w| w[0] >= w[1]));
@@ -350,11 +358,19 @@ fn bench(label: &str, mut dom: WeakDom) {
     };
     let started = Instant::now();
     let mut metrics = Metrics::new(&dom, &mut fetch);
-    println!("[{label}] build: {} parts in {:?}", metrics.len(), started.elapsed());
+    println!(
+        "[{label}] build: {} parts in {:?}",
+        metrics.len(),
+        started.elapsed()
+    );
     for metric in Metric::ALL {
         let started = Instant::now();
         let report = metrics.report(metric);
-        println!("[{label}] {metric:?} report: {:?} — {}", started.elapsed(), report.summary);
+        println!(
+            "[{label}] {metric:?} report: {:?} — {}",
+            started.elapsed(),
+            report.summary
+        );
     }
 
     // One drag step's worth of edits: a `CFrame` written on 50 parts.

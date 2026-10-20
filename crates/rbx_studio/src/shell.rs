@@ -989,9 +989,9 @@ impl Shell {
         // `shell::perf_view`): turns the Performance view on — a screenshot
         // aid, since its dropdown can't be clicked from outside.
         if let Ok(name) = std::env::var("RBX_STUDIO_PERF") {
-            let metric = rbx_viewer::perf::Metric::ALL.into_iter().find(|metric| {
-                metric.label().to_lowercase().contains(&name.to_lowercase())
-            });
+            let metric = rbx_viewer::perf::Metric::ALL
+                .into_iter()
+                .find(|metric| metric.label().to_lowercase().contains(&name.to_lowercase()));
             shell.set_perf_metric(metric, cx);
         }
 

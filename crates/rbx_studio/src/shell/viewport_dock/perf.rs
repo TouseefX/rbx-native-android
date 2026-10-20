@@ -63,7 +63,11 @@ impl Shell {
         };
 
         // As wide as the Rendering column, rather than the dock's whole width.
-        let mut body = v_flex().child(div().max_w(px(300.)).child(row("Performance view", control)));
+        let mut body = v_flex().child(
+            div()
+                .max_w(px(300.))
+                .child(row("Performance view", control)),
+        );
         if let Some(perf) = &self.perf {
             body = body.child(match &perf.report {
                 None => note("Measuring…"),
@@ -156,21 +160,23 @@ fn note(text: &str) -> AnyElement {
 /// The ramp as a strip of swatches, each over the smallest value it
 /// stands for.
 fn legend(stops: &[([u8; 3], String)]) -> Div {
-    h_flex().gap(px(2.)).children(stops.iter().map(|([r, g, b], label)| {
-        v_flex()
-            .w(px(72.))
-            .gap(px(2.))
-            .child(div().h(px(10.)).rounded(px(2.)).bg(rgb(
-                u32::from(*r) << 16 | u32::from(*g) << 8 | u32::from(*b),
-            )))
-            .child(
-                div()
-                    .text_size(tokens::text_xxs())
-                    .line_height(tokens::line_xxs())
-                    .font_family(tokens::font_mono())
-                    .text_color(tokens::text3())
-                    .truncate()
-                    .child(format!("≥ {label}")),
-            )
-    }))
+    h_flex()
+        .gap(px(2.))
+        .children(stops.iter().map(|([r, g, b], label)| {
+            v_flex()
+                .w(px(72.))
+                .gap(px(2.))
+                .child(div().h(px(10.)).rounded(px(2.)).bg(rgb(u32::from(*r) << 16
+                    | u32::from(*g) << 8
+                    | u32::from(*b))))
+                .child(
+                    div()
+                        .text_size(tokens::text_xxs())
+                        .line_height(tokens::line_xxs())
+                        .font_family(tokens::font_mono())
+                        .text_color(tokens::text3())
+                        .truncate()
+                        .child(format!("≥ {label}")),
+                )
+        }))
 }
