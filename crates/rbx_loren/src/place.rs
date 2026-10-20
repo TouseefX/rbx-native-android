@@ -136,12 +136,21 @@ fn build_node(
             return Ok(None);
         }
         insert_path(dom, parent, name, &target)?
-    } else {
-        let class = node
-            .get("$className")
-            .and_then(Json::as_str)
-            .unwrap_or("Folder");
+    } else if let Some(class) = node.get("$className").and_then(Json::as_str) {
         dom.new_instance(class, name, Some(parent))
+    } else {
+        // Like Rojo: a bare node under StarterPlayer is its scripts container,
+        // and one the place already has is filled in rather than shadowed by a
+        // Folder of the same name, which Roblox would never run.
+        let player_scripts = dom
+            .get(parent)
+            .is_some_and(|p| p.class() == "StarterPlayer")
+            && matches!(name, "StarterPlayerScripts" | "StarterCharacterScripts");
+        match find_child(dom, parent, name) {
+            Some(existing) if player_scripts => existing,
+            _ if player_scripts => dom.new_instance(name, name, Some(parent)),
+            _ => dom.new_instance("Folder", name, Some(parent)),
+        }
     };
     build_children(dom, made, node, base)?;
     Ok(Some(made))
