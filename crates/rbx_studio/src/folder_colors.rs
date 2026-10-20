@@ -1,4 +1,4 @@
-//! Per-place Explorer colour tags for `Folder` rows — a purely local editor
+//! Per-place Explorer colour tags for `Folder` rows, a purely local editor
 //! convenience with no corresponding real Roblox property, so it lives here
 //! (`$XDG_CONFIG_HOME/rbx-native/folder_colors.json`, mirroring `settings.rs`'s
 //! directory convention) rather than in the saved place file. See
@@ -8,11 +8,11 @@
 //!
 //! Keyed by the place's own file path, then by the tagged folder's Explorer
 //! path (`Workspace.Nested.MyFolder`, see [`path_of`]) rather than its `Ref`
-//! — a `Ref` regenerates on every load, so it can never be a stable key
+//! a `Ref` regenerates on every load, so it can never be a stable key
 //! across a reload.
 //!
 //! ponytail: path-keyed, so renaming or moving a tagged folder orphans its
-//! entry — the old path no longer resolves, so the tint silently stops
+//! entry, the old path no longer resolves, so the tint silently stops
 //! applying, and [`FolderColors::prune`] is the one-line upkeep that clears
 //! the orphan rather than leaving it to grow forever. Upgrade to a real
 //! content-addressed key (a `UniqueId`-derived id, if `Folder` reliably
@@ -30,7 +30,7 @@ use crate::settings::{default_config_dir, write_atomic, SettingsError};
 /// 0-255 sRGB, the same space `properties::EditKind::Color` already edits in.
 pub(crate) type Rgb = (u8, u8, u8);
 
-/// The only class this feature tags — see `ROADMAP.md`'s own hedged wording
+/// The only class this feature tags, see `ROADMAP.md`'s own hedged wording
 /// ("and perhaps any instance"), which this deliberately does not chase.
 pub(crate) const FOLDER_CLASS: &str = "Folder";
 
@@ -41,7 +41,7 @@ pub(crate) struct FolderColors(HashMap<String, HashMap<String, Rgb>>);
 impl FolderColors {
     /// Reads the store; a missing file, an unreadable path, or a malformed
     /// document all fall back to an empty store rather than blocking
-    /// startup — the same discipline `Settings::load` follows.
+    /// startup, the same discipline `Settings::load` follows.
     pub(crate) fn load() -> FolderColors {
         let Some(path) = folder_colors_path() else {
             return FolderColors::default();
@@ -79,7 +79,7 @@ impl FolderColors {
     }
 
     /// Drops every entry for `place` whose folder no longer exists (or is no
-    /// longer a `Folder`) at its tagged path — see this module's doc comment.
+    /// longer a `Folder`) at its tagged path, see this module's doc comment.
     /// Returns whether anything changed, so a caller only re-saves when it
     /// did.
     pub(crate) fn prune(&mut self, place: &Path, dom: &WeakDom) -> bool {
@@ -102,7 +102,7 @@ fn place_key(place: &Path) -> String {
 }
 
 /// `reference`'s Explorer-style path, itself included
-/// (`Workspace.Nested.MyFolder`) — the key every store entry above is kept
+/// (`Workspace.Nested.MyFolder`), the key every store entry above is kept
 /// under. `None` when `reference` no longer resolves.
 pub(crate) fn path_of(dom: &WeakDom, reference: Ref) -> Option<String> {
     let mut names = Vec::new();
@@ -273,7 +273,7 @@ mod tests {
         let mut colors = FolderColors::default();
         colors.set(&place(), "Workspace.Tagged", (9, 9, 9));
 
-        // `set` only ever mutates `FolderColors`'s own map — the `Instance`
+        // `set` only ever mutates `FolderColors`'s own map, the `Instance`
         // it was computed from is a separate, untouched borrow.
         let after = dom.get(folder).unwrap().properties().clone();
         assert_eq!(before, after);

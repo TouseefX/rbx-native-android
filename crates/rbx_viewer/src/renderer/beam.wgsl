@@ -3,7 +3,7 @@
 // Unlike `particles.wgsl`, every vertex here already sits at its final world
 // position: `FaceCamera`, the curve and the width taper are all resolved on
 // the CPU each frame (see `ribbon::vertices`), so this shader only projects
-// and shades. The `LightEmission` blend trick is identical to particles' —
+// and shades. The `LightEmission` blend trick is identical to particles',
 // see that shader's `fs_main` for why one blend state covers both straight
 // alpha and additive.
 
@@ -42,7 +42,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // `LightInfluence` blends the beam's own colour toward that colour lit by
     // the scene: 0 leaves it at full brightness (unlit), 1 lets the scene's
     // light tint it. Done here, per vertex, because the light is one value for
-    // the whole frame — the fragment shader stays a plain texture multiply.
+    // the whole frame, the fragment shader stays a plain texture multiply.
     let lit = in.color * camera.env_light.rgb;
     out.color = mix(in.color, lit, in.light_influence);
     out.alpha = in.alpha;

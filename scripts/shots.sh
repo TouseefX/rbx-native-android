@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 OUT="${1:-shots}"; mkdir -p "$OUT"
 FIX="${RBX_FIXTURES:-../rbx-native-fixtures/places}"
 # `ionice` is Linux-only; fall back to plain `nice` rather than failing
-# outright anywhere else (macOS, in particular) — see check.sh's own copy of
+# outright anywhere else (macOS, in particular), see check.sh's own copy of
 # this same fallback, and shots.ps1 for the native Windows equivalent.
 if command -v ionice >/dev/null 2>&1; then
   ionice -c3 nice -n 10 cargo build --release -p rbx_viewer 2>&1 | grep -E '^(error|warning)' || true

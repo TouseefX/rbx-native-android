@@ -151,7 +151,7 @@ struct Decoded {
     indices: Vec<u32>,
 }
 
-/// A decoded union mesh and the colour most of its surface was baked in —
+/// A decoded union mesh and the colour most of its surface was baked in,
 /// what paints it where `UsePartColor` is off, as the biggest leaf's colour
 /// does for a carved one.
 pub(super) struct Baked {
@@ -262,7 +262,7 @@ pub(super) fn mesh_data(
     ["MeshData2", "MeshData"]
         .iter()
         .find_map(|key| match properties.get(*key) {
-            // Never valid UTF-8, so always `Unknown` — see `tree::child_data`.
+            // Never valid UTF-8, so always `Unknown`: see `tree::child_data`.
             Some(rbx_dom::Variant::Unknown { raw, .. }) if !raw.is_empty() => Some(raw.as_slice()),
             _ => None,
         })

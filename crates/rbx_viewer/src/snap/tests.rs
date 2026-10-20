@@ -2,7 +2,7 @@ use glam::{Mat4, Quat, Vec3};
 
 use super::*;
 
-/// A part of `size` studs standing at `centre`, axis-aligned — the matrix
+/// A part of `size` studs standing at `centre`, axis-aligned, the matrix
 /// `pick::model_of` builds for one.
 fn part(centre: Vec3, size: Vec3) -> Mat4 {
     Mat4::from_scale_rotation_translation(size, Quat::IDENTITY, centre)

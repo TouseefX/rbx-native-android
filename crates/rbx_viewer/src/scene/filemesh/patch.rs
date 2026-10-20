@@ -29,20 +29,20 @@ impl Entry {
         self.referent
     }
 
-    /// The mesh this entry draws through — what has to have downloaded.
+    /// The mesh this entry draws through, what has to have downloaded.
     pub(crate) fn asset(&self) -> &AssetRef {
         &self.mesh
     }
 
     /// Whether a fresh [`super::resolve`] would drop this entry as fully
-    /// transparent — told apart from [`Entry::patched`]'s other `None`s, since
+    /// transparent, told apart from [`Entry::patched`]'s other `None`s, since
     /// an invisible instance is removed in place while the rest need a reload.
     pub(crate) fn is_invisible(&self) -> bool {
         self.alpha <= 0.0
     }
 
     /// The instance [`super::resolve`] would build for this entry against
-    /// `resolved`'s already-downloaded assets — `None` wherever a fresh
+    /// `resolved`'s already-downloaded assets, `None` wherever a fresh
     /// resolution would drop it (its mesh never downloaded, or it is now
     /// fully transparent) or would need something only a full reload
     /// downloads: a `SurfaceAppearance` map set the scene has not uploaded.

@@ -85,7 +85,7 @@ impl Shell {
 
     /// Ctrl+V and Ctrl+D: the clipboard (or, for a duplicate, the region
     /// itself) put down where the region is, then the Transform tool to
-    /// move it on — `terrain-editor.md`'s "swap to the Transform tool".
+    /// move it on, `terrain-editor.md`'s "swap to the Transform tool".
     pub(in crate::shell) fn terrain_paste(&mut self, duplicate: bool, cx: &mut Context<Self>) {
         let area = self.terrain.settings.active_region();
         if duplicate {

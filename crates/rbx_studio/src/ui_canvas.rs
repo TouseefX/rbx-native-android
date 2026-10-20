@@ -1,8 +1,8 @@
 //! The UI editor canvas's geometry, apart from any GPUI state: which element
 //! a point lands on, what a marquee takes, and how a drag on a handle turns
 //! into the `Position`/`Size`/`Rotation` writes Roblox's own `UDim2` model
-//! needs. Everything is in *canvas pixels* — the simulated screen the
-//! `ScreenGui` is laid out against — and every element box is the one the
+//! needs. Everything is in *canvas pixels*, the simulated screen the
+//! `ScreenGui` is laid out against, and every element box is the one the
 //! renderer laid out (see `rbx_viewer::GuiBox`), so the canvas never
 //! re-derives a layout of its own.
 //!
@@ -16,7 +16,7 @@ pub(crate) mod guides;
 use rbx_dom::Ref;
 use rbx_viewer::GuiBox;
 
-/// The simulated screens the canvas offers — the conventional widths a
+/// The simulated screens the canvas offers, the conventional widths a
 /// Figma frame is stress-tested against, in Roblox's terms: a whole
 /// resolution per preset, since a `UDim2` resolves against both axes.
 pub(crate) const PRESETS: [(&str, u32, u32); 6] = [
@@ -40,7 +40,7 @@ pub(crate) struct View {
 }
 
 impl View {
-    /// The whole `screen` centred in `panel` with `margin` round it — shrunk
+    /// The whole `screen` centred in `panel` with `margin` round it, shrunk
     /// to fit, but never blown up past 1:1, where the picture (drawn at the
     /// screen's own resolution) would only go soft.
     pub(crate) fn fit(panel: [f32; 2], screen: [f32; 2], margin: f32) -> View {
@@ -53,7 +53,7 @@ impl View {
     }
 
     /// `rect` centred in `panel` with `margin` round it, zoomed as far in
-    /// as that takes — zoom to selection, which unlike [`View::fit`] goes
+    /// as that takes, zoom to selection, which unlike [`View::fit`] goes
     /// past 1:1: a small button is what it is asked to show.
     pub(crate) fn framing(panel: [f32; 2], rect: &Rect, margin: f32) -> View {
         let size = [rect.w, rect.h];
@@ -175,7 +175,7 @@ impl Rect {
     }
 
     /// The four corners after turning `degrees` clockwise about the centre,
-    /// top-left first — what the renderer draws for a rotated element.
+    /// top-left first, what the renderer draws for a rotated element.
     pub(crate) fn corners(&self, degrees: f32) -> [[f32; 2]; 4] {
         let c = self.centre();
         let (hw, hh) = (self.w * 0.5, self.h * 0.5);
@@ -198,7 +198,7 @@ impl Rect {
     }
 }
 
-/// `point` turned `degrees` clockwise about the origin — clockwise on a
+/// `point` turned `degrees` clockwise about the origin, clockwise on a
 /// screen whose y runs down, the way `GuiObject.Rotation` turns.
 pub(crate) fn rotate([x, y]: [f32; 2], degrees: f32) -> [f32; 2] {
     let (sin, cos) = degrees.to_radians().sin_cos();
@@ -234,7 +234,7 @@ pub(crate) fn box_of(boxes: &[GuiBox], referent: Ref) -> Option<&GuiBox> {
 }
 
 /// What a marquee over `area` selects: every element drawn wholly inside it
-/// whose parent is not also taken — the outermost of a nested run, so a
+/// whose parent is not also taken, the outermost of a nested run, so a
 /// marquee round a card takes the card rather than every label on it.
 pub(crate) fn marquee(
     boxes: &[GuiBox],
@@ -312,7 +312,7 @@ pub(crate) struct Resize {
 
 /// Dragging `handle` of a `size` box by `local` (the pointer's travel, turned
 /// into the element's own frame): the grabbed sides follow, the opposite
-/// ones hold still — never past each other, a box is never turned inside
+/// ones hold still, never past each other, a box is never turned inside
 /// out. `keep_aspect` on a corner scales both sides by one factor, the
 /// larger of the two the pointer asks for.
 pub(crate) fn resize(handle: Handle, size: [f32; 2], local: [f32; 2], keep_aspect: bool) -> Resize {
@@ -334,7 +334,7 @@ pub(crate) fn resize(handle: Handle, size: [f32; 2], local: [f32; 2], keep_aspec
 }
 
 /// How far an element's `Position` offset moves for its centre to travel
-/// `centre` canvas pixels while it grows by `grow` — `Position` is where
+/// `centre` canvas pixels while it grows by `grow`: `Position` is where
 /// `AnchorPoint` lands, and it lands in the *parent's* frame, turned by the
 /// parent's own absolute rotation.
 pub(crate) fn position_shift(
@@ -357,7 +357,7 @@ pub(crate) fn shifted(udim: Udim2, shift: [f32; 2]) -> Udim2 {
 }
 
 /// Which half of a `UDim` the canvas writes an edit into: whole pixels, or
-/// a share of the parent — the insert bar's Offset/Scale switch. Only the
+/// a share of the parent, the insert bar's Offset/Scale switch. Only the
 /// half named moves; the other keeps whatever it held.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum Unit {
@@ -367,8 +367,8 @@ pub(crate) enum Unit {
 }
 
 /// [`shifted`] in `unit`: the pixels onto the offsets, or onto the scales
-/// as the share of `span` — what a scale of 1 comes to, in pixels, on each
-/// axis — they are. An axis with no span to divide by takes pixels.
+/// as the share of `span`: what a scale of 1 comes to, in pixels, on each
+/// axis, they are. An axis with no span to divide by takes pixels.
 pub(crate) fn shifted_in(udim: Udim2, shift: [f32; 2], unit: Unit, span: [f32; 2]) -> Udim2 {
     let pixels = shifted(udim, shift);
     [0, 1].map(|axis| match unit == Unit::Scale && span[axis] > 0.0 {

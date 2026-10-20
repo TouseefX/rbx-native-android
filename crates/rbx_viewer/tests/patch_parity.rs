@@ -1,12 +1,12 @@
 //! An edit patched in place must draw the very pixels a scene rebuilt from
-//! the same DOM draws — for every kind of change `Headless::apply_changes`
+//! the same DOM draws, for every kind of change `Headless::apply_changes`
 //! patches, forwards, undone and redone. Anything short of that is a patch
 //! that shows something a reload would not, which is the one bug this path
 //! cannot afford.
 //!
 //! Needs a GPU, so it is `#[ignore]`d and run by hand:
 //! `cargo test -p rbx_viewer --release --test patch_parity -- --ignored
-//! --test-threads=1` — every test opens two or more devices of its own, and
+//! --test-threads=1`: every test opens two or more devices of its own, and
 //! eight tests' worth at once has tripped the driver into a panic deep in
 //! `wgpu` before any pixel was compared. Runs against the in-repo
 //! `TestPlace.rbxl` by default; `RBX_PARITY_FIXTURE` points it at a real
@@ -48,7 +48,7 @@ fn frame(headless: &mut Headless) -> Vec<u8> {
         .pixels
 }
 
-/// Pixels that differ between two frames of the same size — ImageMagick's
+/// Pixels that differ between two frames of the same size, ImageMagick's
 /// `AE` metric, the number a screenshot comparison reports.
 fn differing(a: &[u8], b: &[u8]) -> usize {
     assert_eq!(a.len(), b.len());
@@ -80,7 +80,7 @@ fn check(patched: &mut Headless, dom: &WeakDom, log: &[Change], what: &str) {
     );
 }
 
-/// Runs one edit three ways — forwards, undone, redone — each against a
+/// Runs one edit three ways, forwards, undone, redone, each against a
 /// rebuild. Undo and redo are done the way `rbxstudio` does them: the DOM
 /// from before (or after) is put back whole, and the *edit's* log is what
 /// the viewport is handed.
@@ -90,7 +90,7 @@ fn parity(what: &str, edit: impl Fn(&mut WeakDom)) {
 
 /// [`parity`] for an edit that needs the place set up first: `setup` is
 /// patched in (and checked) as an edit of its own, so the log under test is
-/// the edit's alone — a `Frame` *moved* into a `BillboardGui` is not the
+/// the edit's alone, a `Frame` *moved* into a `BillboardGui` is not the
 /// same log as one created there.
 fn staged(what: &str, setup: impl Fn(&mut WeakDom), edit: impl Fn(&mut WeakDom)) {
     let path = fixture();
@@ -112,8 +112,8 @@ fn staged(what: &str, setup: impl Fn(&mut WeakDom), edit: impl Fn(&mut WeakDom))
 /// [`parity`] for an edit that needs a union this fixture actually draws as
 /// its recovered fallback pieces.
 ///
-/// A fixture with no such union is *skipped*, loudly: `TestPlace.rbxl` — the
-/// default — has no `UnionOperation` at all, and a hand-built stand-in would
+/// A fixture with no such union is *skipped*, loudly: `TestPlace.rbxl`, the
+/// default, has no `UnionOperation` at all, and a hand-built stand-in would
 /// compare the patch path against itself rather than against a real place's
 /// baked CSG. Point `RBX_PARITY_FIXTURE` at a place that has one.
 fn union_parity(what: &str, edit: impl Fn(&mut WeakDom, Ref)) {
@@ -151,7 +151,7 @@ fn three_ways(what: &str, patched: &mut Headless, before: WeakDom, dom: &mut Wea
     check(patched, &after, &log, &format!("{what} (redo)"));
 }
 
-/// The first instance the viewer draws as several recovered pieces — which
+/// The first instance the viewer draws as several recovered pieces, which
 /// depends on what that union's asset carved to, not on its class, so the
 /// renderer is asked rather than the DOM.
 fn fallback_union(headless: &Headless, dom: &WeakDom) -> Option<Ref> {
@@ -355,7 +355,7 @@ fn a_moved_union_draws_as_a_rebuild_draws_it() {
 }
 
 // A union's own colour paints the mesh its boolean would have produced, and
-// nothing at all when it is drawn as its pieces — which is exactly what makes
+// nothing at all when it is drawn as its pieces, which is exactly what makes
 // this worth pinning: the patch has to agree with the rebuild about drawing
 // *no* change, rather than repainting pieces a rebuild would leave alone.
 #[test]
@@ -432,7 +432,7 @@ fn a_frame_moved_from_a_screen_gui_to_a_billboard_gui_draws_as_a_rebuild_draws_i
     );
 }
 
-// A class change re-derives the instance whole — a wedge is not a block —
+// A class change re-derives the instance whole, a wedge is not a block,
 // and is the one edit that can move a live instance out of the pass that
 // draws it: a part turned into a `Folder` has to stop being drawn.
 #[test]
@@ -515,7 +515,7 @@ fn a_frame_given_another_class_draws_as_a_rebuild_draws_it() {
 /// `Headless::reload` instead, and the render thread has to come out of that
 /// still drawing: a viewport that goes black (or stops handing frames back)
 /// after a scripted edit is the failure this guards, and it is one no
-/// parity check above would catch — a rebuild compared against a rebuild
+/// parity check above would catch, a rebuild compared against a rebuild
 /// agrees with itself perfectly while both draw nothing.
 #[test]
 #[ignore = "needs a GPU"]
@@ -554,7 +554,7 @@ fn a_rebuild_leaves_the_renderer_drawing() {
 
     let after = frame(&mut headless);
     assert!(!blank(&after), "the frame after a rebuild is blank");
-    // And it is the picture a scene rebuilt from the same DOM draws — the
+    // And it is the picture a scene rebuilt from the same DOM draws, the
     // same bar every patched edit above is held to, applied to the path
     // that gives up on patching.
     let reference = rebuilt(&dom);
@@ -584,7 +584,7 @@ fn sky(dom: &WeakDom) -> Option<Ref> {
     None
 }
 
-/// Whether every pixel is the same colour — a frame with nothing drawn in
+/// Whether every pixel is the same colour, a frame with nothing drawn in
 /// it, whatever that colour turned out to be.
 fn blank(pixels: &[u8]) -> bool {
     let mut chunks = pixels.chunks(4);
@@ -594,7 +594,7 @@ fn blank(pixels: &[u8]) -> bool {
 
 /// Selecting a part has to show in the frame: the cue is the silhouette of
 /// the geometry it covers (see `renderer::cue`), so a selected part draws
-/// differently from an unselected one — and goes back to the unselected
+/// differently from an unselected one, and goes back to the unselected
 /// picture when the selection is cleared.
 #[test]
 #[ignore = "needs a GPU"]
@@ -625,7 +625,7 @@ fn a_selected_part_is_cued_in_the_frame() {
     );
 }
 
-/// The same, at every graphics level — the cue's mask follows the scene
+/// The same, at every graphics level, the cue's mask follows the scene
 /// pass's own sample count, and a multisampled one is a different texture
 /// type in the shader (see `renderer::highlight::pipelines`). A level that
 /// silently dropped the cue would leave the editor with nothing to show for
@@ -656,8 +656,8 @@ fn a_selected_part_is_cued_at_every_graphics_level() {
     }
 }
 
-/// A selected part moved by an edit — a viewport drag, a typed `CFrame`, an
-/// undo, which all reach the viewer as this same patched log — carries its
+/// A selected part moved by an edit, a viewport drag, a typed `CFrame`, an
+/// undo, which all reach the viewer as this same patched log, carries its
 /// selection cue with it: the frame is the one a rebuild of the moved DOM,
 /// with the same selection, draws.
 #[test]
@@ -862,7 +862,7 @@ fn rebuilt_at_dummy(place: &std::path::Path, dom: &WeakDom) -> Vec<u8> {
 }
 
 /// Patches `edit` of the dressed dummy in, forwards, undone and redone, and
-/// checks each frame against a rebuild — and that the edit showed at all.
+/// checks each frame against a rebuild, and that the edit showed at all.
 fn worn(what: &str, edit: impl Fn(&mut WeakDom)) {
     let cache = tempfile::tempdir().unwrap();
     seed_template(cache.path(), 9_100_001, [200, 30, 30, 255]);

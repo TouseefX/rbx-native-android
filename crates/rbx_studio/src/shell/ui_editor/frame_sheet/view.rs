@@ -23,7 +23,7 @@ const SURROUND: u32 = 0x0b0b0c;
 const HATCH_STEP: f32 = 8.0;
 
 impl Shell {
-    /// The sheet over the canvas — the backdrop, then the sheet itself.
+    /// The sheet over the canvas, the backdrop, then the sheet itself.
     pub(in crate::shell::ui_editor) fn frame_sheet(
         &mut self,
         window: &mut Window,
@@ -331,7 +331,7 @@ impl Shell {
     }
 }
 
-/// The surround's hairline hatch, 135°, and where the area was laid out —
+/// The surround's hairline hatch, 135°, and where the area was laid out,
 /// what the stage is sized against next frame.
 fn hatch(area: std::rc::Rc<std::cell::Cell<Bounds<Pixels>>>) -> impl IntoElement {
     canvas(

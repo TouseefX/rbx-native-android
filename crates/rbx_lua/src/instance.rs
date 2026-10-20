@@ -25,7 +25,7 @@ pub(crate) struct LuaInstance {
 }
 
 /// What [`LuaInstance::new`] hands back. Converting it into Lua yields
-/// the one userdata this VM holds for that instance — Roblox instances are
+/// the one userdata this VM holds for that instance, Roblox instances are
 /// unique objects, so scripts key tables by them and `table.find` /
 /// `rawequal` must see the same value however the instance was reached. The
 /// cache is weak-valued: an instance no script holds is let go.

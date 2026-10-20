@@ -136,7 +136,7 @@ pub fn sanitize_name(name: &str) -> String {
     out
 }
 
-/// `base`, or `base1`, `base2`, … — the first `taken` does not refuse. This
+/// `base`, or `base1`, `base2`, …, the first `taken` does not refuse. This
 /// is the editor's `"%s%d"` de-duplication for nodes, pins and parameters.
 pub fn unique(base: &str, taken: impl Fn(&str) -> bool) -> String {
     if !taken(base) {

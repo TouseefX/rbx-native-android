@@ -1,4 +1,4 @@
-//! Finding an experience from a link to one of its places — Home's "Add by
+//! Finding an experience from a link to one of its places, Home's "Add by
 //! place ID or URL", the way to reach a private experience that no listing
 //! can show on an unrestricted key (Open Cloud has no "list my universes";
 //! the Creator Dashboard's own `universes/v1/search` is cookie-only).
@@ -81,7 +81,7 @@ impl Client {
         }))
     }
 
-    /// A user's display name (`users.roblox.com/v1/users/{id}`, anonymous) —
+    /// A user's display name (`users.roblox.com/v1/users/{id}`, anonymous),
     /// what the wizard shows for a key's `authorized_user_id`.
     pub fn user_display_name(&self, user_id: u64) -> Result<String, CloudError> {
         let url = format!("https://users.roblox.com/v1/users/{user_id}");

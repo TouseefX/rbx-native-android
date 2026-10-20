@@ -11,7 +11,7 @@ fn contains(b: &GuiBox, x: f32, y: f32) -> bool {
 }
 
 /// The topmost interactive element (a button, text box, scrolling frame or
-/// `Active` object — `render::Drawn::sinks`) under the point, as in Roblox,
+/// `Active` object, `render::Drawn::sinks`) under the point, as in Roblox,
 /// where a button's own label lets the press through to it; otherwise the
 /// topmost box. Skips the root's own frame (`boxes[0]`); rotation is
 /// ignored.
@@ -24,7 +24,7 @@ pub(super) fn hit(boxes: &[GuiBox], sinks: &HashSet<Ref>, x: f32, y: f32) -> Opt
         .or(top)
 }
 
-/// Whether any interactive element is under the point — what keeps a click
+/// Whether any interactive element is under the point, what keeps a click
 /// on an overlay's button from also reaching the 3D view below it.
 pub(super) fn over_sink(boxes: &[GuiBox], sinks: &HashSet<Ref>, x: f32, y: f32) -> bool {
     boxes

@@ -130,7 +130,7 @@ pub(crate) fn region_model(region: &StudBox, rotation: glam::Mat3) -> Mat4 {
 }
 
 /// The region's box, and the handles the tool grabs it by: a ball on each
-/// face to scale it, and — for Transform — the three axis arrows to move it.
+/// face to scale it, and, for Transform, the three axis arrows to move it.
 pub(crate) fn region_outline(
     model: Mat4,
     faces: Option<&Faces>,

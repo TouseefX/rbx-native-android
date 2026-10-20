@@ -1,5 +1,5 @@
 //! The synthetic "Explorer Colour" row [`super::Properties::rows`] adds for
-//! a `Folder` — split out of `properties.rs` to stay under `GUIDELINES.md`
+//! a `Folder`: split out of `properties.rs` to stay under `GUIDELINES.md`
 //! §6's line budget, the same reason `properties/edit.rs` is its own file.
 //! See `crate::folder_colors` for why this pseudo-property exists outside
 //! `instance.properties()` at all: the same reasoning `Properties::rows`
@@ -14,7 +14,7 @@ use super::{edit, EditKind, PropertyRow};
 /// tint at all.
 const NO_COLOR: (u8, u8, u8) = (255, 255, 255);
 
-/// `Some(row)` when `class` is `Folder`, `None` for anything else —
+/// `Some(row)` when `class` is `Folder`, `None` for anything else,
 /// `Folder`-only, per the roadmap request this ships. `category` is the
 /// caller's own `self.category(class, edit::FOLDER_COLOR_PROPERTY)` lookup,
 /// passed in rather than resolved here since that needs the
