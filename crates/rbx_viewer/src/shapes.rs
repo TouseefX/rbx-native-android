@@ -2,8 +2,8 @@
 //!
 //! Each mesh fits exactly inside `[-0.5, 0.5]^3`, the same convention the existing
 //! box uses (see `renderer::mesh::cube`), so a part's `size` becomes the model
-//! matrix's scale directly. This module has no GPU dependency — every mesh can be
-//! validated by a plain unit test — and [`renderer::shaped`](super::renderer)
+//! matrix's scale directly. This module has no GPU dependency, every mesh can be
+//! validated by a plain unit test, and [`renderer::shaped`](super::renderer)
 //! turns a [`MeshData`] into vertex/index buffers.
 
 mod block;
@@ -27,7 +27,7 @@ use glam::Vec3;
 /// Every generator in this module builds one of these with [`push_flat_triangle`]
 /// or [`push_smooth_triangle`], which orient each triangle outward relative to a
 /// point known to sit inside the shape. That means no generator has to
-/// hand-derive a winding order — a common source of inside-out geometry — and
+/// hand-derive a winding order, a common source of inside-out geometry, and
 /// unit tests can check orientation once, generically, via [`MeshData::volume`].
 ///
 /// [`push_flat_triangle`]: MeshData::push_flat_triangle
@@ -94,7 +94,7 @@ impl MeshData {
     /// theorem: `sum(v0 . (v1 x v2)) / 6` over every triangle, independent of
     /// the reference point as long as the surface is closed.
     ///
-    /// Positive for a closed, outward-wound mesh — every shape here is convex,
+    /// Positive for a closed, outward-wound mesh, every shape here is convex,
     /// so this doubles as the orientation check every generator's tests use,
     /// and its magnitude can be checked against the shape's known volume.
     ///

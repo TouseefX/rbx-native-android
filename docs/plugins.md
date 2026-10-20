@@ -6,9 +6,9 @@ plugins (Luau or WebAssembly, described by a `plugin.toml`).
 
 Examples live in `examples/plugins/`:
 
-- `roblox/SelectionInspector.lua` — toolbar, dock widget, `Handles`.
-- `native/tint` — a Luau native plugin that colours the selection.
-- `native/count-parts` — a WASM (`.wat`) native plugin that counts parts.
+- `roblox/SelectionInspector.lua`: toolbar, dock widget, `Handles`.
+- `native/tint`: a Luau native plugin that colours the selection.
+- `native/count-parts`: a WASM (`.wat`) native plugin that counts parts.
 
 ## Where plugins are loaded from
 
@@ -56,7 +56,7 @@ also fires for the plugin that called `Selection:Set`, as in Studio.
 Every plugin edit can be undone. A user input a plugin handles (a button,
 a widget click, a handle drag, a prompt answer) is one undo step, and so is
 a press through its release in the 3D view. Edits a plugin makes on its own
-— from `task.delay`, `Heartbeat`, a selection or change handler — gather
+from `task.delay`, `Heartbeat`, a selection or change handler, gather
 into one step that ends at the plugin's next
 `ChangeHistoryService:SetWaypoint`, the user's next action, or Ctrl+Z.
 
@@ -66,7 +66,7 @@ into one step that ends at the plugin's next
 
 [Archimedes](https://create.roblox.com/store/asset/144938633) (Scriptos's
 arc builder, Roact + StudioComponents) is the reference plugin: it runs
-from a plain `.rbxm` — its window over the 3D view, the direction buttons,
+from a plain `.rbxm`: its window over the 3D view, the direction buttons,
 **Render**, **Render All** and undo. The `run_plugin` example
 (`cargo run -p rbx_lua --example run_plugin -- place.rbxl plugin.rbxm`)
 runs a plugin headless; `RUN_PLUGIN_SELECT=<name>` selects a part and
@@ -81,7 +81,7 @@ The 30 most-voted free plugins on the Creator Store were run through the
 headless harness (start, every toolbar button, `RUN_PLUGIN_USER_ID=1`), and
 the big ones by hand in the editor. 28 start and answer their buttons with
 no error; the two that do not are noted. "Runs" means the plugin loads and
-its toolbar works without an error — not that every feature was exercised.
+its toolbar works without an error, not that every feature was exercised.
 
 ![F3X moving a part with its own handles](plugins/f3x-move.png)
 
@@ -129,15 +129,15 @@ plugin GUIs drawn once they arrive.
 
 Available to every plugin, Roblox or native:
 
-- `plugin:PromptColor3(initial?)` — yields; returns a `Color3`, or `nil` if
+- `plugin:PromptColor3(initial?)`: yields; returns a `Color3`, or `nil` if
   cancelled.
-- `plugin:PromptBrickColor(initial?)` — yields; returns a `BrickColor`, or
+- `plugin:PromptBrickColor(initial?)`: yields; returns a `BrickColor`, or
   `nil` if cancelled.
 - `plugin:CreateFloatingWidget(id, {Size = Vector2, Position = Vector2?,
-  LightDismiss = bool?})` — a widget that is not dockable and is drawn above
+  LightDismiss = bool?})`: a widget that is not dockable and is drawn above
   the editor. With no `Position` it opens at the cursor; with `LightDismiss`
   a click outside closes it.
-- `plugin:GetDebuggerManager()` — breakpoints, watches and stepping through
+- `plugin:GetDebuggerManager()`: breakpoints, watches and stepping through
   the editor's debugger.
 
 Native plugins also get `rbxnative.command(id, text, fn)`, which adds a

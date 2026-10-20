@@ -1,7 +1,7 @@
 //! The Sun tool: placing the sun, or the moon, by pointing at the scene
 //! instead of typing `ClockTime` and `GeographicLatitude`.
 //!
-//! Four gestures, each a left-button press and drag in the 3D view — see
+//! Four gestures, each a left-button press and drag in the 3D view, see
 //! [`Mode`]. This module is their geometry and the writes they make, pure so
 //! it can be tested without a window. The view turns the cursor into a ray
 //! and draws the guide (`workspace_view::sun`); `Shell` owns the DOM and the
@@ -114,7 +114,7 @@ pub(crate) struct Guide {
 
 impl SunTool {
     /// The left button going down: a new gesture. Shadow takes its caster
-    /// here — the one point the rest of the drag measures from.
+    /// here, the one point the rest of the drag measures from.
     ///
     /// `hit` is the drawn surface under a ray, leaving out one part if asked
     /// (see `shell::sun`, which answers it through `pick::PartSurface`).
@@ -135,7 +135,7 @@ impl SunTool {
 
     /// Where this step of the gesture points the body, or `None` where it
     /// points nowhere: over empty sky in a mode that needs a surface, and
-    /// Shadow's own press, which only picks the caster up — its ground would
+    /// Shadow's own press, which only picks the caster up, its ground would
     /// be whatever stands behind the caster, and the light would jump before
     /// the drag had said anything.
     pub(crate) fn aim(
@@ -176,7 +176,7 @@ impl SunTool {
         }
     }
 
-    /// Whether a write is the gesture's first — the one that opens its undo
+    /// Whether a write is the gesture's first, the one that opens its undo
     /// step. Asked only of a step that really changes something, so a
     /// gesture that never did stays out of the history altogether.
     pub(crate) fn opens_step(&mut self) -> bool {
@@ -185,7 +185,7 @@ impl SunTool {
 }
 
 impl Aim {
-    /// The guide for this aim, along where the body really went — which is
+    /// The guide for this aim, along where the body really went, which is
     /// not where it was aimed when the sky could not reach that, and the
     /// line swinging away from the cursor is what says so.
     pub(crate) fn guide(self, placement: &Placement) -> Option<Guide> {
@@ -248,8 +248,8 @@ pub(crate) fn lighting(dom: &WeakDom) -> Option<Ref> {
 /// value: an empty list is a step that changed nothing, which must not open
 /// an undo step.
 ///
-/// `TimeOfDay` is always written. It is the clock a place file carries —
-/// `ClockTime`'s `CanSave` is false in the API dump — and the one the
+/// `TimeOfDay` is always written. It is the clock a place file carries,
+/// `ClockTime`'s `CanSave` is false in the API dump, and the one the
 /// Properties panel edits. `ClockTime` is written only where the DOM already
 /// has one (a script set it, say): the renderer reads it ahead of
 /// `TimeOfDay` (`rbx_viewer`'s `lighting::clock_of`), so leaving it stale
@@ -297,7 +297,7 @@ fn time_of_day(clock: f32) -> String {
 }
 
 /// What the drag readout says: which body, the time and the latitude that
-/// put it there, and — when the sky could not reach where it was aimed —
+/// put it there, and, when the sky could not reach where it was aimed,
 /// that the latitude has run out.
 pub(crate) fn readout(body: Body, placement: &Placement) -> String {
     let minutes = ((placement.clock_time * 60.0).round() as i64).rem_euclid(SECONDS_PER_DAY / 60);

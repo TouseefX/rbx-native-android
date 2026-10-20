@@ -1,11 +1,11 @@
 //! `ViewportFrame` presentation: the frame's own parts drawn through the
 //! ordinary shape pipelines into a texture of the frame's pixel size, which
-//! the GUI then paints exactly like an `ImageLabel`'s image — so
+//! the GUI then paints exactly like an `ImageLabel`'s image, so
 //! `ImageColor3`/`ImageTransparency`, `UICorner`, `Rotation` and
 //! `ClipsDescendants` all apply to it for free (see [`Viewports::bake_all`]).
 //!
-//! The lighting is the frame's own — one directional lamp plus an ambient
-//! term — and nothing its docs deny it: no shadows, no sky or environment
+//! The lighting is the frame's own, one directional lamp plus an ambient
+//! term, and nothing its docs deny it: no shadows, no sky or environment
 //! (`EnvironmentSpecularScale`/`DiffuseScale` "act as if set to 0"), no fog,
 //! no local lights, no post-processing. The surface shaders still declare
 //! bind group 0 in full, so this pass carries stand-ins for the shadow maps,
@@ -58,7 +58,7 @@ pub(super) struct Viewports {
     /// What `LightingRaw` reads of the level: an unlimited render distance
     /// and no probe sampling, whatever the display is drawn at.
     quality: QualityProfile,
-    /// Kept alive beside the bind groups that view them — the stand-ins the
+    /// Kept alive beside the bind groups that view them, the stand-ins the
     /// frame group is built over, and every baked texture by its key.
     #[allow(dead_code)]
     stand_ins: StandIns,
@@ -146,7 +146,7 @@ impl Viewports {
     /// quad build that follows paints it like any other image.
     ///
     /// `namespace` keeps one layout's keys apart from another's in the shared
-    /// atlas — the screen overlay's from each canvas' — while a re-layout of
+    /// atlas, the screen overlay's from each canvas', while a re-layout of
     /// the same tree (a resize) replaces its textures in place.
     pub(super) fn bake_all(
         &mut self,
@@ -320,7 +320,7 @@ impl Viewports {
     }
 }
 
-/// How the GUI lays one frame's baked image over the frame's background —
+/// How the GUI lays one frame's baked image over the frame's background,
 /// what an editor needs to show the frame on its own, the way the overlay
 /// would (see `Gui::viewport_frame`).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -334,7 +334,7 @@ pub(crate) struct Look {
 }
 
 impl Look {
-    /// Composites `pixels` — a bake read back, RGBA8 in encoded sRGB — in
+    /// Composites `pixels`, a bake read back, RGBA8 in encoded sRGB, in
     /// place over the frame's background, itself over `backdrop` (encoded).
     /// The GUI pass's own arithmetic (`gui.wgsl`): the tint meets the image
     /// in linear light, and the blend happens on encoded values, since the

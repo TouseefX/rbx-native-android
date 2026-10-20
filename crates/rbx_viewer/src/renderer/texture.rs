@@ -167,8 +167,8 @@ impl Uploaded {
 /// box filter [`mip_chain`] itself uses) as many times as it takes.
 ///
 /// No quality level ever asks to *view* a texture above
-/// [`crate::quality::MAX_TEXTURE_SIZE`] — a level's own cap only moves the view
-/// down the already-uploaded mip chain (see [`skipped`]) — so uploading
+/// [`crate::quality::MAX_TEXTURE_SIZE`], a level's own cap only moves the view
+/// down the already-uploaded mip chain (see [`skipped`]), so uploading
 /// anything larger than that in the first place would just be VRAM no level
 /// ever reads. An asset already at or under `max_side` is untouched.
 fn capped(image: &Image, max_side: u32) -> Image {

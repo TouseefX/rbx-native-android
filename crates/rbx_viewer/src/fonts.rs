@@ -1,9 +1,9 @@
 //! Roblox font families: what a `FontFace` names, how a family's JSON lists
 //! its faces, and which face answers a weight/style request.
 //!
-//! Shared by the loader (which face file to fetch — see
+//! Shared by the loader (which face file to fetch, see
 //! `load::Loaded::resolve_fonts`) and the renderer (which bytes to hand the
-//! font system — see `renderer::gui::text`), so the two can never disagree on
+//! font system, see `renderer::gui::text`), so the two can never disagree on
 //! the face. Fonts are Roblox content the repository never ships: every byte
 //! here arrives through the asset pipeline at run time.
 
@@ -89,7 +89,7 @@ impl Family {
     /// family lacks is served; this takes the smallest weight difference among
     /// faces of the requested style (a bolder face winning a tie), and only
     /// falls back to the other style when the family has none of the
-    /// requested one — so a bold request on a family with a single regular
+    /// requested one, so a bold request on a family with a single regular
     /// face still gets that face rather than nothing.
     pub(crate) fn closest(&self, weight: u16, italic: bool) -> Option<&Entry> {
         let distance =
@@ -192,7 +192,7 @@ mod tests {
             AssetRef::Id(12345)
         );
 
-        // A family with no italic at all answers with its upright face —
+        // A family with no italic at all answers with its upright face,
         // `FredokaOne`'s single regular face serves a 700 request too.
         let single = Family::parse(
             br#"{"name": "Fredoka One", "faces": [

@@ -1,6 +1,6 @@
 //! The viewport's transform draggers: where each axis handle sits in the
-//! world, which one a ray is pointing at, and how far along it — or how far
-//! around it — a drag has travelled.
+//! world, which one a ray is pointing at, and how far along it, or how far
+//! around it, a drag has travelled.
 //!
 //! Pure geometry, no GPU and no DOM. Both halves of the editor read it: the
 //! renderer builds the arrows, balls and rings' triangles from [`Handles`] and
@@ -13,7 +13,7 @@
 //! per axis, both reaching a constant distance on screen out of the
 //! selection's pivot ([`Handles`]), and Scale's ball on each face of the
 //! part's own box ([`Faces`]). Coloured red/green/blue for X/Y/Z, and drawn in
-//! world orientation or — with the local toggle on — in the part's own frame.
+//! world orientation or, with the local toggle on, in the part's own frame.
 
 use glam::{Mat3, Mat4, Vec3};
 
@@ -45,13 +45,13 @@ pub(crate) const HEAD_RADIUS: f32 = 0.105;
 /// arm lengths. Wider than the arrowhead on purpose: a handle that can only
 /// be grabbed by its exact silhouette is one the user misses repeatedly.
 const PICK_RADIUS: f32 = 0.15;
-/// A rotation ring's radius, in arm lengths — the same reach a Move arrow has,
+/// A rotation ring's radius, in arm lengths, the same reach a Move arrow has,
 /// so switching tools does not change how far out the user has to aim.
 pub(crate) const RING_RADIUS: f32 = 1.0;
 /// Half the thickness of a ring's drawn tube, in arm lengths.
 pub(crate) const RING_THICKNESS: f32 = 0.024;
 /// How far off a ring's own circle a ray still counts as grabbing it, in arm
-/// lengths — wider than the tube, for the same reason [`PICK_RADIUS`] is.
+/// lengths, wider than the tube, for the same reason [`PICK_RADIUS`] is.
 const RING_PICK: f32 = 0.09;
 /// Below this, a ray runs so nearly along a ring's plane that the crossing it
 /// would report is numerical noise. Deliberately tiny rather than a
@@ -64,7 +64,7 @@ const RING_EDGE_ON: f32 = 1e-6;
 /// has at this distance.
 const MIN_DISTANCE: f32 = 1.0;
 
-/// Which axis a dragger acts along, or — for Rotate — turns about.
+/// Which axis a dragger acts along, or, for Rotate, turns about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Axis {
     X,
@@ -111,18 +111,18 @@ pub enum Kind {
     Scale,
     /// A ring around each axis; dragging one turns the part about it.
     Rotate,
-    /// Move's arrows, Scale's balls and Rotate's rings, all at once —
+    /// Move's arrows, Scale's balls and Rotate's rings, all at once,
     /// `Enum.RibbonTool.Transform`: "provides combined move, scale, and
     /// rotate handles in a single gizmo" (`reference/engine/enums/
     /// RibbonTool.yaml`, confirmed against the API dump this project syncs
     /// daily, `assets/API-Dump.json`). `creator-docs`' own prose never names
-    /// a distinct Transform tool — it uses "transform" only as the umbrella
-    /// term for Move+Scale+Rotate together — so the enum and the dump are
+    /// a distinct Transform tool, it uses "transform" only as the umbrella
+    /// term for Move+Scale+Rotate together, so the enum and the dump are
     /// the only primary sources this is built from.
     Transform,
     /// Studio's Edit Pivot (`studio/pivot-tools.md`): Move's arrows and
     /// Rotate's rings standing on the selection's pivot and turned with it,
-    /// plus the free-drag ball at their origin — and, with snapping on, the
+    /// plus the free-drag ball at their origin, and, with snapping on, the
     /// magenta hotspots the pivot snaps onto. Dragging any of them moves the
     /// pivot alone, never the geometry.
     Pivot,
@@ -133,7 +133,7 @@ pub enum Kind {
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Gizmo {
     pub kind: Kind,
-    /// The part's own orientation rather than the world's — Studio's
+    /// The part's own orientation rather than the world's, Studio's
     /// `Ctrl`/`Cmd`+`L` toggle.
     pub local: bool,
     /// The Move arrow or Scale ball a drag holds, drawn alone while it does:
@@ -157,13 +157,13 @@ pub struct Gizmo {
     /// rest.
     pub snapped: Option<Vec3>,
     /// The axis whose handle the cursor rests on, drawn brighter so the
-    /// user can see what a press would grab before pressing — Studio lights
+    /// user can see what a press would grab before pressing, Studio lights
     /// a hovered arrow or ring the same way.
     pub hover: Option<Axis>,
 }
 
 /// One Move arrow or Scale ball: the axis it stands on, and which end of it
-/// — what [`Handles::grab_arm`] and [`Faces::grab`] report as a sign.
+/// what [`Handles::grab_arm`] and [`Faces::grab`] report as a sign.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct End {
     pub axis: Axis,
@@ -216,7 +216,7 @@ impl Handles {
         self.arm
     }
 
-    /// Which dragger `ray` is pointing at and which end of it — the nearest
+    /// Which dragger `ray` is pointing at and which end of it, the nearest
     /// one, so an axis pointing at the camera never loses to the one behind
     /// it. The sign is `+1` on the arm running along the axis and `-1` on the
     /// one opposite it.
@@ -245,7 +245,7 @@ impl Handles {
             .map(|(axis, sign, _)| (axis, sign))
     }
 
-    /// Which dragger `ray` is pointing at, if any — [`Handles::grab_arm`]
+    /// Which dragger `ray` is pointing at, if any, [`Handles::grab_arm`]
     /// without the end it was grabbed by, which is all the Move tool needs.
     pub fn grab(&self, ray: Ray) -> Option<Axis> {
         self.grab_arm(ray).map(|(axis, _)| axis)
@@ -257,7 +257,7 @@ impl Handles {
     ///
     /// Built from the gizmo's own basis rather than from an arbitrary
     /// perpendicular so that turning from the first towards the second is a
-    /// *positive* rotation about the axis by the right-hand rule — which is
+    /// *positive* rotation about the axis by the right-hand rule, which is
     /// what lets the angle this measures be handed straight to
     /// `Mat3::from_axis_angle`.
     pub fn ring_frame(&self, axis: Axis) -> (Vec3, Vec3, Vec3) {
@@ -272,7 +272,7 @@ impl Handles {
         (normal, across.cross(normal), across)
     }
 
-    /// Which rotation ring `ray` is pointing at, if any — the nearest, so the
+    /// Which rotation ring `ray` is pointing at, if any, the nearest, so the
     /// ring in front of the part never loses to the one crossing behind it.
     pub fn grab_ring(&self, ray: Ray) -> Option<Axis> {
         self.ring_within(ray, RING_PICK * self.arm)
@@ -312,7 +312,7 @@ impl Handles {
 /// The angle is the whole of a rotate drag: sample it once when the ring is
 /// grabbed and again on every move, and the steps between those samples (see
 /// [`angle_step`]) are how far the part has turned. A drag measures against
-/// the frame it *started* in rather than against a live [`Handles`] — in local
+/// the frame it *started* in rather than against a live [`Handles`], in local
 /// orientation the handles turn with the part as it goes, and measuring
 /// against those would cancel out the very rotation being applied.
 pub fn ring_crossing(
@@ -336,7 +336,7 @@ pub fn ring_crossing(
 
 /// How far along the line through `origin` in direction `axis` the point
 /// closest to `ray` sits, in studs. `None` when the two are close enough to
-/// parallel that the answer would be meaningless — which is exactly when a
+/// parallel that the answer would be meaningless, which is exactly when a
 /// drag along that axis has no usable screen direction either.
 ///
 /// This is the whole of an axis drag: sample it once when the handle is
@@ -365,15 +365,15 @@ pub fn angle_step(from: f32, to: f32) -> f32 {
 
 /// The rotation Move's and Rotate's handles take, or `None` for the
 /// world's: the pivot's own while `editing` it (Edit Pivot), and with local
-/// space on the pivot's too when there is one — Studio orients local handles
-/// by the pivot — else the `anchor` part's. Shared by the renderer and the
+/// space on the pivot's too when there is one, Studio orients local handles
+/// by the pivot, else the `anchor` part's. Shared by the renderer and the
 /// editor's hit test, so the handles drawn and grabbed agree.
 pub fn handle_axes(editing: bool, local: bool, pivot: Option<Mat4>, anchor: Mat3) -> Option<Mat3> {
     (editing || local).then(|| pivot.map_or(anchor, Mat3::from_mat4))
 }
 
 /// The world-space directions the three draggers point along: the world axes,
-/// or — with the local toggle on — the part's own, taken from its rotation.
+/// or, with the local toggle on, the part's own, taken from its rotation.
 ///
 /// A degenerate rotation (a part scaled to nothing on an axis, so its basis
 /// vector can't be normalized) falls back to the world axis rather than
@@ -390,7 +390,7 @@ pub fn basis(rotation: Option<Mat3>) -> [Vec3; 3] {
 }
 
 /// How long one dragger arm should be, in studs, for a gizmo at `origin` seen
-/// from this pose — the conversion that keeps the handles a constant size on
+/// from this pose, the conversion that keeps the handles a constant size on
 /// screen.
 ///
 /// Under a parallel projection there is no such thing as camera distance, so
@@ -406,8 +406,8 @@ pub fn arm_length(origin: Vec3, pose: Pose, orthographic: bool) -> f32 {
 
 /// The shortest a Move arrow or a Rotate ring's radius may be on screen, in
 /// pixels of the viewport's height. [`arm_length`] keeps the handles a fifth
-/// of the half-height, which in a small 3D view — the Animation editor's,
-/// above its timeline — left a ring's whole grab band
+/// of the half-height, which in a small 3D view, the Animation editor's,
+/// above its timeline, left a ring's whole grab band
 /// ([`RING_PICK`] of an arm) under 4 pixels. At this floor that band is 7
 /// pixels either side of the circle and an arrow's ([`PICK_RADIUS`]) 12; a
 /// view taller than 800 pixels never reaches it, so the ordinary Workspace
@@ -446,9 +446,9 @@ pub fn quarter_turn(axis: Vec3) -> Mat3 {
 /// rotation, possibly still carrying a part's `Size` in its column lengths)
 /// and where it stands.
 ///
-/// Shared by the two halves of a `T`/`R` turn — the viewport rotates the
+/// Shared by the two halves of a `T`/`R` turn, the viewport rotates the
 /// matrix its draggers are drawn from, the editor rotates the `CFrame` it
-/// writes into the DOM — so the handles cannot end up describing a different
+/// writes into the DOM, so the handles cannot end up describing a different
 /// rotation than the one that was saved.
 pub fn turned(linear: Mat3, position: Vec3, pivot: Vec3, turn: Mat3) -> (Mat3, Vec3) {
     (turn * linear, pivot + turn * (position - pivot))
@@ -458,7 +458,7 @@ pub fn turned(linear: Mat3, position: Vec3, pivot: Vec3, turn: Mat3) -> (Mat3, V
 ///
 /// Move and Rotate share [`Handles`]; Scale's [`Faces`] are a different shape
 /// entirely, so there is no one type both halves of the editor can pass around
-/// — this is it, and it is what keeps the renderer and the hit-test from being
+/// this is it, and it is what keeps the renderer and the hit-test from being
 /// handed different geometry for the same tool.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Shape {

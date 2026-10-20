@@ -7,7 +7,7 @@
 //! down the button, states a single static frame has no way to be in.
 //!
 //! Everything here stays in the source image's own pixels or in an
-//! unresolved `UDim2` — the box it eventually lands in, and the source
+//! unresolved `UDim2`: the box it eventually lands in, and the source
 //! image's pixel *size*, are both unknown until the renderer has an
 //! uploaded texture to ask (see `renderer::gui::atlas::Slot`).
 
@@ -38,7 +38,7 @@ pub(crate) struct PixelRect {
 pub(in crate::scene::gui) enum ScaleMode {
     Stretch,
     /// `TileSize`, a `UDim2` resolved against the element's own box once one
-    /// exists — that resolution is `super::super::layout::painted`'s job.
+    /// exists, that resolution is `super::super::layout::painted`'s job.
     Tile {
         size: Span,
     },
@@ -58,7 +58,7 @@ pub(in crate::scene::gui) enum ScaleMode {
 
 /// `Enum.ScaleType`'s ordinals, straight off `enums/ScaleType.yaml`.
 /// What an `ImageLabel`/`ImageButton` shows where its own image is not to be
-/// had — never downloaded, failed, or still on its way: the same placeholder
+/// had, never downloaded, failed, or still on its way: the same placeholder
 /// Studio gives a fresh `ImageLabel` (`ImageLabel.Image`'s own default).
 pub(crate) const PLACEHOLDER: &str = "textures/ui/GuiImagePlaceholder.png";
 
@@ -122,7 +122,7 @@ fn scale_mode(properties: &BTreeMap<String, Variant>) -> ScaleMode {
         },
         SLICE => ScaleMode::Slice {
             center: slice_center(properties),
-            // "Defaults to 1.0" — the one default `SliceScale`'s own docs do
+            // "Defaults to 1.0", the one default `SliceScale`'s own docs do
             // state.
             scale: float(properties, "SliceScale", 1.0),
         },

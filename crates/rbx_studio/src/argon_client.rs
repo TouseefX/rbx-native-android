@@ -1,15 +1,15 @@
-//! A real client for Argon (`argon-rbx/argon`, Apache-2.0)'s sync protocol —
+//! A real client for Argon (`argon-rbx/argon`, Apache-2.0)'s sync protocol,
 //! the same role its own Studio plugin
 //! (`github.com/argon-rbx/argon-roblox`) plays, talking HTTP+MsgPack to a
 //! locally-running `argon serve` CLI, built against this codebase's own
 //! `WeakDom`/GPUI chrome instead of Roblox's. `shell::argon_sync` is the
-//! only consumer — this module knows nothing about `Shell`/`WeakDom`, only
+//! only consumer, this module knows nothing about `Shell`/`WeakDom`, only
 //! the wire protocol and the thread that speaks it, so it's usable and
 //! testable on its own.
 //!
 //! **One deliberate departure from the reference plugin**: Argon's protocol
 //! carries an `ExecuteCode` message that runs server-sent Luau. This client
-//! decodes it (see [`wire::Message`]) and always discards it — a native
+//! decodes it (see [`wire::Message`]) and always discards it, a native
 //! desktop app accepting and running arbitrary code from a local network
 //! message is a real attack surface in a way it isn't inside a sandboxed
 //! Roblox script, and nothing in this client executes it. Every other
@@ -33,7 +33,7 @@ pub(crate) use value::{decode as decode_value, encode as encode_value};
 pub(crate) use wire::{ArgonRef, Changes, Project, Snapshot, UpdatedSnapshot};
 
 /// A live (or connecting, or winding down) connection to one `argon serve`
-/// instance. Dropping it disconnects — same shape as `workspace_view::
+/// instance. Dropping it disconnects, same shape as `workspace_view::
 /// pump::Pump`'s own `Drop`.
 pub(crate) struct ArgonClient {
     events: Receiver<ArgonEvent>,
@@ -44,7 +44,7 @@ pub(crate) struct ArgonClient {
 
 impl ArgonClient {
     /// Spawns the background thread and starts connecting. Nothing here
-    /// blocks — the caller finds out how it went via [`ArgonClient::poll`].
+    /// blocks, the caller finds out how it went via [`ArgonClient::poll`].
     /// `https` picks the scheme, as the plugin's `Https` setting does for
     /// its own client (`Core/init.luau:46`).
     pub(crate) fn connect(host: String, port: u16, https: bool) -> Self {
@@ -68,14 +68,14 @@ impl ArgonClient {
     }
 
     /// Asks the server to open the file behind `id` in the OS editor at
-    /// `line` — the plugin's `Client:open` (`Client/init.luau:132-141`),
+    /// `line`: the plugin's `Client:open` (`Client/init.luau:132-141`),
     /// `POST /open` on the server (`argon@3dbed6d:src/server/open.rs`).
     pub(crate) fn open(&self, id: ArgonRef, line: u32) {
         let _ = self.opens.send((id, line));
     }
 
     /// Drains every event the background thread has reported since the
-    /// last poll — called once per tick from `shell::argon_sync`'s timer
+    /// last poll, called once per tick from `shell::argon_sync`'s timer
     /// loop, never blocking.
     pub(crate) fn poll(&self) -> Vec<ArgonEvent> {
         let mut events = Vec::new();
@@ -86,7 +86,7 @@ impl ArgonClient {
     }
 
     /// Queues a batch of local edits for the background thread to send as
-    /// one `POST write` — best-effort, dropped silently if the thread has
+    /// one `POST write`: best-effort, dropped silently if the thread has
     /// already wound down (the next poll will report `Disconnected` too).
     pub(crate) fn write(&self, changes: Changes) {
         let _ = self.writes.send(changes);
@@ -109,7 +109,7 @@ mod tests {
 
     use super::*;
 
-    /// Exercises the real client against a real `argon serve` — not run by
+    /// Exercises the real client against a real `argon serve`, not run by
     /// default (no server to talk to in CI), but the strongest check this
     /// module has: everything else tests the wire format and value mapping
     /// against hand-built fixtures, this proves those fixtures actually

@@ -1,13 +1,13 @@
 //! Find in Game's text search: every script's `Source` in one place,
 //! matched the way the script editor's own Find All matches
 //! (`script_editor::find`: plain text, ASCII case-insensitive), grouped by
-//! script with one row per matching line — plus Replace's preview and its
+//! script with one row per matching line, plus Replace's preview and its
 //! write. Pure functions over a `WeakDom`, so a place that is not loaded
 //! in the window can be searched from its file alone.
 //!
 //! Text only. An instance query (selecting by class, property or tag) would
-//! be a second producer of the same per-place rows: `search`'s shape —
-//! one `WeakDom` in, rows grouped by instance out — is the seam it plugs
+//! be a second producer of the same per-place rows: `search`'s shape,
+//! one `WeakDom` in, rows grouped by instance out, is the seam it plugs
 //! into, with the Find window unchanged.
 
 use std::ops::Range;

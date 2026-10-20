@@ -3,7 +3,7 @@
 //!
 //! [`Scene::beams`](super::Scene::beams) is the only door in; the renderer
 //! builds the ribbon geometry every frame from these static definitions,
-//! since only it knows the eye position `FaceCamera` needs — see
+//! since only it knows the eye position `FaceCamera` needs, see
 //! `renderer::beam`.
 
 mod attachment;

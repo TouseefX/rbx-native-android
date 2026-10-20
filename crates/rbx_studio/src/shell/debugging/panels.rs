@@ -190,7 +190,7 @@ impl Shell {
         )
     }
 
-    /// Run, or Resume / the three steps / Stop while a run is live — the
+    /// Run, or Resume / the three steps / Stop while a run is live, the
     /// row Studio puts in its mezzanine, here over the editor it drives.
     pub(in crate::shell) fn debug_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let control =
@@ -295,7 +295,7 @@ impl Shell {
     }
 
     /// The "add a watch" field, made the first time the dock is drawn.
-    /// The caret into the "add a watch" field — the dock's one keyboard
+    /// The caret into the "add a watch" field, the dock's one keyboard
     /// surface, on the My Watches tab, which this brings forward.
     pub(in crate::shell) fn focus_watch_input(
         &mut self,

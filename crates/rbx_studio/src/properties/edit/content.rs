@@ -31,7 +31,7 @@ pub(super) fn content_text(content: &Content) -> String {
 /// Every Content property whose creator-docs entry says it takes an object,
 /// with the class it names: (declaring class, property, object class). The
 /// API dump does not type a Content's object, so this is the docs' word,
-/// property by property — the 81 Content properties of the 2026-10-05 dump
+/// property by property, the 81 Content properties of the 2026-10-05 dump
 /// were each checked against their class's `.yaml`. The rest hold a URI
 /// only: most say nothing about objects, and some say outright they take
 /// none (`Shirt.ShirtTemplateContent` "does not support EditableImage
@@ -114,7 +114,7 @@ pub(super) fn check_object(
 /// `Content.fromUri` returns `Content.none` for an empty string, and
 /// `Content.fromAssetId(id)` is `fromUri("rbxassetid://" .. id)` with `0`
 /// also meaning none. So an empty field clears the value, a bare number is
-/// an asset id, and anything else is kept as the URI it was typed as —
+/// an asset id, and anything else is kept as the URI it was typed as,
 /// asset URIs have several schemes (`rbxasset://`, `rbxthumb://`, plain
 /// `https://`), and refusing the ones not listed here would refuse real
 /// values. A number that is no asset id (negative, fractional, past `u64`)

@@ -47,7 +47,7 @@ fn gradient() -> GuiGradient {
 
 // The fragment's distance field is evaluated in the element's own frame, so
 // every vertex carries where it sits relative to the box centre *before*
-// rotation — which is what keeps a rotated rounded box round.
+// rotation, which is what keeps a rotated rounded box round.
 #[test]
 fn a_vertex_carries_its_unrotated_position_relative_to_the_centre() {
     let mut spun = rounded(8.0);

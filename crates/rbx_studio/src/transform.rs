@@ -2,7 +2,7 @@
 //! whether its handles follow the world's axes or the part's own, and the
 //! keystrokes that change either.
 //!
-//! The state lives in [`crate::shell::Shell`] — the toolbar renders from it —
+//! The state lives in [`crate::shell::Shell`], the toolbar renders from it,
 //! and is pushed down to [`crate::workspace_view::WorkspaceView`], which
 //! hit-tests the cursor against the handles, and on to the render thread,
 //! which draws them.
@@ -30,7 +30,7 @@ pub(crate) use targets::{Target, Targets};
 /// A transform tool the viewport can carry out.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) enum Tool {
-    /// Click to select, and nothing else — Studio's own default.
+    /// Click to select, and nothing else, Studio's own default.
     #[default]
     Select,
     Move,
@@ -47,13 +47,13 @@ pub(crate) enum Tool {
     /// summary: "provides combined move, scale, and rotate handles in a
     /// single gizmo."
     Transform,
-    /// Point at the scene to place the sun or the moon — see `crate::sun`.
+    /// Point at the scene to place the sun or the moon, see `crate::sun`.
     /// Not a transform: it has no handles and never touches the selection.
     Sun,
     /// Studio's Edit Pivot, on the Model tab (`studio/pivot-tools.md`):
     /// handles on the selected part's or model's pivot that move and turn
     /// the pivot alone, the geometry staying where it is. One part or one
-    /// model at a time — a selection of several has no one pivot to edit.
+    /// model at a time, a selection of several has no one pivot to edit.
     Pivot,
     /// The Terrain Editor's tool under the cursor (`crate::terrain`): a
     /// brush or the selection region. Like Sun, no handles of its own and
@@ -120,7 +120,7 @@ impl Tool {
 ///
 /// Two, not three: `creator-docs` gives Move and Scale one field between them
 /// ("**snapping** increments are based on **studs** for moving/scaling or
-/// **degrees** for rotating"), and confirms it with the shortcuts — `Shift`+`2`
+/// **degrees** for rotating"), and confirms it with the shortcuts, `Shift`+`2`
 /// jumps to "the **move/scale** increment input", `Alt`+`R` to "the **rotate**
 /// increment input".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -150,7 +150,7 @@ impl SnapKind {
     }
 }
 
-/// One snap increment and whether it is switched on — Studio's toolbar pairs a
+/// One snap increment and whether it is switched on, Studio's toolbar pairs a
 /// checkbox with a number, rather than carrying a single fixed flag.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Snap {
@@ -170,7 +170,7 @@ impl Snap {
         self.enabled && !shift
     }
 
-    /// The increment this drag should round to, or `0.0` for no grid at all —
+    /// The increment this drag should round to, or `0.0` for no grid at all,
     /// the value [`rbx_viewer::snap::round_to`] passes through untouched.
     pub(crate) fn grid(self, shift: bool) -> f32 {
         if self.active(shift) {
@@ -331,7 +331,7 @@ pub(crate) enum Action {
     ToggleSnap(SnapKind),
     /// A new increment, already parsed out of the field's text.
     SetIncrement(SnapKind, f32),
-    /// Put the caret in one of the increment fields — Studio's `Shift`+`2`.
+    /// Put the caret in one of the increment fields, Studio's `Shift`+`2`.
     FocusIncrement(SnapKind),
     /// Edit Pivot's Snap checkbox.
     TogglePivotSnap,
@@ -396,7 +396,7 @@ pub(crate) fn action_for(key: impl AsRef<str>, modifiers: Modifiers) -> Option<A
 /// Reads an increment out of the toolbar's own field.
 ///
 /// Anything unreadable leaves the increment alone rather than silently
-/// becoming zero — a field mid-edit passes through `""` and `"1."` on its way
+/// becoming zero, a field mid-edit passes through `""` and `"1."` on its way
 /// to a number, and neither should turn snapping off under the user.
 /// Negatives fold to their magnitude: a grid has no direction.
 pub(crate) fn parse_increment(text: &str) -> Option<f32> {

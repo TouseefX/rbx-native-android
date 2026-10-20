@@ -10,7 +10,7 @@ pub enum AssetKind {
     Webp,
     Bmp,
     Tga,
-    /// A DXT-compressed DDS file — including Roblox's default skybox and many
+    /// A DXT-compressed DDS file, including Roblox's default skybox and many
     /// particle textures, which ship under a `.tex` extension but the same
     /// `"DDS "` magic.
     Dds,

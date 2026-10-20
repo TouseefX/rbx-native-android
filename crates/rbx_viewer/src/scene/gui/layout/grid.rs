@@ -6,7 +6,7 @@ use crate::scene::gui::plan::{Grid, Node};
 
 /// One rect per node in `nodes`'s own order, plus the extent the grid covers.
 ///
-/// Every item takes `CellSize` whatever its own `Size` says — "the actual cell
+/// Every item takes `CellSize` whatever its own `Size` says, "the actual cell
 /// sizes are the same for all cells". The docs also have a grid respect a
 /// `UISizeConstraint`/`UIAspectRatioConstraint` on an item, letting it span
 /// several cells; constraints are another module's business, so a cell here is

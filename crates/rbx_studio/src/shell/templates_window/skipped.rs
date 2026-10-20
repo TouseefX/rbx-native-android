@@ -1,5 +1,5 @@
 //! The pane for a file the loader refused: what it is, why it isn't used,
-//! and the three things to do about it. It never opens in the editor — the
+//! and the three things to do about it. It never opens in the editor, the
 //! reason it was refused is the reason it can't be shown there.
 
 use gpui_kit::component::{h_flex, v_flex};

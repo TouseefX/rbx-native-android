@@ -1,4 +1,4 @@
-//! The per-level bands — the only place to retune what a quality level does.
+//! The per-level bands, the only place to retune what a quality level does.
 //!
 //! This table is an approximation based on community observation, not official
 //! documentation: Roblox publishes no per-level breakdown. The bands are
@@ -22,7 +22,7 @@ use super::{QualityLevel, QualityProfile};
 /// two bottom bands (no shadows either, the cheapest tier) draw none and the
 /// reach grows with the rest of the table from there.
 const BANDS: [(u8, QualityProfile); 8] = [
-    // 1-2: roughly Compatibility — no shadows, no post effects at all.
+    // 1-2: roughly Compatibility, no shadows, no post effects at all.
     (
         2,
         QualityProfile {
@@ -80,7 +80,7 @@ const BANDS: [(u8, QualityProfile); 8] = [
             water_reflections: false,
         },
     ),
-    // 5-6: shadows and Neon's glow appear — the level users notice.
+    // 5-6: shadows and Neon's glow appear, the level users notice.
     (
         6,
         QualityProfile {
@@ -223,7 +223,7 @@ const BANDS: [(u8, QualityProfile); 8] = [
         },
     ),
     // 16-21: the levels a desktop client actually runs at, and where
-    // `FAR_SHADOWS_STUDS` (see its own doc comment) lands — so the map
+    // `FAR_SHADOWS_STUDS` (see its own doc comment) lands, so the map
     // doubles again here too, for the same reason `7-8` doubles it over
     // `5-6`: leaving the resolution flat while the reach doubles would make
     // `Q21` no sharper than `Q9`'s already-coarser-than-`Q7-8` map.
@@ -261,7 +261,7 @@ const BANDS: [(u8, QualityProfile); 8] = [
 ///
 /// `renderer::texture` uploads every image capped to this, since a level's own
 /// cap (`QualityProfile::texture_max_size`) only ever moves the *view* down the
-/// mip chain (see `texture::skipped`) — uploading a texel no band can ever view
+/// mip chain (see `texture::skipped`), uploading a texel no band can ever view
 /// would just be VRAM nothing reads. Bump this if a band above ever needs more.
 pub(crate) const MAX_TEXTURE_SIZE: u32 = 1024;
 
@@ -288,7 +288,7 @@ pub(super) const NEAR_SHADOWS_STUDS: f32 = 150.0;
 /// the far end of typical test scenes' shadow maps.
 pub(super) const MID_SHADOWS_STUDS: f32 = 300.0;
 /// Twice that again. A single non-cascaded shadow map (see `renderer::shadow`)
-/// has exactly one lever to trade against reach: its own resolution — the map
+/// has exactly one lever to trade against reach: its own resolution, the map
 /// covers the camera frustum out to this distance no matter how far that is,
 /// so doubling the distance alone would halve the texel density every surface
 /// in view actually gets, however square the map's own texels are. (The
@@ -296,7 +296,7 @@ pub(super) const MID_SHADOWS_STUDS: f32 = 300.0;
 /// either: the frustum sphere `fit()` sizes the map to is wider than it is
 /// tall at anything but a 1:1 aspect ratio and a square FOV, so the real
 /// figure depends on both.) The top band's `shadow_map_size` is doubled
-/// alongside this distance for exactly that reason — see its own comment.
+/// alongside this distance for exactly that reason, see its own comment.
 pub(super) const FAR_SHADOWS_STUDS: f32 = 600.0;
 
 /// Where the first seven bands end as tuned; the eighth always runs to

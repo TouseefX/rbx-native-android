@@ -2,7 +2,7 @@
 //! declares.
 //!
 //! The toolkit builds the same thing from the same structures internally, but
-//! only for its own `AppMenuBar` — the entry point is `pub(super)` to it — so
+//! only for its own `AppMenuBar`, the entry point is `pub(super)` to it, so
 //! this is that translation, written out against `PopupMenu`'s public
 //! builders. Nothing here is a behaviour change from what the toolkit did:
 //! an action item keeps its checked and disabled state, a separator stays a
@@ -28,7 +28,7 @@ pub(super) const PRIMARY_ROWS: [&str; 4] = [
     "Delete",
 ];
 
-/// `action_context` is where an item's action dispatches from — the handle
+/// `action_context` is where an item's action dispatches from, the handle
 /// focus was on before the bar took it, so a command reads the same world it
 /// would have if its shortcut had been typed instead.
 pub(super) fn dropdown(

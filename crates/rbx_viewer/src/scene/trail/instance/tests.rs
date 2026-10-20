@@ -17,13 +17,13 @@ fn cframe(position: Vec3) -> Variant {
 }
 
 /// A DOM with two parts, each holding one `Attachment`, and a `Trail` linking
-/// them — the minimal shape [`plan`] walks, mirroring
+/// them, the minimal shape [`plan`] walks, mirroring
 /// `scene::beam::instance::tests::fixture`.
 fn fixture(properties: Vec<(&str, Variant)>) -> (WeakDom, Ref) {
     let mut dom = WeakDom::new();
 
     // `plan` only looks for a `Trail` under `Workspace` now (see
-    // `super::plan`'s doc comment) — the parts/attachments themselves stay at
+    // `super::plan`'s doc comment), the parts/attachments themselves stay at
     // root since `ParentMap` (from `scene::beam`) still walks the whole DOM.
     let workspace = Ref::new(9000);
     dom.insert(Instance::new(workspace, "Workspace", "Workspace"));

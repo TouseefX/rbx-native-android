@@ -4,8 +4,8 @@
 //! A consumer on another thread (a viewport's render thread, say) that reads
 //! the DOM after every edit cannot borrow the editor's copy, and cloning the
 //! whole tree per keystroke is the cost the change log exists to avoid. So
-//! the editor hands over a [`Snapshot`] of each instance the log names — the
-//! instance as it stands *now*, or its absence — and the consumer's own copy
+//! the editor hands over a [`Snapshot`] of each instance the log names, the
+//! instance as it stands *now*, or its absence, and the consumer's own copy
 //! is brought in line by [`WeakDom::mirror`]. The log is read as a list of
 //! *which* instances may differ, never for the values it does not carry, so
 //! an undo hands over the very log its mutation produced against the restored
@@ -19,7 +19,7 @@ use crate::instance::Instance;
 use crate::reference::Ref;
 
 /// One instance as the DOM that produced a change log holds it now, with the
-/// parent it hangs under — or its absence. Produced by [`WeakDom::snapshot`],
+/// parent it hangs under, or its absence. Produced by [`WeakDom::snapshot`],
 /// consumed by [`WeakDom::mirror`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct Snapshot {
@@ -33,8 +33,8 @@ pub struct Snapshot {
 impl WeakDom {
     /// What a mirror of this DOM has to be handed to come back in step after
     /// `changes` (see [`WeakDom::mirror`]), each referent once: every
-    /// instance the log names, as it stands now, and — for one added,
-    /// removed or moved — the parents whose child lists changed with it: the
+    /// instance the log names, as it stands now, and, for one added,
+    /// removed or moved, the parents whose child lists changed with it: the
     /// one it hangs under now and the one a move took it from. A property
     /// write costs one instance copy; only a structural change copies a
     /// parent, since only a structural change reorders one, and a parent's
@@ -52,7 +52,7 @@ impl WeakDom {
         for change in changes {
             match change {
                 // A class change reorders no child list, so, like a write,
-                // it costs the one instance — which carries its new class.
+                // it costs the one instance, which carries its new class.
                 Change::Property { referent, .. } | Change::Class(referent) => {
                     want(*referent, &mut wanted)
                 }
@@ -86,7 +86,7 @@ impl WeakDom {
             .collect()
     }
 
-    /// Brings this DOM — a copy of another, kept in step edit by edit — in
+    /// Brings this DOM, a copy of another, kept in step edit by edit, in
     /// line with what [`WeakDom::snapshot`] took off that other after one of
     /// its change logs. Each snapshot is the truth about its instance: an
     /// absent one is taken out with whatever still hangs under it, a present
@@ -113,7 +113,7 @@ impl WeakDom {
                     self.parents.insert(referent, parent);
                     if let Some(instance) = self.instances.get_mut(&parent) {
                         // Appended only where the parent's own snapshot does
-                        // not settle the order — see `snapshot`.
+                        // not settle the order, see `snapshot`.
                         if !instance.children().contains(&referent) {
                             instance.children_mut().push(referent);
                         }
@@ -132,7 +132,7 @@ impl WeakDom {
         }
         self.detach(referent);
         // Every descendant is named by the same log (`remove` records each),
-        // so this is only ever a no-op for them — kept for the invariant that
+        // so this is only ever a no-op for them, kept for the invariant that
         // nothing hangs under an instance that is gone.
         let mut stack = vec![referent];
         while let Some(current) = stack.pop() {
@@ -196,8 +196,8 @@ mod tests {
     }
 
     /// Runs `edit` on the source, mirrors its log forwards, then undoes it
-    /// the way an editor's history does — the tree from before put back
-    /// whole, the *edit's* log handed over — mirrors that, and redoes it.
+    /// the way an editor's history does, the tree from before put back
+    /// whole, the *edit's* log handed over, mirrors that, and redoes it.
     fn round_trip(edit: impl Fn(&mut WeakDom, &Fixture)) {
         let (mut dom, fixture) = place();
         let mut mirror = dom.clone();
@@ -297,7 +297,7 @@ mod tests {
     }
 
     // What the hand-off costs: one instance for a write, the parents too
-    // for a move — never the tree.
+    // for a move, never the tree.
     #[test]
     fn a_snapshot_copies_the_instances_the_log_names_and_no_more() {
         let (mut dom, fixture) = place();
