@@ -16,7 +16,7 @@ use super::protocol::{Failure, INVALID_PARAMS};
 use super::Session;
 
 pub(crate) use edit::{apply as apply_edit, ScriptEdit};
-pub(crate) use studio::{describe, LIST_STUDIOS, STUDIO_STATE};
+pub(crate) use studio::{LIST_STUDIOS, STUDIOS_KEY, STUDIO_STATE};
 
 /// What every path starts with, as `Instance:GetFullName()` would print it
 /// from a script: the services are the DataModel's children.
@@ -27,83 +27,97 @@ const ROOT: &str = "game";
 /// try again.
 type Outcome = Result<Value, String>;
 
-/// `tools/list`'s answer. Every tool but `list_roblox_studios` also takes
-/// a `studio_id`, as Studio's do.
+/// `tools/list`'s answer. Names, arguments and their meaning follow the
+/// schemas Studio's own server lists (`StudioMCP`'s `tools/list`), so a
+/// client or prompt written for Studio works unchanged. Studio requires
+/// `studio_id` on every call; here it may be left out with one editor open.
 pub(super) fn list() -> Value {
     let mut tools = json!([
         tool(
             "search_game_tree",
-            "Lists the instance hierarchy as a flat JSON array of {path, class, children}. \
-             Filters by a starting path, a class (matching subclasses, as IsA does) and \
-             keywords in the name, down to a depth limit.",
+            "Lists the instance hierarchy as a flat JSON array of {name, className, fullPath, \
+             parentName}, depth-first as the Explorer shows it. Filters by a starting path, a \
+             class (matching subclasses, as IsA does) and name keywords. Past max_depth, an \
+             instance's children are summarized by class instead of listed.",
             json!({
-                "path": string("Where to start, such as game.Workspace. Defaults to game."),
-                "instance_type": string("Only instances that are this class or derive from it."),
-                "keywords": string("Only instances whose name contains this, ignoring case."),
-                "max_depth": integer("How many levels below the start to go. Defaults to 3."),
+                "path": string("Where to start, such as Workspace or Workspace.Models. Defaults to the whole place."),
+                "instance_type": string("Only instances that are this class or derive from it, such as BasePart."),
+                "keywords": string("Only instances whose name contains one of these, ignoring case. Separate several with commas or spaces."),
+                "max_depth": integer("How many levels below the start to go. Defaults to 3, at most 10."),
+                "head_limit": integer("The most instances to return. Defaults to 200."),
+                "datamodel_type": datamodel_type(),
             }),
             &[],
         ),
         tool(
             "inspect_instance",
-            "Returns one instance's class, every property it carries, its attributes and \
-             tags, its children and how many descendants it has.",
-            json!({ "path": string("The instance, such as game.Workspace.Baseplate.") }),
+            "Returns an instance's class, every property it carries, its attributes and tags, \
+             and its children and descendant count. The path ignores case; when siblings share \
+             a name, every match is returned, up to 20.",
+            json!({ "path": string("The instance, such as Workspace.Baseplate. game. in front is optional.") }),
             &["path"],
         ),
         tool(
             "script_read",
-            "Reads a script's Source, each line numbered. A line range reads part of it.",
+            "Reads a script's Source, each line numbered as LINE_NUMBER\u{2192}LINE_CONTENT. \
+             Reads the whole script unless should_read_entire_file is false.",
             json!({
-                "path": string("The script, such as game.ServerScriptService.Main."),
-                "start_line": integer("The first line to read, counting from 1."),
-                "end_line": integer("The last line to read, included."),
+                "target_file": string("The script, such as game.ServerScriptService.Main."),
+                "should_read_entire_file": boolean("Defaults to true. When false, both line numbers are needed."),
+                "start_line_one_indexed": integer("The first line to read, counting from 1."),
+                "end_line_one_indexed_inclusive": integer("The last line to read, included."),
             }),
-            &["path"],
+            &["target_file"],
         ),
         tool(
             "script_search",
-            "Finds scripts by name, fuzzily: the letters typed in order. Up to 10 results, \
-             best first.",
-            json!({ "query": string("Part of the script's name.") }),
-            &["query"],
+            "Finds scripts by name, fuzzily: a keyword matches a name that holds its letters \
+             in order. Up to 10 results, best first.",
+            json!({ "keywords": string("Comma-separated parts of the script's name, each ignoring case.") }),
+            &["keywords"],
         ),
         tool(
             "script_grep",
-            "Finds a piece of text in every script's Source. The text is matched literally, \
-             not as a Luau pattern. Up to 50 matches.",
-            json!({
-                "pattern": string("The text to find."),
-                "case_sensitive": json!({ "type": "boolean", "description": "Defaults to false." }),
-            }),
-            &["pattern"],
+            "Finds a string or Luau pattern in every script's Source, line by line, matched by \
+             Luau's own string.find. Up to 50 matches.",
+            json!({ "query": string("The string or Luau pattern to find, such as print or ^local%s.") }),
+            &["query"],
         ),
         tool(
             "multi_edit",
-            "Applies several edits to one script's Source in order, all or none, as one              undo step. Each old_string must appear exactly once unless replace_all is set.              If nothing is at the path yet, a new script is created under its parent and the              edits apply to its empty Source, so the first one's old_string is empty.",
+            "Applies several edits to one script's Source in order, each on what the last left, \
+             all or none, as one undo step. Each old_string must appear exactly once unless \
+             replace_all is set, and must differ from its new_string. If nothing is at file_path \
+             yet, a script of className is created under its parent and the edits apply to its \
+             empty Source, so the first one's old_string is empty.",
             json!({
-                "path": string("The script, such as game.ServerScriptService.Main."),
+                "file_path": string("The script, such as game.ServerScriptService.Main."),
                 "edits": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "type": "object",
                         "properties": {
-                            "old_string": string("The exact text to replace."),
+                            "old_string": string("The exact text to replace; empty to fill a new script."),
                             "new_string": string("What replaces it."),
-                            "replace_all": json!({ "type": "boolean", "description": "Replace every occurrence. Defaults to false." }),
+                            "replace_all": boolean("Replace every occurrence. Defaults to false."),
                         },
                         "required": ["old_string", "new_string"],
                     },
                 },
-                "datamodel_type": json!({ "type": "string", "enum": ["Edit"], "description": "Only the Edit data model can be edited." }),
-                "class_name": json!({ "type": "string", "enum": edit::SCRIPT_CLASSES, "description": "The class of a script this creates. Defaults to Script." }),
+                "className": json!({
+                    "type": "string",
+                    "enum": edit::SCRIPT_CLASSES,
+                    "description": "The class of the script to create. Needed only when nothing is at file_path.",
+                }),
+                "datamodel_type": datamodel_type(),
             }),
-            &["path", "edits"],
+            &["file_path", "edits"],
         ),
         tool(
             STUDIO_STATE,
-            "Returns this editor's studio_id, place name and place ID, its play state and              the data model types tools can reach.",
+            "Returns this editor's studio id, place name and place ID, its play state and the \
+             data model types tools can reach.",
             json!({}),
             &[],
         ),
@@ -111,12 +125,14 @@ pub(super) fn list() -> Value {
     if let Value::Array(tools) = &mut tools {
         for tool in tools.iter_mut() {
             tool["inputSchema"]["properties"]["studio_id"] = string(
-                "The editor to act on, from list_roblox_studios. May be left out when only one                  editor is open.",
+                "The editor to act on, from list_roblox_studios. May be left out when only one \
+                 editor is open.",
             );
         }
         tools.push(tool(
             LIST_STUDIOS,
-            "Lists every running editor serving MCP: its studio_id, its place's name and, for              a place linked to Roblox, its place ID.",
+            "Lists every running editor serving MCP, each with the id to pass as studio_id and \
+             a name: its place file's name and, for a place linked to Roblox, its place ID.",
             json!({}),
             &[],
         ));
@@ -154,7 +170,7 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
         "script_grep" => scripts::grep(arguments, session),
         "multi_edit" => edit::multi_edit(arguments, session),
         STUDIO_STATE => Ok(studio::state(session.studio)),
-        LIST_STUDIOS => Ok(json!([describe(session.studio)])),
+        LIST_STUDIOS => Ok(studio::list(session.studio)),
         _ => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
     })
 }
@@ -185,12 +201,43 @@ fn integer(description: &str) -> Value {
     json!({ "type": "integer", "minimum": 0, "description": description })
 }
 
+fn boolean(description: &str) -> Value {
+    json!({ "type": "boolean", "description": description })
+}
+
+fn datamodel_type() -> Value {
+    json!({
+        "type": "string",
+        "enum": [EDIT_DATAMODEL],
+        "description": "The data model to act on. Only Edit is reachable: see get_studio_state.",
+    })
+}
+
+/// The one data model tools reach: see `studio::state`.
+const EDIT_DATAMODEL: &str = "Edit";
+
+/// Refuses a `datamodel_type` other than [`EDIT_DATAMODEL`]; none given is
+/// the edited place.
+fn edit_datamodel(arguments: &Value) -> Result<(), String> {
+    match text_argument(arguments, "datamodel_type") {
+        Some(other) if other != EDIT_DATAMODEL => Err(format!(
+            "only the {EDIT_DATAMODEL} data model is reachable here, not {other}: a playtest \
+             runs in a real Roblox client, outside the editor"
+        )),
+        _ => Ok(()),
+    }
+}
+
 fn text_argument<'a>(arguments: &'a Value, name: &str) -> Option<&'a str> {
     arguments.get(name).and_then(Value::as_str)
 }
 
 fn required_text<'a>(arguments: &'a Value, name: &str) -> Result<&'a str, String> {
     text_argument(arguments, name).ok_or_else(|| format!("missing the `{name}` argument"))
+}
+
+fn flag_argument(arguments: &Value, name: &str) -> Option<bool> {
+    arguments.get(name).and_then(Value::as_bool)
 }
 
 fn count_argument(arguments: &Value, name: &str) -> Option<usize> {
@@ -200,7 +247,8 @@ fn count_argument(arguments: &Value, name: &str) -> Option<usize> {
         .map(|count| usize::try_from(count).unwrap_or(usize::MAX))
 }
 
-/// `game.Workspace.Part` for an instance.
+/// `Workspace.Part` for an instance, as Studio's tools print paths: from
+/// the services down, without `game.` in front.
 fn path_of(dom: &WeakDom, reference: Ref) -> String {
     let mut names = Vec::new();
     let mut at = Some(reference);
@@ -211,19 +259,56 @@ fn path_of(dom: &WeakDom, reference: Ref) -> String {
         names.push(instance.name());
         at = dom.parent(current);
     }
-    names.push(ROOT);
     names.reverse();
     names.join(".")
+}
+
+/// `path` without the optional `game.` in front, in either case.
+fn relative(path: &str) -> &str {
+    let path = path.trim();
+    match path.get(..ROOT.len() + 1) {
+        Some(prefix) if prefix.eq_ignore_ascii_case("game.") => &path[ROOT.len() + 1..],
+        _ => path,
+    }
 }
 
 /// The instance a dotted path names; `game.` in front is optional, so a
 /// path copied from the Explorer works as well. `None` for `game` itself,
 /// which is not an instance this DOM holds.
 fn resolve(dom: &WeakDom, path: &str) -> Option<Ref> {
-    let path = path.trim();
-    let path = path.strip_prefix("game.").unwrap_or(path);
-    let segments: Vec<&str> = path.split('.').collect();
+    let segments: Vec<&str> = relative(path).split('.').collect();
     descend(dom, dom.root_refs(), &segments)
+}
+
+/// Every instance a dotted path names, ignoring case, in Explorer order:
+/// siblings that share a name are all of them named by it.
+fn resolve_all(dom: &WeakDom, path: &str) -> Vec<Ref> {
+    let segments: Vec<&str> = relative(path).split('.').collect();
+    let mut found = Vec::new();
+    collect(dom, dom.root_refs(), &segments, &mut found);
+    found
+}
+
+/// [`descend`] for every match rather than the first.
+fn collect(dom: &WeakDom, candidates: &[Ref], segments: &[&str], found: &mut Vec<Ref>) {
+    for taken in 1..=segments.len() {
+        let name = segments[..taken].join(".").to_lowercase();
+        for &candidate in candidates {
+            let Some(instance) = dom.get(candidate) else {
+                continue;
+            };
+            if instance.name().to_lowercase() != name {
+                continue;
+            }
+            if taken == segments.len() {
+                if !found.contains(&candidate) {
+                    found.push(candidate);
+                }
+            } else {
+                collect(dom, instance.children(), &segments[taken..], found);
+            }
+        }
+    }
 }
 
 /// A name may itself hold a dot (`Config.v2`), so each level tries every
@@ -247,9 +332,4 @@ fn descend(dom: &WeakDom, candidates: &[Ref], segments: &[&str]) -> Option<Ref> 
         }
     }
     None
-}
-
-fn resolve_argument(dom: &WeakDom, arguments: &Value) -> Result<Ref, String> {
-    let path = required_text(arguments, "path")?;
-    resolve(dom, path).ok_or_else(|| format!("nothing in the place is at {path}"))
 }

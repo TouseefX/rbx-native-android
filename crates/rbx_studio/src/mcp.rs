@@ -67,7 +67,8 @@ impl<'a> Session<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Studio {
     pub(crate) id: String,
-    /// The place file's name, as the window title shows it.
+    /// The place file's name, such as `Lobby.rbxl`, as the window title
+    /// shows it.
     pub(crate) name: String,
     /// Only a place linked to Roblox has one.
     pub(crate) place_id: Option<u64>,

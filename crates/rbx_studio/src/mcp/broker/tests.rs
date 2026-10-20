@@ -106,7 +106,8 @@ fn tool(broker: &mut Broker, name: &str, arguments: Value) -> (bool, String) {
 fn studios(broker: &mut Broker) -> Value {
     let (failed, text) = tool(broker, "list_roblox_studios", json!({}));
     assert!(!failed, "{text}");
-    serde_json::from_str(&text).unwrap()
+    let listed: Value = serde_json::from_str(&text).unwrap();
+    listed["studios"].clone()
 }
 
 const MAIN: &str = "game.ServerScriptService.Main";
@@ -124,7 +125,7 @@ fn with_no_editor_the_protocol_still_answers_and_tools_say_why_not() {
     assert!(list["result"]["tools"].as_array().unwrap().len() > 5);
     assert_eq!(studios(&mut broker), json!([]));
     assert_eq!(
-        tool(&mut broker, "script_read", json!({ "path": MAIN })),
+        tool(&mut broker, "script_read", json!({ "target_file": MAIN })),
         (true, NOT_RUNNING.to_owned())
     );
     assert!(broker
@@ -141,11 +142,11 @@ fn one_editor_is_used_without_naming_it() {
     let mut broker = Broker::new(dir);
     assert_eq!(
         studios(&mut broker),
-        json!([{ "studio_id": editor.id, "name": "Arena" }])
+        json!([{ "id": editor.id, "name": "Arena" }])
     );
-    let (failed, text) = tool(&mut broker, "script_read", json!({ "path": MAIN }));
+    let (failed, text) = tool(&mut broker, "script_read", json!({ "target_file": MAIN }));
     assert!(!failed, "{text}");
-    assert_eq!(text, "1\tprint(\"Arena\")");
+    assert_eq!(text, "     1\u{2192}print(\"Arena\")\n     2\u{2192}");
 }
 
 #[test]
@@ -165,7 +166,7 @@ fn with_two_editors_each_call_goes_to_the_one_it_names() {
     names.sort_unstable();
     assert_eq!(names, ["Arena", "Lobby"]);
 
-    let (failed, text) = tool(&mut broker, "script_read", json!({ "path": MAIN }));
+    let (failed, text) = tool(&mut broker, "script_read", json!({ "target_file": MAIN }));
     assert!(failed);
     assert!(text.contains("2 editors"), "{text}");
 
@@ -174,7 +175,7 @@ fn with_two_editors_each_call_goes_to_the_one_it_names() {
         "multi_edit",
         json!({
             "studio_id": lobby.id,
-            "path": MAIN,
+            "file_path": MAIN,
             "edits": [{ "old_string": "Lobby", "new_string": "Lobby, edited" }],
         }),
     );
@@ -183,14 +184,17 @@ fn with_two_editors_each_call_goes_to_the_one_it_names() {
         tool(
             broker,
             "script_read",
-            json!({ "path": MAIN, "studio_id": id }),
+            json!({ "target_file": MAIN, "studio_id": id }),
         )
         .1
     };
-    assert_eq!(read(&mut broker, &lobby.id), "1\tprint(\"Lobby, edited\")");
+    assert_eq!(
+        read(&mut broker, &lobby.id),
+        "     1\u{2192}print(\"Lobby, edited\")\n     2\u{2192}"
+    );
     assert_eq!(
         read(&mut broker, &arena.id),
-        "1\tprint(\"Arena\")",
+        "     1\u{2192}print(\"Arena\")\n     2\u{2192}",
         "the other editor's place is left alone"
     );
 }
@@ -205,7 +209,7 @@ fn an_editor_that_closed_or_never_was_is_reported_and_its_file_cleared() {
         !tool(
             &mut broker,
             "script_read",
-            json!({ "path": MAIN, "studio_id": id })
+            json!({ "target_file": MAIN, "studio_id": id })
         )
         .0
     );
@@ -213,7 +217,7 @@ fn an_editor_that_closed_or_never_was_is_reported_and_its_file_cleared() {
     let (failed, text) = tool(
         &mut broker,
         "script_read",
-        json!({ "path": MAIN, "studio_id": id }),
+        json!({ "target_file": MAIN, "studio_id": id }),
     );
     assert!(failed);
     assert!(text.contains(&id), "{text}");

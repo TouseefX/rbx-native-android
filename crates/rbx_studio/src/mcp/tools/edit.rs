@@ -10,17 +10,14 @@
 mod tests;
 
 use rbx_dom::{Ref, WeakDom};
-use serde_json::{json, Value};
+use serde_json::Value;
 
-use super::{path_of, required_text, resolve, text_argument, Outcome, ROOT};
+use super::{edit_datamodel, path_of, relative, required_text, resolve, text_argument, Outcome};
 use crate::mcp::{PlayState, Session};
 use crate::script_editor::source;
 
-/// What a new script can be created as, `Script` first as the default.
+/// What a new script can be created as.
 pub(super) const SCRIPT_CLASSES: [&str; 3] = ["Script", "LocalScript", "ModuleScript"];
-
-/// The one data model `multi_edit` reaches: see `studio::state`.
-const EDIT_DATAMODEL: &str = "Edit";
 
 /// A `Source` write a `multi_edit` call asked for.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,56 +71,56 @@ struct Replacement {
 }
 
 pub(super) fn multi_edit(arguments: &Value, session: &mut Session) -> Outcome {
-    if let Some(other) =
-        text_argument(arguments, "datamodel_type").filter(|kind| *kind != EDIT_DATAMODEL)
-    {
-        return Err(format!(
-            "only the {EDIT_DATAMODEL} data model can be edited, not {other}"
-        ));
-    }
+    edit_datamodel(arguments)?;
     if session.studio.play == PlayState::ShowingLive {
         return Err(
             "the editor is showing a running playtest; switch back to the edited place first"
                 .to_owned(),
         );
     }
-    let path = required_text(arguments, "path")?;
+    let path = required_text(arguments, "file_path")?;
     let replacements = replacements(arguments)?;
     let dom = session.dom;
 
-    let (target, before, shown) = match resolve(dom, path) {
+    let (target, before, name, class) = match resolve(dom, path) {
         Some(reference) => {
-            let class = dom.get(reference).map(|instance| instance.class());
-            if !class.is_some_and(|class| source::is_script_class(session.properties.db(), class)) {
+            let Some(instance) = dom.get(reference) else {
+                return Err(format!("Script not found at path: {path}"));
+            };
+            if !source::is_script_class(session.properties.db(), instance.class()) {
                 return Err(format!("{} is not a script", path_of(dom, reference)));
             }
             let before = source::read(dom, reference).unwrap_or_default();
-            (Target::Existing(reference), before, path_of(dom, reference))
+            let (name, class) = (instance.name().to_owned(), instance.class().to_owned());
+            (Target::Existing(reference), before, name, class)
         }
         None => {
             let (parent, name) = new_place(dom, path)?;
-            let class = new_class(arguments)?;
-            let shown = format!("{}.{name}", path_of(dom, parent));
+            let class = new_class(arguments, path)?;
             let target = Target::New {
                 parent,
-                name,
+                name: name.clone(),
                 class,
             };
-            (target, String::new(), shown)
+            (target, String::new(), name, class.to_owned())
         }
     };
 
     let after = replace(&before, &replacements)?;
     let created = matches!(target, Target::New { .. });
-    let changed = created || after != before;
-    let lines = after.lines().count();
-    if changed {
+    // Edits that end where they started leave no undo step behind.
+    if created || after != before {
         session.planned = Some(ScriptEdit {
             target,
             source: after,
         });
     }
-    Ok(json!({ "path": shown, "created": created, "changed": changed, "lines": lines }))
+    // Studio's own sentence, which counts edits as "edits" even for one.
+    let verb = if created { "Created" } else { "Modified" };
+    Ok(Value::String(format!(
+        "{verb} {name} ({class}) with {} edits applied",
+        replacements.len()
+    )))
 }
 
 fn replacements(arguments: &Value) -> Result<Vec<Replacement>, String> {
@@ -141,16 +138,25 @@ fn replacements(arguments: &Value) -> Result<Vec<Replacement>, String> {
             let field = |name: &str| {
                 text_argument(edit, name)
                     .map(str::to_owned)
-                    .ok_or_else(|| format!("edit {}: missing `{name}`", index + 1))
+                    .ok_or_else(|| format!("Edit {} - missing `{name}`", index + 1))
             };
-            Ok(Replacement {
+            let replacement = Replacement {
                 old: field("old_string")?,
                 new: field("new_string")?,
                 all: edit
                     .get("replace_all")
                     .and_then(Value::as_bool)
                     .unwrap_or(false),
-            })
+            };
+            // Studio refuses this too: an edit that changes nothing is a
+            // mistake in the call, not a request.
+            if replacement.old == replacement.new {
+                return Err(format!(
+                    "Edit {} has identical old_string and new_string",
+                    index + 1
+                ));
+            }
+            Ok(replacement)
         })
         .collect()
 }
@@ -166,20 +172,26 @@ fn replace(text: &str, replacements: &[Replacement]) -> Result<String, String> {
             // script leaves no doubt about where the text goes.
             if !text.is_empty() {
                 return Err(format!(
-                    "edit {number}: an empty old_string only fills an empty script"
+                    "Edit {number} - an empty old_string only fills an empty script"
                 ));
             }
             text.clone_from(&replacement.new);
             continue;
         }
         match text.matches(replacement.old.as_str()).count() {
-            0 => return Err(format!("edit {number}: old_string was not found")),
+            0 => {
+                return Err(format!(
+                    "Edit {number} - old_string '{}' not found in current content",
+                    replacement.old
+                ))
+            }
             1 => text = text.replacen(&replacement.old, &replacement.new, 1),
             _ if replacement.all => text = text.replace(&replacement.old, &replacement.new),
             count => {
                 return Err(format!(
-                    "edit {number}: old_string appears {count} times; give more of the \
-                     surrounding text or set replace_all"
+                    "Edit {number} - old_string '{}' appears {count} times; give more of the \
+                     surrounding text or set replace_all",
+                    replacement.old
                 ))
             }
         }
@@ -192,9 +204,7 @@ fn replace(text: &str, replacements: &[Replacement]) -> Result<String, String> {
 /// may be new, so a typo higher up is reported rather than turned into a
 /// script whose name holds a dot.
 fn new_place(dom: &WeakDom, path: &str) -> Result<(Ref, String), String> {
-    let trimmed = path.trim();
-    let relative = trimmed.strip_prefix(&format!("{ROOT}.")).unwrap_or(trimmed);
-    let parent = relative
+    let parent = relative(path)
         .rsplit_once('.')
         .filter(|(_, name)| !name.is_empty())
         .and_then(|(parent, name)| Some((resolve(dom, parent)?, name.to_owned())));
@@ -203,18 +213,20 @@ fn new_place(dom: &WeakDom, path: &str) -> Result<(Ref, String), String> {
     })
 }
 
-fn new_class(arguments: &Value) -> Result<&'static str, String> {
-    let Some(asked) = text_argument(arguments, "class_name") else {
-        return Ok(SCRIPT_CLASSES[0]);
+/// The class a new script is created as. Studio asks for it rather than
+/// guess, since a `Script` where a `ModuleScript` was meant runs nothing the
+/// caller expects.
+fn new_class(arguments: &Value, path: &str) -> Result<&'static str, String> {
+    let classes = SCRIPT_CLASSES.join(", ");
+    let Some(asked) = text_argument(arguments, "className").filter(|asked| !asked.is_empty())
+    else {
+        return Err(format!(
+            "`className` is required when creating a new script at path: {path}"
+        ));
     };
     SCRIPT_CLASSES
         .iter()
         .copied()
         .find(|class| *class == asked)
-        .ok_or_else(|| {
-            format!(
-                "class_name must be one of {}, not {asked}",
-                SCRIPT_CLASSES.join(", ")
-            )
-        })
+        .ok_or_else(|| format!("className must be one of {classes}, not {asked}"))
 }
