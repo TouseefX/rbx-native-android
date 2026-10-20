@@ -19,73 +19,69 @@
     <br/>
 </div>
 
-rbx-native is a from-scratch, native replacement for Roblox Studio on Linux and
-Windows, written in Rust: a binary `.rbxm`/`.rbxl` parser, an XML
-`.rbxlx`/`.rbxmx` parser, a reflection database, a mesh parser, a sandboxed
-Luau runtime, an Open Cloud client, an asset cache, and a wgpu viewer/editor
-that aims to look and feel like Roblox Studio.
+rbx-native is a Roblox Studio replacement for Linux and Windows, written from
+scratch in Rust. It reads and writes place and model files (binary and XML),
+renders them with wgpu, runs Luau, talks to Open Cloud, and the editor tries
+to look and feel as close to Studio as I can get it.
 
-This is an unofficial, community project, unaffiliated with and not endorsed
-by Roblox Corporation. "Roblox" is a trademark of Roblox Corporation.
+This is an unofficial community project. It isn't affiliated with or endorsed
+by Roblox Corporation, and "Roblox" is their trademark.
 
 ## Status
 
-Actively developed, pre-alpha. The parsing/format layer (`rbx_dom`,
-`rbx_binary`, `rbx_xml`, `rbx_reflection`, `rbx_mesh`) is solid and
-round-trip-tested against real files. The renderer (`rbx_viewer`) and the
-desktop editor (`rbx_studio`, binary `rbxstudio`) work end to end on real
-places. The biggest missing pieces are voxel terrain (`Terrain.SmoothGrid`),
-playing animations on rigs (`KeyframeSequence` playback and an Animation
-Editor), and a real Play/Test session. See [ROADMAP.md](ROADMAP.md) for the full, current picture of
-what's done, what's approximated, and what's out of scope on purpose).
+Pre-alpha, but moving fast. The file format side (`rbx_dom`, `rbx_binary`,
+`rbx_xml`, `rbx_reflection`, `rbx_mesh`) is solid and round-trip tested on
+real files. The viewer (`rbx_viewer`) and the editor (`rbx_studio`, binary
+`rbxstudio`) work on real places: you can open them, edit them, script them,
+animate rigs and playtest. A lot is still approximated or missing though.
+[ROADMAP.md](ROADMAP.md) has the full list of what's done, what's faked and
+what's out of scope on purpose.
 
 ## Platform support
 
 | Platform | State |
 |---|---|
-| Linux (X11) | Primary target. Actively developed and tested on it every day. |
-| Windows | **Supported: the editor runs.** CI also builds it on every change, running `cargo clippy -D warnings`, `cargo build` and `cargo test --workspace` on `windows-latest`. Known gaps are noted on the Windows items under [Platform](ROADMAP.md#platform) in the roadmap. Reports of anything that breaks on your machine are welcome. |
-| macOS | Not a supported target. CI builds it and runs the tests on `macos-latest` so the workspace keeps compiling there, but nobody runs the editor on it. |
-| Wayland | Falls back to an uncaptured cursor (no pointer lock) rather than failing outright. |
+| Linux (X11) | Main target. I use it on this every day. |
+| Windows | **Supported, the editor runs.** CI runs clippy, the build and the tests on `windows-latest` for every change. Known gaps are listed under [Platform](ROADMAP.md#platform) in the roadmap. If something breaks on your machine, please open an issue. |
+| macOS | Not supported. CI builds it and runs the tests on `macos-latest` so it keeps compiling, but nobody actually runs the editor there. |
+| Wayland | Works, but without pointer lock (the cursor isn't captured). |
 
 ## Building
 
-Requires a recent stable Rust toolchain ([rustup.rs](https://rustup.rs)). On
-Windows, rustup's default MSVC toolchain also needs the Visual Studio C++ build
-tools, which its installer offers to set up.
+You need a recent stable Rust toolchain ([rustup.rs](https://rustup.rs)). On
+Windows, the default MSVC toolchain also needs the Visual Studio C++ build
+tools. The rustup installer offers to set them up.
 
-On Linux, the desktop editor (`rbx_studio`) needs a few system packages for
-window/input handling — this list comes from this project's own build
-history, not an exhaustive audit, so if something's missing on your distro
-please open an issue or a PR against this file:
+On Linux the editor needs a few system packages for windows and input. This
+list comes from my own setups, not a full audit, so if your distro needs
+something else, open an issue or a PR on this file:
 
 ```sh
 # Debian/Ubuntu
 sudo apt install libxkbcommon-x11-dev libx11-xcb-dev libssl-dev libfontconfig1-dev
 ```
 
-Then, from the repository root:
+Then from the repo root:
 
 ```sh
 cargo build --release
 ```
 
-This builds the whole workspace. Individual binaries:
+That builds everything. The binaries you get:
 
-| Binary | Crate | What it is |
+| Binary | Crate | What it does |
 |---|---|---|
-| `rbxdump` | `rbx_parser_cli` | Reads a `.rbxm`/`.rbxl`/`.rbxlx`/`.rbxmx` file and prints its instance tree; `--roundtrip <file>` is a continuous-verification tool that re-serializes a file and diffs the result against the original. |
-| `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file from the command line (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`). |
-| `rbxview` | `rbx_viewer` | A standalone 3D viewer for a place/model file (`rbxview place.rbxl [--screenshot out.png]`), and the server for its browser build (`rbxview --serve`, below). |
-| `rbxstudio` | `rbx_studio` | The desktop editor (`rbxstudio [--select <name-or-path>] [--run <script.luau>] [--verbose] <place>`; `--help` lists them all). |
-| `rbxcloud` | `rbx_cloud` | An Open Cloud CLI (`whoami`/`list`/`download`/`asset`). |
+| `rbxdump` | `rbx_parser_cli` | Prints the instance tree of a `.rbxm`/`.rbxl`/`.rbxlx`/`.rbxmx` file. `--roundtrip <file>` writes the file back out and diffs it against the original. |
+| `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`). |
+| `rbxview` | `rbx_viewer` | A standalone 3D viewer (`rbxview place.rbxl [--screenshot out.png]`), and the server for the browser build (`rbxview --serve`, see below). |
+| `rbxstudio` | `rbx_studio` | The editor (`rbxstudio [--select <name-or-path>] [--run <script.luau>] [--verbose] <place>`, `--help` for the rest). |
+| `rbxcloud` | `rbx_cloud` | A small Open Cloud CLI (`whoami`, `list`, `download`, `asset`). |
 
 ### The viewer in a browser
 
-`rbxview` also builds for the web (WebGPU: a current Chrome, Edge, Firefox or
-Safari), with the same renderer, asset streaming, union booleans, quality
-levels and camera, plus a read-only Explorer and Studio-style click
-selection:
+`rbxview` also builds for the web with WebGPU (a recent Chrome, Edge, Firefox
+or Safari). Same renderer, asset streaming, unions, quality levels and camera,
+plus a read-only Explorer and click selection like in Studio:
 
 ```sh
 rustup target add wasm32-unknown-unknown
@@ -94,36 +90,35 @@ cargo install wasm-bindgen-cli --version 0.2.128 --locked   # the lockfile's was
 rbxview --serve crates/rbx_viewer/web [place.rbxl] [--port 8123]
 ```
 
-Then open <http://127.0.0.1:8123/> and drop a place or model file on the
-page (a place given to `--serve` opens by itself). A browser cannot fetch
-Roblox's assets itself (its CDNs send no CORS headers), so `rbxview --serve`
-resolves them for the page, through the same disk cache, anonymous delivery
-and optional Open Cloud key as the desktop tools; it only listens on
-loopback. `?eye=x,y,z&at=x,y,z` opens the page at a camera position.
+Open <http://127.0.0.1:8123/> and drop a place or model file on the page (a
+place passed to `--serve` opens by itself). Browsers can't fetch Roblox's
+assets directly because their CDNs send no CORS headers, so `rbxview --serve`
+fetches them for the page, using the same disk cache and optional Open Cloud
+key as the desktop tools. It only listens on localhost. You can add
+`?eye=x,y,z&at=x,y,z` to the URL to start at a given camera position.
 
-A debug build (`cargo build`) works too, but the renderer and editor are
-compiled at `opt-level = 3` even in dev builds (see the workspace
-`Cargo.toml`) because GPUI Kit's text/layout stack and an unoptimized
-offscreen frame are both too slow to use otherwise — don't be surprised that
-`cargo build` still takes a while for those two crates.
+A debug build (`cargo build`) works too, but the renderer and the editor are
+compiled at `opt-level = 3` even in debug (see the workspace `Cargo.toml`).
+GPUI Kit's text and layout code and the offscreen frame are way too slow
+otherwise. So yes, `cargo build` still takes a while for those two crates.
 
 ### Workspace crates
 
 | Crate | What it does |
 |---|---|
-| `rbx_dom` | The in-memory instance tree and property value types shared by every other crate. |
+| `rbx_dom` | The instance tree and property types every other crate uses. |
 | `rbx_binary` | Reads and writes binary `.rbxl`/`.rbxm`. |
 | `rbx_xml` | Reads and writes XML `.rbxlx`/`.rbxmx`. |
-| `rbx_reflection` | The class/property/enum database, built from Roblox's API dump (synced daily by CI). |
-| `rbx_mesh` | Parses Roblox `.mesh` geometry, `version 1.00` through `5.00`. |
-| `rbx_lua` | A sandboxed, synchronous Luau runtime over a DOM, like Studio's command bar: no scheduler, no events, no yielding. |
-| `rbx_assets` | Resolves, caches and decodes the assets a place references (`rbxassetid://`, `rbxasset://`, legacy URLs). The network fetch plugs in from `rbx_cloud`. |
-| `rbx_materials` | The table of texture packs (colour, normal, metalness, roughness) behind each `Enum.Material`. |
-| `rbx_import` | Reads `.fbx`/`.obj`/`.gltf`/`.glb`, counts triangles against Roblox's budget and prepares the file for upload. |
-| `rbx_cloud` | Open Cloud API client and the `rbxcloud` CLI. |
-| `rbx_viewer` | The wgpu renderer and the `rbxview` binary (desktop and WebGPU). |
-| `rbx_studio` | The desktop editor (`rbxstudio`), built on GPUI Kit. |
-| `rbx_parser_cli` | The `rbxdump` and `rbxlua` command-line tools. |
+| `rbx_reflection` | The class, property and enum database, built from Roblox's API dump (CI syncs it daily). |
+| `rbx_mesh` | Parses Roblox `.mesh` files, versions `1.00` to `5.00`. |
+| `rbx_lua` | A sandboxed Luau runtime over a DOM, like Studio's command bar. No scheduler, no events, no yielding. |
+| `rbx_assets` | Resolves, caches and decodes the assets a place uses (`rbxassetid://`, `rbxasset://`, old URLs). The network side comes from `rbx_cloud`. |
+| `rbx_materials` | The texture packs (colour, normal, metalness, roughness) behind each `Enum.Material`. |
+| `rbx_import` | Reads `.fbx`/`.obj`/`.gltf`/`.glb`, checks the triangle count against Roblox's limit and gets the file ready for upload. |
+| `rbx_cloud` | The Open Cloud client and the `rbxcloud` CLI. |
+| `rbx_viewer` | The wgpu renderer and `rbxview` (desktop and WebGPU). |
+| `rbx_studio` | The editor (`rbxstudio`), built on GPUI Kit. |
+| `rbx_parser_cli` | The `rbxdump` and `rbxlua` tools. |
 
 ## Testing
 
@@ -131,76 +126,62 @@ offscreen frame are both too slow to use otherwise — don't be surprised that
 ./scripts/check.sh
 ```
 
-On Windows, without WSL or Git Bash: `.\scripts\check.ps1` from PowerShell —
-the same gate, native to the platform (see
-[Platform support](#platform-support)).
+On Windows without WSL or Git Bash, run `.\scripts\check.ps1` from
+PowerShell instead. It's the same thing.
 
-Runs the full gate this project holds every change to: `cargo fmt --check`,
-`cargo clippy --workspace --all-targets -- -D warnings`, and
-`cargo test --workspace`, then prints a `TOTAL PASSED: N` summary. This is
-what every change is expected to pass before it's considered done — see
-[CONTRIBUTING.md](CONTRIBUTING.md).
+It runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D
+warnings` and `cargo test --workspace`, then prints a `TOTAL PASSED: N` line.
+Every change has to pass it. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Some tests need real Roblox place/mesh/texture files this repository
-deliberately does not ship (see [Assets & fixtures](#assets--fixtures)
-below); those are marked `#[ignore]` and read a path from an environment
-variable (grep the codebase for `RBX_.*_FIXTURE` to find them all), so a
-plain `cargo test`/`./scripts/check.sh` skips them cleanly and still passes.
+Some tests need real Roblox files that this repo doesn't ship (see
+[Assets & fixtures](#assets--fixtures)). Those are marked `#[ignore]` and
+read a path from an environment variable (grep for `RBX_.*_FIXTURE` to find
+them), so a normal `cargo test` or `./scripts/check.sh` just skips them.
 
 ## Assets & fixtures
 
-This repository ships no Roblox place files, meshes, textures, or other
-assets extracted from the Roblox client — see
-[GUIDELINES.md](GUIDELINES.md)/[SPECS.md](SPECS.md) for the engineering
-rules, and [ROADMAP.md](ROADMAP.md) for the reasoning behind what is and
-isn't decoded (notably: this project does not attempt to decode Roblox's
-proprietary CSG mesh format, and reads material/lighting *behavior* from
-Roblox's own decompiled shaders and public documentation, not from shipping
-any of Roblox's own assets). Where a test needs a real file, it downloads one
-anonymously from Roblox's public CDN at test time, or expects you to point it
-at your own local copy via an environment variable — never at a file
-committed to this repo.
+This repo doesn't ship any Roblox place files, meshes, textures or other
+assets pulled from the Roblox client. The engineering rules are in
+[GUIDELINES.md](GUIDELINES.md) and [SPECS.md](SPECS.md), and
+[ROADMAP.md](ROADMAP.md) explains what gets decoded and what doesn't. For
+example, I don't try to decode Roblox's proprietary CSG mesh format, and the
+material and lighting behaviour comes from Roblox's decompiled shaders and
+public docs, not from shipping their assets. When a test needs a real file,
+it either downloads one anonymously from Roblox's public CDN, or you point it
+at your own copy with an environment variable. Nothing like that ever gets
+committed here.
 
 ## Roblox Open Cloud API key (optional)
 
-Most of this project works without any Roblox credentials at all — public
-assets (meshes, textures, materials) are fetched anonymously. A key is only
-needed for a handful of `rbx_cloud`/`rbxcloud` operations that Roblox
-requires authentication for (reading a private experience's data,
-publishing a place, and similar). If you're not touching those, skip this
-section.
+Most of this works without any Roblox account. Public assets (meshes,
+textures, materials) are downloaded anonymously. You only need a key for the
+few `rbx_cloud`/`rbxcloud` operations that Roblox requires auth for, like
+reading a private experience's data or publishing a place. If you don't need
+those, skip this part.
 
-**Creating a key:**
+**Making a key:**
 
 1. Sign in to the [Creator Dashboard](https://create.roblox.com/dashboard)
-   and open its API Keys section (Open Cloud credentials).
-2. Create a new key, give it a name, and grant it only the specific scopes
-   the operation you need actually requires — Roblox's own
-   [Open Cloud documentation](https://create.roblox.com/docs/cloud) has the
-   current, authoritative list of scopes and how to configure them; it
-   changes more often than this file would stay accurate if the exact
-   clicks were duplicated here.
-3. Restricting the key to specific experiences/IPs where the dashboard
-   offers it is worth doing — narrower scope, less to worry about if it
-   ever leaks.
-4. Copy the key. Roblox shows it once.
+   and open API Keys (under Open Cloud).
+2. Create a key, name it, and only give it the scopes you actually need.
+   Roblox's [Open Cloud docs](https://create.roblox.com/docs/cloud) have the
+   up to date list. It changes too often for me to copy it here.
+3. If the dashboard lets you lock the key to specific experiences or IPs, do
+   it. Less damage if it ever leaks.
+4. Copy the key. Roblox only shows it once.
 
-**Where it goes — never in this repository.** `rbx_cloud` looks, in order:
+**Where to put it (never in this repo).** `rbx_cloud` checks, in this order:
 
 1. The `RBX_API_KEY` environment variable.
-2. A plain-text file, trimmed of whitespace, at
-   `$XDG_CONFIG_HOME/rbx-native/api_key` (Linux/macOS, falling back to
-   `~/.config/rbx-native/api_key` when `XDG_CONFIG_HOME` isn't set), or
-   `%APPDATA%\rbx-native\api_key` on Windows.
+2. A plain text file at `$XDG_CONFIG_HOME/rbx-native/api_key` on Linux/macOS
+   (or `~/.config/rbx-native/api_key` if `XDG_CONFIG_HOME` isn't set), or
+   `%APPDATA%\rbx-native\api_key` on Windows. Whitespace is trimmed.
 
-If neither is set, `rbx_cloud` simply falls back to Roblox's anonymous API
-surface rather than erroring — plenty of this project's own testing runs
-with no key configured at all. If you do use a config file, keep its
-permissions tight (`chmod 600` on Linux/macOS — the loader warns on stderr
-if it finds the file group- or world-readable) and never place it inside
-this repository; `.gitignore` has a few safety-net patterns
-(`api_key`, `*.key`, `.env`) in case one ends up in the tree by mistake, but
-the real answer is simply: it doesn't belong here at all.
+If there's no key, `rbx_cloud` just uses Roblox's anonymous API instead of
+failing. A lot of my own testing runs without one. If you use the file, keep
+it private (`chmod 600` on Linux/macOS, the loader warns you if other users
+can read it) and keep it out of this repo. `.gitignore` catches `api_key`,
+`*.key` and `.env` just in case, but it really shouldn't be here at all.
 
 ## Contributing
 
@@ -208,65 +189,63 @@ the real answer is simply: it doesn't belong here at all.
 
 | Branch | Who merges into it | What it is |
 |---|---|---|
-| `dev` | Collaborators with write access, through a reviewed pull request | The default branch. Every pull request targets it. |
-| `main` | **The maintainer only** | Releases. It only ever receives `dev`, never a feature branch. |
+| `dev` | Collaborators with write access, through a reviewed pull request | The default branch. Every pull request goes here. |
+| `main` | **Me only** | Releases. It only ever gets `dev` merged into it, never a feature branch. |
 
-`main` is protected by a repository ruleset: nobody but the maintainer can
-push to it, merge into it, force-push it or delete it, whatever their role on
-the repository. `dev` requires a pull request with one approving review and
-green CI (`Gate (Linux)` and `Build & test (Windows)`) before it can merge.
+`main` is protected by a ruleset: nobody but me can push, merge, force-push
+or delete it, whatever their role. `dev` needs a pull request with one
+approval and green CI (`Gate (Linux)` and `Build & test (Windows)`) before it
+can be merged.
 
 ### 1. Fork and clone
 
-Unless you're a collaborator with write access, work from your own fork:
+Unless you have write access, work from your own fork:
 
-1. Click **Fork** at the top of
+1. Click **Fork** on
    [github.com/chteau/rbx-native](https://github.com/chteau/rbx-native).
-   Leave "Copy the `dev` branch only" ticked; `dev` is all you need.
-2. Clone your fork, and add this repository as a second remote named
-   `upstream`:
+   Keep "Copy the `dev` branch only" ticked, `dev` is all you need.
+2. Clone your fork and add this repo as a second remote called `upstream`:
 
    ```sh
    git clone https://github.com/<your-username>/rbx-native.git
    cd rbx-native
    git remote add upstream https://github.com/chteau/rbx-native.git
-   git remote -v   # origin = your fork, upstream = this repository
+   git remote -v   # origin = your fork, upstream = this repo
    ```
 
    With the GitHub CLI, `gh repo fork chteau/rbx-native --clone` does all of
-   this in one step.
+   that at once.
 
 ### 2. Stay in sync with upstream
 
 `dev` moves fast. Sync before you start a branch and again before you open a
-pull request, so you're never building on (or reviewing against) a stale
-base:
+pull request, so you're not working on an old base:
 
 ```sh
 git switch dev
 git fetch upstream
 git merge --ff-only upstream/dev   # your dev never has commits of its own
-git push origin dev                # keep your fork's dev current too
+git push origin dev                # keep your fork's dev up to date too
 ```
 
-Then bring an in-progress branch up to date:
+Then update a branch you're working on:
 
 ```sh
 git switch fix/my-change
-git rebase dev                     # or `git merge dev` if you'd rather not rewrite history
+git rebase dev                     # or `git merge dev` if you don't want to rewrite history
 git push --force-with-lease        # only needed after a rebase
 ```
 
-Never commit to your own `dev`: keep it an exact copy of `upstream/dev`, so
+Don't commit to your own `dev`. Keep it an exact copy of `upstream/dev` so
 the `--ff-only` merge above always works. The **Sync fork** button on your
-fork's GitHub page does the same as the first block.
+fork's GitHub page does the same thing as the first block.
 
 ### 3. Make the change on its own branch
 
 ```sh
 git switch -c fix/beam-texture-orientation dev
 # ...edit, commit...
-./scripts/check.sh                 # must be green: fmt, clippy -D warnings, tests
+./scripts/check.sh                 # has to pass: fmt, clippy -D warnings, tests
 git push -u origin fix/beam-texture-orientation
 ```
 
@@ -274,58 +253,62 @@ One branch per change, named `fix/…`, `feat/…`, `docs/…` or `perf/…`.
 
 ### 4. Open the pull request
 
-1. On GitHub, open your fork. A **Compare & pull request** banner appears
-   for the branch you just pushed. Or run
+1. Open your fork on GitHub. A **Compare & pull request** banner shows up for
+   the branch you just pushed. Or run
    `gh pr create --repo chteau/rbx-native --base dev`.
 2. Check the target: **base repository `chteau/rbx-native`, base branch
-   `dev`**. A pull request against `main` will be closed.
-3. Fill in the template rather than deleting it: what changed and why, the
-   `ROADMAP.md` bullet or issue it addresses, how you verified it, and a
-   screenshot or recording for anything visible.
-4. Leave **Allow edits by maintainers** ticked, so a small fix-up can be
-   pushed to your branch instead of going back and forth in review.
-5. CI runs on the pull request. Push more commits to the same branch to
-   answer review comments; the pull request updates by itself.
+   `dev`**. Pull requests against `main` get closed.
+3. Fill in the template, don't delete it: what changed and why, the
+   `ROADMAP.md` item or issue it's for, how you tested it, and a screenshot or
+   recording if it's something you can see.
+4. Leave **Allow edits by maintainers** ticked, so I can push a small fix to
+   your branch instead of going back and forth in review.
+5. CI runs on the pull request. To answer review comments, just push more
+   commits to the same branch.
 
-Once it's approved and green, it merges into `dev`. The maintainer later
-merges `dev` into `main` for a release.
+Once it's approved and green, it gets merged into `dev`. I merge `dev` into
+`main` later for releases.
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the rest: what a change has to
+[CONTRIBUTING.md](CONTRIBUTING.md) has the rest: what a change needs to
 include, how to report a bug, and the rules about Roblox assets.
 
-## Documentation map
+## Docs
 
-- [ROADMAP.md](ROADMAP.md) — what's done, what's planned, what's possible
-  only via a deliberate workaround, and what's flatly impossible without
-  Roblox's own engine, and why. The single source of truth for project
-  direction. Only the maintainer edits this file.
-- [GUIDELINES.md](GUIDELINES.md) / [SPECS.md](SPECS.md) — the Rust style and
-  architecture rules every change in this repo follows.
-- [UX_GUIDELINES.md](UX_GUIDELINES.md) — palette, contrast, spacing, radius
-  and dock-layout rules for anything touching `rbx_studio`'s look.
-- [THEMES.md](THEMES.md) — installing and writing editor themes: the
-  folder layout, `manifest.json`, every token, effects and icon packs.
-- [CONTRIBUTING.md](CONTRIBUTING.md) — how to propose a change.
-- [CHANGELOG.md](CHANGELOG.md) — a running log of what landed and why.
-- [BENCHMARKS.md](BENCHMARKS.md) — recorded load, reload and frame timings,
-  the machine they came from, and what `./scripts/bench.sh` re-runs to get
-  them again.
-- [agents/](agents/) — standing instructions for AI coding agents working in
-  this repository, including a step-by-step workflow
+- [ROADMAP.md](ROADMAP.md): what's done, what's planned, what only works
+  through a workaround, and what's impossible without Roblox's own engine
+  (and why). This is where the project's direction lives, and only I edit it.
+- [GUIDELINES.md](GUIDELINES.md) and [SPECS.md](SPECS.md): the Rust style and
+  architecture rules for every change.
+- [UX_GUIDELINES.md](UX_GUIDELINES.md): colours, contrast, spacing, radius
+  and dock layout rules for anything that changes how `rbx_studio` looks.
+- [THEMES.md](THEMES.md): installing and making editor themes. Folder
+  layout, `manifest.json`, every token, effects and icon packs.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to propose a change.
+- [CHANGELOG.md](CHANGELOG.md): a log of what landed and why.
+- [BENCHMARKS.md](BENCHMARKS.md): load, reload and frame timings, the
+  machine they were measured on, and how `./scripts/bench.sh` reproduces
+  them.
+- [agents/](agents/): rules for coding agents working in this repo, plus a
+  step by step workflow
   ([agents/workflows/roadmap-task.md](agents/workflows/roadmap-task.md)) for
-  picking up a `ROADMAP.md` item autonomously.
+  picking up a `ROADMAP.md` item on their own.
 
-## AI-assisted contributions
+## Using a coding agent
 
-AI-written code — including a coding agent working fully autonomously,
-end to end from picking a `ROADMAP.md` item to opening a pull request — is
-welcome here. It's held to the same bar as anything else, not a lower one.
+Code written with a coding agent is fine here, even a fully autonomous one
+that picks a roadmap item and opens the pull request itself. It's held to the
+same bar as everything else:
 
-**Quick start**: clone this repository, `cd` into it, and paste the
-following into Claude Code, Codex, Gemini CLI, or any other coding agent
-you're running locally — it points the agent at the actual procedure
-below rather than duplicating it here, so it stays accurate as that
-procedure evolves:
+- `./scripts/check.sh` has to pass. No exceptions.
+- It follows [GUIDELINES.md](GUIDELINES.md) and [SPECS.md](SPECS.md) like any
+  other change.
+- Someone who didn't write it has to be able to maintain it. Comments explain
+  *why*, not what the code already says. No magic numbers nobody explains, no
+  abstraction that's only there to look smart.
+- I review every pull request before it merges, however it was written.
+
+If you want to point an agent at the repo, clone it, `cd` into it and give
+it something like this:
 
 ```
 Read agents/AGENTS.md in this repository for the standing rules, then
@@ -339,86 +322,68 @@ asking me to confirm each step, but stop and ask if you hit a genuine
 ambiguity the roadmap and the linked docs don't resolve.
 ```
 
-The rest of this section is the detail behind that prompt, for anyone
-(agent or human) who wants the reasoning, not just the instruction:
+The actual rules are in [`agents/AGENTS.md`](agents/AGENTS.md), and the
+workflow is in
+[`agents/workflows/roadmap-task.md`](agents/workflows/roadmap-task.md).
 
-- It passes the same gate everything else does — `./scripts/check.sh`
-  green, no exceptions.
-- It follows [GUIDELINES.md](GUIDELINES.md)/[SPECS.md](SPECS.md) — the
-  style and architecture rules don't bend because a human didn't type the
-  code.
-- It's maintainable by a human who didn't write it: no comment explaining
-  what the code already says, every comment that exists explains *why*;
-  no unexplained magic constant; no abstraction that exists because it
-  seemed clever rather than because the codebase needed it.
-- A human reviews the pull request before it merges, whether the agent
-  that opened it acted autonomously or under direction. Autonomy in how a
-  change gets written doesn't extend to whether it ships.
+## Thanks
 
-See [`agents/AGENTS.md`](agents/AGENTS.md) for the actual rules an agent
-working here follows, and
-[`agents/workflows/roadmap-task.md`](agents/workflows/roadmap-task.md) for
-the autonomous-contribution workflow specifically.
-
-## Acknowledgements
-
-- **MaximumADHD** — [Roblox-Client-Tracker](https://github.com/MaximumADHD/Roblox-Client-Tracker)
-  (Roblox's shader sources, studied to reproduce its lighting model),
+- **MaximumADHD** for [Roblox-Client-Tracker](https://github.com/MaximumADHD/Roblox-Client-Tracker)
+  (Roblox's shader sources, which I studied to reproduce its lighting),
   [Roblox-Materials](https://github.com/MaximumADHD/Roblox-Materials) (the
-  material texture pack layout) and the Roblox FileMesh format specification.
-- **rojo-rbx** — [rbx-dom](https://github.com/rojo-rbx/rbx-dom) documentation
-  of the binary format, and its reflection database (MIT), from which
-  `scripts/reflection-defaults.sh` extracts each class's default property
-  values and the names properties are saved under
+  material texture pack layout) and the Roblox FileMesh format spec.
+- **rojo-rbx** for the [rbx-dom](https://github.com/rojo-rbx/rbx-dom) docs on
+  the binary format, and its reflection database (MIT).
+  `scripts/reflection-defaults.sh` pulls each class's default property values
+  and the names properties are saved under from it
   (`assets/reflection-defaults.json`).
-- **Roblox** — [creator-docs](https://github.com/Roblox/creator-docs), the
+- **Roblox** for [creator-docs](https://github.com/Roblox/creator-docs), the
   public API dump and the material texture asset ids it publishes.
-- **Evan Wallace** — [csg.js](https://github.com/evanw/csg.js) (MIT), whose
-  BSP-tree boolean algorithm the legacy union/negate CSG resolver
-  (`rbx_viewer::scene::union::csg`) is a dependency-free Rust port of.
+- **Evan Wallace** for [csg.js](https://github.com/evanw/csg.js) (MIT). The
+  legacy union/negate resolver (`rbx_viewer::scene::union::csg`) is a Rust
+  port of its BSP tree boolean algorithm, with no dependencies.
 - **Elttob** (Studio Elttob,
-  [Roblox profile](https://www.roblox.com/users/1670764/profile)) — the free
-  Studio plugins *Reclass* and *Relight*, whose ideas (changing an
-  instance's class while keeping what it holds; placing the sun by pointing
-  at the scene) inspired this editor's Change Class and sun placement tools.
-  No code, assets or interface from either plugin is used: both were
-  reimplemented independently from how they behave.
-- **argon-rbx** — [Argon](https://argon.wiki/) (Apache-2.0), the file-sync
-  tool the Script Editor's Argon dock connects to, and its
-  [Studio plugin source](https://github.com/argon-rbx/argon-roblox)
-  (also Apache-2.0), which is how this editor's own Argon client
-  (`crate::argon_client`) confirmed the wire protocol's actual shape —
-  no code from either was copied, but that source is what the client's
-  message and property encoding are read from.
-- **UpliftGames** — [Wally](https://wally.run/) (MPL-2.0), the Luau package
-  manager the Script Editor's Wally dock is built around, and the
-  [`wally` source](https://github.com/UpliftGames/wally) (also MPL-2.0),
-  which is how this editor's own client (`crate::wally_client`) confirmed
-  the registry API's actual response shapes and the real on-disk install
-  layout (`_Index` slots, sibling alias files) that
-  `shell::wally_sync` reproduces — no code was copied, but that source is
-  what the install layout is read from.
-- **JohnnyMorganz** — [`luau-lsp`](https://github.com/JohnnyMorganz/luau-lsp)
-  (MIT), the language server behind the script editor's autocomplete,
-  hover, Go to Definition and Script Analysis. A pinned release is built
-  into `rbxstudio` (`crates/rbx_studio/build.rs`) and unpacked beside its
-  licence and that of [Luau](https://github.com/luau-lang/luau) (MIT,
-  Roblox), which it is built from
-  (`crates/rbx_studio/third_party/luau-lsp-NOTICE.txt`). Its Roblox API
-  definitions, and Roblox's API reference text from
+  [Roblox profile](https://www.roblox.com/users/1670764/profile)) for the
+  free Studio plugins *Reclass* and *Relight*. Their ideas (changing an
+  instance's class while keeping its children, placing the sun by pointing at
+  the scene) inspired the editor's Change Class and sun placement tools. No
+  code, assets or UI from either plugin is used, both were rebuilt from how
+  they behave.
+- **argon-rbx** for [Argon](https://argon.wiki/) (Apache-2.0), the file sync
+  tool the Script Editor's Argon dock connects to. Its
+  [Studio plugin source](https://github.com/argon-rbx/argon-roblox) (also
+  Apache-2.0) is where the editor's own Argon client (`crate::argon_client`)
+  checked the real wire protocol. No code was copied.
+- **UpliftGames** for [Wally](https://wally.run/) (MPL-2.0), the Luau package
+  manager the Script Editor's Wally dock is built around. The
+  [`wally` source](https://github.com/UpliftGames/wally) (also MPL-2.0) is
+  where the editor's own client (`crate::wally_client`) checked the registry
+  API responses and the real install layout (`_Index` slots, alias files)
+  that `shell::wally_sync` reproduces. No code was copied.
+- **JohnnyMorganz** for [`luau-lsp`](https://github.com/JohnnyMorganz/luau-lsp)
+  (MIT), the language server behind the script editor's autocomplete, hover,
+  Go to Definition and Script Analysis. A pinned release is built into
+  `rbxstudio` (`crates/rbx_studio/build.rs`) and unpacked next to its licence
+  and the licence of [Luau](https://github.com/luau-lang/luau) (MIT, Roblox),
+  which it's built from (`crates/rbx_studio/third_party/luau-lsp-NOTICE.txt`).
+  Its Roblox API definitions, and Roblox's API reference text from
   [Roblox-Client-Tracker](https://github.com/MaximumADHD/Roblox-Client-Tracker),
-  are fetched at run time, not shipped.
-- **Twitter and jdecked** — [Twemoji](https://github.com/jdecked/twemoji)
-  graphics (CC-BY 4.0), the emoji on the Device Simulator's keyboard
-  cover, shipped unmodified in `assets/twemoji/` with their licence.
+  are downloaded at run time, not shipped.
+- **Twitter and jdecked** for the [Twemoji](https://github.com/jdecked/twemoji)
+  graphics (CC-BY 4.0) on the Device Simulator's keyboard cover. They're
+  shipped unmodified in `assets/twemoji/` with their licence.
+- **MiniDev** ([TikTok](https://vm.tiktok.com/ZN8AFbRwp/)) for the Icon
+  Updater idea: timer overlays put on an experience's icon, uploaded and
+  approved ahead of time, then swapped on a schedule until the update goes
+  live. The roadmap's update planning item follows that design. No code or
+  assets from it are used.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
 
 ---
 
-> If you are an AI agent (such as Claude, Codex, or another coding
-> assistant) working in this repository, please read
-> [`agents/AGENTS.md`](agents/AGENTS.md) first — it has the standing rules
-> this project expects every automated change to follow.
+> If you're a coding agent working in this repo, read
+> [`agents/AGENTS.md`](agents/AGENTS.md) first. It has the rules every
+> automated change here has to follow.
