@@ -25,6 +25,7 @@ use rbx_dom::Ref;
 
 use super::team_presence::PresenceMark;
 use super::Shell;
+use crate::folder_colors::Rgb;
 use crate::tokens;
 
 pub(super) mod menu;
@@ -109,7 +110,9 @@ impl Shell {
     /// cannot borrow the shell back out of it, so it carries this instead —
     /// two referents and an `Entity`, all cheap to clone.
     pub(super) fn row_slots(&self) -> RowSlots {
+        let layer = self.layer_rows();
         RowSlots {
+            layer: Rc::new(layer),
             marks: Rc::new(self.presence_marks()),
             hovered: self.explorer_edit.hovered,
             renaming: self
@@ -118,6 +121,48 @@ impl Shell {
                 .as_ref()
                 .map(|renaming| (renaming.target(), renaming.input().clone())),
         }
+    }
+
+    /// Every row a layer marks: its own members with the layer's dot, and,
+    /// while the layer is hidden or locked, everything beneath them dimmed
+    /// too. One walk of the tree, and none at all for a place without layers.
+    fn layer_rows(&self) -> HashMap<Ref, (Rgb, bool, bool)> {
+        let view = &self.layers.view;
+        let colors: HashMap<String, Rgb> = crate::layers::layers(&self.dom)
+            .into_iter()
+            .map(|layer| (layer.id, layer.color))
+            .collect();
+        let mut rows = HashMap::new();
+        if colors.is_empty() {
+            return rows;
+        }
+        let mut stack: Vec<(Ref, bool)> = self
+            .dom
+            .root_refs()
+            .iter()
+            .map(|&root| (root, false))
+            .collect();
+        while let Some((at, dimmed)) = stack.pop() {
+            let Some(instance) = self.dom.get(at) else {
+                continue;
+            };
+            let own = crate::layers::own_layer(&self.dom, at).and_then(|id| colors.get(&id));
+            let dimmed = match own {
+                Some(&color) => {
+                    let dim = view.dims(&self.dom, at);
+                    rows.insert(at, (color, dim, true));
+                    dim
+                }
+                None => {
+                    if dimmed {
+                        rows.insert(at, ((0, 0, 0), true, false));
+                    }
+                    dimmed
+                }
+            };
+            stack.extend(instance.children().iter().map(|&child| (child, dimmed)));
+        }
+        rows
     }
 
     /// GPUI reports a row's hover from the row itself, so "the pointer left
@@ -200,6 +245,8 @@ fn give_focus_back(
 /// [`Shell::row_slots`].
 #[derive(Clone)]
 pub(super) struct RowSlots {
+    /// Colour, dimmed, and whether the instance is a direct member.
+    layer: Rc<HashMap<Ref, (Rgb, bool, bool)>>,
     marks: Rc<HashMap<Ref, Vec<PresenceMark>>>,
     hovered: Option<Ref>,
     renaming: Option<(Ref, Entity<InputState>)>,
@@ -223,10 +270,12 @@ impl RowSlots {
             .marks
             .get(&reference)
             .map(|marks| presence_dots(("presence-row", 0usize), marks).into_any_element());
+        let layer = self.layer.get(&reference).copied();
         RowWidgets {
             name,
             trailing,
             presence,
+            layer,
         }
     }
 }
@@ -269,4 +318,7 @@ pub(super) struct RowWidgets {
     pub(super) name: Option<AnyElement>,
     pub(super) trailing: Option<AnyElement>,
     pub(super) presence: Option<AnyElement>,
+    /// Layer colour, whether the row dims, and whether the instance is
+    /// itself on the layer (rather than inheriting it from an ancestor).
+    pub(super) layer: Option<(Rgb, bool, bool)>,
 }

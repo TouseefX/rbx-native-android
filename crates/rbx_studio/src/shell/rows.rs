@@ -144,10 +144,16 @@ pub(super) fn row(
         ),
     };
 
+    let (layer_dim, layer_dot) = match widgets.layer {
+        Some((color, dim, own)) => (dim, own.then_some(color)),
+        None => (false, None),
+    };
+
     h_flex()
         .id(index)
         .relative()
         .w_full()
+        .when(layer_dim, |this| this.opacity(0.45))
         .h(tokens::tree_row_height())
         .flex_none()
         .items_center()
@@ -234,7 +240,14 @@ pub(super) fn row(
                     widgets
                         .name
                         .unwrap_or_else(|| div().child(item.label.clone()).into_any_element()),
-                ),
+                )
+                .children(layer_dot.map(|(r, g, b)| {
+                    div()
+                        .size(px(7.))
+                        .flex_none()
+                        .rounded_full()
+                        .bg(rgb(u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b)))
+                })),
         )
         .children(widgets.presence)
         .children(widgets.trailing)

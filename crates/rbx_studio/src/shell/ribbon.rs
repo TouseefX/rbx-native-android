@@ -494,6 +494,7 @@ impl Shell {
             (Panel::Output, IconName::Terminal, "Output"),
             (Panel::Viewport, IconName::MonitorCog, "Viewport"),
             (Panel::InputActions, IconName::Gamepad2, "Input Actions"),
+            (Panel::Layers, IconName::Layers, "Layers"),
         ];
         // Argon and Wally have no tab of their own to reopen from outside
         // the Script Editor, because they're nowhere to be seen outside it
