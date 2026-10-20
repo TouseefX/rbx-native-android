@@ -381,7 +381,7 @@ fn bench(label: &str, mut dom: WeakDom) {
     while (headless.assets_in_flight() > 0 || headless.swap_assets())
         && settling.elapsed() < Duration::from_secs(120)
     {}
-    let mut frames = |headless: &mut crate::Headless| {
+    let frames = |headless: &mut crate::Headless| {
         for _ in 0..60 {
             headless.render_frame(1280, 720).unwrap();
         }

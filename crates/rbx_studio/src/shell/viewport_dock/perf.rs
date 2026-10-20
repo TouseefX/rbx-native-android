@@ -62,7 +62,8 @@ impl Shell {
             .into_any_element()
         };
 
-        let mut body = v_flex().child(row("Performance view", control));
+        // As wide as the Rendering column, rather than the dock's whole width.
+        let mut body = v_flex().child(div().max_w(px(300.)).child(row("Performance view", control)));
         if let Some(perf) = &self.perf {
             body = body.child(match &perf.report {
                 None => note("Measuring…"),
