@@ -29,6 +29,30 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
     });
     cx.on_action({
         let shell = shell.clone();
+        move |_: &MenuNewPlace, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.request_new(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuOpenPlace, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.open_place_dialog(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuInsertObject, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.insert_object_from_menu(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuToggleCommandBar, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.toggle_command_bar(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
         move |_: &MenuSave, cx| {
             let _ = shell.update(cx, |shell, cx| shell.save(cx));
         }
@@ -93,6 +117,12 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
     });
     cx.on_action({
         let shell = shell.clone();
+        move |_: &MenuDataStores, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.open_data_stores(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
         move |_: &MenuStudioSettings, cx| {
             let _ = shell.update(cx, |shell, cx| shell.open_settings(cx));
         }
@@ -142,6 +172,7 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         (Panel::Output, &MenuToggleOutput),
         (Panel::Viewport, &MenuToggleViewport),
         (Panel::Collaborators, &MenuToggleCollaborators),
+        (Panel::InputActions, &MenuToggleInputActions),
     ] {
         toggle.install(panel, shell.clone(), cx);
     }
@@ -319,3 +350,4 @@ panel_toggle!(MenuToggleProperties);
 panel_toggle!(MenuToggleOutput);
 panel_toggle!(MenuToggleViewport);
 panel_toggle!(MenuToggleCollaborators);
+panel_toggle!(MenuToggleInputActions);

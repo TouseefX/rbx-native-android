@@ -55,11 +55,14 @@ pub(crate) enum MenuId {
     CallStackOverflow,
     TerrainOverflow,
     CollaboratorsOverflow,
+    InputActionsOverflow,
     /// The version picker on the n-th Wally search result.
     WallyVersion(usize),
     InsertPart,
     InsertScript,
     InsertGui,
+    RibbonMaterial,
+    RibbonImport,
     InsertOptions,
     UiResolution,
     UiInsert,
@@ -81,6 +84,8 @@ pub(crate) enum MenuId {
     /// A state machine's n-th transition's From and To pickers.
     AnimTransitionFrom(usize),
     AnimTransitionTo(usize),
+    /// The document strip's "+".
+    DocumentAdd,
 }
 
 impl MenuId {
@@ -101,10 +106,13 @@ impl MenuId {
             MenuId::CallStackOverflow => "menu-call-stack",
             MenuId::TerrainOverflow => "menu-terrain",
             MenuId::CollaboratorsOverflow => "menu-collaborators",
+            MenuId::InputActionsOverflow => "menu-input-actions",
             MenuId::WallyVersion(_) => "menu-wally-version",
             MenuId::InsertPart => "menu-insert-part",
             MenuId::InsertScript => "menu-insert-script",
             MenuId::InsertGui => "menu-insert-gui",
+            MenuId::RibbonMaterial => "menu-ribbon-material",
+            MenuId::RibbonImport => "menu-ribbon-import",
             MenuId::InsertOptions => "menu-insert-options",
             MenuId::UiResolution => "menu-ui-resolution",
             MenuId::UiInsert => "menu-ui-insert",
@@ -125,6 +133,7 @@ impl MenuId {
             MenuId::AnimAutorigJoint => "menu-anim-autorig-joint",
             MenuId::AnimTransitionFrom(_) => "menu-anim-transition-from",
             MenuId::AnimTransitionTo(_) => "menu-anim-transition-to",
+            MenuId::DocumentAdd => "menu-document-add",
         }
     }
 

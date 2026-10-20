@@ -10,7 +10,7 @@ landed and why.
 
 Feasibility legend: ✅ done · 📋 planned, not
 started · ⚠️ possible only via a workaround · ❌ not possible without
-Roblox's own engine.
+Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 
 ## What's been implemented
 
@@ -2653,6 +2653,55 @@ Roblox's own engine.
   temporary repository, and screenshots of the resolver
   (`docs/screenshots/place-merge/`). Roblox's version is cloud-side; this
   one is local.
+- [x] **Input action manager** (Creator Roadmap, Late 2026). View ›
+  Input Actions (also a Home ribbon tile) opens a dock with every
+  `InputContext` as a section, its `InputAction`s as rows and their
+  `InputBinding`s sorted into Keyboard & Mouse, Gamepad and Touch columns
+  (plus Other for scriptable or unbound ones), by the `KeyCode` items and
+  `UIButton` the dump defines. Contexts, actions and bindings are created,
+  renamed and deleted in place; an inspector beside the table edits every
+  property the dump saves for the class (enum dropdowns, searchable for
+  `KeyCode`; toggles; `GuiButton` references from the selection), and it
+  follows the selection, Explorer included. Every write is an ordinary
+  undoable DOM edit. Check mode marks actions with no binding for a family
+  their type expects, the same input bound twice in one context or in two
+  enabled contexts at the same priority, and properties the action's type
+  ignores or that contradict each other (thresholds, response curve,
+  per-axis scales, a 2D input on a Bool action). Verified by unit tests of
+  the reader and the checker, a round trip of every binding property
+  through the binary and XML formats, a place built and saved by real
+  Studio (read back with the values Studio was given, and re-saved through
+  both formats; `RBX_INPUT_ACTIONS_FIXTURE`, not committed), and
+  screenshots of adding a binding, picking its key and undoing it
+  (`docs/screenshots/input-actions/`). Studio has no such editor yet, so
+  the layout is this project's own.
+- [x] **Native DataStore browser** (File › Data Stores…, Home's ribbon,
+  the palette): browse, search and edit a universe's DataStores from the
+  editor, without a plugin or the Creator Hub page, through Open Cloud's
+  v2 data store, ordered data store and memory store APIs
+  (`rbx_cloud::datastores`). Data stores with search and soft-deleted
+  ones on request; scopes (one, or all at once); keys by prefix, a page at
+  a time; the entry as a foldable tree or raw JSON with its size, version,
+  etag, times, UserIds and attributes; create, edit (JSON and size checked
+  before sending), increment and delete; the version history with any
+  version viewable and rollback (its value, UserIds and attributes written
+  as a new version). `OrderedDataStore` entries sorted by value either way
+  with a range filter, edited, incremented and deleted. MemoryStore sorted
+  maps (items with sort key and expiry, edited and deleted) and queues
+  (read with the invisibility window explained, add, discard) in the same
+  window; ordered stores and memory structures are opened by name, since
+  Open Cloud lists neither. Every write is confirmed in a dialog naming the
+  key and the experience; anything but the Play sandbox wears a LIVE badge
+  and needs "I know this is live player data" ticked. Edits carry the
+  entry's etag, and a conflict shows Roblox's newer copy beside the edit
+  with Keep theirs / Overwrite. A missing permission names the scope to add
+  and opens the key check, which now lists the version-history and memory
+  store scopes; a throttled request says so while it retries. Verified by
+  unit tests of every call's request and parsing, a loopback mock Open
+  Cloud with a fake universe (`RBX_STUDIO_DATASTORE_MOCK`) driven by the
+  real client, an ignored live round trip (`tests/datastores_live.rs`), and
+  the window driven against a real sandbox universe; screenshots in
+  `docs/screenshots/datastore-browser/`.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):
@@ -2735,6 +2784,21 @@ Roblox's own engine.
   are not shaped, as in Studio. Default is Off, not Studio's Ideal Fiber.
   Shaping is measured by a UDP-echo integration test through the
   namespace; **not yet live-tested against a real Sober session.**
+- [x] **Network Simulator on Windows and macOS** (`rbx_play::netsim`
+  `windivert` and `dummynet`): the Network tile works on both. Windows
+  relaunches the editor once as an elevated helper (a UAC prompt) that
+  loads WinDivert 2.2 at runtime (`WinDivert.dll` and `WinDivert64.sys`
+  beside the exe, not bundled), finds RobloxPlayerBeta's UDP ports with
+  `GetExtendedUdpTable` without ever opening the client's process, and
+  delays, jitters and drops them in its own delay line, in order. macOS
+  asks for an administrator password once and runs a root script that
+  loads pf `dummynet` rules into the `com.apple/rbxnative` anchor for the
+  client's UDP ports (found with `lsof`), takes and releases its own
+  `pfctl -E` token and removes only its own pipes; macOS dummynet has no
+  jitter, so jitter is spread over four pipes when pf accepts
+  `probability` on those rules, and Output says so when it does not.
+  Research and a live-test checklist for each:
+  `docs/research/play-sandbox/network-simulator-windows-macos.md`.
 - [x] **Device Simulator** — a Device menu in the Test ribbon: phones
   (flagship, mid-range, entry level), tablets, desktops, consoles and a
   headset with real logical resolutions and iPhone safe-area insets, a
@@ -2750,6 +2814,27 @@ Roblox's own engine.
   mid-test. Nothing is faked: a script cannot override what the client
   reports, so the real client reports the device's values. The Play half
   is not yet live-tested.
+- [x] **Device Simulator: keyboard cover, Android back, display scaling
+  and a client self-report** — the Device menu gains an **On-screen
+  keyboard** toggle (our own key grid at each phone's and tablet's
+  approximate keyboard height per orientation, cut out of the Play client
+  and also shown while the game has a TextBox focused; the game is not
+  told, `OnScreenKeyboardSize` stays 0), Studio's **Android back button**
+  for Android devices during Play (Escape sent to the embedded client
+  through XTest, Linux only), and **Display scaling** — Fit to window,
+  Actual resolution or Physical size (each device's PPI against 96 dpi ×
+  the window scale, as Studio's auto-detect does) — for Edit; Roblox
+  exposes no DPI to scripts, so how big the screen looks is the only
+  effect pixel density has. During Play the client probe reports its
+  `ViewportSize`, `TouchEnabled`, `IsTenFootInterface`, input kinds and
+  TextBox focus; the badge shows them and turns to a warning with the
+  expected size when the viewport does not match, and the first report
+  goes to Output, so any Play is a live test. Run live through Sober: the
+  client reports the device's size, follows rotation live, gives
+  `TouchEnabled` for phones and `IsTenFootInterface` for consoles, Escape
+  through the back button opens Roblox's menu, and the cover follows a
+  focused TextBox. Research, verdicts and measurements:
+  `docs/research/play-sandbox/device-simulator.md`.
 - [x] **Controller Emulator** (`rbx_play::gamepad`,
   `shell/controller_emulator`; Test › Controller): Studio's widget —
   Generic Gamepad, PS4, PS5, Xbox and Generic Handheld — drawn with the
@@ -2767,6 +2852,46 @@ Roblox's own engine.
   When `/dev/uinput` isn't writable the window says why and gives the
   udev rule. Linux only; live pickup by Sober not yet tested (see the
   planned item).
+- [x] **Server Authority, editor side (Studio Beta, announced 2026)**,
+  checked against the Creator Hub's `projects/server-authority` page. It is
+  a workspace mode, not an editor feature: `Workspace.AuthorityMode = Server`
+  turns on client prediction, misprediction detection and rollback with
+  resimulation, and sets five companion `Workspace` properties in one go.
+  The embedded API dump already carries all of them (`AuthorityMode`,
+  `NextGenerationReplication`, `PlayerScriptsUseInputActionSystem`,
+  `UseFixedSimulation`, `StreamingEnabled`, and `SignalBehavior`, which a
+  file saves as `SignalBehavior2`), and the Properties panel lists them
+  under their dump categories (`NotScriptable` hides nothing). Shipped:
+  - Setting `AuthorityMode` to `Server` writes the five companions
+    (`NextGenerationReplication`, `PlayerScriptsUseInputActionSystem`,
+    `UseFixedSimulation` Enabled, `SignalBehavior` Deferred,
+    `StreamingEnabled` on) in the same undo step. Switching back to
+    `Automatic` leaves them as they are; the docs do not say Studio reverts
+    them.
+  - On a `Server` place the Attributes section states the replication
+    limits (first 64 attributes, names and string values of 50 characters
+    at most) and flags each attribute a predicted instance will not
+    replicate, with a warning line.
+  - Play on such a place writes one Output info line: prediction and
+    rollback run in the real client and server, so playtest results are the
+    real engine's, and the Network Simulator shapes real UDP traffic.
+  - Sandbox audit of the probe and mirror Luau: the mirror batches
+    `DescendantAdded`/`DescendantRemoving`/`Changed` into sets flushed on a
+    timer and re-checks the tree at flush time, so `SignalBehavior =
+    Deferred` (handlers run late, possibly after the instance moved again)
+    changes nothing; the editor-side `LiveTree` already tolerates a child
+    before its parent and an unknown id. Under `StreamingEnabled` the
+    client tree holds only what streamed in, the mirror never assumes a
+    part exists (it walks `GetChildren` and listens for additions), and an
+    edit aimed at an instance that has streamed out now fails with "(it may
+    be streamed out)" rather than a bare "not in the client tree". The
+    probe's own modules live in `ReplicatedStorage`, which is not streamed.
+    Nothing in the probe depends on `Heartbeat` ordering (it only counts
+    beats for the server FPS metric).
+  - Not yet live-tested: Play on an `AuthorityMode = Server` place through
+    Sober (the probe, live tree, stats and the new Output line). Whether
+    the server `fps` metric (a `Heartbeat` count) stays meaningful under
+    `UseFixedSimulation` is likewise unchecked.
 
 ### Platform
 - [x] Linux (X11) — the daily-driven target.
@@ -2848,6 +2973,19 @@ Roblox's own engine.
   clippy, build and test. macOS is still not a supported target; the job
   only keeps the workspace from rotting there.
 
+### Collaboration (`rbx_presence`)
+- [x] **Live co-editing between rbx-native editors, and with Studio
+  through the Team Presence plugin (beta)** — edits travel as operations
+  through the hosted presence relay's op log, end-to-end encrypted like
+  presence itself (HKDF from the place secret → ChaCha20-Poly1305; the
+  plugin's Luau implementation was checked against the shared test vectors
+  inside Studio 0.743). Instances by `UniqueId` (paths for Studio, which
+  cannot read it), last-writer-wins per property on a Lamport clock, script
+  text merged three ways, remote edits undoable as steps of their own, and
+  a late joiner replays the log. Live-tested between two rbx-native editors
+  and between Studio and rbx-native on a real place; see
+  `crates/rbx_presence/README.md` for what was and was not verified.
+
 ## What's planned
 
 ### Script authoring — the biggest real gap
@@ -2891,35 +3029,42 @@ Roblox's own engine.
   does, not a shortcut that could write something a saved place file
   can't actually represent.
 
+- [ ] 📋 **Update planning: countdown icons on autopilot** (concept by
+  [@MiniDev](https://vm.tiktok.com/ZN8AFbRwp/), see Acknowledgements).
+  Per experience, a set of reusable **timers** (say H-12, H-6, H-3, H-1),
+  each a transparent 512×512 PNG overlay such as an hourglass with
+  "6 Hours". To **plan an update** you pick the current icon (a file, or
+  fetched from Roblox) as the base for the timers, the new icon to apply at
+  update time, and the update's date and time. A **timeline** then
+  previews every step: each overlay composited on the current icon at its
+  time, then the new icon at T. **Start update** uploads every composited
+  image straight away, so each is moderated and approved hours early. A
+  steps view shows each one as Uploaded, Approved and then Upcoming or
+  Applied, with a live "update in" countdown and a Cancel. At each step
+  the experience icon is swapped automatically on every place in the
+  universe, with a desktop notification when it's applied ("New icon
+  applied on 3 places"). It needs a sidebar of the user's experiences with
+  per-experience status. Timer edits apply to future updates only, never to
+  one already started. Still open: whether Open Cloud can set an
+  experience's icon with an API key, or only the cookie-authenticated web
+  endpoint can.
+
+  Steps are written as "set the icon the plan says is due now", so a late
+  run catches up and any number of runners can't conflict. They fire while
+  the editor is open. **Start update** also registers a small background
+  helper with the OS, so steps keep firing after the editor is closed as
+  long as the PC is on and someone is logged in: a systemd user timer on
+  Linux, Task Scheduler on Windows, launchd on macOS. The helper is
+  removed when the plan finishes or is cancelled. Firing with the PC off
+  is under [Maybe](#maybe).
+
+  Later, the same plan could also restart servers onto the new version and
+  send an in-game announcement through MessagingService.
+
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows
   embeds through `SetParent` (type-checked for the MSVC target only); on
   macOS the client keeps its own window.
-- [ ] 📋 **Device Simulator: what is still open** — live-test the Play
-  half through Sober (the client sized to the device so `ViewportSize`
-  reads the device's logical size, rotation resizing it live, and
-  `touch_mode`/`use_console_experience` giving `TouchEnabled`, the mobile
-  UI and `IsTenFootInterface`); input modes on Windows, where
-  RobloxPlayerBeta has no equivalent switch; pixel density (Sober's
-  `enable_hidpi` scales the window, it reports no DPI); a headset in Play
-  (Sober has no VR); Studio's on-screen keyboard cover and Android back
-  button; a Play client larger than the 3D view (a foreign window can be
-  sized, not scaled, so it is refused).
-- [x] **Network Simulator on Windows and macOS** (`rbx_play::netsim`
-  `windivert` and `dummynet`): the Network tile works on both. Windows
-  relaunches the editor once as an elevated helper (a UAC prompt) that
-  loads WinDivert 2.2 at runtime (`WinDivert.dll` and `WinDivert64.sys`
-  beside the exe, not bundled), finds RobloxPlayerBeta's UDP ports with
-  `GetExtendedUdpTable` without ever opening the client's process, and
-  delays, jitters and drops them in its own delay line, in order. macOS
-  asks for an administrator password once and runs a root script that
-  loads pf `dummynet` rules into the `com.apple/rbxnative` anchor for the
-  client's UDP ports (found with `lsof`), takes and releases its own
-  `pfctl -E` token and removes only its own pipes; macOS dummynet has no
-  jitter, so jitter is spread over four pipes when pf accepts
-  `probability` on those rules, and Output says so when it does not.
-  Research and a live-test checklist for each:
-  `docs/research/play-sandbox/network-simulator-windows-macos.md`.
 - [ ] 📋 **Network Simulator on Windows and macOS: never run** — neither
   shaper has run on a real Windows PC or Mac (only their platform-free
   parts are unit-tested, and a scripted pf/dnctl stand-in on Linux):
@@ -2928,27 +3073,6 @@ Roblox's own engine.
   accepting `probability` and port lists on dummynet rules in the
   `com.apple/*` sub-anchor, and whether Roblox's anti-cheat reacts to
   either.
-- [x] **Device Simulator: keyboard cover, Android back, display scaling
-  and a client self-report** — the Device menu gains an **On-screen
-  keyboard** toggle (our own key grid at each phone's and tablet's
-  approximate keyboard height per orientation, cut out of the Play client
-  and also shown while the game has a TextBox focused; the game is not
-  told, `OnScreenKeyboardSize` stays 0), Studio's **Android back button**
-  for Android devices during Play (Escape sent to the embedded client
-  through XTest, Linux only), and **Display scaling** — Fit to window,
-  Actual resolution or Physical size (each device's PPI against 96 dpi ×
-  the window scale, as Studio's auto-detect does) — for Edit; Roblox
-  exposes no DPI to scripts, so how big the screen looks is the only
-  effect pixel density has. During Play the client probe reports its
-  `ViewportSize`, `TouchEnabled`, `IsTenFootInterface`, input kinds and
-  TextBox focus; the badge shows them and turns to a warning with the
-  expected size when the viewport does not match, and the first report
-  goes to Output, so any Play is a live test. Run live through Sober: the
-  client reports the device's size, follows rotation live, gives
-  `TouchEnabled` for phones and `IsTenFootInterface` for consoles, Escape
-  through the back button opens Roblox's menu, and the cover follows a
-  focused TextBox. Research, verdicts and measurements:
-  `docs/research/play-sandbox/device-simulator.md`.
 - [ ] 📋 **Device Simulator: what is still open** — known caveats of Play
   through Sober, measured live: a click reaches the game as `MouseButton1`,
   never a touch (no multi-touch), and Roblox's own UI chosen by
@@ -2972,50 +3096,6 @@ Roblox's own engine.
   client larger than the 3D view, still refused: an XComposite capture of
   the client works under Mutter but costs 7 ms a frame at 1920×1044 and its
   input cannot be forwarded cleanly.
-- [ ] 📋 **Network Simulator on Windows and macOS** — the tile says why it
-  is unavailable there: Windows needs a packet-filter driver such as
-  WinDivert run as administrator, macOS needs dummynet (`dnctl` and
-  `pfctl`) as root.
-- [x] **Server Authority, editor side (Studio Beta, announced 2026)**,
-  checked against the Creator Hub's `projects/server-authority` page. It is
-  a workspace mode, not an editor feature: `Workspace.AuthorityMode = Server`
-  turns on client prediction, misprediction detection and rollback with
-  resimulation, and sets five companion `Workspace` properties in one go.
-  The embedded API dump already carries all of them (`AuthorityMode`,
-  `NextGenerationReplication`, `PlayerScriptsUseInputActionSystem`,
-  `UseFixedSimulation`, `StreamingEnabled`, and `SignalBehavior`, which a
-  file saves as `SignalBehavior2`), and the Properties panel lists them
-  under their dump categories (`NotScriptable` hides nothing). Shipped:
-  - Setting `AuthorityMode` to `Server` writes the five companions
-    (`NextGenerationReplication`, `PlayerScriptsUseInputActionSystem`,
-    `UseFixedSimulation` Enabled, `SignalBehavior` Deferred,
-    `StreamingEnabled` on) in the same undo step. Switching back to
-    `Automatic` leaves them as they are; the docs do not say Studio reverts
-    them.
-  - On a `Server` place the Attributes section states the replication
-    limits (first 64 attributes, names and string values of 50 characters
-    at most) and flags each attribute a predicted instance will not
-    replicate, with a warning line.
-  - Play on such a place writes one Output info line: prediction and
-    rollback run in the real client and server, so playtest results are the
-    real engine's, and the Network Simulator shapes real UDP traffic.
-  - Sandbox audit of the probe and mirror Luau: the mirror batches
-    `DescendantAdded`/`DescendantRemoving`/`Changed` into sets flushed on a
-    timer and re-checks the tree at flush time, so `SignalBehavior =
-    Deferred` (handlers run late, possibly after the instance moved again)
-    changes nothing; the editor-side `LiveTree` already tolerates a child
-    before its parent and an unknown id. Under `StreamingEnabled` the
-    client tree holds only what streamed in, the mirror never assumes a
-    part exists (it walks `GetChildren` and listens for additions), and an
-    edit aimed at an instance that has streamed out now fails with "(it may
-    be streamed out)" rather than a bare "not in the client tree". The
-    probe's own modules live in `ReplicatedStorage`, which is not streamed.
-    Nothing in the probe depends on `Heartbeat` ordering (it only counts
-    beats for the server FPS metric).
-  - Not yet live-tested: Play on an `AuthorityMode = Server` place through
-    Sober (the probe, live tree, stats and the new Output line). Whether
-    the server `fps` metric (a `Heartbeat` count) stays meaningful under
-    `UseFixedSimulation` is likewise unchecked.
 - [ ] ⚠️ **Running Server Authority is impossible.** Prediction, rollback
   and resimulation are engine behaviour, the same wall as physics, listed
   under "Explicitly impossible". What remains of the item is the Network
@@ -3131,15 +3211,6 @@ not yet honoured by the engine, which each bullet notes.
   share) is the natural choice for which set of hints to draw.
 
 #### Editor
-- [ ] 📋 **Input action manager** (Late 2026): a visual editor for building
-  and checking cross-platform control mappings. Unlike most of this list,
-  what it edits already exists. The Input Action System's
-  `InputContext`/`InputAction`/`InputBinding` are ordinary instances that
-  Roblox has already shipped. That makes a contexts × actions × bindings
-  table, one column per device, that writes real properties through the undo
-  history, buildable now. It is the one item here that does not wait on
-  Roblox. The embedded API dump now carries those classes (it was refreshed
-  for `UIShadow`).
 - [ ] ⚠️ **Package overrides** (Late 2026): inspect, diff, selectively
   revert or publish deliberate edits to a package copy, from the Properties
   panel. The diff itself is local: a `PackageLink`'s subtree compared,
@@ -3238,6 +3309,28 @@ not yet honoured by the engine, which each bullet notes.
     (see [Play / Test workflow](#play--test-workflow)), whose passes already
     last exactly one session.
 
+## Maybe
+
+Ideas worth keeping that aren't committed to. Each one has a cost (an extra
+account, a second app, a service to run) that most Roblox developers
+wouldn't want to pay.
+
+- [ ] 🤔 **Update planning with the PC off**: a cloud runner for the
+  countdown-icon steps above. The images are uploaded and approved before
+  the plan starts, so a step is one small "set the icon" request, and any
+  free scheduler could send it. The candidates:
+  - **Cloudflare Workers.** Free cron triggers, or Durable Object alarms
+    for an exact minute, but it needs a Cloudflare account and a token.
+  - **GitHub Actions** in the user's own private repo. Free, but the
+    scheduled runs can start 5–30 minutes late, and most Roblox developers
+    don't use GitHub.
+  - **A phone companion** (the original's "Send to phone"), which would be
+    a second app to build and keep alive through battery savers.
+
+  All of them depend on Roblox letting an Open Cloud API key with narrow
+  scopes set an experience's icon. If only the account cookie can, no
+  third-party runner should ever hold it.
+
 ## Explicitly impossible without Roblox's engine
 
 These aren't missing features — they require Roblox's own closed-source
@@ -3321,17 +3414,6 @@ engine, just as an escape hatch.
 
 ### Collaboration
 
-- [x] **Live co-editing between rbx-native editors, and with Studio
-  through the Team Presence plugin (beta)** — edits travel as operations
-  through the hosted presence relay's op log, end-to-end encrypted like
-  presence itself (HKDF from the place secret → ChaCha20-Poly1305; the
-  plugin's Luau implementation was checked against the shared test vectors
-  inside Studio 0.743). Instances by `UniqueId` (paths for Studio, which
-  cannot read it), last-writer-wins per property on a Lamport clock, script
-  text merged three ways, remote edits undoable as steps of their own, and
-  a late joiner replays the log. Live-tested between two rbx-native editors
-  and between Studio and rbx-native on a real place; see
-  `crates/rbx_presence/README.md` for what was and was not verified.
 - [ ] 📋 **Co-editing without an rbx-native host, and at scale** — only the
   hosted relay (an rbx-native user's own) keeps the op log, so Studio users
   alone cannot co-edit, and a new host starts with an empty log. Attributes

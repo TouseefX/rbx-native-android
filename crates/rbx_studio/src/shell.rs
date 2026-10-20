@@ -15,6 +15,7 @@ mod clipboard;
 mod close_place;
 mod coedit;
 mod command;
+mod command_run;
 mod controller_emulator;
 mod debugging;
 mod device_sim;
@@ -31,11 +32,13 @@ mod group;
 mod guides;
 mod history;
 pub(crate) mod import3d;
+mod input_panel;
 mod keys;
 mod layout;
 mod light_guides;
 mod luau_lsp;
 mod menu;
+mod open_place;
 mod output;
 mod palette;
 mod panel_window;
@@ -66,6 +69,7 @@ pub(crate) use roving::install as install_key_bindings;
 mod tree_keys;
 
 mod argon_dock;
+mod datastores;
 mod game_settings;
 mod rows;
 mod save;
@@ -98,7 +102,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use gpui_kit::component::input::{InputEvent, InputState};
+use gpui_kit::component::input::{InputEvent, InputState, MoveDown, MoveUp};
 use gpui_kit::component::select::{SearchableVec, SelectEvent, SelectState};
 use gpui_kit::component::tree::TreeState;
 use gpui_kit::component::{v_flex, IndexPath};
@@ -170,6 +174,9 @@ pub(crate) struct Shell {
     /// Whether a part in front of the selection hides its outline box.
     /// Persisted the same way `orthographic` is (see `settings`).
     selection_occluded: bool,
+    /// Whether the viewport draws its `ScreenGui`s: the ribbon's Show UI.
+    /// Per session, not persisted, as Studio's View > UI is.
+    show_screen_gui: bool,
     /// Whether a selected light draws its guide — Studio's `Show Light
     /// Guides`. Persisted the same way `orthographic` is (see `settings`).
     light_guides: bool,
@@ -248,6 +255,8 @@ pub(crate) struct Shell {
     version_history: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Game Settings, while open — see `game_settings`.
     game_settings: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// Data Stores, while open — see `datastores`.
+    data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
     /// The Explorer's type-ahead buffer — see `shell::tree_keys`.
@@ -315,6 +324,7 @@ pub(crate) struct Shell {
     /// The Style Editor panel's open fields and last error; see
     /// `shell::style_panel`.
     style_edits: style_panel::StyleEdits,
+    input_edits: input_panel::InputEdits,
     style_scroll: ScrollHandle,
     /// The UI Editor document's own state — its sub-tab, the screen on the
     /// canvas, the pan and zoom, the gesture in flight. See
@@ -330,6 +340,9 @@ pub(crate) struct Shell {
     history: History,
     database: ReflectionDatabase,
     command_bar: CommandBar,
+    /// The Command Bar's persistent runtime and its in-flight run; see
+    /// `shell::command_run`.
+    command_run: command_run::CommandRun,
     /// Every Command Bar run, success or failure; see `shell::output`.
     output: output::OutputLog,
     /// Which levels the Output panel currently shows; see `shell::output`.
@@ -397,9 +410,9 @@ pub(crate) struct Shell {
     /// File › Close Place's unsaved-changes prompt is up; see
     /// `shell::close_place`.
     close_prompt: bool,
-    /// The close prompt above is for a restart (Settings › Beta features'
-    /// Restart now), not for going back to Home — see `close_place`.
-    restart_after_close: bool,
+    /// Where the close prompt above leads once answered — see
+    /// `close_place`.
+    after_close: close_place::AfterClose,
     /// Held by the prompt while it is up, so Escape reaches the window's
     /// key handler rather than whatever panel had focus.
     close_focus: FocusHandle,
@@ -649,11 +662,15 @@ impl Shell {
         });
 
         let command_bar = CommandBar::new(window, cx);
-        let entered = cx.subscribe(command_bar.input(), |shell, _, event: &InputEvent, cx| {
-            if matches!(event, InputEvent::PressEnter { .. }) {
-                shell.run_typed_command(cx);
-            }
-        });
+        let entered = cx.subscribe_in(
+            command_bar.input(),
+            window,
+            |shell, _, event: &InputEvent, window, cx| {
+                if matches!(event, InputEvent::PressEnter { .. }) {
+                    shell.run_typed_command(window, cx);
+                }
+            },
+        );
 
         let initial_outline = outlined(&dom, &database, &Vec::from_iter(selected));
         let mut transform = Transform::default();
@@ -734,6 +751,7 @@ impl Shell {
             orthographic,
             axis_indicator,
             selection_occluded,
+            show_screen_gui: true,
             light_guides,
             light_guides_sent: Vec::new(),
             icon_pack,
@@ -762,6 +780,7 @@ impl Shell {
             controller_window: None,
             version_history: None,
             game_settings: None,
+            data_stores: None,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,
             typeahead: tree_keys::Typeahead::default(),
@@ -788,6 +807,7 @@ impl Shell {
             lsp: luau_lsp::Session::default(),
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
+            input_edits: input_panel::InputEdits::default(),
             style_scroll: ScrollHandle::new(),
             ui,
             anim: animation::Animation::new(cx).with_seams(anim_sheet_height, anim_names_width),
@@ -796,6 +816,7 @@ impl Shell {
             history: History::new(DEFAULT_CAP),
             database,
             command_bar,
+            command_run: command_run::CommandRun::default(),
             output: output::OutputLog::default(),
             output_filter: output::OutputFilter::default(),
             output_show_timestamps: output_timestamps,
@@ -809,7 +830,7 @@ impl Shell {
             output_search: cx.new(|cx| InputState::new(window, cx).placeholder("Search")),
             roblox: roblox_publish::RobloxPublish::new(cx),
             close_prompt: false,
-            restart_after_close: false,
+            after_close: Default::default(),
             close_focus: cx.focus_handle(),
             rig_dialog: None,
             rig_focus: cx.focus_handle(),
@@ -1054,6 +1075,7 @@ impl Shell {
         // selection blocks above, so the edit it may carry lands on whatever
         // `StyleRule` they selected.
         shell.apply_debug_style_editor(cx);
+        shell.apply_debug_input_actions(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.
@@ -1472,6 +1494,14 @@ impl Shell {
         cx.notify();
     }
 
+    /// View › Command Bar: shows or hides the strip under the docks.
+    pub(crate) fn toggle_command_bar(&mut self, cx: &mut Context<Self>) {
+        let hidden = self.layout.command_bar_hidden();
+        self.layout.set_command_bar_hidden(!hidden);
+        self.save_settings();
+        cx.notify();
+    }
+
     /// Docks one panel on one edge — from a drop, or from the dock menu's
     /// "Move to" entry.
     ///
@@ -1616,6 +1646,18 @@ impl Shell {
         self.viewport
             .update(cx, |viewport, cx| viewport.set_axis_indicator(shown, cx));
         self.save_settings();
+        cx.notify();
+    }
+
+    /// Shows or hides the `ScreenGui` overlay over the 3D view.
+    fn set_screen_gui_shown(&mut self, shown: bool, cx: &mut Context<Self>) {
+        if shown == self.show_screen_gui {
+            return;
+        }
+
+        self.show_screen_gui = shown;
+        self.viewport
+            .update(cx, |viewport, cx| viewport.set_screen_gui_shown(shown, cx));
         cx.notify();
     }
 
@@ -1940,10 +1982,24 @@ impl Render for Shell {
             .child(self.ribbon_tabs(cx))
             .child(self.ribbon(cx))
             .child(self.workspace(window, cx))
-            .child(
-                self.command_bar
-                    .render(self.tab_order.next(), self.output_collapsed, cx),
-            )
+            .children((!self.layout.command_bar_hidden()).then(|| {
+                div()
+                    // Captured so the input's own Up/Down (a no-op on one
+                    // line) never gets them: they walk the submitted commands.
+                    .capture_action(cx.listener(|shell, _: &MoveUp, window, cx| {
+                        shell.walk_command_history(true, window, cx);
+                        cx.stop_propagation();
+                    }))
+                    .capture_action(cx.listener(|shell, _: &MoveDown, window, cx| {
+                        shell.walk_command_history(false, window, cx);
+                        cx.stop_propagation();
+                    }))
+                    .child(self.command_bar.render(
+                        self.tab_order.next(),
+                        self.output_collapsed,
+                        cx,
+                    ))
+            }))
             // Painted at the window's root rather than inside the Explorer:
             // a popup nested in the tree's own scrolled, virtualised list
             // is clipped by it.

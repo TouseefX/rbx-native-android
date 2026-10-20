@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-20
+
+- **A Data Stores window.** File › Data Stores… (also on Home's ribbon
+  and in the palette) browses and edits the experience's data stores
+  through Open Cloud: stores, scopes and keys, each entry with its
+  metadata and version history, create, edit, increment, delete and
+  rollback; ordered data stores sorted by value; and the memory store's
+  sorted maps and queues. Every write is confirmed by name, live
+  experiences need an explicit tick, a stale edit shows the newer copy
+  instead of overwriting it, and a missing key permission names the scope
+  to add. — @chteau
+
+- **Delete buttons are centred again, and a wrong icon name can no longer
+  hide.** Several Delete buttons asked for a `trash-2` icon the kit's
+  catalogue doesn't have, which drew nothing but kept its space, pushing
+  the label off centre. They use `trash` now; a debug build asserts every
+  icon it draws exists, and a test checks every icon name written in the
+  editor's source. — @chteau
+
 ## 2026-10-19
 
 - **Creator Roadmap catch-up against the live API dump.** Checked the
@@ -12,6 +31,66 @@
   in Output instead of silently drawing as a block. The orthographic
   `Camera` properties, `UIBlur` and `ParticleEmitter2D` are in the dump
   but Studio does nothing with them yet, so they stay planned. — @chteau
+
+- **Two tests no longer collide when suites run side by side.** The
+  viewer's XML sniffing test and the graph probe's save test wrote a fixed
+  file in the system temp directory, so two concurrent runs could delete
+  each other's file mid-test; the names are now per process. — @chteau
+
+- **rbxmerge no longer pairs unrelated new instances.** Two parts added
+  independently on each side of a merge both carried the all-zero
+  `UniqueId` our binary writer gives script- and editor-created instances,
+  so the merge treated them as one and reported a spurious conflict. An
+  all-zero id now counts as no identity. — @chteau
+
+- **Input Actions bindings get Studio's default Deadzone, and corrupt
+  terrain is rejected cleanly.** A binding added from the dock now starts
+  at `0.1, 1` like Studio's, instead of an empty field that saved nothing;
+  a terrain blob with an out-of-range chunk key is refused as malformed
+  instead of panicking in debug builds. — @chteau
+
+- **File › New, File › Open…, recovered places, and no more lost work on
+  close.** New (Ctrl+N) makes a Baseplate place and Open… (Ctrl+O) picks a
+  place file, both behind the same unsaved-changes prompt as closing; the
+  document tab's + offers both. View › Command Bar now toggles the bar and
+  remembers it, Model › Insert Object… does what Ctrl+I does, and Home
+  lists autosaved copies no running editor holds, with Open and Discard.
+  Fixed on the way: the titlebar X and the window manager's close dropped
+  unsaved work without asking, one Ctrl+Z could undo two Properties edits
+  after a selection change mid-drag, Save As to `Place.RBXLX` wrote binary,
+  and autosave kept the old name after Save As. — @chteau
+
+- **Every ribbon tile does something or says why it can't.** Material,
+  Color, Lock and Anchor apply to the selection in one undo step (locked
+  parts are no longer picked in the viewport), Import opens the importer,
+  Show UI hides ScreenGuis in the viewport, the viewport Settings tile opens
+  its Settings page, and the Script tab's Find, Replace and Analysis tiles
+  work. Toolbox and Team Test stay disabled with the real reason — other
+  creators' assets and Team Create need Roblox's own servers. Beta Features'
+  Reset page works, and Argon's never-read Live Hydrate setting is gone.
+  Also fixed: a Properties dropdown didn't refresh when its value changed
+  from elsewhere, such as an undo. — @chteau
+
+- **The Command Bar runs real scripts.** It now yields: `task.wait`,
+  `spawn`, `delay` and friends resume on later frames with the editor still
+  usable, each resume capped at 10 s of CPU instead of hanging forever.
+  Attributes, `.Changed`, `GetPropertyChangedSignal`, Bindable events and
+  functions, the two-argument CollectionService calls, HttpService JSON,
+  `require(ModuleScript)` and `GetService` creating a missing service all
+  work, sharing one engine with the plugin host. Output printed before an
+  error is kept, errors name the script rather than a Rust file, Up/Down
+  walk the history, and a run is one undo step even across frames. Plugin
+  `Changed` now names the property by its API name, and late listeners no
+  longer receive changes made before they connected. — @chteau
+
+- **Input action manager.** A new Input Actions dock (View menu and Home
+  ribbon) lays out the place's `InputContext`s, `InputAction`s and
+  `InputBinding`s as a table with one column per device family, edits
+  every saved property through the undo history, follows the selection,
+  and has a Check mode that flags missing device coverage, duplicate
+  bindings and properties the action's type ignores. Built from the API
+  dump's classes and checked against a place saved by real Studio, since
+  the Input Action System has no visual editor of its own yet. — @chteau
 
 ## 2026-10-18
 
@@ -2392,7 +2471,6 @@
   mouse wheel over a `ScrollingFrame` in the viewport scrolls it, as Studio's
   edit view does, without entering the undo stack; the wheel anywhere else
   still moves the camera. — @chteau
-
 
 ## 2026-09-16
 
