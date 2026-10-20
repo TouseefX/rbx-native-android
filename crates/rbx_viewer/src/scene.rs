@@ -12,6 +12,7 @@ mod isolation;
 mod material;
 mod particles;
 mod patch;
+pub mod perf;
 mod props;
 mod resync;
 mod shape;
@@ -76,6 +77,7 @@ pub(crate) use trail::{segments as trail_segments, Recorder as TrailRecorder, Tr
 pub(crate) use union::fit as union_fit;
 // Read by the mesh export, which leaves such a union out too.
 pub(crate) use union::is_empty as union_is_empty;
+pub(crate) use union::triangles as union_triangles;
 pub(crate) use union::{unit_mesh, Evaluations as UnionEvaluations};
 
 use crate::assets::Image;

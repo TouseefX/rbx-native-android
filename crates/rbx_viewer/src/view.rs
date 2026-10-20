@@ -23,6 +23,7 @@
 use glam::Mat4;
 
 use crate::gizmo::Gizmo;
+use crate::perf::HeatBin;
 use crate::pick::Selected;
 use crate::renderer::{OverlayColors, Segment};
 
@@ -67,6 +68,9 @@ pub(crate) struct View {
     /// baked into their pipelines, so a rebuilt renderer must be told them
     /// again.
     pub(crate) overlay: OverlayColors,
+    /// The Performance view's heat bins (see `Headless::set_heat`), empty
+    /// while it is off.
+    pub(crate) heat: Vec<HeatBin>,
 }
 
 impl View {

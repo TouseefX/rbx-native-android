@@ -111,6 +111,19 @@ impl Renderer {
         );
     }
 
+    /// Tints every part in `bins` its bin's colour — the Performance view —
+    /// or no part at all with an empty list.
+    pub(crate) fn set_heat(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        bins: &[crate::scene::perf::HeatBin],
+        scene: &Scene,
+    ) {
+        self.cues
+            .set_heat(device, queue, &self.frame_layout, bins, Self::cue_source(scene));
+    }
+
     /// Replaces the ghost boxes a tool is previewing — see
     /// `renderer::preview`. An empty list clears them.
     pub(crate) fn set_preview(&mut self, device: &wgpu::Device, boxes: &[glam::Mat4]) {

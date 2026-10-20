@@ -95,6 +95,7 @@ impl Offscreen {
         offscreen.set_selection(&view.selected, world.scene);
         offscreen.set_selection_occluded(view.selection_occluded, world.scene);
         offscreen.set_overlay_colors(view.overlay, world.scene);
+        offscreen.set_heat(&view.heat, world.scene);
         offscreen.set_hover(view.hovered.clone(), world.scene);
         offscreen.set_preview(&view.preview);
         for (layer, segments) in view.lines.iter().enumerate() {
@@ -117,6 +118,7 @@ impl Offscreen {
         self.set_selection(&view.selected, world.scene);
         self.set_selection_occluded(view.selection_occluded, world.scene);
         self.set_overlay_colors(view.overlay, world.scene);
+        self.set_heat(&view.heat, world.scene);
         self.set_hover(view.hovered.clone(), world.scene);
         self.set_preview(&view.preview);
         for (layer, segments) in view.lines.iter().enumerate() {
@@ -187,6 +189,11 @@ impl Offscreen {
     pub(crate) fn set_overlay_colors(&mut self, colors: crate::OverlayColors, scene: &Scene) {
         self.renderer
             .set_overlay_colors(&self.device, &self.queue, colors, scene);
+    }
+
+    /// Tints parts by cost — see [`Renderer::set_heat`].
+    pub(crate) fn set_heat(&mut self, bins: &[crate::perf::HeatBin], scene: &Scene) {
+        self.renderer.set_heat(&self.device, &self.queue, bins, scene);
     }
 
     /// Replaces the ghost boxes a tool is previewing.

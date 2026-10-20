@@ -218,6 +218,32 @@ pub(crate) fn is_empty(dom: &WeakDom, database: &ReflectionDatabase, referent: R
     .any(filled)
 }
 
+/// How many triangles a union draws as: Studio's own `TriangleCount` where
+/// the file carries one, else the baked mesh it holds inline or behind its
+/// `AssetId` (read through `fetch`, which never downloads). `None` when none
+/// of the three is at hand — a tree-only union whose boolean has not been
+/// carved anywhere this can read.
+pub(crate) fn triangles(
+    properties: &std::collections::BTreeMap<String, Variant>,
+    fetch: &mut dyn FnMut(&AssetRef) -> Option<Vec<u8>>,
+) -> Option<u32> {
+    match properties.get("TriangleCount") {
+        Some(&Variant::Int32(count)) if count > 0 => return u32::try_from(count).ok(),
+        Some(&Variant::Int64(count)) if count > 0 => return u32::try_from(count).ok(),
+        _ => {}
+    }
+    let count = |baked: baked::Baked| u32::try_from(baked.mesh.triangle_count()).ok();
+    if let Some(baked) = baked::mesh_data(properties).and_then(|raw| baked::decode(raw).ok()) {
+        return count(baked);
+    }
+    let asset = properties
+        .get("AssetId")
+        .and_then(asset_uri)
+        .and_then(|uri| AssetRef::parse(uri).ok())
+        .filter(|asset| *asset != AssetRef::Empty)?;
+    count(baked::of_bytes(&fetch(&asset)?)?)
+}
+
 fn from_operation(
     dom: &WeakDom,
     database: &ReflectionDatabase,

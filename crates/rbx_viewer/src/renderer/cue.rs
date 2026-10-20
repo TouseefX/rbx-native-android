@@ -16,6 +16,12 @@
 //! everything beneath it, which `renderer::selection` and
 //! `renderer::hover` go on drawing: a model has no silhouette of its own to
 //! trace, and the box around it is what Studio calls its bounding box.
+//!
+//! The Performance view's heat tint is the third cue here, on a mask of its
+//! own: one fill-only highlight per colour of `scene::perf::RAMP`, drawn
+//! under the selection and hover so neither is lost in it. Its own mask
+//! because the cues are re-masked on every hover change, and the heat covers
+//! every part in the place.
 
 use rbx_dom::Ref;
 
@@ -24,6 +30,7 @@ use super::highlight::{Highlights, Source};
 use super::pipeline::{self, Surface, Target};
 use super::post::Targets;
 use crate::pick::Selected;
+use crate::scene::perf::HeatBin;
 use crate::scene::{DepthMode, Highlight, Part, PartId, Resolved};
 
 /// The colours of the editor's cues, as linear RGB plus straight alpha — what
@@ -132,6 +139,10 @@ pub(super) struct Cues {
     /// here as the `Highlight` depth mode that means the same thing.
     occluded: bool,
     colors: OverlayColors,
+    /// The Performance view's tint — see this module's doc comment. Empty,
+    /// and so free, while the view is off.
+    heat: Highlights,
+    heat_bins: Vec<Highlight>,
 }
 
 impl Cues {
@@ -145,7 +156,9 @@ impl Cues {
             super::skinning::Layout,
         ),
     > {
-        self.pass.skinning_targets()
+        self.pass
+            .skinning_targets()
+            .chain(self.heat.skinning_targets())
     }
 
     /// See [`Highlights::refresh_meshes`].
@@ -156,6 +169,7 @@ impl Cues {
         meshes: &[rbx_assets::AssetRef],
     ) {
         self.pass.refresh_meshes(queue, resolved, meshes);
+        self.heat.refresh_meshes(queue, resolved, meshes);
     }
 
     pub(super) fn new(
@@ -165,21 +179,18 @@ impl Cues {
         target: Target,
         scene: Source<'_>,
     ) -> Self {
+        let empty = || Source {
+            highlights: &[],
+            ..scene
+        };
         Cues {
-            pass: Highlights::new(
-                device,
-                queue,
-                frame,
-                target,
-                Source {
-                    highlights: &[],
-                    ..scene
-                },
-            ),
+            pass: Highlights::new(device, queue, frame, target, empty()),
             selection: Vec::new(),
             hover: Vec::new(),
             occluded: false,
             colors: OverlayColors::default(),
+            heat: Highlights::new(device, queue, frame, target, empty()),
+            heat_bins: Vec::new(),
         }
     }
 
@@ -197,7 +208,7 @@ impl Cues {
             return;
         }
         self.colors = colors;
-        self.rebuild(device, queue, frame, scene);
+        self.rebuild_cues(device, queue, frame, scene);
     }
 
     /// The parts of `selected` that have a silhouette of their own: a part
@@ -221,7 +232,7 @@ impl Cues {
         scene: Source<'_>,
     ) {
         self.selection = selection;
-        self.rebuild(device, queue, frame, scene);
+        self.rebuild_cues(device, queue, frame, scene);
     }
 
     pub(super) fn set_hover(
@@ -233,7 +244,7 @@ impl Cues {
         scene: Source<'_>,
     ) {
         self.hover = hover;
-        self.rebuild(device, queue, frame, scene);
+        self.rebuild_cues(device, queue, frame, scene);
     }
 
     pub(super) fn set_occluded(
@@ -248,13 +259,65 @@ impl Cues {
             return;
         }
         self.occluded = occluded;
-        self.rebuild(device, queue, frame, scene);
+        self.rebuild_cues(device, queue, frame, scene);
     }
 
-    /// Rebuilds both cues against a scene that has just been replaced — see
+    /// Paints the Performance view's heat bins over their parts, or nothing
+    /// with an empty list.
+    pub(super) fn set_heat(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        frame: &wgpu::BindGroupLayout,
+        bins: &[HeatBin],
+        scene: Source<'_>,
+    ) {
+        self.heat_bins = bins
+            .iter()
+            .map(|bin| Highlight {
+                parts: bin.parts.clone(),
+                fill: bin.color,
+                fill_alpha: bin.alpha,
+                outline: bin.color,
+                outline_alpha: 0.0,
+                depth_mode: DepthMode::Occluded,
+                referent: NO_INSTANCE,
+            })
+            .collect();
+        self.heat.replace(
+            device,
+            queue,
+            frame,
+            Source {
+                highlights: &self.heat_bins,
+                ..scene
+            },
+        );
+    }
+
+    /// Rebuilds every cue against a scene that has just been replaced — see
     /// `renderer::rebuild`, where the parts they cover are new objects even
     /// where they are the same instances.
     pub(super) fn rebuild(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        frame: &wgpu::BindGroupLayout,
+        scene: Source<'_>,
+    ) {
+        self.heat.replace(
+            device,
+            queue,
+            frame,
+            Source {
+                highlights: &self.heat_bins,
+                ..scene
+            },
+        );
+        self.rebuild_cues(device, queue, frame, scene);
+    }
+
+    fn rebuild_cues(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -279,14 +342,17 @@ impl Cues {
 
     pub(super) fn sync_part(&mut self, device: &wgpu::Device, part: &Part) {
         self.pass.sync_part(device, part);
+        self.heat.sync_part(device, part);
     }
 
     pub(super) fn remove_part(&mut self, id: PartId) {
         self.pass.remove_part(id);
+        self.heat.remove_part(id);
     }
 
     pub(super) fn flush(&mut self, queue: &wgpu::Queue) {
         self.pass.flush(queue);
+        self.heat.flush(queue);
     }
 
     pub(super) fn sync_mesh(
@@ -296,10 +362,12 @@ impl Cues {
         instance: &crate::scene::ResolvedInstance,
     ) -> bool {
         self.pass.sync_mesh(device, resolved, instance)
+            && self.heat.sync_mesh(device, resolved, instance)
     }
 
     pub(super) fn remove_mesh(&mut self, referent: Ref) {
         self.pass.remove_mesh(referent);
+        self.heat.remove_mesh(referent);
     }
 
     pub(super) fn set_target(
@@ -309,6 +377,7 @@ impl Cues {
         frame: &wgpu::BindGroupLayout,
     ) {
         self.pass.set_target(device, target, frame);
+        self.heat.set_target(device, target, frame);
     }
 
     pub(super) fn draw(
@@ -320,6 +389,8 @@ impl Cues {
         meshes: &Meshes,
         size: (u32, u32),
     ) {
+        self.heat
+            .draw(device, encoder, targets, frame, meshes, size);
         self.pass
             .draw(device, encoder, targets, frame, meshes, size);
     }
