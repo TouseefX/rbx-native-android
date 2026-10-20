@@ -148,6 +148,50 @@ impl HomeWindow {
         }
     }
 
+    pub(super) fn new_loren_project(&mut self, cx: &mut Context<Self>) {
+        let picked = cx.prompt_for_paths(PathPromptOptions {
+            files: false,
+            directories: true,
+            multiple: false,
+            prompt: Some("Create Loren project here".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let picked = match picked.await {
+                Ok(picked) => picked,
+                Err(_) => return,
+            };
+            let _ = this.update(cx, |this, cx| match picked {
+                Ok(Some(paths)) => {
+                    if let Some(folder) = paths.into_iter().next() {
+                        match create_loren_project(&folder) {
+                            Ok(place) => this.open_path_later(place, cx),
+                            Err(reason) => {
+                                this.dialog = Some(Dialog::Error {
+                                    experience: None,
+                                    title: "Couldn\u{2019}t create the Loren project".to_string(),
+                                    status: None,
+                                    reason,
+                                });
+                                cx.notify();
+                            }
+                        }
+                    }
+                }
+                Ok(None) => {}
+                Err(err) => {
+                    this.dialog = Some(Dialog::Error {
+                        experience: None,
+                        title: "Couldn\u{2019}t open the file picker".to_string(),
+                        status: None,
+                        reason: format!("{err:#}"),
+                    });
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+    }
+
     pub(super) fn open_file(&mut self, cx: &mut Context<Self>) {
         let picked = cx.prompt_for_paths(PathPromptOptions {
             files: true,
@@ -253,6 +297,51 @@ impl HomeWindow {
         crate::launcher::open_wizard(self.boot.clone(), cx);
         window.remove_window();
     }
+}
+
+/// The picked folder itself when empty, else the first free `LorenGame`,
+/// `LorenGame2`, ... inside it.
+fn loren_target(picked: &Path) -> PathBuf {
+    let empty = std::fs::read_dir(picked).is_ok_and(|mut entries| entries.next().is_none());
+    if empty {
+        return picked.to_path_buf();
+    }
+    let mut target = picked.join("LorenGame");
+    let mut n = 2;
+    while target.exists() {
+        target = picked.join(format!("LorenGame{n}"));
+        n += 1;
+    }
+    target
+}
+
+/// Scaffolds a Loren project under `picked` and returns its place file.
+fn create_loren_project(picked: &Path) -> Result<PathBuf, String> {
+    let target = loren_target(picked);
+    let folder_name = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    let name = if rbx_loren::names::validate_project_name(folder_name).is_ok() {
+        folder_name.to_string()
+    } else {
+        "LorenGame".to_string()
+    };
+    let template = rbx_loren::template::template_dir()?;
+    // Argon: rbx-native's live sync is its Argon client.
+    rbx_loren::commands::init::write_scaffold(
+        &template,
+        &target,
+        &name,
+        rbx_loren::ctx::Tool::Argon,
+    )?;
+    rbx_loren::types::generate_types(&target, &Default::default())
+        .map_err(|err| err.to_string())?;
+    let mut dom = Template::Baseplate.dom();
+    rbx_loren::place::apply_project(&mut dom, &target)?;
+    let place = target.join(format!("{name}.rbxl"));
+    crate::save::save(&dom, crate::save::Format::Binary, &place)?;
+    Ok(place)
 }
 
 /// The DownloadError line after the status.

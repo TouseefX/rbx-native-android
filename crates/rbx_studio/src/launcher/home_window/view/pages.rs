@@ -329,6 +329,22 @@ impl HomeWindow {
                     }),
             )
             .child(
+                tile("new-loren-project".into(), false)
+                    .child(
+                        h_flex()
+                            .size(px(52.))
+                            .flex_none()
+                            .rounded(px(6.))
+                            .bg(ui::bg())
+                            .items_center()
+                            .justify_center()
+                            .text_color(ui::accent())
+                            .child(ui::icon("flame", 20.)),
+                    )
+                    .child(label("Loren project", "Services & Controllers, by fabi"))
+                    .on_click(cx.listener(|this, _, _, cx| this.new_loren_project(cx))),
+            )
+            .child(
                 tile("new-open-file".into(), true)
                     .child(
                         h_flex()
