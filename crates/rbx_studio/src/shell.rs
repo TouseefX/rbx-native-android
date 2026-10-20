@@ -49,6 +49,7 @@ mod play;
 mod plugins;
 mod property_element;
 mod quality;
+mod query_select;
 mod recovery;
 mod ref_pick;
 mod reparent;
@@ -275,6 +276,9 @@ pub(crate) struct Shell {
     /// What the Explorer's search field holds, trimmed; see
     /// `explorer::search`.
     explorer_query: String,
+    /// The search field's query mode and what its query last matched; see
+    /// `shell::query_select`.
+    query: query_select::QuerySearch,
     filter: Entity<InputState>,
     properties: Properties,
     /// One open `Input` per Properties row currently being edited, keyed by
@@ -640,12 +644,17 @@ impl Shell {
         });
 
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
-        let searched = cx.subscribe(&search, |shell, input, event: &InputEvent, cx| {
-            if matches!(event, InputEvent::Change) {
-                let query = input.read(cx).value().trim().to_owned();
-                shell.search_explorer(query, cx);
-            }
-        });
+        let searched = cx.subscribe(
+            &search,
+            |shell, input, event: &InputEvent, cx| match event {
+                InputEvent::Change => {
+                    let query = input.read(cx).value().trim().to_owned();
+                    shell.search_explorer(query, cx);
+                }
+                InputEvent::PressEnter { .. } => shell.select_query_matches(cx),
+                _ => {}
+            },
+        );
 
         let wally_query = cx.new(|cx| InputState::new(window, cx).placeholder("Search Wally"));
         let wally_query_changed = cx.subscribe(&wally_query, |shell, _, event: &InputEvent, cx| {
@@ -789,6 +798,7 @@ impl Shell {
             expand_on_select,
             search,
             explorer_query: String::new(),
+            query: query_select::QuerySearch::default(),
             filter,
             properties,
             edits: edit::Edits::default(),
@@ -1373,6 +1383,7 @@ impl Shell {
     /// Pushes the root rows the visibility settings and the search now call
     /// for into the tree.
     fn push_root_rows(&mut self, cx: &mut Context<Self>) {
+        self.refresh_query();
         let items = self.explorer_items();
         // Replacing the rows drops the tree's selection; putting it back in the
         // same update keeps the observer from ever seeing the gap. A selected

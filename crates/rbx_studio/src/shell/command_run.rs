@@ -38,7 +38,17 @@ impl Shell {
     /// it did not compile, so the user can fix it.
     pub(super) fn run_typed_command(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let source = self.command_bar.input().read(cx).value().to_string();
-        if self.run_command(&source, cx) {
+        let ran = match source
+            .trim_start()
+            .strip_prefix(super::query_select::SELECT_COMMAND)
+        {
+            Some(query) => {
+                self.run_select_command(&source, query, cx);
+                true
+            }
+            None => self.run_command(&source, cx),
+        };
+        if ran {
             self.command_bar
                 .input()
                 .update(cx, |input, cx| input.set_value("", window, cx));

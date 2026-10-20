@@ -2,6 +2,17 @@
 
 ## 2026-10-20
 
+- **Select by query.** The Explorer's search field has a query mode (the
+  `</>` toggle beside it): `Part where Material = Plastic and Anchored =
+  false`, `BasePart where Size.Y < 1`, `* where Name ~ "Door" under
+  Workspace.Map`, `has tag Lava`, `attr Health > 50`. Classes match their
+  subclasses, components (`Size.Y`, `Color.R`) and enum names work, the
+  tree narrows to the matches with a count under the field, and Enter
+  selects them all — the viewport outlines them and one Properties edit
+  changes every one as a single undo step. A query that doesn't parse says
+  what and where. The Command Bar takes `:select <query>` too. Studio's own
+  Explorer only searches names. — @chteau
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its
