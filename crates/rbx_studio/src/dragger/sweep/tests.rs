@@ -77,7 +77,7 @@ fn a_part_ahead_offers_its_near_and_far_faces_to_each_offset() {
 #[test]
 fn a_part_the_slab_starts_inside_offers_only_its_far_faces() {
     // The baseplate under the crate: the slab reaches a tenth of a stud into
-    // it, so no cast ever enters it — only the passes coming back meet its
+    // it, so no cast ever enters it, only the passes coming back meet its
     // edges.
     let ground = part(Vec3::new(0.0, -1.0, 0.0), Vec3::new(512.0, 1.0, 512.0));
     let snaps = search(&[ground]);

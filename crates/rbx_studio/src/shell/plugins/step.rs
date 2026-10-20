@@ -7,7 +7,7 @@
 //! press in the 3D view, by `ChangeHistoryService:SetWaypoint`, and by any
 //! other history push, undo or redo. So a button click is one step, a press
 //! through its release is one step, and edits from timers, `Heartbeat` or
-//! change handlers are one step up to the next waypoint or user action —
+//! change handlers are one step up to the next waypoint or user action,
 //! roughly what Studio's waypoints give.
 
 use rbx_dom::{Change, WeakDom};

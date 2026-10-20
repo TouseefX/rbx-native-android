@@ -58,7 +58,7 @@ fn an_unchanged_pose_is_not_resent_even_when_due() {
     assert_eq!(due_pose(Some(1), Some(1), true), None);
 }
 
-// A moved pose still waits for `POSE_SYNC_INTERVAL` — this is what keeps the
+// A moved pose still waits for `POSE_SYNC_INTERVAL`: this is what keeps the
 // DOM write to a few times a second instead of once a rendered frame.
 #[test]
 fn a_moved_pose_is_held_back_until_the_interval_is_due() {
@@ -71,7 +71,7 @@ fn a_moved_pose_reports_once_due() {
 }
 
 // The very first pose, before anything has ever been sent, is due immediately
-// — see `run`'s `pose_due` initialization: a place opened at its own saved
+// see `run`'s `pose_due` initialization: a place opened at its own saved
 // `Camera` still reports that pose once, with zero input.
 #[test]
 fn the_first_pose_is_reported_with_nothing_sent_before_it() {

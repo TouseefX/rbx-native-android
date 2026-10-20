@@ -16,7 +16,7 @@ fn decodes_the_real_default_sky_panel() {
     let image = decode(&bytes).unwrap();
 
     // Despite the "512" in its file name, Studio's own default sky panel is a
-    // 1024x1024 top mip — that number names which mip Studio's UI shows, not
+    // 1024x1024 top mip, that number names which mip Studio's UI shows, not
     // this file's actual top-level resolution.
     assert_eq!(image.dimensions(), (1024, 1024));
 

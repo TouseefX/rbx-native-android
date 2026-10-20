@@ -22,8 +22,8 @@ const ENV_DIFFUSE_WEIGHT: f32 = 1.0;
 
 /// PCF kernel radius, in shadow-map texels, at `ShadowSoftness = 1`.
 ///
-/// Studio's default 0.2 has to land on a penumbra of a couple of texels — the
-/// reference capture's cubes have an edge roughly a stud wide — which is where
+/// Studio's default 0.2 has to land on a penumbra of a couple of texels, the
+/// reference capture's cubes have an edge roughly a stud wide, which is where
 /// a fifth of this comes out right; 0 is then a single tap, i.e. the hard edge
 /// Roblox gives it, and 1 a penumbra several studs across.
 const SOFTNESS_TEXELS: f32 = 8.0;
@@ -66,7 +66,7 @@ pub(super) struct LightingRaw {
     /// the only thing that tells an unlit scene apart from a lit one.
     locals: [f32; 4],
     /// The quality knobs the shading itself reads. x: render distance in
-    /// studs, 0 meaning unlimited — an infinity would poison every arithmetic it
+    /// studs, 0 meaning unlimited, an infinity would poison every arithmetic it
     /// touched, so it is flattened to the one value no fade can start at.
     /// y: 1 where the environment terms sample the probe, 0 where they fall back
     /// to one flat sky colour. z: 1 where terrain water ripples, w: 1 where it
@@ -74,7 +74,7 @@ pub(super) struct LightingRaw {
     quality: [f32; 4],
     /// `Clouds.Color`, linear like everything else here; w is unused.
     clouds_color: [f32; 4],
-    /// x: `Clouds.Cover`, 0 drawing nothing — which is also what no enabled
+    /// x: `Clouds.Cover`, 0 drawing nothing, which is also what no enabled
     /// `Clouds` instance collapses to (see `crate::lighting::clouds`).
     /// y: `Clouds.Density`.
     clouds_extra: [f32; 4],
@@ -183,7 +183,7 @@ fn vec4(value: Vec3, w: f32) -> [f32; 4] {
 }
 
 /// No enabled `Clouds` layer packs to `Cover = 0`, which the sky shader already
-/// has to treat as "draw nothing" for the property itself — so there is no
+/// has to treat as "draw nothing" for the property itself, so there is no
 /// separate presence marker here, unlike `fog_color.w` above.
 fn clouds(clouds: Option<Clouds>) -> (Vec3, [f32; 4]) {
     let Some(clouds) = clouds else {

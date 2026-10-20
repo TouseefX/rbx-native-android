@@ -2,7 +2,7 @@
 //!
 //! A `SurfaceGui`'s are fixed and were resolved when the place was read; a
 //! `BillboardGui`'s only exist once there is an eye to turn towards, so they
-//! are rebuilt every frame here — the same split `renderer::beam::ribbon`
+//! are rebuilt every frame here, the same split `renderer::beam::ribbon`
 //! makes for `FaceCamera`.
 
 use glam::Vec3;
@@ -60,8 +60,8 @@ pub(super) fn corners(anchor: &GuiAnchor, eye: Vec3) -> [Vec3; 4] {
 ///
 /// Built off world up rather than off the view matrix, which is the same thing
 /// here: this viewer's camera never rolls (see `camera::look_at_mat4`), so its
-/// own right axis is exactly `Y × forward`. The degenerate cases — the eye
-/// inside the billboard, or straight above it — fall back to fixed axes rather
+/// own right axis is exactly `Y × forward`. The degenerate cases, the eye
+/// inside the billboard, or straight above it, fall back to fixed axes rather
 /// than collapsing the quad to nothing.
 fn basis(origin: Vec3, eye: Vec3) -> (Vec3, Vec3, Vec3) {
     let forward = non_zero((eye - origin).normalize_or_zero(), Vec3::Z);

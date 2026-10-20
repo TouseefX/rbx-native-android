@@ -1,7 +1,7 @@
 //! Skinned meshes deformed on the GPU: a compute pass that blends each rig's
 //! rest vertices through its bone matrices straight into every vertex buffer
-//! drawing it — the main mesh pass, the shadow casters, and the highlight and
-//! selection masks — so all of them follow the same pose.
+//! drawing it, the main mesh pass, the shadow casters, and the highlight and
+//! selection masks, so all of them follow the same pose.
 //!
 //! The rest vertices and the influences are uploaded once per rig; a pose
 //! change writes only the bone matrices (two `mat4` per bone). A buffer is

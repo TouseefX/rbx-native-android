@@ -11,14 +11,14 @@ use super::Trails;
 use crate::scene::{Trail, TrailRecorder};
 
 impl Trails {
-    /// Replaces the trail set with `trails` — the scene's freshly re-planned
-    /// list (see `Scene::replan_effect`) — keeping the recorder (the drawn
+    /// Replaces the trail set with `trails`: the scene's freshly re-planned
+    /// list (see `Scene::replan_effect`), keeping the recorder (the drawn
     /// history) of every trail still present, so an edit never wipes the
     /// ribbon it has already laid down; a trail that just appeared starts
     /// with an empty history, exactly as at load.
     ///
     /// A trail whose texture this pass has no upload for draws on the flat
-    /// white slot — the solid plane Roblox itself falls back to — for the same
+    /// white slot, the solid plane Roblox itself falls back to, for the same
     /// reasons as `renderer::beam::Beams::replace`.
     pub(in crate::renderer) fn replace(&mut self, trails: &[Trail]) {
         if !self.enabled {

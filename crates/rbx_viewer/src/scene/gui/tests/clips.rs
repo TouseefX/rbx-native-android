@@ -57,9 +57,9 @@ fn clips_descendants_scissors_children_to_the_frame_and_compounds() {
 
 #[test]
 fn a_non_zero_rotation_makes_the_elements_own_clips_descendants_a_no_op() {
-    // Roblox's own docs for `ClipsDescendants` are explicit that — without
+    // Roblox's own docs for `ClipsDescendants` are explicit that, without
     // `StarterGui.ClipsDescendantsSupportsRotation` enabled, which isn't
-    // scriptable and so isn't modelled here — it is ignored wherever this
+    // scriptable and so isn't modelled here, it is ignored wherever this
     // element or an ancestor has a non-zero `Rotation`, since a scissor rect
     // can't follow a rotated box.
     let (mut dom, gui) = screen_gui();
@@ -123,7 +123,7 @@ fn a_rotated_ancestor_also_disables_a_non_rotated_descendants_clips_descendants(
 #[test]
 fn an_unrotated_clip_still_bounds_a_rotated_descendant() {
     // The incompatibility is about the object that owns `ClipsDescendants`,
-    // not about whatever it clips — an unrotated clipping ancestor still
+    // not about whatever it clips, an unrotated clipping ancestor still
     // scissors a rotated child.
     let (mut dom, gui) = screen_gui();
     let clipper = frame(

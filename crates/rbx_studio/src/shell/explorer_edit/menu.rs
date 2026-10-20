@@ -6,7 +6,7 @@
 //! Duplicate, and also options specific to Models like Ungroup. In contrast,
 //! right-clicking a service like `Lighting` reveals a more concise menu."
 //!
-//! Contextual here means *greyed*, not absent — §6's "disabled beats
+//! Contextual here means *greyed*, not absent, §6's "disabled beats
 //! absent": a service's menu still shows Cut and Group so the shape of what
 //! an instance can do stays the same wherever you right-click, and each row
 //! is enabled by exactly the predicate its own handler returns early on
@@ -43,7 +43,7 @@ use crate::change_class;
 
 /// Which of the menu's rows are live. Every field is the guard the row's own
 /// handler returns early on, so a row can never be clickable and do nothing
-/// — and the whole set is decidable without a window, which is what makes
+/// and the whole set is decidable without a window, which is what makes
 /// the contextual half of this menu testable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Availability {
@@ -117,7 +117,7 @@ pub(in crate::shell) fn opens_row_menu(keystroke: &Keystroke) -> bool {
 
 impl Shell {
     /// A right-click on an Explorer row. Selects the row first unless it is
-    /// already part of the selection — right-clicking one of three selected
+    /// already part of the selection, right-clicking one of three selected
     /// parts has to keep all three, or Copy would silently copy one.
     pub(in crate::shell) fn open_row_menu(
         &mut self,
@@ -399,7 +399,7 @@ impl Shell {
 type RowAction = std::rc::Rc<dyn Fn(&mut Shell, &mut Window, &mut Context<Shell>)>;
 
 /// One row of the menu, before it has a `Context` to bind its handler
-/// through — the array above has to be built as data first so every row can
+/// through, the array above has to be built as data first so every row can
 /// be laid out in one `map`.
 struct Row {
     id: &'static str,

@@ -205,7 +205,7 @@ impl<'a> Paused<'a> {
     }
 
     /// Upvalues then locals, so a local shadows an upvalue of the same name
-    /// and, among locals, the innermost block's wins — the order `lua_getlocal`
+    /// and, among locals, the innermost block's wins, the order `lua_getlocal`
     /// numbers them in.
     fn scope(&self, frame: usize) -> Vec<(String, Value)> {
         let Some(&(frame_level, _)) = self.luau_frames().get(frame) else {

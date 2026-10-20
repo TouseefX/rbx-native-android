@@ -27,7 +27,7 @@ const TONEMAPPER_PRESET_RETRO: u32 = 1;
 const DEFAULT_BLOOM_INTENSITY: f32 = 0.4;
 const DEFAULT_BLOOM_SIZE: f32 = 24.0;
 const DEFAULT_BLOOM_THRESHOLD: f32 = 0.95;
-/// `BlurEffect.Size`, Roblox's own default — the same unit (pixels at 1080p)
+/// `BlurEffect.Size`, Roblox's own default, the same unit (pixels at 1080p)
 /// as `BloomEffect.Size`, which is why both share `renderer::post::bloom`'s
 /// resolution-aware radius function.
 const DEFAULT_BLUR_SIZE: f32 = 24.0;
@@ -42,7 +42,7 @@ const DEFAULT_SUN_RAYS_INTENSITY: f32 = 0.0;
 const DEFAULT_SUN_RAYS_SPREAD: f32 = 0.0;
 // `DepthOfFieldEffect` defaults are verified against real Studio places:
 // multiple examples with untouched effects all serialize exactly these four
-// numbers — and all disabled, which matches Studio's own default.
+// numbers, and all disabled, which matches Studio's own default.
 const DEFAULT_FOCUS_DISTANCE: f32 = 0.05;
 const DEFAULT_IN_FOCUS_RADIUS: f32 = 30.0;
 const DEFAULT_NEAR_INTENSITY: f32 = 0.75;
@@ -51,7 +51,7 @@ const DEFAULT_FAR_INTENSITY: f32 = 0.1;
 /// How far past the sharp zone's own edge the blur ramps in over, as a multiple
 /// of `InFocusRadius`.
 ///
-/// Roblox publishes no falloff whatsoever — only the four properties — so this
+/// Roblox publishes no falloff whatsoever, only the four properties, so this
 /// is a choice, and the choice is to reuse the one length the effect already
 /// carries rather than to invent a constant in studs: a place that widens its
 /// sharp zone widens the gradient either side of it in the same proportion,
@@ -86,10 +86,10 @@ pub(crate) struct Bloom {
 }
 
 /// `BlurEffect`: a full-frame blur that replaces the sharp image outright,
-/// which is what Roblox itself does — there is no partial-strength mix.
+/// which is what Roblox itself does, there is no partial-strength mix.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Blur {
-    /// Radius in pixels, quoted at 1080p — same convention as [`Bloom::size`],
+    /// Radius in pixels, quoted at 1080p, same convention as [`Bloom::size`],
     /// and scaled by the same function in `renderer::post::bloom`.
     pub(crate) size: f32,
 }
@@ -107,22 +107,22 @@ pub(crate) struct ColorCorrection {
 }
 
 /// `SunRaysEffect`: an occlusion-masked radial blur toward the sun's projected
-/// screen position, which is what actually casts the rays — see
+/// screen position, which is what actually casts the rays, see
 /// `renderer::sun::sun_screen_position` for where that projection comes from
 /// and `renderer::post`'s resolve shader for the taps themselves.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct SunRays {
     pub(crate) intensity: f32,
     /// How far the taps reach along the pixel-to-sun line, as a fraction of
-    /// that line's own length — see the resolve shader for the exact mapping.
+    /// that line's own length, see the resolve shader for the exact mapping.
     pub(crate) spread: f32,
 }
 
 /// `ColorGradingEffect.TonemapperPreset`: how the final HDR colour is folded
 /// into the displayable range.
 ///
-/// Roblox publishes no formula for either curve — only that `Retro` "emulates
-/// the pre-2019 Roblox lighting system" — so both are principled
+/// Roblox publishes no formula for either curve, only that `Retro` "emulates
+/// the pre-2019 Roblox lighting system", so both are principled
 /// approximations, not a reproduction. `Default` is exactly this renderer's
 /// existing tonemap (a plain clamp; see `renderer::post`'s resolve shader), so
 /// a place with no `ColorGradingEffect`, or one that resolves to `Default`,
@@ -144,11 +144,11 @@ pub(crate) enum Tonemap {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct DepthOfField {
     /// Centre of the sharp zone, in studs down the view axis. Studio's own
-    /// default is a degenerate 0.05 — closer than the near plane — which is
+    /// default is a degenerate 0.05, closer than the near plane, which is
     /// taken literally: a place that means something else says so.
     pub(crate) focus_distance: f32,
     /// Distance in studs the sharp zone extends on EACH side of
-    /// [`DepthOfField::focus_distance`] — despite the name, this is not a
+    /// [`DepthOfField::focus_distance`], despite the name, this is not a
     /// diameter: Roblox's own docs for `InFocusRadius` are explicit that it is
     /// "the distance away from FocusDistance (on both sides)", so the sharp
     /// zone is `2 * in_focus_radius` wide, not `in_focus_radius` wide.
@@ -171,15 +171,15 @@ pub(crate) struct Effects {
     /// them is disabled.
     pub(crate) color_correction: Option<ColorCorrection>,
     /// `ColorGradingEffect::default()` (i.e. [`Tonemap::Default`]) where the
-    /// place has none, or every one of them is disabled or absent — which
+    /// place has none, or every one of them is disabled or absent, which
     /// carries no behavioural change on its own.
     pub(crate) tonemap: Tonemap,
     /// `None` where the place has no `SunRaysEffect`, or every one of them is
     /// disabled. This alone does not decide whether the rays actually draw
-    /// this frame — see [`SunRays`]'s own doc comment.
+    /// this frame, see [`SunRays`]'s own doc comment.
     pub(crate) sun_rays: Option<SunRays>,
     /// `None` where the place has no `DepthOfFieldEffect`, or every one of them
-    /// is disabled — Studio ships the effect turned off by default.
+    /// is disabled, Studio ships the effect turned off by default.
     pub(crate) depth_of_field: Option<DepthOfField>,
 }
 
@@ -218,7 +218,7 @@ impl DepthOfField {
 
 /// The grade in Rust, which is the only form of it a test can call: the frame
 /// itself is graded by `post.wgsl`'s `fs_resolve`, and the two are the same
-/// arithmetic written twice on purpose — a shader cannot be unit-tested, and an
+/// arithmetic written twice on purpose, a shader cannot be unit-tested, and an
 /// order of operations that drifts between them is invisible until a place
 /// looks wrong.
 #[cfg(test)]
@@ -231,7 +231,7 @@ impl ColorCorrection {
     /// never state a combination order, so this chain is this renderer's own
     /// choice, not a verified one; each property's formula, on the other hand,
     /// is: Brightness -1/1 map to fully black/white, Contrast pivots on grey,
-    /// Saturation -1 is full desaturation and >1 keeps intensifying — all
+    /// Saturation -1 is full desaturation and >1 keeps intensifying, all
     /// matched exactly to create.roblox.com/docs, ColorCorrectionEffect.
     fn apply(&self, color: Vec3) -> Vec3 {
         let tinted = color * self.tint + Vec3::splat(self.brightness);
@@ -246,7 +246,7 @@ impl ColorCorrection {
 ///
 /// Only the first *enabled* effect of each class counts: Roblox composites them
 /// all, but a place that carries two of a kind almost always has one turned off
-/// as a spare. `BlurEffect` is the one exception — see [`strongest_blur`] for
+/// as a spare. `BlurEffect` is the one exception, see [`strongest_blur`] for
 /// the tie-break Roblox documents for it specifically.
 pub(super) fn read(dom: &WeakDom, database: &ReflectionDatabase, lighting: Ref) -> Effects {
     Effects {
@@ -257,7 +257,7 @@ pub(super) fn read(dom: &WeakDom, database: &ReflectionDatabase, lighting: Ref) 
         .unwrap_or_default(),
         // Unlike every other effect here, Roblox documents BlurEffect's
         // multi-instance rule explicitly: "Only one BlurEffect can be applied
-        // at once (the instance with the greatest Size takes priority)" —
+        // at once (the instance with the greatest Size takes priority)",
         // create.roblox.com/docs, BlurEffect.Size. Not "first enabled".
         blur: strongest_blur(dom, database, lighting).map(blur),
         color_correction: enabled(dom, lighting, |instance| {
@@ -266,7 +266,7 @@ pub(super) fn read(dom: &WeakDom, database: &ReflectionDatabase, lighting: Ref) 
         .map(color_correction),
         // `ColorGradingEffect` is missing from this renderer's embedded API dump
         // (see `assets/API-Dump.json`) even though Roblox documents it, so
-        // `is_subclass_of` can never confirm it — an exact name match is the
+        // `is_subclass_of` can never confirm it, an exact name match is the
         // only test available, which is fine since nothing subclasses it.
         tonemap: enabled(dom, lighting, |instance| {
             instance.class() == COLOR_GRADING_CLASS
@@ -304,7 +304,7 @@ fn enabled(
 }
 
 /// The properties of the *enabled* `BlurEffect` child with the greatest
-/// effective `Size` — Roblox's own tie-break for having more than one, unlike
+/// effective `Size`: Roblox's own tie-break for having more than one, unlike
 /// every other effect [`enabled`] serves. Sizes are compared after the same
 /// missing-property/negative-value handling [`blur`] applies, so a `BlurEffect`
 /// that never touched `Size` competes at Roblox's own default rather than at 0.
@@ -350,7 +350,7 @@ fn blur(properties: &std::collections::BTreeMap<String, Variant>) -> Blur {
 }
 
 /// A negative `Size` is not physically meaningful, so it floors at 0 the same
-/// way [`bloom`]'s does — shared by [`blur`] and [`strongest_blur`], which both
+/// way [`bloom`]'s does, shared by [`blur`] and [`strongest_blur`], which both
 /// need the exact same number: the second must compare the sizes it will
 /// ultimately hand to the first.
 fn blur_size(properties: &std::collections::BTreeMap<String, Variant>) -> f32 {
@@ -368,8 +368,8 @@ fn color_correction(properties: &std::collections::BTreeMap<String, Variant>) ->
     }
 }
 
-/// Any value but `Retro` — including no `TonemapperPreset` at all, which is
-/// what a place that never touched it serializes — defaults to `Default`.
+/// Any value but `Retro`: including no `TonemapperPreset` at all, which is
+/// what a place that never touched it serializes, defaults to `Default`.
 fn tonemap(properties: &std::collections::BTreeMap<String, Variant>) -> Tonemap {
     match properties.get("TonemapperPreset") {
         Some(&Variant::Enum(TONEMAPPER_PRESET_RETRO)) => Tonemap::Retro,

@@ -1,7 +1,7 @@
 //! Ground truth for the skybox assembly: which panel border meets which.
 //!
 //! The table here is what [`super::SkyFace::basis`] is derived from, and the
-//! tests check the bases against it — one on synthetic panels (no GPU, no
+//! tests check the bases against it, one on synthetic panels (no GPU, no
 //! network), one on the real images the table was measured from (ignored).
 
 mod real_capture;
@@ -28,7 +28,7 @@ pub(super) const EDGES: [Edge; 4] = [Edge::Top, Edge::Bottom, Edge::Left, Edge::
 /// `reversed` means the two borders run in opposite directions, so one has to be
 /// walked backwards for its pixels to line up with the other's.
 ///
-/// Measured off the six images of a real sky capture — see
+/// Measured off the six images of a real sky capture, see
 /// [`real_capture::the_real_capture_borders_agree_only_as_this_table_says`], which re-derives
 /// every row from the pixels.
 pub(super) const ADJACENT_BORDERS: [(SkyFace, Edge, SkyFace, Edge, bool); 12] = [
@@ -87,7 +87,7 @@ fn direction(quad: &Quad, [x, y]: [f32; 2]) -> Vec3 {
 ///
 /// Built from [`ADJACENT_BORDERS`] alone, never from a basis: the numbering is
 /// the claim, and lining the numbers back up through the quads is the check.
-/// Corner texels are left at zero — they belong to three panels at once, so no
+/// Corner texels are left at zero, they belong to three panels at once, so no
 /// single edge number fits them.
 fn numbered_panels() -> Vec<[u8; PANEL * PANEL]> {
     let mut panels = vec![[0u8; PANEL * PANEL]; SKY_FACES.len()];

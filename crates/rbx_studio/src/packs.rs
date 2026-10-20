@@ -17,15 +17,15 @@
 //! still a Lucide glyph (`explorer::resolve_icon`), so a pack of three icons
 //! is a valid pack. A file is named by the class it stands for
 //! (`Part.svg`) or by the kit's own tile slug (`humanoid-description.svg`),
-//! the latter reaching every class that shares a tile — see
+//! the latter reaching every class that shares a tile, see
 //! `class_icons::CLASS_ICON_SLUGS`.
 //!
 //! A theme can carry an icon pack of its own; a pack chosen here is layered
 //! over it (see [`layered`]).
 //!
 //! Everything here reads files a stranger may have written, so it refuses what
-//! it cannot use — an over-large or non-SVG file, a path that is not a plain
-//! name — and never fails the editor starting.
+//! it cannot use, an over-large or non-SVG file, a path that is not a plain
+//! name, and never fails the editor starting.
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -193,7 +193,7 @@ fn save_key(path: &Path, key: &str, entry: Option<serde_json::Value>) -> Result<
 }
 
 /// Everything the editor reads from the config directory beyond
-/// `settings.json`, gathered in one pass at startup — before the window
+/// `settings.json`, gathered in one pass at startup, before the window
 /// exists, where the file reads cannot stall the UI thread, and once, so
 /// `appearance.json` is not parsed by three different callers.
 pub(crate) struct UserContent {
@@ -201,14 +201,14 @@ pub(crate) struct UserContent {
     /// The chosen pack's drawings, for `main` to install
     /// (`class_icons::set_user_pack`) before the place loads and resolves its
     /// first icons. `None` when no pack is chosen or the chosen one would not
-    /// load — in which case `appearance.icon_pack` has been cleared too, so
+    /// load, in which case `appearance.icon_pack` has been cleared too, so
     /// the Explorer's menu never shows a pack as chosen that is not drawn.
     pub(crate) icon_overlay: Option<IconOverlay>,
     /// Every installed pack's name, for the Explorer menu. Listed once: the
     /// menu is rebuilt every frame.
     pub(crate) icon_packs: Vec<String>,
     /// The theme `appearance.json` names, or Default when it names none or
-    /// one that will not load — reported on stderr, since no window exists
+    /// one that will not load, reported on stderr, since no window exists
     /// yet to show it in.
     pub(crate) theme: ThemePack,
     pub(crate) script_templates: ScriptTemplates,
@@ -318,7 +318,7 @@ impl IconOverlay {
     }
 
     /// The pack's drawing for a class, by its own name first and then by the
-    /// kit tile it falls under — so `Part.svg` reaches exactly `Part`, and
+    /// kit tile it falls under, so `Part.svg` reaches exactly `Part`, and
     /// `humanoid-description.svg` reaches every class sharing that tile.
     pub(crate) fn svg(&self, class: &str, slug: Option<&str>) -> Option<Arc<[u8]>> {
         self.files

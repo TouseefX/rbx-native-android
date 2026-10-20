@@ -10,7 +10,7 @@
 //!
 //! **Two levels, not a tree of arbitrary splits.** An edge holds a stack
 //! of [`Group`]s and a group holds a stack of tabs; that is exactly what a
-//! drop can express — land on a dock's tab strip and you are a tab of it,
+//! drop can express, land on a dock's tab strip and you are a tab of it,
 //! land on its top or bottom half and you are a new dock above or below
 //! it. The recursive `Split { axis, fraction, before, after }` the
 //! architecture note sketched can nest further than that, but nothing in
@@ -44,7 +44,7 @@ impl Edge {
         }
     }
 
-    /// Whether this edge's size is a width rather than a height — which is
+    /// Whether this edge's size is a width rather than a height, which is
     /// also which axis a drag on its handle reads.
     pub(crate) fn is_vertical(self) -> bool {
         !matches!(self, Edge::Bottom)
@@ -66,7 +66,7 @@ impl Edge {
     /// Read through `tokens` rather than held as a constant: the frame
     /// fixes a dock at 228px against a 9px label, this shell sets text at
     /// 14px, and at 2x the UI scale a dock that stayed 300px would hold
-    /// 600px rows — or a bottom dock that stayed 180px would be half its
+    /// 600px rows, or a bottom dock that stayed 180px would be half its
     /// own tab strip.
     pub(crate) fn default_size(self) -> f32 {
         match self {
@@ -101,14 +101,14 @@ pub(crate) enum Panel {
     Explorer,
     Properties,
     Output,
-    /// The viewport's own settings and live stats — the quality level, the
-    /// view toggles, the frame rate — kept off the 3D view itself.
+    /// The viewport's own settings and live stats, the quality level, the
+    /// view toggles, the frame rate, kept off the 3D view itself.
     Viewport,
-    /// Argon (`argon-rbx/argon`) two-way file sync. Script Editor only —
+    /// Argon (`argon-rbx/argon`) two-way file sync. Script Editor only,
     /// see `Shell::hidden_panels`.
     Argon,
     /// The Wally (`UpliftGames/wally`) package manager. Script Editor
-    /// only — see `Shell::hidden_panels`.
+    /// only, see `Shell::hidden_panels`.
     Wally,
     /// Every problem `luau-lsp` finds across the place's scripts. Script
     /// Editor only, like Argon and Wally.
@@ -156,7 +156,7 @@ impl Panel {
         Panel::Tests,
     ];
 
-    /// Where this panel lives in a layout nobody has rearranged — also
+    /// Where this panel lives in a layout nobody has rearranged, also
     /// where it goes when a saved layout has lost track of it, and where
     /// closing its torn-out window puts it back.
     pub(crate) fn home(self) -> Edge {
@@ -246,7 +246,7 @@ impl Group {
         &self.panels
     }
 
-    /// The tab currently showing. Never `None` for a group that exists —
+    /// The tab currently showing. Never `None` for a group that exists,
     /// [`Layout`] drops a group the moment its last tab leaves.
     pub(crate) fn active(&self) -> Option<Panel> {
         self.panels.get(self.active).copied()
@@ -261,7 +261,7 @@ pub(crate) enum Home {
     /// Torn out into a window of its own.
     Floating,
     /// Shut, and reachable only from the View menu or the ribbon's Home
-    /// tab. A closed panel keeps nothing — reopening puts it back on its
+    /// tab. A closed panel keeps nothing, reopening puts it back on its
     /// own default edge (see [`Layout::seat`]), because a layout that
     /// remembered where a panel was before it was closed would have to keep
     /// a slot open for it.
@@ -292,15 +292,15 @@ pub(crate) enum Landing {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Layout {
     /// Per edge, the docks stacked along it. A panel appears in exactly
-    /// one group or in [`Self::floating`] — never both, never twice — and
+    /// one group or in [`Self::floating`], never both, never twice, and
     /// no group is ever empty. Every mutation here preserves both, and
     /// every reader assumes them.
     edges: [Vec<Group>; 3],
     /// Panels torn out into windows of their own.
     floating: Vec<Panel>,
     /// Panels that have been shut. Held rather than simply absent so that
-    /// `restore` can tell "this file predates the panel" — put it back —
-    /// from "the user closed it" — leave it shut.
+    /// `restore` can tell "this file predates the panel", put it back,
+    /// from "the user closed it", leave it shut.
     closed: Vec<Panel>,
     /// View › Command Bar turned off. Not a [`Panel`] (it is a strip under
     /// the docks), so the settings file keeps it as [`COMMAND_BAR_KEY`] in
@@ -355,7 +355,7 @@ impl Layout {
 
     /// Whether a panel is actually on screen: in a window of its own, or
     /// the tab its dock is showing. What a View menu or a ribbon button
-    /// ticks — a tab hidden behind another reads as off, so the button
+    /// ticks, a tab hidden behind another reads as off, so the button
     /// that would otherwise close it brings it forward instead.
     pub(crate) fn is_showing(&self, panel: Panel) -> bool {
         match self.home_of(panel) {
@@ -417,7 +417,7 @@ impl Layout {
 
     /// Takes a panel off whatever holds it, dropping a dock that has just
     /// lost its last tab and keeping its active tab pointed at the same
-    /// panel it was — or, if that panel is the one leaving, at the dock's
+    /// panel it was, or, if that panel is the one leaving, at the dock's
     /// first remaining tab, the same "first of the rest" fallback
     /// `Shell::dock_showing` uses when a tab is set aside instead of removed.
     fn detach(&mut self, panel: Panel) {
@@ -442,8 +442,8 @@ impl Layout {
 
     /// Puts a panel wherever a drop said it should go.
     ///
-    /// The single mutation every gesture funnels through — the drag, the
-    /// menu's "Move to" and its "Float" alike — so no two of them can
+    /// The single mutation every gesture funnels through, the drag, the
+    /// menu's "Move to" and its "Float" alike, so no two of them can
     /// disagree about what a move means.
     pub(crate) fn apply(&mut self, panel: Panel, landing: Landing) {
         // Read before detaching: the indices a landing carries were
@@ -485,8 +485,8 @@ impl Layout {
         }
     }
 
-    /// The dock that taking `panel` out would remove — the one it is the
-    /// last tab of — if any. Asked before the detach, because afterwards
+    /// The dock that taking `panel` out would remove, the one it is the
+    /// last tab of, if any. Asked before the detach, because afterwards
     /// the edge's length cannot tell "removed" from "never there".
     fn emptied_by_moving(&self, panel: Panel) -> Option<(Edge, usize)> {
         match self.home_of(panel) {
@@ -528,7 +528,7 @@ impl Layout {
     }
 
     /// Puts a panel on screen in a dock. A shut one goes back to its own
-    /// default edge, and so does one in a window of its own — this is what
+    /// default edge, and so does one in a window of its own, this is what
     /// closing that window asks for (see `shell::panel_window`); one hidden
     /// behind another tab is brought forward.
     pub(crate) fn open(&mut self, panel: Panel) {
@@ -545,7 +545,7 @@ impl Layout {
     /// A tab rather than a dock of its own because the bottom edge stacks
     /// its docks *across*: a panel that split it would halve Output's width
     /// for something that is looked at far less often. Seated behind the
-    /// tab already showing — [`Self::open`] is what brings it forward.
+    /// tab already showing, [`Self::open`] is what brings it forward.
     fn seat(&mut self, panel: Panel) {
         let groups = &mut self.edges[panel.home().index()];
         match groups.first_mut() {
@@ -555,7 +555,7 @@ impl Layout {
     }
 
     /// Shows one of a dock's tabs. Ignores a panel that is not docked,
-    /// rather than moving it — a tab click is not a rearrangement.
+    /// rather than moving it, a tab click is not a rearrangement.
     pub(crate) fn activate(&mut self, panel: Panel) {
         let Home::Docked { edge, group } = self.home_of(panel) else {
             return;
@@ -638,7 +638,7 @@ impl Layout {
     }
 
     /// The panel `name` refers to, if this version knows it and nothing
-    /// has taken it yet — the guard that keeps a file naming one panel
+    /// has taken it yet, the guard that keeps a file naming one panel
     /// twice from putting it in two places at once.
     fn unclaimed(&self, name: &str) -> Option<Panel> {
         Panel::from_key(name).filter(|panel| {
@@ -693,7 +693,7 @@ pub(crate) struct SavedGroup {
 pub(crate) struct SavedEdge {
     pub(crate) edge: Edge,
     pub(crate) groups: Vec<SavedGroup>,
-    /// The edge's size, or 0 for "never set" — which `Settings` writes for
+    /// The edge's size, or 0 for "never set", which `Settings` writes for
     /// a field it has no value for.
     pub(crate) size: f32,
 }

@@ -176,7 +176,7 @@ fn fire_and_smoke_read_the_names_roblox_saves_them_under() {
     }
 }
 
-/// Documented: `Opacity` works inversely to `Transparency` — 0 invisible, 1
+/// Documented: `Opacity` works inversely to `Transparency`: 0 invisible, 1
 /// visible.
 #[test]
 fn smoke_opacity_is_the_inverse_of_transparency() {

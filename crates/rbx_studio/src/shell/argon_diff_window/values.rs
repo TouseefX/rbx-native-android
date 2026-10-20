@@ -30,7 +30,7 @@ pub(super) struct FormattedProperty {
     pub(super) after: Option<Cell>,
 }
 
-/// Every property of `node` in the Properties panel's own words — the
+/// Every property of `node` in the Properties panel's own words, the
 /// one formatter, not a second one.
 pub(super) fn format_properties(shell: &Shell, node: &DiffNode) -> Vec<FormattedProperty> {
     node.properties

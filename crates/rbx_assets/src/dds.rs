@@ -1,7 +1,7 @@
 //! Decodes the top mip of a DXT1/DXT3/DXT5-compressed DDS file to RGBA8.
 //!
 //! Roblox ships its default skybox and many particle textures this way inside
-//! its native content packages (see [`crate::native`]) — some renamed `.tex`,
+//! its native content packages (see [`crate::native`]), some renamed `.tex`,
 //! which is the same format under another extension since detection here goes
 //! by the `"DDS "` magic, never by the caller's file name.
 //!
@@ -72,7 +72,7 @@ pub(crate) fn decode(data: &[u8]) -> Result<RgbaImage, AssetError> {
 }
 
 /// Walks the block grid, decoding each 4x4 block and copying it into the
-/// image — clipped on the right/bottom edge for dimensions not a multiple of 4,
+/// image, clipped on the right/bottom edge for dimensions not a multiple of 4,
 /// which a compressed block always pads up to.
 fn decode_blocks(
     width: u32,
@@ -209,7 +209,7 @@ fn apply_explicit_alpha(pixels: &mut [[u8; 4]; 16], alpha_block: &[u8]) {
 
 /// BC3's alpha half: two 8-bit endpoints plus a 3-bit index per pixel, either
 /// interpolating between them (`a0 > a1`) or reserving two of the eight slots
-/// for flat 0 and 255 (`a0 <= a1`) — mirroring BC1's color/alpha split.
+/// for flat 0 and 255 (`a0 <= a1`), mirroring BC1's color/alpha split.
 fn apply_interpolated_alpha(pixels: &mut [[u8; 4]; 16], alpha_block: &[u8]) {
     let a0 = alpha_block[0];
     let a1 = alpha_block[1];

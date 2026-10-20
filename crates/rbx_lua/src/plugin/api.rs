@@ -272,7 +272,7 @@ pub enum HandleEventKind {
     Leave {
         face: u8,
     },
-    /// `ArcHandles` — `axis`: `Enum.Axis` value (X 0, Y 1, Z 2).
+    /// `ArcHandles`: `axis`: `Enum.Axis` value (X 0, Y 1, Z 2).
     ArcDown {
         axis: u8,
     },
@@ -344,7 +344,7 @@ pub enum OutputKind {
 pub enum Request {
     Undo,
     Redo,
-    /// `ChangeHistoryService:SetWaypoint` — the edits so far are one step.
+    /// `ChangeHistoryService:SetWaypoint`: the edits so far are one step.
     Waypoint(String),
     /// Ask the user; answer with [`Input::PromptAnswered`].
     Prompt {
@@ -358,7 +358,7 @@ pub enum Request {
         line: Option<u32>,
     },
     Debugger(DebuggerRequest),
-    /// `rbxnative.notify(text)` — a toast.
+    /// `rbxnative.notify(text)`: a toast.
     Notify {
         plugin: PluginId,
         text: String,
@@ -489,7 +489,7 @@ pub enum WidgetKind {
         float_size: (f32, f32),
         min_size: (f32, f32),
     },
-    /// rbx-native's `plugin:CreateFloatingWidget` — not dockable, drawn
+    /// rbx-native's `plugin:CreateFloatingWidget`: not dockable, drawn
     /// above the editor; dismissed by a click outside it when `light_dismiss`.
     Floating {
         /// `None` = at the cursor when it opens.
