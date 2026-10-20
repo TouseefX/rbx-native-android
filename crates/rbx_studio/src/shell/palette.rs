@@ -1,6 +1,6 @@
 //! The command palette and Quick Open, one overlay as in Studio: Ctrl+P
-//! searches the place's instances, and a leading `>` — or Ctrl+Alt+P,
-//! which opens with it typed — searches commands instead ("Quickest Open
+//! searches the place's instances, and a leading `>`: or Ctrl+Alt+P,
+//! which opens with it typed, searches commands instead ("Quickest Open
 //! in the West!", DevForum, 2020). Commands are every one the editor
 //! already has (see [`commands`]), each with its shortcut, so a command can
 //! be found by name instead of remembered by key.
@@ -34,7 +34,7 @@ use commands::{Command, Run};
 
 /// `RBX_STUDIO_A11Y_DUMP=<path>`: while a screen reader (or any AT-SPI
 /// client) has the window's accessibility tree switched on, each frame
-/// writes GPUI's own debug dump of it to `path` — the only way to see from
+/// writes GPUI's own debug dump of it to `path`, the only way to see from
 /// outside what the palette reports as focused, since no test window ever
 /// activates accessibility.
 const A11Y_DUMP_VARIABLE: &str = "RBX_STUDIO_A11Y_DUMP";
@@ -76,9 +76,9 @@ impl Open {
 }
 
 impl Shell {
-    /// The menu actions' handlers are global and get no `Window` — and
+    /// The menu actions' handlers are global and get no `Window`, and
     /// `App::active_window` is `None` under a window manager that never
-    /// activates anything — so the opening waits for `Render`, which has one.
+    /// activates anything, so the opening waits for `Render`, which has one.
     pub(crate) fn request_palette(&mut self, actions: bool, cx: &mut Context<Self>) {
         self.palette.requested = Some(actions);
         cx.notify();

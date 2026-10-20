@@ -202,7 +202,7 @@ Sandbox: "Experimenting Place" (universe 1113565074, place 3086963177), Sober on
 | 1 | **Pass.** Published (API, `Published`, v340) with injected flags; hello reported `http_enabled: true, loadstring_enabled: true, is_studio: false`; `eval "return 1 + 1"` acked `"2"` 0.2 s later and its `print` came back as a server log. |
 | 2 | **Pass** for trycloudflare: the game server reached the tunnel on first try. Funnel not tested. |
 | 3 | **Pass.** `flatpak run org.vinegarhq.Sober "roblox://placeId=…&launchData=…"` joined directly; `launchData` arrived as the session id. |
-| — | Leaving the game produced `Left { user_id }` at once, which ends the session. |
+|, | Leaving the game produced `Left { user_id }` at once, which ends the session. |
 
 Findings that change the design:
 - `ServerScriptService.LoadStringEnabled` is **not readable from scripts** ("not a valid member"); the probe tests `loadstring` by calling it.

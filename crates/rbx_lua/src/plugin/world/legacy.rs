@@ -1,5 +1,5 @@
-//! Members Studio still answers to that rbx-native has nothing behind —
-//! surface joints and assembly roots — and the camera's screen rays.
+//! Members Studio still answers to that rbx-native has nothing behind,
+//! surface joints and assembly roots, and the camera's screen rays.
 
 use mlua::{Lua, MultiValue, Result, Table, Value};
 use rbx_dom::{CFrameData, Ref, Variant};

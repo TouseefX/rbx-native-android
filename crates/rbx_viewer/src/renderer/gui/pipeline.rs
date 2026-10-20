@@ -62,7 +62,7 @@ const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 13] = wgpu::vertex_attr_array![
 ];
 
 /// Three two-bit enum ordinals in one attribute: bits 0–1 the
-/// `LineJoinMode`, 2–3 the `GradientType`, 4–5 the `GradientTileMode` — the
+/// `LineJoinMode`, 2–3 the `GradientType`, 4–5 the `GradientTileMode`: the
 /// same ordinals the shader unpacks.
 pub(super) fn mode(join: u32, kind: u32, tile: u32) -> u32 {
     (join & 3) | (kind & 3) << 2 | (tile & 3) << 4
@@ -70,8 +70,8 @@ pub(super) fn mode(join: u32, kind: u32, tile: u32) -> u32 {
 
 /// The format the GUI pass renders through: the non-sRGB twin of whatever the
 /// target really is. Roblox composites its 2D layer in the display's *encoded*
-/// space — a frame at `BackgroundTransparency` 0.5 halves the encoded pixel
-/// behind it, not the linear light it stands for — and the only way to stop
+/// space, a frame at `BackgroundTransparency` 0.5 halves the encoded pixel
+/// behind it, not the linear light it stands for, and the only way to stop
 /// the hardware decoding, blending and re-encoding around that is to attach a
 /// view that claims no encoding at all. The shader then emits the encoding
 /// itself (`gui.wgsl`'s `linear_to_srgb`), the bytes in the texture are

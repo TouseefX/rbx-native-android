@@ -1,9 +1,9 @@
-//! Six-face shadow maps for `PointLight`s — the one local light that has no
+//! Six-face shadow maps for `PointLight`s, the one local light that has no
 //! cone to fit a single map to, and so the one `shadow::local` cannot serve.
 //!
 //! A point light is spelled as a cone with no axis at all (see
 //! `crate::lighting::local`), which is what [`select`] filters on. Each one
-//! chosen gets six 90-degree perspectives — one per signed axis — into six
+//! chosen gets six 90-degree perspectives, one per signed axis, into six
 //! consecutive layers of a depth array of their own; the shader picks the
 //! face a fragment belongs to from the major axis of the light-to-fragment
 //! direction and reads that layer with that face's own matrix, which is the
@@ -22,7 +22,7 @@ use super::local::NEAR_STUDS;
 /// -axis test numbers them.
 pub(in crate::renderer) const FACES: usize = 6;
 
-/// Each face covers a quadrant of the sphere, which is 90 degrees exactly —
+/// Each face covers a quadrant of the sphere, which is 90 degrees exactly,
 /// widened by a hair so a PCF tap taken right at a face boundary still lands
 /// inside that face's map instead of off its edge, where the lookup would
 /// read "lit" and leave a seam along the boundary.
@@ -49,14 +49,14 @@ const AXES: [(Vec3, Vec3); FACES] = [
 /// One point light chosen to cast this frame.
 #[derive(Debug, Clone, PartialEq)]
 pub(in crate::renderer) struct Selected {
-    /// Position in the slice [`select`] was given — the index its record in
+    /// Position in the slice [`select`] was given, the index its record in
     /// the light-shadow buffer sits at, exactly as `local::Selected`'s is.
     pub(in crate::renderer) index: usize,
     pub(in crate::renderer) faces: [Mat4; FACES],
 }
 
 /// Every enabled, axis-less, `Shadows = true` light in `lights`, nearest
-/// `camera` first and truncated to `cap` *cubes* — not layers; each one
+/// `camera` first and truncated to `cap` *cubes*, not layers; each one
 /// selected here spends [`FACES`] of them.
 ///
 /// Sorted by distance to the camera for the same reason the cone lights are:
@@ -101,7 +101,7 @@ fn faces_of(light: &LocalLight) -> [Mat4; FACES] {
 }
 
 /// The `PointLight` cube array: six layers per cube, each drawn into on its
-/// own and all sampled through one array view — see
+/// own and all sampled through one array view, see
 /// `renderer::shadow::point` for why this is an array of perspectives
 /// rather than a cube map.
 pub(in crate::renderer) fn map(
@@ -157,7 +157,7 @@ pub(in crate::renderer) fn faces_buffer(device: &wgpu::Device, cubes: usize) -> 
     })
 }
 
-/// An empty matrix array for a pass that draws no shadows at all — a
+/// An empty matrix array for a pass that draws no shadows at all, a
 /// `ViewportFrame`'s own, which still has to bind something at the slot
 /// (see `renderer::gui::viewport`).
 pub(in crate::renderer) fn faces_stand_in(device: &wgpu::Device) -> wgpu::Buffer {

@@ -1,7 +1,7 @@
 //! `POST /universes/v1/{universe}/places/{place}/versions`: upload a place
 //! file as a new saved or published version.
 //!
-//! Never call [`Client::publish_place`] from a test or ad-hoc script — it
+//! Never call [`Client::publish_place`] from a test or ad-hoc script, it
 //! mutates a real experience. This module is exercised only through
 //! request-construction/response-parsing unit tests.
 

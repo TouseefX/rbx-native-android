@@ -4,7 +4,7 @@
 //!
 //! The tabs are drawn here rather than made dock panels of their own. A dock
 //! tab is a persisted, rearrangeable part of the window layout, and an open
-//! script is neither — it comes and goes with a double-click, and a saved
+//! script is neither, it comes and goes with a double-click, and a saved
 //! layout naming scripts by referent would be meaningless on the next file
 //! opened.
 
@@ -105,7 +105,7 @@ impl Shell {
     }
 
     /// Ctrl+D (Cmd+D) adds a cursor at the next match of the selection,
-    /// Shift+Alt+L one at every match — Studio's own bindings for both. Only
+    /// Shift+Alt+L one at every match, Studio's own bindings for both. Only
     /// while the editor itself has focus, so the finder's query field keeps
     /// its keys.
     fn handle_match_cursor_key(
@@ -232,7 +232,7 @@ impl Shell {
     }
 }
 
-/// What the panel shows before anything has been opened in it — the panel is
+/// What the panel shows before anything has been opened in it, the panel is
 /// part of the default layout, so it is what a fresh window draws.
 fn no_scripts_open(cx: &App) -> impl IntoElement {
     v_flex()

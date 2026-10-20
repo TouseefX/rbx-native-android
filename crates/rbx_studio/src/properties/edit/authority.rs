@@ -6,7 +6,7 @@
 //! The writes happen inside the one `commit_all` an edit is, so the whole
 //! thing is a single undo step: `Shell::apply_edit` snapshots the DOM before
 //! it and pushes it once. Switching back to `Automatic` leaves the five as
-//! they are — the docs don't say Studio reverts them, and a creator may have
+//! they are, the docs don't say Studio reverts them, and a creator may have
 //! wanted `StreamingEnabled` on for its own sake.
 
 use rbx_dom::{Ref, WeakDom};

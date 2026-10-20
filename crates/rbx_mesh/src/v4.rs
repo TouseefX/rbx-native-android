@@ -1,7 +1,7 @@
 //! `version 4.00`/`4.01` and `5.00`: the skinnable binary layout.
 //!
-//! The v2/v3 stride bytes are gone — v4 fixes the vertex record at 40 bytes and
-//! LOD entries at 4 — and the header instead describes the optional skinning,
+//! The v2/v3 stride bytes are gone, v4 fixes the vertex record at 40 bytes and
+//! LOD entries at 4, and the header instead describes the optional skinning,
 //! bone and subset blocks that follow the geometry. v5 adds a trailing FACS block.
 
 use crate::error::MeshError;

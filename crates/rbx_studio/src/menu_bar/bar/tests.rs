@@ -1,6 +1,6 @@
 use super::next_title;
 
-/// Left from the first title lands on the last, not nowhere — the same
+/// Left from the first title lands on the last, not nowhere, the same
 /// circular reading `shell::roving` gives the ribbon and the tab strips.
 #[test]
 fn the_titles_wrap_in_both_directions() {

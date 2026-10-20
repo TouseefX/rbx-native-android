@@ -85,8 +85,8 @@ impl WeakDom {
     }
 
     /// Deletes a single property, returning the value it held (if any). An absent
-    /// key is how this DOM stores a null `Ref` — `Variant` has no null reference,
-    /// and both file formats read their null referent back as a missing property —
+    /// key is how this DOM stores a null `Ref`, `Variant` has no null reference,
+    /// and both file formats read their null referent back as a missing property,
     /// so this is what clearing one means. Logged as a `Change::Property` like a
     /// write, since every consumer reads the value back from the DOM anyway.
     pub fn remove_property(
@@ -126,8 +126,8 @@ impl WeakDom {
     }
 
     /// Changes an instance's class in place, returning the class it had. The
-    /// referent stays, so everything that names the instance by it — a
-    /// `Weld.Part0`, a `Model.PrimaryPart`, a selection — still does; making a
+    /// referent stays, so everything that names the instance by it, a
+    /// `Weld.Part0`, a `Model.PrimaryPart`, a selection, still does; making a
     /// new instance of the new class would leave each of those pointing at
     /// nothing. Properties are left exactly as they were: which of them the new
     /// class can still hold is a reflection question this crate cannot answer.
@@ -205,7 +205,7 @@ impl WeakDom {
         self.next_ref
     }
 
-    /// Makes sure no referent below `floor` is ever allocated again — for
+    /// Makes sure no referent below `floor` is ever allocated again, for
     /// an editor that swaps in an older copy of its DOM (undo) while
     /// instances allocated after that copy live on elsewhere.
     pub fn raise_next_ref(&mut self, floor: u32) {
@@ -256,7 +256,7 @@ impl WeakDom {
     /// root (or absent entirely).
     ///
     /// Reads the reverse edge `set_parent` already maintains, so walking up a
-    /// chain costs its depth rather than a search of the whole tree — which is
+    /// chain costs its depth rather than a search of the whole tree, which is
     /// what makes an "is this instance an ancestor of that one" check cheap
     /// enough for a caller to run per frame (the Explorer's drag-and-drop
     /// refuses a drop into the dragged instance's own subtree that way).
@@ -292,7 +292,7 @@ impl WeakDom {
     /// children (or among the roots). A no-op unless the two are distinct
     /// siblings. Logs nothing of its own: it is meant for a child whose
     /// `Added` or `Parent` change is already in the log, which is what makes
-    /// [`WeakDom::snapshot`] copy the parent — and so this order — anyway.
+    /// [`WeakDom::snapshot`] copy the parent, and so this order, anyway.
     pub fn place_after(&mut self, child: Ref, anchor: Ref) {
         let parent = self.parents.get(&anchor).copied();
         if child == anchor

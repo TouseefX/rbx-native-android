@@ -3,7 +3,7 @@
 //! The APG's combobox keeps DOM focus in the field and points
 //! `aria-activedescendant` at the highlighted option. GPUI reports an
 //! active descendant only from inside the *focused* node, and the field's
-//! own focusable element has no accessibility node — so the combobox
+//! own focusable element has no accessibility node, so the combobox
 //! wrapper tracks the field's own focus handle: the wrapper becomes the
 //! focused node (it has the id and role the field lacks), the list sits
 //! inside it, and the highlighted option's claim is honoured. Key dispatch

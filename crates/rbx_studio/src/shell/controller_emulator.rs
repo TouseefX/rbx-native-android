@@ -6,7 +6,7 @@
 //! during a Play session: opening it mid-session connects the device,
 //! closing it unplugs it. The client must be allowed to see it, so a Play
 //! started while the window is open (or with "Prepare every Play" on) adds
-//! Sober's gamepad permission and the sandbox's `/dev/input` access — see
+//! Sober's gamepad permission and the sandbox's `/dev/input` access, see
 //! [`Shell::controller_client_options`].
 
 mod drawing;

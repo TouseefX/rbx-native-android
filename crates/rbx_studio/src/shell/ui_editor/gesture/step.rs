@@ -17,7 +17,7 @@ use crate::ui_canvas::{
 
 impl Shell {
     /// Every selected element a move carries: the laid-out `GuiObject`s,
-    /// less any whose ancestor is carried too — moving the parent already
+    /// less any whose ancestor is carried too, moving the parent already
     /// moves it.
     pub(in crate::shell::ui_editor) fn held_selection(
         &self,
@@ -44,7 +44,7 @@ impl Shell {
     }
 
     /// The boxes a drag of `held` snaps onto: its siblings, and its
-    /// parent's box and the padded box inside it — the screen's frame when
+    /// parent's box and the padded box inside it, the screen's frame when
     /// the parent is the screen.
     fn snap_targets(&self, held: &[Held], cx: &App) -> Vec<Rect> {
         let Some((_, boxes)) = self.canvas_boxes(cx) else {

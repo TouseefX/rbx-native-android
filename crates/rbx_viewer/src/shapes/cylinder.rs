@@ -25,7 +25,7 @@ pub(crate) fn cylinder_x() -> MeshData {
 ///
 /// The X and Y variants share this one implementation by passing different
 /// embeddings; swapping which axis carries height and which two carry radius is
-/// an odd permutation and flips handedness, but that is harmless here — every
+/// an odd permutation and flips handedness, but that is harmless here, every
 /// triangle is oriented against a point known to be inside the shape, not by
 /// the order its vertices happen to be listed in.
 fn cylinder(embed: impl Fn(f32, f32, f32) -> Vec3) -> MeshData {

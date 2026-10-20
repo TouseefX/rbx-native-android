@@ -61,7 +61,7 @@ struct Node {
     id: u32,
     class: String,
     name: String,
-    /// This instance's own `crate::folder_colors::path_of` — computed once
+    /// This instance's own `crate::folder_colors::path_of`: computed once
     /// here rather than re-walked per row, since only `items` (building the
     /// tinted icon for a tagged `Folder`) needs it and it no longer has a
     /// live `&WeakDom` to walk by the time it runs.
@@ -83,7 +83,7 @@ pub(crate) struct Explorer {
     all_items: Vec<TreeItem>,
     icons: HashMap<SharedString, ClassIcon>,
     /// Every row's class, kept alongside `icons` so [`Explorer::set_icon_pack`]
-    /// can re-resolve icons for the other pack without re-walking `dom` — the
+    /// can re-resolve icons for the other pack without re-walking `dom`, the
     /// tree's own `TreeItem`s (and their expansion state) never need to
     /// change for that, only which sprite each row's icon points at.
     classes: HashMap<SharedString, String>,
@@ -91,7 +91,7 @@ pub(crate) struct Explorer {
     /// `classes` so [`Explorer::set_icon_pack`] can re-tint a tagged
     /// `Folder`'s icon for the other pack without re-walking `dom` either.
     paths: HashMap<SharedString, String>,
-    /// Every tagged `Folder` row's colour, by row id — see
+    /// Every tagged `Folder` row's colour, by row id, see
     /// [`Explorer::folder_tints`].
     tints: HashMap<SharedString, Rgb>,
 }
@@ -99,7 +99,7 @@ pub(crate) struct Explorer {
 impl Explorer {
     /// `folder_colors`/`place` are only consulted for a `Folder` node, to
     /// bake a tagged one's tinted icon (see `class_icons::tint`) into
-    /// `icons` right here — computed once per rebuild rather than once per
+    /// `icons` right here, computed once per rebuild rather than once per
     /// render, and shared (via `tinted`) across every folder that happens to
     /// carry the same tag colour.
     pub(crate) fn from_dom(
@@ -140,7 +140,7 @@ impl Explorer {
     /// Re-resolves every row's icon for `pack`, keeping the same `TreeItem`s
     /// (so expansion/selection state, which lives on them, survives) and the
     /// same `classes`/`paths` maps this was built from. Re-applies a tagged
-    /// `Folder`'s tint on top of the freshly resolved pack icon — `tint`
+    /// `Folder`'s tint on top of the freshly resolved pack icon, `tint`
     /// overwrites every non-transparent pixel with the tag colour regardless
     /// of which pack it started from, but the untinted base icon still has
     /// to come from the pack just switched to.
@@ -187,7 +187,7 @@ impl Explorer {
         }
     }
 
-    /// Every tagged `Folder` row's colour, by row id — what the tree paints a
+    /// Every tagged `Folder` row's colour, by row id, what the tree paints a
     /// tagged row's hover and selected state with. Worked out when the rows
     /// were, from the same classes and paths their tinted icons came from,
     /// so the two always agree, and never per render: walking the DOM for it
@@ -215,7 +215,7 @@ impl Explorer {
 
     /// The UI editor's view of the place: every `ScreenGui`, `BillboardGui`
     /// and `SurfaceGui` as a root of its own, wherever it sits, with
-    /// everything beneath it — and nothing that is not beneath one. The rows
+    /// everything beneath it, and nothing that is not beneath one. The rows
     /// are the full tree's own, so expanding one here expands it there.
     pub(crate) fn ui_items(&self) -> Vec<TreeItem> {
         fn collect(
@@ -277,13 +277,13 @@ pub(crate) fn item_ref(id: &SharedString) -> Option<Ref> {
 ///
 /// Trying the path first and falling back, rather than branching on whether
 /// `target` contains a `.`, is what keeps an instance whose own name has a dot
-/// in it (`Config.v2`) reachable — it fails as a path, then matches as a name.
+/// in it (`Config.v2`) reachable, it fails as a path, then matches as a name.
 pub(crate) fn resolve(dom: &WeakDom, target: &str) -> Option<Ref> {
     find_by_path(dom, target).or_else(|| find_by_name(dom, target))
 }
 
 /// The instance at `path`, each segment naming a child of the one before it
-/// and the first naming a root — the spelling [`crate::folder_colors::path_of`]
+/// and the first naming a root, the spelling [`crate::folder_colors::path_of`]
 /// produces (`Workspace.Nested.MyFolder`). `None` unless every segment
 /// matches: this is an exact lookup, not [`find_by_name`]'s search.
 fn find_by_path(dom: &WeakDom, path: &str) -> Option<Ref> {
@@ -354,7 +354,7 @@ fn node(dom: &WeakDom, reference: Ref, parent_path: &str) -> Option<Node> {
 }
 
 /// Services first, in Studio's fixed order (shown by default or ticked to
-/// show alike — see `services::explorer_rank`); everything else
+/// show alike, see `services::explorer_rank`); everything else
 /// alphabetically after.
 fn sort_roots(roots: &mut [Node]) {
     roots.sort_by(
@@ -445,7 +445,7 @@ fn items(
         .collect()
 }
 
-/// A tagged `Folder`'s own icon, recolored to its tag — see
+/// A tagged `Folder`'s own icon, recolored to its tag, see
 /// `class_icons::tint`. Falls back to `icon` itself (untinted) for the
 /// Lucide stand-in, which is not something this project rasterizes and so
 /// has no bitmap to recolor; unreached in practice today, since the icon kit
@@ -501,7 +501,7 @@ mod tests;
 /// The Explorer's search: every row whose name contains `query` (ignoring
 /// case), under the rows that lead to it, which are opened so the match is
 /// in view. A match keeps all of its own children, so it can be expanded and
-/// browsed in place without clearing the search — real Studio's Explorer
+/// browsed in place without clearing the search, real Studio's Explorer
 /// makes you clear it first (`view-descendants-of-matching-instances-in-
 /// explorer-search` on the devforum).
 ///

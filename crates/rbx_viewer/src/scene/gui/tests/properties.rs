@@ -138,9 +138,9 @@ fn text_classes_draw_their_background_and_carry_their_text() {
     }
 }
 
-// A GUI instance outside any `ScreenGui` — `BubbleChatConfiguration`'s own
+// A GUI instance outside any `ScreenGui`: `BubbleChatConfiguration`'s own
 
-// `ImageLabel`, for one — is not part of any screen and must not be drawn.
+// `ImageLabel`, for one, is not part of any screen and must not be drawn.
 
 #[test]
 fn a_gui_object_outside_a_screen_gui_is_not_a_screen_of_its_own() {
@@ -186,7 +186,7 @@ fn a_stretched_image_repeats_once_and_a_tiled_one_by_its_tile_size() {
     assert_eq!(tile.repeat, [3.0, 2.0]);
 }
 
-// `ImageButton` is a `GuiButton`, not a `GuiLabel` — but it draws its image
+// `ImageButton` is a `GuiButton`, not a `GuiLabel`: but it draws its image
 // exactly the way an `ImageLabel` does, `HoverImage`/`PressedImage` aside:
 // those only ever show while the mouse is over or holding the button down,
 // which this static renderer has no notion of, so they are never read.

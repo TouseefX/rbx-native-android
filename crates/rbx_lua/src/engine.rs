@@ -1,4 +1,4 @@
-//! The Roblox runtime both VMs share — the command bar's [`crate::Runtime`]
+//! The Roblox runtime both VMs share, the command bar's [`crate::Runtime`]
 //! and each plugin's: the scheduler behind `task`, signals and instance
 //! events, `require` of `ModuleScript`s, JSON and `CollectionService`.
 //!
