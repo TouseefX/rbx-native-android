@@ -489,7 +489,7 @@ pub fn encode(
 }
 
 /// An attribute value (attributes carry their own type): JSON → `Variant`
-/// using the tag alone — numbers become `Float64`, strings `String`, bools
+/// using the tag alone, numbers become `Float64`, strings `String`, bools
 /// `Bool`, and tagged values as in the table. `None` for `null`/unknown.
 pub fn decode_attribute(json: &Value) -> Option<Variant> {
     match json {

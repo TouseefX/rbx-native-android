@@ -33,7 +33,7 @@ pub fn round_to(value: f32, increment: f32) -> f32 {
     (value / increment).round() * increment
 }
 
-/// [`round_to`] on all three components — a drag's travel rounded onto the
+/// [`round_to`] on all three components, a drag's travel rounded onto the
 /// grid.
 pub fn round_point(point: Vec3, increment: f32) -> Vec3 {
     Vec3::new(
@@ -51,13 +51,13 @@ const DEGENERATE: f32 = 1e-6;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Surface {
     pub point: Vec3,
-    /// Outward, unit length — the face's own normal, which is what a 90°
+    /// Outward, unit length, the face's own normal, which is what a 90°
     /// `R` turn while cursor-dragging rotates about.
     pub normal: Vec3,
 }
 
 /// The nearest point on the surface of any of `boxes` to `point`, if one is
-/// within `reach` studs of it — Studio's "soft snap".
+/// within `reach` studs of it, Studio's "soft snap".
 ///
 /// `boxes` are the oriented boxes parts are drawn inside, the same matrices
 /// [`crate::pick::model_of`] builds. Each is measured in its own rigid frame
@@ -67,7 +67,7 @@ pub struct Surface {
 /// An edge wins over the face it belongs to: once the nearest surface point
 /// is already within `reach` of a second face as well, it is pulled onto the
 /// shared edge, and onto a corner if a third is in reach too. That is the
-/// whole of what "surfaces and edges" means here — the docs describe the
+/// whole of what "surfaces and edges" means here, the docs describe the
 /// behaviour and show it, but publish no threshold, so `reach` is the
 /// caller's to choose (see `workspace_view::gizmo`).
 pub fn nearest_surface(point: Vec3, boxes: &[Mat4], reach: f32) -> Option<Surface> {
@@ -100,7 +100,7 @@ fn surface_of(point: Vec3, model: Mat4, reach: f32) -> Option<Surface> {
     let centre = model.w_axis.truncate();
     let offset = point - centre;
     // In the box's own frame, where distances are still studs because the
-    // axes are unit length — the scale lives in `half` instead.
+    // axes are unit length, the scale lives in `half` instead.
     let local = Vec3::new(
         offset.dot(axes[0]),
         offset.dot(axes[1]),

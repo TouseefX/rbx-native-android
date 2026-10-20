@@ -20,12 +20,12 @@ use crate::load::Source;
 /// Six in flight keeps a place with a few dozen textures fast.
 ///
 /// The ceiling it has to respect is the Open Cloud one, which the keyed asset
-/// route reports as `x-ratelimit-limit: 1000, 1000;w=60` — a thousand requests
+/// route reports as `x-ratelimit-limit: 1000, 1000;w=60`: a thousand requests
 /// a minute, shared across every key an owner holds. A private asset costs one
 /// of those (the anonymous 401 and the CDN download are other hosts), and six
 /// workers turning them around in a few hundred milliseconds each sit just
 /// under that rate, so only a place with more than about a thousand private
-/// assets — or a second tool on the same key — crosses it. Roblox publishes no
+/// assets, or a second tool on the same key, crosses it. Roblox publishes no
 /// per-endpoint number for this route and warns that undocumented limits apply
 /// besides (creator-docs `content/en-us/cloud/reference/rate-limits.md`), so
 /// the defence that matters is `rbx_cloud`'s backoff on the 429, not a smaller
@@ -71,7 +71,7 @@ impl AssetFetcher for CloudFetcher {
 /// second is worth asking again.
 ///
 /// The line is where the status came from. A 4xx is the service's verdict on
-/// this request — the asset is gone, or the key does not cover it — and the
+/// this request, the asset is gone, or the key does not cover it, and the
 /// next load asks with the same key and hears the same thing. A 5xx, a rate
 /// limit `rbx_cloud` already backed off on four times (see its `retry`
 /// module) and a transport error are all about the moment.
@@ -98,8 +98,8 @@ fn fetch_error(id: u64, err: CloudError) -> FetchError {
 
 /// Why a reference could not be answered, and whether asking again on a
 /// later load could change that. A transient failure is the machine's, not
-/// the asset's — a request that did not complete, a cache that would not
-/// write, a key not yet configured — and worth one more try per load. A
+/// the asset's, a request that did not complete, a cache that would not
+/// write, a key not yet configured, and worth one more try per load. A
 /// 404, a file the content package does not hold or bytes that will not
 /// decode are not: asking again cannot change the answer, and on a real
 /// place the ask is the expensive part (a package scan, a round trip), so
@@ -138,7 +138,7 @@ fn transient(err: &AssetError) -> bool {
     }
 }
 
-/// What one reference turned into: the decoded value, or why it could not —
+/// What one reference turned into: the decoded value, or why it could not,
 /// kept by reference so a caller that remembers results across reloads (see
 /// `load::Resident`) can remember the failures too.
 pub(crate) type Keyed<T> = HashMap<AssetRef, Result<T, Failure>>;
@@ -168,7 +168,7 @@ pub(crate) fn load_bytes(references: &[AssetRef]) -> Keyed<Vec<u8>> {
     load_with("unions", references, fetch_bytes)
 }
 
-/// The cache-and-network resolver behind every background fetch — see
+/// The cache-and-network resolver behind every background fetch, see
 /// [`crate::load::Source`], whose three methods are the same three decoders
 /// [`load_images`]/[`load_meshes`]/[`load_bytes`] run in their own pool.
 struct Resolved(AssetResolver);
@@ -189,7 +189,7 @@ impl Source for Resolved {
 
 /// Stands in where no resolver could be built at all (no cache directory,
 /// say), so every reference is *answered* with that reason rather than left
-/// in flight forever — a viewport waiting on a fetch that can never land
+/// in flight forever, a viewport waiting on a fetch that can never land
 /// would keep its placeholders and never say why. Transient, for the same
 /// reason [`load_with`]'s is: the next load may find the machine fixed.
 struct Unavailable(String);
@@ -232,7 +232,7 @@ pub(crate) fn source() -> Arc<dyn Source> {
 
 /// Shared worker-pool machinery behind [`load_images`], [`load_meshes`] and
 /// [`load_bytes`]: same bounded concurrency, same disk cache, same
-/// warn-and-skip failure handling — only what a resolved
+/// warn-and-skip failure handling, only what a resolved
 /// [`Asset`](rbx_assets::Asset) turns into differs.
 ///
 /// Every warning is the same text already `eprintln!`'d, kept against its
@@ -241,8 +241,8 @@ pub(crate) fn source() -> Arc<dyn Source> {
 /// unchanged either way. When no resolver could be built at all (no cache
 /// directory, say) every reference fails with that one message: it then
 /// reaches the caller through the same channel as any other failure, keyed
-/// by references the caller actually looks up, and — transient, since it is
-/// the machine's fault — is retried by the next load once that is fixed.
+/// by references the caller actually looks up, and, transient, since it is
+/// the machine's fault, is retried by the next load once that is fixed.
 fn load_with<T: Send>(
     label: &str,
     references: &[AssetRef],
@@ -310,7 +310,7 @@ pub(crate) fn resolver() -> Result<AssetResolver, String> {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        // A browser build asks `rbxview --serve` instead — see `web`.
+        // A browser build asks `rbxview --serve` instead, see `web`.
         Err("no disk cache or network in a browser".to_string())
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -334,14 +334,14 @@ fn fetch_image(resolver: &AssetResolver, reference: &AssetRef) -> Result<Image, 
     // A decal id where an image id was meant: the catalogue hands back a
     // one-instance model whose `Texture` names the actual image, and Roblox
     // itself follows that one hop for an `Image`/`Texture` property. One hop
-    // only — a model pointing at a model is left as the decode error it is.
+    // only, a model pointing at a model is left as the decode error it is.
     if let Some(inner) = wrapped_image(&asset) {
         asset = resolver.resolve(&inner).map_err(failed)?;
     }
     image(reference, &asset)
 }
 
-/// Decodes what `reference` resolved to — after [`wrapped_image`]'s hop,
+/// Decodes what `reference` resolved to, after [`wrapped_image`]'s hop,
 /// which is the caller's, since only it knows how to fetch the inner one.
 pub(crate) fn image(reference: &AssetRef, asset: &rbx_assets::Asset) -> Result<Image, Failure> {
     let decoded = decode_image(asset).map_err(|err| Failure::resolving(reference, &err))?;
@@ -523,12 +523,12 @@ pub(crate) mod tests {
     }
 
     // The line between "ask again next load" and "remembered for good" is
-    // whether the answer is about this machine or about the asset — see
+    // whether the answer is about this machine or about the asset, see
     // `Failure`. `TestPlace.rbxl` names a `SpawnLocation.png` its content
     // package does not hold, and each ask is a 200 ms package scan.
     // The catalogue's image for a `SpawnLocation` decal, and Studio's own
     // `ImageLabel` placeholder, are both published as a `Decal` model that
-    // names the real image — the shape the store gives every "decal id".
+    // names the real image, the shape the store gives every "decal id".
     #[test]
     fn a_decal_model_asset_names_the_image_it_wraps() {
         let xml = r#"<roblox version="4"><Item class="Decal" referent="RBX0"><Properties><string name="Name">Decal</string><Content name="Texture"><url>http://www.roblox.com/asset/?id=6891610105</url></Content></Properties></Item></roblox>"#;

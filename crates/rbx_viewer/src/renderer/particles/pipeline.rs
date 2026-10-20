@@ -47,7 +47,7 @@ pub(super) struct ParticleRaw {
 }
 
 /// Blended with a premultiplied `(One, OneMinusSrcAlpha)` state on both
-/// channels — see `particles.wgsl`'s `fs_main` for why this one blend state
+/// channels, see `particles.wgsl`'s `fs_main` for why this one blend state
 /// covers both straight alpha and additive `LightEmission`.
 const PARTICLE_BLEND: wgpu::BlendState = wgpu::BlendState {
     color: wgpu::BlendComponent {

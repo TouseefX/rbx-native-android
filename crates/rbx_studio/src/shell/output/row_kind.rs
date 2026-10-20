@@ -15,8 +15,8 @@ use crate::command_bar::Feedback;
 ///
 /// UTC, not the machine's local offset: the `time` crate (already in this
 /// workspace's dependency tree transitively) gates its local-offset lookup
-/// behind an `unsound_local_offset` feature flag — it's unsound to call from
-/// a multi-threaded process, which this editor is — and there's no other
+/// behind an `unsound_local_offset` feature flag, it's unsound to call from
+/// a multi-threaded process, which this editor is, and there's no other
 /// timezone source here to reach for instead.
 // ponytail: UTC-only clock; swap in a vetted local-time source (or accept
 // the `time` crate's unsoundness caveat explicitly) if local display ever
@@ -31,13 +31,13 @@ pub(super) fn format_timestamp(time: SystemTime) -> SharedString {
     SharedString::from(format!("{hours:02}:{minutes:02}:{seconds:02}.{millis:03}"))
 }
 
-/// Which color/icon family a row's [`Feedback`] maps to — Studio's Output
+/// Which color/icon family a row's [`Feedback`] maps to, Studio's Output
 /// window docs give each of its four message kinds its own color and icon.
 /// `Info` is `LogService`'s `MessageInfo`, what `TestService:Message` (and
 /// the engine's own notices) print in a running game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RowKind {
-    /// `print` and a script's own successful run — Studio's docs call this
+    /// `print` and a script's own successful run, Studio's docs call this
     /// the "default/black text color", i.e. no override at all rather than
     /// a distinct one; see [`RowKind::color`].
     Success,
@@ -51,7 +51,7 @@ pub(crate) enum RowKind {
 /// without a live `Theme` (see this module's tests).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RowColor {
-    /// No override — the row keeps whatever text color it already had.
+    /// No override, the row keeps whatever text color it already had.
     Default,
     Info,
     Warning,
@@ -66,7 +66,7 @@ impl RowKind {
             Feedback::Info(_) => RowKind::Info,
             // `Idle` never reaches an `OutputEntry`: `run_command` always logs
             // a `Feedback::from_run` result (`Output`/`Error`), and
-            // `push_warning` always logs `Warning` — there's no path that
+            // `push_warning` always logs `Warning`: there's no path that
             // logs `Idle`. Folded into `Success` rather than given its own
             // unreachable case.
             Feedback::Idle | Feedback::Output(_) => RowKind::Success,

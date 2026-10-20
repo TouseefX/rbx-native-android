@@ -19,7 +19,10 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            if !path.ends_with("target") && !path.ends_with(".git") && !path.ends_with(".claude") {
+            let hidden = path
+                .file_name()
+                .is_some_and(|n| n.to_string_lossy().starts_with('.'));
+            if !hidden && !path.ends_with("target") {
                 walk(&path, out);
             }
         } else {

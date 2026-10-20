@@ -128,7 +128,7 @@ impl Server {
     }
 
     // `ShowCursor` moves a per-thread counter rather than setting a state, so
-    // the two below must stay paired — which `PointerLock` guarantees by only
+    // the two below must stay paired, which `PointerLock` guarantees by only
     // showing on the release of a look it hid for. Both run on GPUI's main
     // thread, the one that owns the window.
     pub(super) fn hide(&self, _window: WindowId) {

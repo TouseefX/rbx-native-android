@@ -100,7 +100,7 @@ fn inserted_part_gets_studio_s_visible_defaults() {
 }
 
 /// Mirrors what `Shell::insert_instance`/`insert_part` does for one Part
-/// insert-menu item, without needing a real `Shell`/`Context` — the same
+/// insert-menu item, without needing a real `Shell`/`Context`: the same
 /// reason [`apply_part_defaults`]'s own tests above work on a bare
 /// `WeakDom` instead.
 fn insert_menu_item(class: &str, shape: Option<u32>) -> (WeakDom, Ref) {
@@ -113,8 +113,8 @@ fn insert_menu_item(class: &str, shape: Option<u32>) -> (WeakDom, Ref) {
 }
 
 /// One test per `shell::ribbon::insert_tiles` Part-menu item. The bug
-/// `ROADMAP.md` describes was invisible in the Explorer — every item
-/// already showed the right class — and only showed once the viewport
+/// `ROADMAP.md` describes was invisible in the Explorer, every item
+/// already showed the right class, and only showed once the viewport
 /// resolved the wrong `ShapeKind`, so each of these checks both.
 #[test]
 fn block_menu_item_is_a_part_that_renders_as_a_box() {
@@ -183,7 +183,7 @@ fn database() -> ReflectionDatabase {
 }
 
 /// Counts unmatched `function`/`do` openers against `end` closers by
-/// whitespace-splitting the template into tokens — no full Luau parser is
+/// whitespace-splitting the template into tokens, no full Luau parser is
 /// needed to catch a template with a stray or missing `end`.
 fn opens_and_ends(template: &str) -> (usize, usize) {
     let opens = template

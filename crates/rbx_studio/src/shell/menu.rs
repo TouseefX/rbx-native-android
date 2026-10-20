@@ -2,8 +2,8 @@
 //! trigger, and the rows inside it.
 //!
 //! Hand-built rather than `gpui_component`'s stock `PopupMenu` because the
-//! design pins the geometry — one 3px radius everywhere, 24px rows, 9px
-//! labels — and none of that is reachable from outside that component.
+//! design pins the geometry, one 3px radius everywhere, 24px rows, 9px
+//! labels, and none of that is reachable from outside that component.
 //! What is reused is the stock [`Popover`], which already owns the hard
 //! parts: anchoring, outside-click dismissal, and layering above everything
 //! else in the window.
@@ -36,7 +36,7 @@ use crate::tokens;
 use super::roving::{clamp, Move};
 use super::Shell;
 
-/// Every menu the shell can open. One value, one menu — `Shell::open_menu`
+/// Every menu the shell can open. One value, one menu, `Shell::open_menu`
 /// holds at most one, so opening any menu closes whichever was open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MenuId {
@@ -209,7 +209,7 @@ impl Item {
         self
     }
 
-    /// A row with no real handler behind it yet. It still draws — seeing
+    /// A row with no real handler behind it yet. It still draws, seeing
     /// what Studio offers here, greyed, beats a menu that quietly omits it
     /// (the same rule `menu_bar`'s disabled items follow).
     pub(super) fn disabled(mut self) -> Self {
@@ -238,7 +238,7 @@ impl Item {
 }
 
 /// A trigger wired to its menu. `trigger` is whatever the caller wants
-/// clicked — a ribbon tile, an overflow "…", a panel header button.
+/// clicked, a ribbon tile, an overflow "…", a panel header button.
 pub(super) fn dropdown(
     shell: &Shell,
     menu: MenuId,

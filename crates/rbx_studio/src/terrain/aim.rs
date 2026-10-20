@@ -1,5 +1,5 @@
-//! Where the brush lands: what the cursor's ray meets — terrain, a part, or
-//! a locked plane — and how the brush sits against it.
+//! Where the brush lands: what the cursor's ray meets, terrain, a part, or
+//! a locked plane, and how the brush sits against it.
 
 use glam::Vec3;
 #[cfg(test)]
@@ -33,7 +33,7 @@ pub(crate) struct Aim {
 }
 
 /// Manual plane lock's normal as tilts in degrees: about X, then about Z,
-/// from straight up — the two turns a plane facing up can take.
+/// from straight up, the two turns a plane facing up can take.
 pub(crate) fn plane_tilt(normal: [f32; 3]) -> [f32; 2] {
     let n = Vec3::from(normal).normalize_or(Vec3::Y);
     // n = Rz(z) · Rx(x) · Y = (-sin z·cos x, cos z·cos x, sin x).

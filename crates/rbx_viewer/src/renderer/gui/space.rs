@@ -60,12 +60,12 @@ pub(super) struct Space {
     canvases: Vec<Canvas>,
     items: Vec<Item>,
     vertices: Option<wgpu::Buffer>,
-    /// Grown, never shrunk — same reasoning as `renderer::beam::Beams`.
+    /// Grown, never shrunk, same reasoning as `renderer::beam::Beams`.
     vertex_capacity: usize,
 }
 
 impl Space {
-    /// `shared` is what a bake draws with — the image atlas, the typesetter
+    /// `shared` is what a bake draws with, the image atlas, the typesetter
     /// and the `ViewportFrame` pass, whose textures sample `materials`.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
@@ -176,7 +176,7 @@ impl Space {
         self.painter = Some(painter);
     }
 
-    /// Rebuilds both pipelines for a new sample count — see `renderer::switch`.
+    /// Rebuilds both pipelines for a new sample count, see `renderer::switch`.
     pub(super) fn set_target(&mut self, device: &wgpu::Device, target: Target) {
         let (depth_tested, always_on_top) =
             pipeline::create_pipelines(device, target, &self.camera_layout, &self.image_layout);

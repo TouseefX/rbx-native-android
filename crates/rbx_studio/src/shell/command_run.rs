@@ -2,7 +2,7 @@
 //! `rbx_lua::Runtime` over the place, a run that yields (`task.wait`, signals)
 //! is resumed from the UI loop between frames, and what each resume printed
 //! and changed reaches the Output panel, the Explorer and the viewport as it
-//! happens — the editor stays live while a script waits.
+//! happens, the editor stays live while a script waits.
 
 use std::time::Duration;
 
@@ -73,7 +73,7 @@ impl Shell {
         let compiled = rbx_lua::compile_check(source, "=Command bar").is_ok();
         self.command_bar.remember(source);
         // Snapshotted before the run touches anything, whether or not it ends
-        // up mutating — see `shell::history`. The run's changes all join this
+        // up mutating, see `shell::history`. The run's changes all join this
         // one entry (see `command_bar::undo`).
         self.push_history();
         self.command_run.undo = Some(RunUndo::new(self.history.revision()));
@@ -192,8 +192,8 @@ impl Shell {
         self.command_bar.set_feedback(feedback);
     }
 
-    /// Shows this step's DOM changes in the Explorer and the viewport — also
-    /// after an error, since what the script did before it failed is kept —
+    /// Shows this step's DOM changes in the Explorer and the viewport, also
+    /// after an error, since what the script did before it failed is kept,
     /// and files them under the run's undo step.
     fn reflect_command_changes(&mut self, cx: &mut Context<Self>) {
         let changes = self.dom.take_changes();

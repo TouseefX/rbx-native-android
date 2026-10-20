@@ -279,7 +279,7 @@ fn zero_rotation_is_the_identity() {
 #[test]
 fn rotation_turns_a_point_clockwise_about_the_pivot() {
     // A square centred on the pivot: turning it 90 degrees clockwise sends
-    // the point that was top-left to where top-right used to be — "up" swings
+    // the point that was top-left to where top-right used to be, "up" swings
     // to "right" the way a clock's hand does, in this y-down pixel space.
     let spin = Spin::new(90.0, [10.0, 10.0]);
     let top_left = [5.0, 5.0];
@@ -321,7 +321,7 @@ fn a_rotated_quad_stays_centred_on_the_unrotated_rects_centre() {
 #[test]
 fn a_rotated_borders_bands_turn_about_the_elements_centre_too() {
     // `outline`'s four bands sit outside `rect`, each with its own, different
-    // centre — sharing the element's own `Spin` (rather than each band
+    // centre, sharing the element's own `Spin` (rather than each band
     // getting its own, freshly computed one) is what keeps them turning as
     // one rigid box rather than four independently-spinning strips.
     let mut bordered = element(rect(0.0, 0.0, 20.0, 10.0), None);
@@ -341,7 +341,7 @@ fn a_rotated_borders_bands_turn_about_the_elements_centre_too() {
     // Unrotated, the bordered box spans 20 + 2*4 = 28 px horizontally and
     // 10 + 2*4 = 18 px vertically. A quarter turn swaps those: if every band
     // shares the element's own pivot, the vertical extent afterwards is the
-    // *un*rotated horizontal one, 28 — not 18, and not something else
+    // *un*rotated horizontal one, 28, not 18, and not something else
     // entirely, which is what four bands rotating about their own separate
     // centres would produce instead.
     let min_y = border
@@ -368,8 +368,8 @@ fn grouped(alpha: f32, texture: Option<usize>) -> GuiElement {
     element
 }
 
-// A group the renderer has not flattened — because its tint is the default,
-// or because it is marked but never baked — is its own background and
+// A group the renderer has not flattened, because its tint is the default,
+// or because it is marked but never baked, is its own background and
 // nothing more, exactly like a `Frame`.
 #[test]
 fn an_unflattened_group_draws_like_a_plain_frame() {

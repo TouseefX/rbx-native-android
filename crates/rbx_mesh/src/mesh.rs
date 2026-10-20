@@ -75,7 +75,7 @@ pub struct Mesh {
     pub bounds: Aabb,
 }
 
-/// A parsed mesh together with its skinning, if it has any — what
+/// A parsed mesh together with its skinning, if it has any, what
 /// [`crate::parse_skinned`] returns. Dereferences to the [`Mesh`].
 ///
 /// Kept apart from [`Mesh`] rather than as a field of it so code that builds a

@@ -205,7 +205,7 @@ pub(super) fn number(
 }
 
 /// A committed field's number: the text read as one, clamped into `range`
-/// when `clamp`, refused outside it otherwise — each setting keeping the
+/// when `clamp`, refused outside it otherwise, each setting keeping the
 /// rule it loads with.
 pub(super) fn committed(text: &str, (low, high): (f32, f32), clamp: bool) -> Option<f32> {
     let value = text.trim().parse::<f32>().ok().filter(|v| v.is_finite())?;

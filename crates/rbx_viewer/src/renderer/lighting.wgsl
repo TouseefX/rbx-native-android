@@ -33,7 +33,7 @@ struct LightingUniform {
     // w: highest mip level of the cube map.
     tuning: vec4<f32>,
     // xyz: what the sky, its bounce and its haze are multiplied by at this time
-    // of day — white by day, a dim blue at night. w: how much of the star field
+    // of day, white by day, a dim blue at night. w: how much of the star field
     // shows, 0 by day to 1 at night.
     sky_tint: vec4<f32>,
     // x: Atmosphere.Glare, y: Atmosphere.Haze.
@@ -78,7 +78,7 @@ struct LightingUniform {
 // Plastic, the default part material. Roblox derives the exponent from one
 // per-material parameter `p` as `p * 0.5036`; `PLASTIC_SHININESS` is that at
 // the `p` near 60 a plain plastic part lands on. The strength has no such
-// primary-source derivation — Roblox publishes no formula for it — so it is
+// primary-source derivation, Roblox publishes no formula for it, so it is
 // empirically tuned instead: low enough that an upward face reflecting the
 // sky never reads as a mirror, high enough that a curved part shows a real
 // highlight against the sun the way Studio's does. This is the highlight's
@@ -94,8 +94,8 @@ const PLASTIC_ROUGHNESS: f32 = 0.25;
 // Roblox samples its environment probe at `(0.089 + roughness * 0.911) * 5`,
 // the 5 being the top mip of its own probe. That fraction is only meaningful
 // alongside the size the probe starts from: Studio's reflections are famously
-// soft — a Reflectance 1 plastic part shows a sky gradient blurred over some
-// ten degrees, not a mirror — which puts its base face at about 32 texels.
+// soft, a Reflectance 1 plastic part shows a sky gradient blurred over some
+// ten degrees, not a mirror, which puts its base face at about 32 texels.
 // Reading the curve as an absolute resolution instead of a fraction of *our*
 // chain is what keeps a 1024-texel sky from turning every reflective part into
 // a mirror.
@@ -226,7 +226,7 @@ fn sky_ambient(normal: vec3<f32>) -> vec3<f32> {
 /// The receiver is pushed along its own normal before being projected, by about
 /// the world width of the kernel and only where the lamp grazes it. That offset
 /// is what keeps a surface from shadowing itself once the kernel reaches into
-/// neighbouring texels — and, unlike a bigger depth bias, it slides the lookup
+/// neighbouring texels, and, unlike a bigger depth bias, it slides the lookup
 /// *along* the surface instead of lifting the shadow off the foot of its caster.
 fn lamp_visibility(world_position: vec3<f32>, normal: vec3<f32>, facing: f32) -> f32 {
     if abs(lighting.shadow_lamp.x) < 0.5 {
@@ -266,7 +266,7 @@ fn lamp_visibility(world_position: vec3<f32>, normal: vec3<f32>, facing: f32) ->
 }
 
 /// The whole model, per fragment: two lamps, ambient, specular, environment,
-/// exposure and fog. Returns linear colour clamped to the displayable range —
+/// exposure and fog. Returns linear colour clamped to the displayable range,
 /// Roblox squares it down into a gamma-2 target here, which an `*Srgb` render
 /// target does for us on write.
 fn shade(surface: Surface) -> vec3<f32> {
@@ -279,7 +279,7 @@ fn shade(surface: Surface) -> vec3<f32> {
     // Two lamps, one at L and a dim one at -L: what stops a face turned away
     // from the sun reading as a flat silhouette.
     let facing = dot(normal, light);
-    // Only the lamp above the horizon is occluded — and only its own term.
+    // Only the lamp above the horizon is occluded, and only its own term.
     // Ambient and sky irradiance stay whole, which is what makes a Studio
     // shadow on a grey baseplate read as pure blue sky rather than as black.
     let lamp = lighting.shadow_lamp.x;
@@ -292,7 +292,7 @@ fn shade(surface: Surface) -> vec3<f32> {
 
     // Roblox mixes indoor Ambient with OutdoorAmbient by a per-voxel skylight
     // factor. We have no voxel grid, so every surface is treated as open to the
-    // sky (outdoor = 1) — an honest approximation, not the real thing.
+    // sky (outdoor = 1), an honest approximation, not the real thing.
     let ambient = lighting.ambient.rgb + sky_ambient(normal);
 
     let half_vector = normalize(light + to_eye);
@@ -323,7 +323,7 @@ fn shade(surface: Surface) -> vec3<f32> {
     // highlight there is exactly what greyed the greens out. A place that
     // leaves it at 1 keeps the full highlight. Roblox publishes no formula, so
     // this ties the direct highlight to the same scale as the reflection it is
-    // physically the sharp end of — matched against Studio on a place with the
+    // physically the sharp end of, matched against Studio on a place with the
     // scale at 0 (matte) and one at 1 (glossy).
     var color = surface.albedo * (direct + ambient + locals.diffuse)
         + (specular * lighting.sun_color.rgb * lighting.tuning.y
@@ -332,7 +332,7 @@ fn shade(surface: Surface) -> vec3<f32> {
             * surface.spec_tint;
     // Reflectance is a straight crossfade to the reflection, with no Fresnel:
     // that is literally what Roblox does. Gated by EnvironmentSpecularScale
-    // like every other use of `environment` above — Lighting's own docs describe
+    // like every other use of `environment` above, Lighting's own docs describe
     // the property as "specular light derived from the environment" in general,
     // not specifically the roughness-driven term, and Reflectance's crossfade is
     // exactly that, just dialled per-part instead of per-material.

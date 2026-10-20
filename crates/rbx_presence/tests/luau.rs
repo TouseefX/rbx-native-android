@@ -544,7 +544,7 @@ fn data_catchup() {
 
 /// Mirrors the Rust `ntfy::fit_encode` test over the same large state: the
 /// plugin's `fitEncode` sheds down to a body that fits `MAX_BODY`, and the
-/// shed body interoperates with the Rust receiver — and vice versa — so the
+/// shed body interoperates with the Rust receiver, and vice versa, so the
 /// two shedding paths cannot drift.
 #[test]
 fn ntfy_fit_sheds_to_a_fitting_interoperable_body() {

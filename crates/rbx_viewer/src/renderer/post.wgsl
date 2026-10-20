@@ -26,7 +26,7 @@ struct PostUniform {
     // view_distance needs. w: 1 where a DepthOfFieldEffect is enabled.
     misc: vec4<f32>,
     // x/y: the sun's screen-space UV this frame (see
-    // renderer::sun::sun_screen_position). z: SunRaysEffect.Intensity — 0 skips
+    // renderer::sun::sun_screen_position). z: SunRaysEffect.Intensity, 0 skips
     // the whole effect, whichever of "no effect", "moon lit" or "off-screen"
     // that came from. w: Spread.
     sun_rays: vec4<f32>,
@@ -34,7 +34,7 @@ struct PostUniform {
     // z: NearIntensity and w: FarIntensity, both 0-1 mixes. Whether any of it
     // applies at all is misc.w, not a zero in here.
     depth_of_field: vec4<f32>,
-    // x: 1 on an orthographic frame, 0 on a perspective one — which
+    // x: 1 on an orthographic frame, 0 on a perspective one, which
     // view_distance formula the depth buffer needs. y/z: the orthographic far
     // and near planes in studs (near is negative: the volume runs behind the
     // eye plane too, see camera::orthographic_range), meaningless when x is
@@ -57,12 +57,12 @@ const DISPLAY_GAMMA: f32 = 2.2;
 @group(3) @binding(0) var blur: texture_2d<f32>;
 @group(3) @binding(1) var blur_sampler: sampler;
 // The scene's own depth buffer, the one the opaque geometry was tested against,
-// bound for reading now that the scene pass is over — in this group rather than a
+// bound for reading now that the scene pass is over, in this group rather than a
 // fifth one because a WebGPU device is only guaranteed four. Loaded, never
 // sampled: a depth filtered across a silhouette is a depth no surface is at, and
 // above one sample WGSL has no textureSample for a multisampled texture at all.
 // That is also why `renderer::post` builds this shader twice, retyping this one
-// line — see its DEPTH_BINDING.
+// line, see its DEPTH_BINDING.
 @group(3) @binding(2) var scene_depth: texture_depth_2d;
 
 struct VertexOutput {
@@ -189,7 +189,7 @@ fn view_distance(depth: f32) -> f32 {
     }
     // Orthographic depth is linear in view-space Z (mirrors
     // camera.rs::orthographic_reversed_depth), not the hyperbolic perspective
-    // mapping below — the two projections write depth by different formulas.
+    // mapping below, the two projections write depth by different formulas.
     // Its near plane is its own (negative) one, not post.misc.z: the answer
     // can legitimately come out negative for geometry behind the eye plane,
     // which dof_blur_factor already treats as "nearer than the focus plane".
@@ -205,14 +205,14 @@ fn view_distance(depth: f32) -> f32 {
 /// sharp zone, ramping to NearIntensity or FarIntensity either side of it.
 ///
 /// Mirrors `DepthOfField::blur_factor` in `lighting::effects`, where the ramp is
-/// unit-tested — Roblox publishes the four properties and nothing about the
+/// unit-tested, Roblox publishes the four properties and nothing about the
 /// falloff between them, so the ramp is this renderer's own (see
 /// DOF_FALLOFF_RADII).
 fn dof_blur_factor(distance: f32) -> f32 {
     let offset = distance - post.depth_of_field.x;
     // InFocusRadius is the sharp zone's extent on EACH side of FocusDistance
     // (Roblox's own docs: "the distance away from FocusDistance, on both
-    // sides, where no blur is applied") — not a diameter to halve.
+    // sides, where no blur is applied"), not a diameter to halve.
     let beyond = max(abs(offset) - post.depth_of_field.y, 0.0);
     let falloff = max(post.depth_of_field.y * DOF_FALLOFF_RADII, DOF_MIN_FALLOFF);
     let intensity = select(post.depth_of_field.w, post.depth_of_field.z, offset < 0.0);
@@ -222,8 +222,8 @@ fn dof_blur_factor(distance: f32) -> f32 {
 
 @fragment
 fn fs_resolve(in: VertexOutput) -> @location(0) vec4<f32> {
-    // A BlurEffect replaces the sharp frame outright — Roblox's own has no
-    // partial-strength mix — so bloom (below) still adds its glow on top of
+    // A BlurEffect replaces the sharp frame outright, Roblox's own has no
+    // partial-strength mix, so bloom (below) still adds its glow on top of
     // the now-blurred base rather than on top of the sharp geometry pass.
     let blurred = textureSample(blur, blur_sampler, in.uv).rgb;
     var color = select(
@@ -253,7 +253,7 @@ fn fs_resolve(in: VertexOutput) -> @location(0) vec4<f32> {
     // Zero here covers every reason the effect must not draw this frame at
     // once: no SunRaysEffect, the moon lit instead of the sun, or the
     // projection falling behind the camera or off-screen (see
-    // renderer::sun::sun_screen_position) — none of that is this shader's
+    // renderer::sun::sun_screen_position), none of that is this shader's
     // business to re-derive.
     if post.sun_rays.z > 0.0 {
         color += sun_rays(in.uv) * post.sun_rays.z;
@@ -265,7 +265,7 @@ fn fs_resolve(in: VertexOutput) -> @location(0) vec4<f32> {
     // only "curve" it has ever had is the `*Srgb` target's own gamma encode on
     // write, which happens after this shader and cannot be toggled per effect.
     // That rules out approximating `Retro` by "removing" a sqrt this pipeline
-    // never applied — it would just collapse back to Default. A Reinhard
+    // never applied, it would just collapse back to Default. A Reinhard
     // rolloff (`color / (1 + color)`) is used instead: a real, well-known
     // legacy tonemap that reads flatter than the clamp, which is the
     // principled approximation this renderer can actually justify.
@@ -279,7 +279,7 @@ fn fs_resolve(in: VertexOutput) -> @location(0) vec4<f32> {
     if post.correction.w > 0.5 {
         // Graded after the tone map, on gamma-encoded values: Roblox's grade
         // runs on the displayable frame, and a +0.1 Brightness has to lift
-        // black by a tenth of the screen's range — done in linear light it
+        // black by a tenth of the screen's range, done in linear light it
         // lifted it to sRGB 89 and greyed whole places out. The order (tint,
         // brightness, contrast about middle grey, saturation) is this
         // renderer's own choice; `ColorCorrection::apply` is the same grade

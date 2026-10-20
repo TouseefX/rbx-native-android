@@ -7,9 +7,9 @@
 //! `MeshPart`'s siblings in its `Model`**, matched by `Name`; a bone that
 //! names none stays at its bind pose.
 //!
-//! A rig binds wherever its mesh part comes from — the place as opened, a
+//! A rig binds wherever its mesh part comes from, the place as opened, a
 //! patch inserting it later (the auto-rigger swaps its whole `Model` on every
-//! edit), or a mesh streaming in after either — and binds again whenever its
+//! edit), or a mesh streaming in after either, and binds again whenever its
 //! `MeshId`, `Size` or model changes, or a part in that model arrives,
 //! leaves or is renamed (see [`bind`]).
 //!
@@ -26,7 +26,7 @@
 //! K_b = part_b_rest.CFrame⁻¹ · meshPart_rest.CFrame · S·bind_b
 //! ```
 //!
-//! — the translation `o_b` alone when the bind rotation agrees with the two
+//! the translation `o_b` alone when the bind rotation agrees with the two
 //! parts' rest orientation (what the auto-rigger writes), the full transform
 //! otherwise so a part already turned at rest does not twist its skin. Each
 //! bone's skinning matrix, in the part's (scaled) space, is then
@@ -35,7 +35,7 @@
 //! M_b = meshPart.CFrame⁻¹ · J_b · (S·bind_b)⁻¹
 //! ```
 //!
-//! — identity at rest — and in native space `S⁻¹ · M_b · S`, which is what
+//! identity at rest, and in native space `S⁻¹ · M_b · S`, which is what
 //! each vertex is blended through: `v' = Σ wᵢ · M_bᵢ · v` (weights
 //! renormalized to sum to 1). Normals go through each matrix's
 //! inverse-transpose and keep their stored length.
@@ -110,7 +110,7 @@ fn ref_of(dom: &WeakDom, referent: Ref, property: &str) -> Option<Ref> {
 /// A part's rest frame is fixed when it is first read: from the model's
 /// animated joints where it hangs off one (see [`joint_rests`]), so a place
 /// saved mid-pose still rests where its joints say, otherwise its `CFrame`
-/// at that moment — which is rest for a rig inserted the way the
+/// at that moment, which is rest for a rig inserted the way the
 /// auto-rigger inserts one.
 #[derive(Default)]
 pub(crate) struct Poses {
@@ -151,7 +151,7 @@ impl Poses {
 
     /// (Re-)reads `model`'s child parts, starting to watch it if need be or
     /// letting it go if it is no longer a model with parts. Answers whether
-    /// a bone name could now find another part there than before — what
+    /// a bone name could now find another part there than before, what
     /// makes the skinned meshes in it bind again.
     pub(crate) fn watch(
         &mut self,
@@ -213,7 +213,7 @@ impl Poses {
     }
 
     /// Keeps `referent`'s membership of the watched models in step with the
-    /// DOM — it may have just arrived in one, left one or been renamed —
+    /// DOM, it may have just arrived in one, left one or been renamed,
     /// answering with every model whose bindings that changed. A part whose
     /// model and name stand as they were costs two lookups.
     pub(crate) fn note(
@@ -278,8 +278,8 @@ impl Poses {
 
     /// Starts tracking a layered garment's handle, which is no member of the
     /// character its garment binds in. It rests where its weld to a member
-    /// puts it with that member at rest — so a place saved mid-pose still
-    /// rests the garment on the body at rest — else where it stands.
+    /// puts it with that member at rest, so a place saved mid-pose still
+    /// rests the garment on the body at rest, else where it stands.
     pub(crate) fn follow(&mut self, dom: &WeakDom, handle: Ref) {
         if self.current.contains_key(&handle) {
             return;
@@ -331,7 +331,7 @@ impl Poses {
     /// and an edit that turns a part about its centre and its joints with it
     /// (what the auto-rigger's publish does) moves its rest: left stale,
     /// every neighbouring bone would warp the skin at rest. Answers with the
-    /// model when some rest moved — what makes its skinned meshes bind
+    /// model when some rest moved, what makes its skinned meshes bind
     /// again; a write that leaves every rest where it was (a `Transform`)
     /// costs one walk of the model's joints.
     pub(crate) fn rejoint(
@@ -656,7 +656,7 @@ impl Rig {
         true
     }
 
-    /// The deformed mesh for the pose last applied, deformed on the CPU —
+    /// The deformed mesh for the pose last applied, deformed on the CPU,
     /// the source itself, bit for bit, at rest.
     pub(crate) fn posed(&self) -> Arc<rbx_mesh::SkinnedMesh> {
         let at_rest = self

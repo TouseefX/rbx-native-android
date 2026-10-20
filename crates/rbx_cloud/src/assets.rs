@@ -228,7 +228,7 @@ fn delivery_failure(body: &[u8]) -> String {
     };
 
     // A payload that does have a `location` only got here because some other
-    // field is the wrong type — and its body holds a signed CDN URL, so it is the
+    // field is the wrong type, and its body holds a signed CDN URL, so it is the
     // one case where the body must not be quoted.
     if value.get("location").is_some() {
         return "asset delivery returned a `location` that is not a string".to_string();

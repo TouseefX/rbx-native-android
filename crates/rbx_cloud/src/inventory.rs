@@ -1,5 +1,5 @@
 //! `GET /cloud/v2/users/{id}/inventory-items` filtered to `CREATED_PLACE`:
-//! every place a user created, private ones included — the only API-key
+//! every place a user created, private ones included, the only API-key
 //! route to a user's private experiences on an unrestricted key. Needs
 //! `user.inventory-item:read` on a key the user themself created.
 
@@ -29,7 +29,7 @@ struct AssetDetailsRaw {
 }
 
 impl Client {
-    /// The ids of every place `user_id` created, oldest first — root places
+    /// The ids of every place `user_id` created, oldest first, root places
     /// and sub-places alike.
     pub fn created_places(&self, user_id: u64) -> Result<Vec<u64>, CloudError> {
         let url = format!("https://apis.roblox.com/cloud/v2/users/{user_id}/inventory-items");

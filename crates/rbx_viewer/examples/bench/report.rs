@@ -2,7 +2,7 @@
 //!
 //! The JSON is hand-written rather than derived. The shape is fixed and shallow,
 //! the values are numbers and short strings, and `rbx_viewer` has no serializer
-//! among its dependencies — adding one so a developer tool can emit forty lines
+//! among its dependencies, adding one so a developer tool can emit forty lines
 //! of object would be the heavier choice, not the lighter one.
 
 use std::fmt::Write as _;
@@ -148,7 +148,7 @@ fn frames(frames: &[Frames]) {
 /// What a column says when the run behind it collected nothing.
 ///
 /// `Samples`' summaries answer `0.0` for an empty run, and `0.00 ms` in a
-/// timing column reads as a real, very fast measurement — the one reading a
+/// timing column reads as a real, very fast measurement, the one reading a
 /// benchmark must never be wrong about.
 const NOTHING: &str = "no samples";
 
