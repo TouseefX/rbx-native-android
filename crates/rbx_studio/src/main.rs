@@ -109,6 +109,7 @@ mod luau_lsp;
 mod menu_bar;
 mod pacing;
 mod packs;
+mod playtests;
 mod pointer_lock;
 #[cfg(test)]
 mod probe;
