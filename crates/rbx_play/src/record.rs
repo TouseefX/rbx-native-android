@@ -33,7 +33,7 @@ pub const PREFIX: &str = "shared.rbxnative = require(game:GetService(\"Replicate
 
 /// `source` with [`PREFIX`] inserted before its first token (after any
 /// leading whitespace, comments and `--!` directives). `Ok(None)` when the
-/// source never says `rbxnative` or has no token; `Err` with the parser's
+/// source never names `rbxnative` (as an identifier) or has no token; `Err` with the parser's
 /// message when it does not parse.
 pub fn rewrite(source: &str) -> Result<Option<String>, String> {
     if !source.contains("rbxnative") {
@@ -46,6 +46,14 @@ pub fn rewrite(source: &str) -> Result<Option<String>, String> {
             .collect::<Vec<_>>()
             .join("\n")
     })?;
+    // An identifier, not a substring: the other Play rewrites put
+    // `"__rbxnative_…"` strings into the scripts they touch.
+    let says_it = ast.nodes().tokens().any(|t| {
+        matches!(t.token().token_type(), TokenType::Identifier { identifier } if identifier.as_str() == "rbxnative")
+    });
+    if !says_it {
+        return Ok(None);
+    }
     let first = ast.nodes().tokens().find(|t| {
         !matches!(
             t.token().token_type(),
@@ -139,6 +147,12 @@ mod tests {
     #[test]
     fn untouched_without_the_word() {
         assert_eq!(rewrite("local x = 1").unwrap(), None);
+    }
+
+    #[test]
+    fn another_rewrites_module_name_is_not_the_word() {
+        let src = format!("{}print(1)", crate::print::PREFIX);
+        assert_eq!(rewrite(&src).unwrap(), None);
     }
 
     #[test]
