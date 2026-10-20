@@ -36,7 +36,7 @@ pub(crate) use beam::{Beam, TextureMode};
 #[cfg(test)]
 pub(crate) use bounds::tests_support;
 pub(crate) use effects::EffectKind;
-// Only a test (`renderer::beam::ribbon`'s) constructs a `Curve` directly —
+// Only a test (`renderer::beam::ribbon`'s) constructs a `Curve` directly,
 // everything else reaches one through `Beam::curve`.
 #[cfg(test)]
 pub(crate) use beam::Curve;
@@ -94,7 +94,7 @@ const FORCE_FIELD_ALPHA: f32 = 0.5;
 /// Everything starts out as one of these, a `UnionOperation`, a `MeshPart` and
 /// a `SpecialMesh` FileMesh child included (see `shape::resolve`), and that box
 /// doubles as the fallback for whichever of them fails to resolve real geometry
-/// — see `id` and `suppressed`. A union that resolves is either one computed
+/// see `id` and `suppressed`. A union that resolves is either one computed
 /// mesh or, where its boolean could not be run, several of these: one per
 /// additive piece recovered from its operation tree, each with an id of its own
 /// (see [`PartId`]).
@@ -106,7 +106,7 @@ const FORCE_FIELD_ALPHA: f32 = 0.5;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Part {
     pub(crate) kind: ShapeKind,
-    /// Which texture-array layer shades it, and how — see `scene::material`.
+    /// Which texture-array layer shades it, and how, see `scene::material`.
     pub(crate) material: Slot,
     pub(crate) transform: Mat4,
     pub(crate) color: [f32; 3],
@@ -149,7 +149,7 @@ pub(crate) struct Placement {
 }
 
 impl Part {
-    /// The DOM instance this box belongs to — the same referent for every
+    /// The DOM instance this box belongs to, the same referent for every
     /// recovered piece of one union, since the union is what the DOM knows.
     pub(crate) fn referent(&self) -> Ref {
         self.id.referent()
@@ -162,12 +162,12 @@ impl Part {
     }
 
     /// Whether the renderer paints this part at all. `Transparency` 1 is how a
-    /// place says "invisible", and Roblox draws nothing for it — but a `Decal`
+    /// place says "invisible", and Roblox draws nothing for it, but a `Decal`
     /// pinned to such a part still shows, which is why the part keeps its
     /// placement (see [`Scene::placements`]) even when nothing draws it.
     ///
-    /// Isolation folds in here too, so every pass that already asks this —
-    /// opaque, blended, shadow casters, highlight masks — leaves a part
+    /// Isolation folds in here too, so every pass that already asks this,
+    /// opaque, blended, shadow casters, highlight masks, leaves a part
     /// outside the isolated roots alone without a test of its own.
     pub(crate) fn is_drawn(&self) -> bool {
         !self.suppressed && !self.isolated_out && self.alpha > 0.0
@@ -186,7 +186,7 @@ impl Part {
         self.alpha < 1.0
     }
 
-    /// Where this box is drawn — the entry [`Scene::placements`] would hold
+    /// Where this box is drawn, the entry [`Scene::placements`] would hold
     /// for it, for a renderer keeping its own copy of that map in step with
     /// a single edit.
     pub(crate) fn placement(&self) -> Placement {
@@ -202,17 +202,17 @@ impl Part {
 /// (`MeshPart`/`SpecialMesh` FileMesh) waiting on network resolution.
 ///
 /// Terrain is excluded to avoid swallowing other parts; everything else that inherits
-/// from BasePart becomes a box, file meshes included — that box is also their fallback
+/// from BasePart becomes a box, file meshes included, that box is also their fallback
 /// (see [`Part::is_suppressed`]) until [`Scene::resolve_file_meshes`] runs.
 pub(crate) struct Scene {
     parts: Vec<Part>,
     /// Where each referent stands in `parts`, so an edit finds its box
-    /// without a scan of the place — see [`Standing`]. Kept in step by
+    /// without a scan of the place, see [`Standing`]. Kept in step by
     /// [`Scene::push_part`] and `Scene::remove_part`, the only two places
     /// `parts` changes length.
     standing: HashMap<Ref, Standing>,
     /// The extent as it stands, grown on the spot by every part that moved
-    /// past it since [`Scene::refresh_bounds`] last ran — see
+    /// past it since [`Scene::refresh_bounds`] last ran, see
     /// `Scene::note_extent`.
     bounds: Bounds,
     /// `bounds` as [`Scene::refresh_bounds`] last answered with, so it can
@@ -226,7 +226,7 @@ pub(crate) struct Scene {
     file_mesh_plan: filemesh::Plan,
     /// Empty until [`Scene::resolve_file_meshes`] runs. `Renderer::new` only
     /// ever sees a `Scene` after that call, so this is where its GPU-ready
-    /// mesh/texture data has to live — `Renderer::new`'s signature has no room
+    /// mesh/texture data has to live, `Renderer::new`'s signature has no room
     /// for a third, network-dependent argument.
     resolved_file_meshes: filemesh::Resolved,
     /// Every `ParticleEmitter` parented to a drawn `BasePart`; see
@@ -243,7 +243,7 @@ pub(crate) struct Scene {
     adornments: Vec<Adornment>,
     /// Every enabled `ScreenGui`; see [`Scene::gui_screens`].
     gui: Vec<GuiScreen>,
-    /// The roots drawing is limited to, if any — see `scene::isolation`.
+    /// The roots drawing is limited to, if any, see `scene::isolation`.
     isolation: Option<Isolation>,
     /// Every placeable `BillboardGui`/`SurfaceGui`; see [`Scene::gui_spaces`].
     gui_spaces: Vec<SpaceGui>,
@@ -255,7 +255,7 @@ pub(crate) struct Scene {
     /// once and nothing rebuilds those.
     unions_resolved: union::Merged,
     /// Cloned once so [`Scene::resolve_unions`] can classify the `BasePart`s a
-    /// downloaded union's operation tree turns out to hold — that only runs
+    /// downloaded union's operation tree turns out to hold, that only runs
     /// once network results are in, long after the `&ReflectionDatabase`
     /// `Scene::from_dom`'s caller lent us has gone out of scope.
     database: ReflectionDatabase,
@@ -317,7 +317,7 @@ impl Scene {
             database: database.clone(),
             terrain,
         };
-        // Needs `scene.placements()`, which only exists once `parts` is set —
+        // Needs `scene.placements()`, which only exists once `parts` is set,
         // an emitter's spawn volume is its parent's own placement, and a
         // `SurfaceGui`'s canvas covers one face of the part as drawn.
         let placements = scene.placements();
@@ -330,7 +330,7 @@ impl Scene {
         // needs no placement either.
         scene.trails = trail::plan(dom, database);
         // Resolves referents rather than geometry, so it needs no placement
-        // either — the renderer looks each part up for itself.
+        // either, the renderer looks each part up for itself.
         scene.highlights = highlight::plan(dom, database);
         // Placed against whatever their adornee is drawn as, so this needs
         // the same placements the emitters did.
@@ -356,7 +356,7 @@ impl Scene {
 
     /// Every `ParticleEmitter` this scene found parented to a drawn `BasePart`.
     ///
-    /// Static definitions only — the renderer owns the per-frame simulation
+    /// Static definitions only, the renderer owns the per-frame simulation
     /// state (`Simulation`) that steps them, since a `Scene` has no GPU handle
     /// and no notion of `dt`.
     pub(crate) fn particle_emitters(&self) -> &[Emitter] {
@@ -372,7 +372,7 @@ impl Scene {
 
     /// Every `Trail` this scene could place: both `Attachment0`/`Attachment1`
     /// resolved to a world position. The renderer owns the per-frame history
-    /// (`Recorder`) those positions feed — a `Scene` never sees a second
+    /// (`Recorder`) those positions feed, a `Scene` never sees a second
     /// frame to record one itself.
     pub(crate) fn trails(&self) -> &[Trail] {
         &self.trails
@@ -385,7 +385,7 @@ impl Scene {
         &self.highlights
     }
 
-    /// Whether anything here is drawn as `Glass` — the one material that
+    /// Whether anything here is drawn as `Glass`: the one material that
     /// reads the scene behind itself, and so the one that makes a frame pay
     /// for the copy it reads (see `renderer::post::Targets`).
     pub(crate) fn has_glass(&self) -> bool {
@@ -401,16 +401,16 @@ impl Scene {
                 .any(|instance| glass(&instance.material))
     }
 
-    /// Every 3D adornment this scene draws — the `Handles`/`*Adornment`/
-    /// `Selection*` family — already resolved to world-space primitives.
+    /// Every 3D adornment this scene draws, the `Handles`/`*Adornment`/
+    /// `Selection*` family, already resolved to world-space primitives.
     /// The renderer turns those into triangles; a `Scene` has no GPU handle
     /// and, for the one camera-facing piece among them, no eye either.
     pub(crate) fn adornments(&self) -> &[Adornment] {
         &self.adornments
     }
 
-    /// Every image the adornments sample — an `ImageHandleAdornment`'s own
-    /// — without repeats, for the loader to fetch alongside the other
+    /// Every image the adornments sample, an `ImageHandleAdornment`'s own
+    /// without repeats, for the loader to fetch alongside the other
     /// effect textures.
     pub(crate) fn adornment_images(&self) -> Vec<AssetRef> {
         let mut references = Vec::new();
@@ -447,7 +447,7 @@ impl Scene {
     }
 
     /// Every image the GUI trees sample, in first-seen paint order and
-    /// without repeats across the three container kinds — one download for
+    /// without repeats across the three container kinds, one download for
     /// an `ImageLabel` image that a screen and a surface both show.
     pub(crate) fn gui_assets(&self) -> Vec<AssetRef> {
         let mut references = Vec::new();
@@ -466,7 +466,7 @@ impl Scene {
     }
 
     /// Every font face the GUI trees' text wants, in first-seen paint order
-    /// and without repeats — see [`Scene::gui_assets`].
+    /// and without repeats, see [`Scene::gui_assets`].
     pub(crate) fn gui_fonts(&self) -> Vec<Face> {
         let mut faces = Vec::new();
         for screen in &self.gui {
@@ -515,7 +515,7 @@ impl Scene {
     /// One entry per referent, always the instance's own box and never one of
     /// a union's recovered pieces: the pieces are what the union is *drawn*
     /// as, while the union is the one thing an outline, a decal, an emitter's
-    /// spawn volume or a `SurfaceGui`'s adornee addresses — and the box those
+    /// spawn volume or a `SurfaceGui`'s adornee addresses, and the box those
     /// pieces stand inside is the very shape `pick` hit-tests it as.
     ///
     /// Suppressed parts are left out, with that one exception: a `MeshPart`
@@ -547,7 +547,7 @@ impl Scene {
 
     /// Where each emitter's parent part stands: [`Scene::placements`] with
     /// suppressed parts kept. An emitter spawns from its part's box whatever
-    /// draws that box — a `MeshPart` whose mesh landed is suppressed, yet its
+    /// draws that box, a `MeshPart` whose mesh landed is suppressed, yet its
     /// sparks still fly from its `Size` and `CFrame`. Planning off
     /// [`Scene::placements`] instead lost every such emitter on the first
     /// re-plan after the mesh arrived, which a pose triggers on every frame.
@@ -559,13 +559,13 @@ impl Scene {
             .collect()
     }
 
-    /// The same, suppressed parts included — what the selection outline and
+    /// The same, suppressed parts included, what the selection outline and
     /// the transform gizmo stand on.
     ///
     /// The opposite call from [`Scene::placements`]' for the opposite reason:
     /// a `MeshPart` or a union whose real mesh replaced its box is still a
     /// `BasePart` with a `Size` and a `CFrame`, is still what a click selects
-    /// and a drag moves, and Studio outlines exactly that box around it —
+    /// and a drag moves, and Studio outlines exactly that box around it,
     /// while a *decal* projected onto a box nothing draws would float in the
     /// air. Leaving them out here left every mesh in a place unable to show a
     /// gizmo at all, and put the handles the editor hit-tests (which read the
@@ -597,7 +597,7 @@ impl Scene {
     /// resolve simply leaves its box alone. Safe to call *again* over a larger
     /// map, which is what a streaming load does every time more meshes land:
     /// the resolved set is rebuilt from the plan, the unions already merged in
-    /// are put back on top of it, and suppression only ever grows — a part
+    /// are put back on top of it, and suppression only ever grows, a part
     /// whose mesh resolved once never goes back to drawing its box on its own.
     pub(crate) fn resolve_file_meshes(
         &mut self,
@@ -620,7 +620,7 @@ impl Scene {
 
     /// Re-poses every skinned mesh whose parts moved since the last call
     /// (see `filemesh::skinned`), answering with the derived meshes that
-    /// changed — what the renderer has to re-upload. Free when no part a
+    /// changed, what the renderer has to re-upload. Free when no part a
     /// skinned mesh binds to has moved.
     pub(crate) fn pose_skins(&mut self) -> Vec<AssetRef> {
         // Rigs a patch (re)built since: their derived mesh was replaced
@@ -635,7 +635,7 @@ impl Scene {
     }
 
     /// Mesh parts still owed a re-bind because their model's parts changed
-    /// (see [`filemesh::Plan::rebind_models`]) — each re-patched by the
+    /// (see [`filemesh::Plan::rebind_models`]), each re-patched by the
     /// caller, which takes it off the list.
     pub(crate) fn skin_rebinds(&self) -> Vec<Ref> {
         let mut parts: Vec<Ref> = self.file_mesh_plan.rebinds.iter().copied().collect();
@@ -696,7 +696,7 @@ impl Scene {
     /// `unions_resolved`: once when the file mesh pass rebuilds the resolved
     /// set, and again when the union pass absorbs whatever bytes landed since.
     /// The instances are a `Vec`, so the second call would otherwise append a
-    /// union already put back by the first and draw it twice — for good, since
+    /// union already put back by the first and draw it twice, for good, since
     /// nothing later prunes the set.
     fn apply_resolved_unions(&mut self) {
         for part in &mut self.parts {
@@ -742,7 +742,7 @@ impl Scene {
 
     /// The nested union assets the trees in `assets` (and the inline trees
     /// `evaluations` has not carved yet) point at and `assets` does not hold
-    /// — the next round to download.
+    /// the next round to download.
     pub(crate) fn union_nested_assets(
         &self,
         assets: &HashMap<AssetRef, Vec<u8>>,
@@ -765,7 +765,7 @@ impl Scene {
     /// Safe to call again every tick of a streaming load, which is what one
     /// does: `assets` need only carry the bytes of what has not been carved
     /// yet, and a union already merged in is ignored however many times
-    /// `union::resolve` answers for it again — see `union::Merged::absorb`,
+    /// `union::resolve` answers for it again, see `union::Merged::absorb`,
     /// without which a failed boolean's recovered pieces would be appended to
     /// the parts a second time.
     pub(crate) fn resolve_unions(
@@ -848,7 +848,7 @@ fn build_part(
 /// `size` (`None` when it's missing, matching `build_part`). A narrow, `pub`
 /// bridge so `rbx_studio`'s Part-insert tests can assert against the exact
 /// render-time shape instead of duplicating the `Enum.PartType`/class mapping
-/// — `ShapeKind` itself stays crate-private, since its `Truss` variant carries
+/// `ShapeKind` itself stays crate-private, since its `Truss` variant carries
 /// `crate::shapes`-private fields.
 pub fn resolved_shape_label(
     dom: &WeakDom,
@@ -905,8 +905,8 @@ pub(super) fn assemble_part(
 }
 
 /// `1 - Transparency`, except on a ForceField: Roblox draws one as a shell
-/// however solid the part claims to be, so it is capped at half-opaque — which
-/// also routes it through the renderer's blended pass — a file mesh's as
+/// however solid the part claims to be, so it is capped at half-opaque, which
+/// also routes it through the renderer's blended pass, a file mesh's as
 /// much as a box's.
 pub(super) fn alpha(properties: &std::collections::BTreeMap<String, Variant>, kind: Kind) -> f32 {
     let alpha = 1.0 - number(properties.get("Transparency")).clamp(0.0, 1.0);
@@ -922,7 +922,7 @@ pub(super) fn casts_shadow(properties: &std::collections::BTreeMap<String, Varia
     !matches!(properties.get("CastShadow"), Some(Variant::Bool(false)))
 }
 
-/// A `BasePart` float property, or 0 when the file leaves it out — which is what
+/// A `BasePart` float property, or 0 when the file leaves it out, which is what
 /// both `Transparency` and `Reflectance` mean by their absence.
 fn number(value: Option<&Variant>) -> f32 {
     let value = match value {
@@ -1005,7 +1005,7 @@ fn walk(dom: &WeakDom, mut pending: Vec<Ref>) -> impl Iterator<Item = Ref> + '_ 
 pub(super) const WORKSPACE_CLASS: &str = "Workspace";
 
 /// Every descendant of the DOM's `Workspace` service, `Workspace` itself
-/// included — real Studio only ever draws what is actually parented under it,
+/// included, real Studio only ever draws what is actually parented under it,
 /// so a `Part` staged in `ServerStorage`/`ReplicatedStorage`/etc. (extremely
 /// common in real places: spare parts, templates, tool prefabs) must never
 /// reach the renderer. Locates `Workspace` the same way `Lighting::from_dom`

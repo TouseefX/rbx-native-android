@@ -2,13 +2,13 @@
 //!
 //! An edit the fast paths cannot take (see `crate::Headless::reload`) means
 //! re-deriving every batch from the DOM; it does not mean the GPU has to
-//! start over. What a scene decides — instance buffers, shadow casters,
-//! effect lists, GUI canvases, the selection's placements — is rebuilt here
+//! start over. What a scene decides, instance buffers, shadow casters,
+//! effect lists, GUI canvases, the selection's placements, is rebuilt here
 //! exactly as [`Renderer::new`] would build it. What it does not decide is
 //! kept: the device's pipelines, layouts, samplers, post chain and shadow
-//! maps, which no scene touches, and every upload keyed by an asset — the
+//! maps, which no scene touches, and every upload keyed by an asset, the
 //! material packs, the sky's probe and panels, the sun and moon, the decal
-//! images, the file meshes, the effect and GUI textures — wherever the new
+//! images, the file meshes, the effect and GUI textures, wherever the new
 //! scene names the same asset again, which for an edit is nearly always.
 //!
 //! The one rule that keeps this honest: a kept upload is only ever reused
@@ -34,7 +34,7 @@ use crate::camera::Camera;
 impl Renderer {
     /// Rebuilds every scene-derived piece of GPU state from `world`, at the
     /// quality level already set, keeping everything [`Renderer::new`] would
-    /// have built identically — see the module doc for which is which. Mirrors
+    /// have built identically, see the module doc for which is which. Mirrors
     /// `new` step for step, so the two draw the same picture from the same
     /// world: anything added to one belongs in the other.
     ///
@@ -146,7 +146,7 @@ impl Renderer {
         // `all_placements`, not `placements`: the selection outline draws a
         // mesh part (a `MeshPart`, or a union carved into one) by its own
         // bounding box, so it needs the suppressed box placements that the
-        // filtered `placements` drops — the same map `Renderer::new` seeds it
+        // filtered `placements` drops, the same map `Renderer::new` seeds it
         // with. Without this a full rebuild (an asset streaming in, a beam or
         // particle resolving) stripped every mesh part's outline and gizmo.
         self.refracting = scene.has_glass();
@@ -196,7 +196,7 @@ impl Renderer {
         );
         self.adornments
             .replace(device, queue, self.target, scene.adornments(), images);
-        // After `shaped`/`filemesh` above only for readability — the mask's
+        // After `shaped`/`filemesh` above only for readability, the mask's
         // own batches are built from the scene, not from theirs.
         self.highlights.replace(
             device,
@@ -245,7 +245,7 @@ pub(super) fn take_spare<K: PartialEq, G>(
 }
 
 /// Whichever of `wanted` a pass never tried to download, in first-seen order
-/// and without duplicates — `tried` holding every reference it did, whether
+/// and without duplicates, `tried` holding every reference it did, whether
 /// the download succeeded or not. A failed asset stays failed for the life
 /// of the renderer rather than being fetched again on every edit.
 pub(super) fn untried<V>(

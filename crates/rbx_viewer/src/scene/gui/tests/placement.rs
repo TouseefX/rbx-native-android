@@ -1,7 +1,7 @@
 //! Where an element lands rather than how big it is: the cumulative
 //! rotation a nested element inherits, where `BorderMode` puts the border
-//! bands, and the two `ScreenGui`-wide properties — `ScreenInsets` and
-//! `ZIndexBehavior` — that decide the canvas and the paint order.
+//! bands, and the two `ScreenGui`-wide properties, `ScreenInsets` and
+//! `ZIndexBehavior`: that decide the canvas and the paint order.
 
 use super::*;
 

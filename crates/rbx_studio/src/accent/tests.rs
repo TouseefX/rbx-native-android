@@ -116,7 +116,7 @@ fn composite(foreground: Rgba, background: Rgba) -> Rgba {
 /// A selected row and the active document tab are *states*, and WCAG 1.4.11
 /// does not exempt states. The tab's wash cannot carry 3:1 on its own (a
 /// dark wash on a dark strip never will), which is exactly why it travels
-/// with an accent rule — and this asserts the rule, not the wash.
+/// with an accent rule, and this asserts the rule, not the wash.
 #[test]
 fn a_selection_and_an_open_document_are_visible_as_states() {
     // The selection is the accent at the opacity `accent::selection_alpha`

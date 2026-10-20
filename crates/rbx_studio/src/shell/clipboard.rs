@@ -1,6 +1,6 @@
 //! Copy/Paste/Duplicate (`Ctrl+C`/`V`/`D`): a deep, in-process copy of the
 //! selection, pushed through the same take/put-back path `shell::keys`'
-//! insert and `shell::group`'s wrap already use for Paste and Duplicate —
+//! insert and `shell::group`'s wrap already use for Paste and Duplicate,
 //! one `push_history`/`take_changes` pair per call, however many instances
 //! it copies, so one Paste or Duplicate is one `Ctrl+Z`. Copy itself never
 //! touches `self.dom`, so it pushes nothing onto the undo stack.
@@ -10,8 +10,8 @@
 //! way `InputState`'s own Ctrl+C/V already do for a text field (`rbx_binary`/
 //! `rbx_xml` are file formats, not a clipboard payload, and Roblox's own
 //! Studio clipboard is a private format this project has no reason to
-//! reverse-engineer). It survives a selection change — copy something,
-//! click elsewhere, Paste still pastes what was copied — but not a window
+//! reverse-engineer). It survives a selection change, copy something,
+//! click elsewhere, Paste still pastes what was copied, but not a window
 //! restart, which real Studio's own clipboard doesn't promise either.
 //!
 //! Real Studio's plain `Ctrl+V` always lands in `Workspace`, not wherever
@@ -22,7 +22,7 @@
 //! convenient way to paste the same clipboard items into multiple parents",
 //! so each selected instance receives its own independent copy of the
 //! whole clipboard. `Ctrl+D` duplicates each selected instance into its own
-//! existing parent — "the same branch" real Studio duplicates into — rather
+//! existing parent, "the same branch" real Studio duplicates into, rather
 //! than `Workspace`.
 
 use std::collections::{BTreeMap, HashMap};
@@ -41,7 +41,7 @@ const WORKSPACE_NAME: &str = "Workspace";
 const ARCHIVABLE: &str = "archivable";
 
 /// What one keystroke does at the window level, or `None` if it means
-/// something else — see [`action_for`].
+/// something else, see [`action_for`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Action {
     Copy,
@@ -55,7 +55,7 @@ pub(super) enum Action {
 /// only while the Explorer has focus, the same reasoning `shell::group`'s
 /// own `action_for` gives for Ctrl+G: copying, pasting or duplicating the
 /// selection is just as sensible from a viewport click as from the tree.
-/// Safe to run no matter what else has focus — `InputState`'s own
+/// Safe to run no matter what else has focus, `InputState`'s own
 /// Ctrl+C/X/V bindings are scoped to its own `"Input"` key context and
 /// resolve first, so a text field being edited (a Properties row, the
 /// Command Bar, an open script) keeps its own copy/paste and this handler
@@ -80,7 +80,7 @@ pub(super) fn action_for(key: &str, modifiers: Modifiers) -> Option<Action> {
 }
 
 /// One instance as copied to the clipboard, together with every
-/// descendant — enough to build a wholly independent copy without reading
+/// descendant, enough to build a wholly independent copy without reading
 /// the DOM it came from again. `origin` is the referent it held at copy
 /// time: meaningless once that DOM moves on, kept only so [`materialize`]
 /// can tell which pasted copy a `Variant::Ref`/`Content::Object` elsewhere
@@ -96,12 +96,12 @@ pub(super) struct Clipped {
 
 /// Deep-copies `reference` and its whole subtree out of `dom`, or `None` if
 /// it no longer resolves. `Variant`'s own clone is already a full, owned
-/// copy — nothing in it is a shared reference — so the result shares no
+/// copy, nothing in it is a shared reference, so the result shares no
 /// state with `dom` at all.
 ///
 /// `reference` itself is snapshotted regardless of its own `Archivable`
-/// property — real Studio's Copy/Duplicate "ignore its own `Archivable`"
-/// the same way, unlike `Instance:Clone()` — but a *descendant* that is not
+/// property, real Studio's Copy/Duplicate "ignore its own `Archivable`"
+/// the same way, unlike `Instance:Clone()`: but a *descendant* that is not
 /// `Archivable` is skipped along with everything under it, matching
 /// `Archivable`'s own docs ("determines if an instance **and its
 /// descendants** can be cloned"). Checked once per child, before recursing,
@@ -130,11 +130,11 @@ fn archivable(properties: &BTreeMap<String, Variant>) -> bool {
 }
 
 /// Every entry of `selected` this editor will copy, duplicate or let
-/// through to the clipboard at all: still resolving, and not a service —
+/// through to the clipboard at all: still resolving, and not a service,
 /// Roblox creates exactly one of each service and parenting a second one
 /// anywhere would be meaningless, the same rule `shell::group`'s own
 /// `common_parent`/`ungroupable` already enforce for Group/Ungroup. Anything
-/// else in a mixed selection still goes through —
+/// else in a mixed selection still goes through,
 /// `shell::group::ungroup_selected` sets the precedent in this codebase for
 /// skipping just the part of a selection that cannot follow along rather
 /// than refusing the whole call.
@@ -154,21 +154,21 @@ fn copyable(dom: &WeakDom, database: &ReflectionDatabase, selected: &[Ref]) -> V
 /// The same question both handlers ask before returning early, asked once
 /// here so the ribbon can grey them instead of offering a click that no-ops.
 /// A selection of nothing but services is not "something selected" for this
-/// purpose — [`copyable`] drops them, so both handlers would return early
+/// purpose, [`copyable`] drops them, so both handlers would return early
 /// on one.
 pub(super) fn has_copyable(dom: &WeakDom, database: &ReflectionDatabase, selected: &[Ref]) -> bool {
     !copyable(dom, database, selected).is_empty()
 }
 
 /// Materializes one clipboard entry under `parent`: every instance in it,
-/// freshly created, with its own class, name and properties. Two passes —
-/// every instance is created first, then every property is written — so a
+/// freshly created, with its own class, name and properties. Two passes,
+/// every instance is created first, then every property is written, so a
 /// `Variant::Ref`/`Content::Object` from an earlier sibling to a later one
 /// still resolves to that later one's fresh copy (see [`remap`]) however
 /// the tree is shaped, not just for a parent pointing at a child.
 ///
 /// The root's own `Archivable` is then forced to `true`, regardless of what
-/// `node` carried — the other half of the same real-Studio rule [`snapshot`]
+/// `node` carried, the other half of the same real-Studio rule [`snapshot`]
 /// applies on the way in: the original's `Archivable` never gates whether
 /// the *root* of a copy happens, but the copy itself is always `Archivable`.
 /// Nothing below the root needs the same treatment: every descendant that
@@ -195,7 +195,7 @@ fn materialize(dom: &mut WeakDom, node: &Clipped, parent: Option<Ref>) -> Ref {
 /// along with that one rather than twice.
 ///
 /// A reference between copied instances follows them, as on paste. One to
-/// anything left behind is dropped — read back as nil, which is what a
+/// anything left behind is dropped, read back as nil, which is what a
 /// model file can say about an instance it does not hold. Left as it was,
 /// its raw id could name an unrelated instance of the new DOM.
 pub(super) fn detached(source: &WeakDom, roots: &[Ref]) -> WeakDom {
@@ -234,10 +234,10 @@ fn drop_outside(dom: &mut WeakDom, node: &Clipped, map: &HashMap<Ref, Ref>) {
 }
 
 /// One Duplicate of `reference`: a copy under the same parent, placed right
-/// after the original among its siblings — where real Studio's Explorer
+/// after the original among its siblings, where real Studio's Explorer
 /// shows it (Studio lists same-class siblings by name, so `Lobby1` follows
 /// `Lobby`; this Explorer lists the DOM's own order, so the copy has to sit
-/// there in the DOM) — renamed to the next free numbered name when
+/// there in the DOM), renamed to the next free numbered name when
 /// `increment` is on.
 fn duplicate(dom: &mut WeakDom, reference: Ref, increment: bool) -> Option<Ref> {
     let parent = dom.parent(reference);
@@ -293,8 +293,8 @@ fn write_properties(dom: &mut WeakDom, node: &Clipped, map: &HashMap<Ref, Ref>) 
     }
 }
 
-/// Rewrites a `Ref`-carrying property through `map` — built fresh per
-/// [`materialize`] call from this one clipboard entry's own referents — so
+/// Rewrites a `Ref`-carrying property through `map`: built fresh per
+/// [`materialize`] call from this one clipboard entry's own referents, so
 /// a reference to something that was copied *along with* it now points at
 /// the copy, exactly as `Class.Instance:Clone()`'s own docs describe: "If a
 /// reference property refers to an instance that was also cloned, the copy
@@ -314,7 +314,7 @@ fn remap(value: &Variant, map: &HashMap<Ref, Ref>) -> Variant {
 impl Shell {
     /// The window-level `on_key_down` handler's clipboard half; called from
     /// `Shell::handle_shell_key` alongside `shell::history`/`shell::group`'s
-    /// own checks — see [`action_for`] for why this runs no matter what
+    /// own checks, see [`action_for`] for why this runs no matter what
     /// currently has focus.
     pub(super) fn handle_clipboard_key(&mut self, keystroke: &Keystroke, cx: &mut Context<Self>) {
         match action_for(&keystroke.key, keystroke.modifiers) {
@@ -329,7 +329,7 @@ impl Shell {
 
     /// Ctrl+C: snapshots every copyable entry of the selection (see
     /// [`copyable`]) into `self.clipboard`, replacing whatever it held
-    /// before. A no-op — the previous clipboard survives untouched — if
+    /// before. A no-op, the previous clipboard survives untouched, if
     /// nothing in the selection can be copied. Never touches `self.dom`, so
     /// there is nothing here for `Ctrl+Z` to undo. `pub(crate)`: also
     /// `menu_bar`'s Copy item's entry point, so a menu click runs the exact
@@ -351,7 +351,7 @@ impl Shell {
     }
 
     /// Ctrl+X: Copy, then remove what was copied. Deliberately built out of
-    /// the two existing halves rather than as a third DOM path — a cut whose
+    /// the two existing halves rather than as a third DOM path, a cut whose
     /// clipboard and whose deletion could disagree about what
     /// `Archivable`/service filtering left out is exactly the bug this
     /// avoids: what lands on the clipboard is what leaves the tree.
@@ -373,16 +373,16 @@ impl Shell {
         self.remove_instances(&cut, cx);
     }
 
-    /// Whether Paste/Paste Into would have anything to paste — the guard
+    /// Whether Paste/Paste Into would have anything to paste, the guard
     /// their own handlers return early on, asked by the ribbon and the
     /// Explorer's context menu so neither offers a row that does nothing.
     pub(super) fn clipboard_is_empty(&self) -> bool {
         self.clipboard.is_empty()
     }
 
-    /// Ctrl+V: pastes every clipboard entry into `Workspace` — real
+    /// Ctrl+V: pastes every clipboard entry into `Workspace`: real
     /// Studio's own target for a plain paste, never the current selection
-    /// (see this module's doc comment) — each an independent deep copy, and
+    /// (see this module's doc comment), each an independent deep copy, and
     /// selects the pasted copies. A no-op with nothing on the clipboard.
     /// `pub(crate)`: also `menu_bar`'s Paste item's entry point.
     pub(crate) fn paste_clipboard(&mut self, cx: &mut Context<Self>) {
@@ -398,8 +398,8 @@ impl Shell {
     }
 
     /// Ctrl+Shift+V: pastes the whole clipboard into *each* selected
-    /// instance — a service included, since `Workspace` and its siblings are
-    /// ordinary places to put a script or a folder — as an independent deep
+    /// instance, a service included, since `Workspace` and its siblings are
+    /// ordinary places to put a script or a folder, as an independent deep
     /// copy per parent, then selects everything that was pasted. A no-op
     /// with nothing on the clipboard or nothing selected. `pub(crate)`: also
     /// `menu_bar`'s Paste Into item's entry point.
@@ -418,7 +418,7 @@ impl Shell {
     }
 
     /// Materializes the clipboard once under every entry of `parents`,
-    /// selects the copies and records the whole batch as one undo step —
+    /// selects the copies and records the whole batch as one undo step,
     /// the single path Paste and Paste Into share, so neither can drift from
     /// the other in how it reaches the history or the viewport.
     fn paste_under(&mut self, parents: &[Option<Ref>], cx: &mut Context<Self>) {
@@ -452,8 +452,8 @@ impl Shell {
     }
 
     /// Ctrl+D: duplicates every copyable entry of the selection (see
-    /// [`copyable`]) into its own existing parent — "the same branch" real
-    /// Studio duplicates into, unlike Paste's fixed `Workspace` target — and
+    /// [`copyable`]) into its own existing parent, "the same branch" real
+    /// Studio duplicates into, unlike Paste's fixed `Workspace` target, and
     /// selects the duplicates. A no-op if nothing in the selection can be
     /// duplicated. `pub(crate)`: also `menu_bar`'s Duplicate item's entry
     /// point.

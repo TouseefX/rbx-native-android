@@ -1,5 +1,5 @@
 //! The GPU-facing half of the in-world GUI pass: the vertex layout, the camera
-//! uniform and the two pipelines a canvas quad draws through — one depth
+//! uniform and the two pipelines a canvas quad draws through, one depth
 //! tested, one for `AlwaysOnTop`.
 
 use bytemuck::{Pod, Zeroable};
@@ -20,7 +20,7 @@ pub(super) struct CameraRaw {
 pub(super) struct VertexRaw {
     pub(super) position: [f32; 3],
     pub(super) uv: [f32; 2],
-    /// What the sampled canvas colour is multiplied by — `Brightness` under
+    /// What the sampled canvas colour is multiplied by, `Brightness` under
     /// `LightInfluence`, see `scene::gui::space::brightness`. Per vertex
     /// rather than in a uniform because every canvas of a pass shares one
     /// vertex buffer and one bind group slot.

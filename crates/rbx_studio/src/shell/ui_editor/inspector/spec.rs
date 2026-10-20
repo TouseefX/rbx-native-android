@@ -1,5 +1,5 @@
-//! What each inspector field is: where its value lives — on the element
-//! or on a modifier under it — which numbers of which properties it is,
+//! What each inspector field is: where its value lives, on the element
+//! or on a modifier under it, which numbers of which properties it is,
 //! and how it reads.
 
 use super::Shell;
@@ -59,7 +59,7 @@ pub(in crate::shell::ui_editor) enum Key {
     ImageAlpha,
 }
 
-/// Each corner's own radius, clockwise from the top left — the order the
+/// Each corner's own radius, clockwise from the top left, the order the
 /// canvas's handles go round in.
 pub(in crate::shell::ui_editor) const CORNERS: [Key; 4] = [
     Key::CornerTopLeft,
@@ -69,8 +69,8 @@ pub(in crate::shell::ui_editor) const CORNERS: [Key; 4] = [
 ];
 
 impl Key {
-    /// Whether the field stands whether or not its modifier does — a
-    /// corner's radius, the padding — reading 0 without it and making it
+    /// Whether the field stands whether or not its modifier does, a
+    /// corner's radius, the padding, reading 0 without it and making it
     /// on the first edit.
     pub(super) fn made_on_edit(self) -> bool {
         matches!(
@@ -86,7 +86,7 @@ impl Key {
 }
 
 /// Where a value lives: on the element, on its first child of a class, or
-/// on its `n`th — a modifier an element may hold several of, which a field
+/// on its `n`th, a modifier an element may hold several of, which a field
 /// never makes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::shell::ui_editor) enum On {
@@ -118,8 +118,8 @@ const FINE: Form = Form::Number {
     whole: false,
 };
 
-/// A value's properties — one, or several written alike (`UIPadding`'s
-/// four sides) — and which of each one's numbers it is.
+/// A value's properties, one, or several written alike (`UIPadding`'s
+/// four sides), and which of each one's numbers it is.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Spec {
     pub(super) on: On,

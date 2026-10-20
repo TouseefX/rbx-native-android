@@ -16,12 +16,12 @@ const SHADER: &str = include_str!("../beam.wgsl");
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub(super) struct CameraRaw {
     pub(super) view_projection: [[f32; 4]; 4],
-    /// The light a `LightInfluence`-1 beam is tinted by (rgb; `w` padding) —
+    /// The light a `LightInfluence`-1 beam is tinted by (rgb; `w` padding),
     /// see `beam.wgsl`.
     pub(super) env_light: [f32; 4],
 }
 
-/// One ribbon vertex, already at its final world position — see
+/// One ribbon vertex, already at its final world position, see
 /// `ribbon::vertices`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
@@ -43,7 +43,7 @@ const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
     5 => Float32,
 ];
 
-/// Same premultiplied `(One, OneMinusSrcAlpha)` state particles use — see
+/// Same premultiplied `(One, OneMinusSrcAlpha)` state particles use, see
 /// `renderer::particles::pipeline::PARTICLE_BLEND`.
 const BEAM_BLEND: wgpu::BlendState = wgpu::BlendState {
     color: wgpu::BlendComponent {
@@ -106,7 +106,7 @@ pub(super) fn create_pipeline(
             // Both faces: a fixed-orientation (non-`FaceCamera`) ribbon is
             // routinely seen edge-on from behind, and the degenerate bridge
             // triangles `ribbon::build` inserts between beams in one texture
-            // group can flip strip winding — neither should ever cull.
+            // group can flip strip winding, neither should ever cull.
             cull_mode: None,
             ..Default::default()
         },

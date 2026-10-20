@@ -132,7 +132,7 @@ fn out_of_range_properties_are_clamped_rather_than_trusted() {
 // The sharp zone is exactly that: no mix of the blurred copy at all, not a small
 // one, or a place with a wide InFocusRadius would read as softer everywhere.
 // Roblox's own docs for `InFocusRadius`: "the distance away from FocusDistance
-// (on both sides) where no blur is applied" — so with focus 50 and radius 20,
+// (on both sides) where no blur is applied", so with focus 50 and radius 20,
 // the zone is the full [30, 70], not the halved [40, 60].
 #[test]
 fn the_in_focus_zone_is_exactly_sharp_out_to_the_full_radius() {

@@ -4,7 +4,7 @@
 //!
 //! [`Scene::particle_emitters`](super::Scene::particle_emitters) is the only
 //! door in; the renderer owns one [`Simulation`] per [`Emitter`] it gets back
-//! and steps it every frame with its own `dt` — see `renderer::particles`.
+//! and steps it every frame with its own `dt`, see `renderer::particles`.
 
 mod emitter;
 mod legacy;

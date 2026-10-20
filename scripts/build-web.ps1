@@ -1,4 +1,4 @@
-# Builds rbxview's browser version into crates/rbx_viewer/web/pkg — see
+# Builds rbxview's browser version into crates/rbx_viewer/web/pkg, see
 # build-web.sh for the prerequisites and why it is `cargo rustc`.
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')

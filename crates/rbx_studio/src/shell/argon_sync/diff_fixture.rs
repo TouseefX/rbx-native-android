@@ -260,7 +260,7 @@ fn parts(prefix: &str, count: usize) -> Vec<Snapshot> {
         .collect()
 }
 
-/// Lobby: 38 nested — Part 22, Folder 4, Model 3, Script 3, PointLight 4,
+/// Lobby: 38 nested, Part 22, Folder 4, Model 3, Script 3, PointLight 4,
 /// Sound 2.
 fn lobby(parent: Option<ArgonRef>) -> Snapshot {
     let mut spawns_children = parts("SpawnPad", 8);

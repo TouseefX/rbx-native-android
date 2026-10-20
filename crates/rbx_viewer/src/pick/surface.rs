@@ -1,6 +1,6 @@
 //! One part's surface, for an editor that needs more than *whether* a ray
 //! hits it: where, which way the surface faces there, and what kind of solid
-//! Studio's draggers take it for — the question their target frames branch
+//! Studio's draggers take it for, the question their target frames branch
 //! on (a box face, a wedge's slope, a ball, a cylinder's cap or side, a
 //! mesh).
 
@@ -15,7 +15,7 @@ use super::{mesh, FlatFace, Meshes, Ray};
 use crate::scene::{cframe_matrix, file_mesh_fit, resolve_shape, ShapeKind};
 
 /// The kinds of solid Studio's draggers tell apart: by class and by
-/// `Part.Shape`, never by a mesh child — a `SpecialMesh` changes what is
+/// `Part.Shape`, never by a mesh child, a `SpecialMesh` changes what is
 /// drawn, not what the dragger measures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Solid {
@@ -99,7 +99,7 @@ impl PartSurface {
     }
 
     /// Where `ray` first meets the surface drawn, and the surface's outward
-    /// unit normal there — a Roblox raycast's `Distance` and `Normal`: a
+    /// unit normal there, a Roblox raycast's `Distance` and `Normal`: a
     /// wedge's slope, a ball's curve, a downloaded mesh's triangle. `None`
     /// when it misses, when the part lies wholly behind the ray, or when the
     /// ray starts inside a solid and so enters through no face.

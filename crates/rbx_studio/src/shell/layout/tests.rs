@@ -25,7 +25,7 @@ fn saved(edges: Vec<SavedEdge>) -> SavedLayout {
     }
 }
 
-/// What one edge holds, as panel lists — the shape most of these assert on.
+/// What one edge holds, as panel lists, the shape most of these assert on.
 fn shape(layout: &Layout, edge: Edge) -> Vec<Vec<Panel>> {
     layout
         .groups(edge)
@@ -35,7 +35,7 @@ fn shape(layout: &Layout, edge: Edge) -> Vec<Vec<Panel>> {
 }
 
 /// The layout nobody has touched is the one the editor always had:
-/// Properties on the left, Explorer on the right, Output underneath — with
+/// Properties on the left, Explorer on the right, Output underneath, with
 /// the Viewport dock, and the Script Editor's own Argon and Wally docks,
 /// tabs behind Output rather than docks of their own.
 #[test]
@@ -71,7 +71,7 @@ fn the_viewport_dock_starts_open_but_not_showing() {
 }
 
 /// What is on screen is exactly the tabs being shown and the windows of
-/// their own — never a tab behind another, never a shut panel.
+/// their own, never a tab behind another, never a shut panel.
 #[test]
 fn showing_follows_the_tab_the_window_and_the_close() {
     let mut layout = Layout::default();
@@ -82,7 +82,7 @@ fn showing_follows_the_tab_the_window_and_the_close() {
 
     layout.float(Panel::Viewport);
     assert!(layout.is_showing(Panel::Viewport));
-    // Output is the dock's first tab, so it's what takes over — not
+    // Output is the dock's first tab, so it's what takes over, not
     // whichever tab happened to land in the slot Viewport left behind.
     assert!(layout.is_showing(Panel::Output));
 
@@ -91,7 +91,7 @@ fn showing_follows_the_tab_the_window_and_the_close() {
 }
 
 /// Opening a panel that is already open but hidden behind another tab
-/// brings it forward rather than doing nothing — otherwise the View menu
+/// brings it forward rather than doing nothing, otherwise the View menu
 /// would have no way to show the Viewport dock in a fresh layout.
 #[test]
 fn opening_a_hidden_tab_brings_it_forward() {
@@ -114,7 +114,7 @@ fn opening_a_hidden_tab_brings_it_forward() {
 }
 
 /// Closing a torn-out dock's window asks for it back, and it comes back
-/// docked where it started, showing — not left floating with no window.
+/// docked where it started, showing, not left floating with no window.
 #[test]
 fn opening_a_floating_panel_docks_it_back_home() {
     let mut layout = Layout::default();
@@ -126,8 +126,8 @@ fn opening_a_floating_panel_docks_it_back_home() {
     assert!(layout.is_showing(Panel::Explorer));
 }
 
-/// Closed and reopened, it comes back where it started — a tab beside
-/// Output — and in front, since reopening is asking to see it.
+/// Closed and reopened, it comes back where it started, a tab beside
+/// Output, and in front, since reopening is asking to see it.
 #[test]
 fn a_reopened_viewport_dock_is_a_showing_tab_beside_output() {
     let mut layout = Layout::default();
@@ -162,7 +162,7 @@ fn a_reopened_viewport_dock_is_a_showing_tab_beside_output() {
 }
 
 /// A settings file from before the Viewport dock existed gets it as a
-/// hidden tab beside Output — the same place a fresh layout puts it —
+/// hidden tab beside Output, the same place a fresh layout puts it,
 /// rather than a second dock halving Output's width.
 #[test]
 fn a_file_from_before_the_viewport_dock_seats_it_beside_output() {
@@ -244,7 +244,7 @@ fn a_panel_is_in_exactly_one_place() {
     }
 }
 
-/// A dock never outlives its last tab — an empty one would render as a
+/// A dock never outlives its last tab, an empty one would render as a
 /// strip with nothing under it and take room from the document.
 #[test]
 fn a_dock_that_loses_its_last_tab_is_gone() {
@@ -291,7 +291,7 @@ fn landing_on_a_strip_inserts_a_tab_there() {
 }
 
 /// Landing on a dock's half makes a *new* dock beside it rather than a
-/// tab — the distinction the whole overlay exists to offer.
+/// tab, the distinction the whole overlay exists to offer.
 #[test]
 fn landing_on_a_half_stacks_a_new_dock() {
     let mut layout = Layout::default();
@@ -350,7 +350,7 @@ fn a_panel_dropped_on_its_own_dock_stays_put() {
 #[test]
 fn a_landing_below_the_dock_it_emptied_still_lands_right() {
     let mut layout = Layout::default();
-    // Right: [Explorer], [Properties] — Properties alone in dock 1.
+    // Right: [Explorer], [Properties], Properties alone in dock 1.
     layout.apply(
         Panel::Properties,
         Landing::NewGroup {
@@ -374,7 +374,7 @@ fn a_landing_below_the_dock_it_emptied_still_lands_right() {
 }
 
 /// Splitting a dock off its own two-tab dock, below it: the dock it came
-/// from is still there, so the index must not shift — it did, and the
+/// from is still there, so the index must not shift, it did, and the
 /// panel landed *above* the dock it was aimed below.
 #[test]
 fn a_tab_split_below_its_own_dock_lands_below() {
@@ -500,7 +500,7 @@ fn floating_a_floating_panel_does_nothing() {
     assert_eq!(layout, before);
 }
 
-/// A closed panel is nowhere, and says so — which is what a View menu tick
+/// A closed panel is nowhere, and says so, which is what a View menu tick
 /// and a ribbon button read.
 #[test]
 fn a_closed_panel_is_open_nowhere() {
@@ -635,7 +635,7 @@ fn a_layout_survives_a_round_trip_through_the_settings_file() {
     assert_eq!(Layout::restore(&layout.saved()), layout);
 }
 
-/// Including which panels were shut — a closed panel that came back on
+/// Including which panels were shut, a closed panel that came back on
 /// every restart would be a panel you cannot close.
 #[test]
 fn a_closed_panel_stays_closed_across_a_round_trip() {

@@ -35,7 +35,7 @@ const BALL_RADIUS: f32 = 0.1;
 const PICK: f32 = 1.4;
 /// Half the unit cube's side. A part's model matrix already folds its `Size`
 /// into its columns, so half a column reaches from the centre exactly to the
-/// middle of that axis's face — the same ±0.5 `renderer::selection` draws the
+/// middle of that axis's face, the same ±0.5 `renderer::selection` draws the
 /// selection outline's corners from, so a ball lands on the outline it is
 /// grabbing.
 const HALF: f32 = 0.5;
@@ -50,7 +50,7 @@ const HALF: f32 = 0.5;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Faces {
     centre: Vec3,
-    /// The part's own axes, normalized — [`super::basis`]'s answer for its
+    /// The part's own axes, normalized, [`super::basis`]'s answer for its
     /// rotation, so a part flattened to nothing on one axis still has a
     /// grabbable handle there rather than a NaN one.
     basis: [Vec3; 3],
@@ -85,7 +85,7 @@ impl Faces {
         }
     }
 
-    /// The same balls, summoned towards `point` by `Tab` — or left on the
+    /// The same balls, summoned towards `point` by `Tab`: or left on the
     /// middle of each face for `None`.
     ///
     /// Studio's handle summoning brings Move's and Rotate's handles to the
@@ -95,7 +95,7 @@ impl Faces {
     /// selected object". It says no more than that, so this is this editor's
     /// reading of it: the point is clamped into the box, and each ball slides
     /// across its own face to sit level with it. Every ball stays on the face
-    /// it resizes — dragging it still moves exactly that face — and the one
+    /// it resizes, dragging it still moves exactly that face, and the one
     /// on the face under the cursor lands right where the cursor is.
     pub fn summoned(mut self, point: Option<Vec3>) -> Self {
         if let Some(point) = point {
@@ -109,7 +109,7 @@ impl Faces {
     }
 
     /// How far summoning slid `axis`'s two balls across their faces, in
-    /// world space — the offset between the line a ball now stands on and
+    /// world space, the offset between the line a ball now stands on and
     /// the line through the box's centre a drag on it is measured along.
     pub fn slide(&self, axis: Axis) -> Vec3 {
         Axis::ALL
@@ -123,9 +123,9 @@ impl Faces {
         self.centre
     }
 
-    /// The outward unit normal of this axis's `+` face — the part's own axis,
+    /// The outward unit normal of this axis's `+` face, the part's own axis,
     /// which is the only direction its `Size` can grow along.
-    /// How long the box is along one of its own axes — what a pull on that
+    /// How long the box is along one of its own axes, what a pull on that
     /// axis's ball is measured against when a group scales in proportion.
     pub fn extent(&self, axis: Axis) -> f32 {
         2.0 * self.half[axis as usize]
@@ -142,7 +142,7 @@ impl Faces {
         self.centre + self.direction(axis) * (self.half[axis as usize] * sign) + self.slide(axis)
     }
 
-    /// How big that ball is drawn, in studs — taken at the ball's own distance
+    /// How big that ball is drawn, in studs, taken at the ball's own distance
     /// from the eye rather than at the part's centre's. On a part the size of
     /// a baseplate the near and far handles are a thousand studs apart, and
     /// one radius for the whole box would leave the far ones specks and the
@@ -158,7 +158,7 @@ impl Faces {
             .flat_map(|axis| [(axis, 1.0f32), (axis, -1.0f32)])
     }
 
-    /// Which ball `ray` is pointing at and which face of the part it sits on —
+    /// Which ball `ray` is pointing at and which face of the part it sits on,
     /// the nearest one, so a handle on the near face never loses to the one
     /// behind the part.
     ///

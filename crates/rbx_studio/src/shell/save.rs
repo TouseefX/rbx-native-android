@@ -1,6 +1,6 @@
 //! Ctrl+S at the window level (see `Render for Shell`, which wires
 //! [`Shell::handle_shell_key`] on the outer container rather than on one
-//! panel like `shell::keys` does for the Explorer — a save must go through no
+//! panel like `shell::keys` does for the Explorer, a save must go through no
 //! matter which widget currently holds focus). `handle_shell_key` is also the
 //! dispatch point `shell::history` reuses for Ctrl+Z/Ctrl+Y, `shell::group`
 //! for Ctrl+G/Ctrl+Shift+G, and `shell::clipboard` for Ctrl+C/V/D, rather
@@ -28,7 +28,7 @@ impl Shell {
         let menu_bar = self.menu_bar.clone();
         menu_bar.update(cx, |bar, cx| {
             bar.interrupt_alt_tap();
-            // F10 is the other, explicit way in — and out again. Handled here
+            // F10 is the other, explicit way in, and out again. Handled here
             // rather than as a binding because the bar's own key context only
             // covers the bar, and F10 has to work from wherever focus is.
             if crate::shortcuts::pressed(crate::shortcuts::Command::MenuBar, keystroke) {
@@ -83,8 +83,8 @@ impl Shell {
         if keystroke.key == "escape" && self.cancel_ref_pick(cx) {
             cx.notify();
         }
-        // The same key backs out of a drag in flight — an Explorer row being
-        // carried to a new parent — so a drag started by mistake is never
+        // The same key backs out of a drag in flight, an Explorer row being
+        // carried to a new parent, so a drag started by mistake is never
         // committed by letting go of it. With no active drag there is nothing
         // to stop, and a bare Escape does nothing here.
         if keystroke.key == "escape" && cx.stop_active_drag(window) {
@@ -106,7 +106,7 @@ impl Shell {
     }
 
     /// File › Save to File As…: the place written to `path`, which then
-    /// becomes the file this session is — as Studio does it: "Save As
+    /// becomes the file this session is, as Studio does it: "Save As
     /// switches your current context in Studio. For example, if you save
     /// Place A to file as Place B, your current context in Studio switches
     /// to Place B. Ctrl+S afterward will save back to the file location for
@@ -201,7 +201,7 @@ impl Shell {
 ///
 /// The log is not optional: the Command Bar's label is hidden while the dock
 /// is open (`Feedback::shown_inline`), so a save that reported only through
-/// the label would be invisible — including a failed one, which would leave
+/// the label would be invisible, including a failed one, which would leave
 /// the user believing the file was written.
 fn record_outcome(
     output: &mut OutputLog,

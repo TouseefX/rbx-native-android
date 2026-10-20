@@ -10,7 +10,7 @@ use crate::scene::{
 
 /// `GuiObject.Rotation` about one fixed pivot, shared by every quad an
 /// element contributes (background, border bands, image) so they turn
-/// together as a rigid box — Roblox gives no way to rotate about anything but
+/// together as a rigid box, Roblox gives no way to rotate about anything but
 /// the element's own centre, so that is the only pivot this ever takes.
 pub(super) struct Spin {
     sin: f32,
@@ -71,7 +71,7 @@ pub(super) struct Shape {
 }
 
 impl Shape {
-    /// The element's own outline, which its strokes always follow — each
+    /// The element's own outline, which its strokes always follow, each
     /// with its own join, set where it is drawn.
     pub(super) fn of(element: &GuiElement) -> Self {
         Shape {
@@ -121,7 +121,7 @@ impl Shape {
     }
 
     /// What the element's fills (background, border, image) are shaped by:
-    /// the outline where a `UICorner` rounds it, otherwise nothing at all —
+    /// the outline where a `UICorner` rounds it, otherwise nothing at all,
     /// a sharp box is left exactly as the rasterizer cuts it.
     pub(super) fn fill_of(element: &GuiElement) -> Self {
         let shape = Shape::of(element);
@@ -146,13 +146,13 @@ pub(super) struct Paint<'a> {
     pub(super) gradient: Option<(usize, &'a GuiGradient)>,
 }
 
-/// The UV corners of a quad sampling a whole texture once — every background,
+/// The UV corners of a quad sampling a whole texture once, every background,
 /// border band and stroke, which sample the flat white texel.
 pub(super) const UV_WHOLE: ([f32; 2], [f32; 2]) = ([0.0, 0.0], [1.0, 1.0]);
 
 /// Two triangles covering `rect`, its corners sampling from `uv.0` to `uv.1`
 /// (a `Tile` reaches past `1` to repeat, relying on the atlas's `Repeat`
-/// address mode) and every corner turned by `spin` — an identity `Spin` (zero
+/// address mode) and every corner turned by `spin`: an identity `Spin` (zero
 /// rotation) leaves them exactly where `rect` puts them.
 pub(super) fn quad(
     rect: &GuiRect,

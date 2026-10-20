@@ -4,7 +4,7 @@
 //! Precedence, matching the engine: a legacy mesh child (`BlockMesh`,
 //! `CylinderMesh`, `SpecialMesh`) replaces the part's own geometry outright;
 //! otherwise `WedgePart`/`CornerWedgePart`'s class decides it; otherwise a
-//! `Part`'s own `shape` property (note the lowercase wire name — `Shape` with a
+//! `Part`'s own `shape` property (note the lowercase wire name, `Shape` with a
 //! capital belongs to `ParticleEmitter`, a different property entirely);
 //! otherwise it is a plain box.
 
@@ -20,7 +20,7 @@ const WEDGE_PART: &str = "WedgePart";
 const CORNER_WEDGE_PART: &str = "CornerWedgePart";
 const TRUSS_PART: &str = "TrussPart";
 // Roblox restricts a real TrussPart.Size to 2*2*n studs, n a multiple of 2, up
-// to 512 — n/2 (this cap) is the largest legitimate number of 2-stud repeats.
+// to 512, n/2 (this cap) is the largest legitimate number of 2-stud repeats.
 const MAX_TRUSS_SEGMENTS: u32 = 256;
 
 /// Which unit mesh (from [`crate::shapes`]) a part instances, before its
@@ -43,7 +43,7 @@ pub(crate) enum ShapeKind {
 /// A part's resolved shape: which mesh, and the size/offset to place it with.
 ///
 /// `size` already folds in a mesh child's `Scale` (or is clamped to a uniform
-/// diameter for `Part.shape == Ball`, which — unlike `SpecialMesh.MeshType ==
+/// diameter for `Part.shape == Ball`, which, unlike `SpecialMesh.MeshType ==
 /// Sphere` — never stretches into an ellipsoid); `offset` is zero unless a mesh
 /// child carries one.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -238,7 +238,7 @@ fn mesh_child(dom: &WeakDom, instance: &Instance, size: Vec3) -> Option<Geometry
             }
             "SpecialMesh" => special_mesh(child, size * scale, offset),
             // A plain `FileMesh` child (no MeshType) has no procedural stand-in
-            // yet — TODO: rbx_mesh will draw its actual geometry.
+            // yet, TODO: rbx_mesh will draw its actual geometry.
             //
             // A `DynamicMesh` child is the one other `DataModelMesh` a file
             // can hold, and it is deliberately nothing here: the class
@@ -255,7 +255,7 @@ fn mesh_child(dom: &WeakDom, instance: &Instance, size: Vec3) -> Option<Geometry
 /// TODO: Head and Torso are rough stand-ins (ball / box) rather than their
 /// true rounded shapes; Prism/ParallelRamp/RightAngleRamp reuse Wedge as a
 /// reasonable approximation; Pyramid has no dedicated mesh yet and falls back
-/// to a box. `VertexColor` is read nowhere yet — every shaped part keeps the
+/// to a box. `VertexColor` is read nowhere yet, every shaped part keeps the
 /// part's own `Color3uint8`.
 fn special_mesh(mesh: &Instance, size: Vec3, offset: Vec3) -> Option<Geometry> {
     let Some(&Variant::Enum(mesh_type)) = mesh.properties().get("MeshType") else {

@@ -32,7 +32,7 @@ impl Shell {
     }
 
     /// Whether a new instance of a class a sibling already carries the name
-    /// of is numbered — see `explorer::insert::incremented_name`.
+    /// of is numbered, see `explorer::insert::incremented_name`.
     pub(in crate::shell) fn increment_names(&self) -> bool {
         self.increment_names
     }
@@ -48,7 +48,7 @@ impl Shell {
     }
 
     /// Whether inserting, pasting or selecting expands the tree to reveal
-    /// the instance — see `Shell::select`.
+    /// the instance, see `Shell::select`.
     pub(in crate::shell) fn expand_on_select(&self) -> bool {
         self.expand_on_select
     }

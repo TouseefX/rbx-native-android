@@ -42,7 +42,7 @@ fn db() -> ReflectionDatabase {
 fn a_plain_click_picks_what_a_click_would_select() {
     let place = place();
     // `ObjectValue.Value` holds any instance, so the house a plain click
-    // selects is what it gets — and `Alt` reaches the part, as it does
+    // selects is what it gets, and `Alt` reaches the part, as it does
     // for a selection.
     let hits = [place.handle];
     assert_eq!(

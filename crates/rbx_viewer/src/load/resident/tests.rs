@@ -14,8 +14,8 @@ fn failure(warning: &str, transient: bool) -> Failure {
     }
 }
 
-/// A loader that decodes `Id(n)` to `n` and fails every odd id — as the
-/// machine's fault, the kind a later load retries — counting how many
+/// A loader that decodes `Id(n)` to `n` and fails every odd id, as the
+/// machine's fault, the kind a later load retries, counting how many
 /// references it was actually asked for.
 fn loader(asked: &Cell<usize>) -> impl Fn(&[AssetRef]) -> Keyed<u64> + '_ {
     move |references| {
@@ -53,8 +53,8 @@ fn a_first_fetch_loads_everything_once() {
 }
 
 // The whole point: a second pass of the same load asks for the same assets
-// again and must not decode any of them a second time — nor retry the one
-// that failed — while still answering exactly what the first pass answered,
+// again and must not decode any of them a second time, nor retry the one
+// that failed, while still answering exactly what the first pass answered,
 // warning included.
 #[test]
 fn a_second_fetch_answers_from_memory_warnings_included() {
@@ -81,7 +81,7 @@ fn only_a_never_seen_reference_is_loaded_later() {
     assert_eq!(found.len(), 2);
 }
 
-// A failure of the machine is worth one more try once it may have changed —
+// A failure of the machine is worth one more try once it may have changed,
 // the next load, not the next ask: the blip is then gone, and the asset
 // resolves as if it had never failed.
 #[test]
@@ -107,7 +107,7 @@ fn a_transient_failure_is_retried_by_the_next_load() {
     assert!(warnings.is_empty());
 }
 
-// A failure of the asset — a 404, a file the package does not hold — is
+// A failure of the asset, a 404, a file the package does not hold, is
 // not: the answer cannot change, and on a real place the ask is the
 // expensive part, so the next load answers it from memory like a success,
 // warning included.
@@ -312,7 +312,7 @@ fn forgetting_a_reference_makes_the_next_ask_fetch_it_again() {
     assert_eq!(resident.images(&[AssetRef::Id(2)]).0.len(), 1);
 }
 
-/// A source that fails a reference the way a rate limit does — transiently —
+/// A source that fails a reference the way a rate limit does, transiently,
 /// for its first `flaky` asks and then answers it, counting every ask.
 struct Flaky {
     flaky: usize,

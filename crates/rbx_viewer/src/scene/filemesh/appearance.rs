@@ -65,7 +65,7 @@ impl Appearance {
             .clone()
             .map(|map| map.filter(|reference| images.contains_key(reference)));
         // The alpha mode describes the colour map, so once that map is gone
-        // there is nothing left to blend — and Overlay is the mode whose
+        // there is nothing left to blend, and Overlay is the mode whose
         // neutral fallback leaves the part's own colour alone.
         let alpha_mode = match maps[MapKind::Color.index()] {
             Some(_) => self.alpha_mode,

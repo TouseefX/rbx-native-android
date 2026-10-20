@@ -1,5 +1,5 @@
 //! The Effects section: one group per `UIShadow`, Figma's drop shadows,
-//! listed in the order they draw — by `ZIndex`, ties in tree order, as the
+//! listed in the order they draw, by `ZIndex`, ties in tree order, as the
 //! renderer stacks them. The `+` adds another rather than standing in for
 //! a missing one, since an element may cast several. A group folds to its
 //! head and a summary; a hidden shadow's group dims but stays editable.

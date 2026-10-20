@@ -235,7 +235,7 @@ impl WorkspaceView {
         self.project(at, scale)
     }
 
-    /// `point` on the frame, in the frame's own physical pixels — off the
+    /// `point` on the frame, in the frame's own physical pixels, off the
     /// frame too, for measuring directions. `None` behind the camera.
     fn screen(&self, point: Vec3) -> Option<Vec2> {
         let pose = self.view?;

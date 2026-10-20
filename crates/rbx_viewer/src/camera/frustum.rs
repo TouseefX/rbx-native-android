@@ -1,9 +1,9 @@
-//! The camera's view frustum, in world space — what the main render pass
+//! The camera's view frustum, in world space, what the main render pass
 //! culls a drawable's bounding sphere against before it costs the GPU
 //! anything (see `renderer::cull::MainCull`).
 //!
 //! Built from [`super::Camera::frustum_corners`], which already unprojects
-//! the exact matrix a frame is drawn with — reusing it here (rather than
+//! the exact matrix a frame is drawn with, reusing it here (rather than
 //! re-deriving planes from the projection matrix by hand) keeps the cull test
 //! in lock-step with the actual projection, and it is already covered by
 //! `super::tests::every_corner_stays_inside_the_frustum`.
@@ -14,7 +14,7 @@ use super::{Camera, Viewpoint};
 
 /// Where the far corners are placed to build the near/left/right/top/bottom
 /// planes below. Those planes all pass through the eye, so their orientation
-/// does not depend on this distance — it only has to be finite and far enough
+/// does not depend on this distance, it only has to be finite and far enough
 /// for the cross products that define them to stay numerically well
 /// conditioned. Distance culling is a wholly separate, spherical test (see
 /// `renderer::cull::MainCull`), so this never gates what is actually drawn.
@@ -79,8 +79,8 @@ impl Frustum {
     }
 
     /// Whether a bounding sphere could still show on screen. The boundary
-    /// counts as visible — a sphere merely touching a plane is kept, not
-    /// culled — with a small epsilon so float rounding in the plane
+    /// counts as visible, a sphere merely touching a plane is kept, not
+    /// culled, with a small epsilon so float rounding in the plane
     /// construction itself can only ever err toward drawing something that
     /// turns out fully hidden, never the other way round.
     pub(crate) fn visible(&self, center: Vec3, radius: f32) -> bool {
@@ -140,7 +140,7 @@ mod tests {
     }
 
     // A sphere exactly tangent to a plane must not be culled by float
-    // rounding alone — the boundary belongs to "visible".
+    // rounding alone, the boundary belongs to "visible".
     #[test]
     fn a_sphere_exactly_touching_a_plane_stays_visible() {
         let frustum = frustum();

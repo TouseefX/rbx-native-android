@@ -9,7 +9,7 @@
 //! falling back to `~/.config` or, on Windows, `%APPDATA%`, all under an
 //! `rbx-native` folder) and its temp-file-then-rename write, but for one small
 //! config document rather than many cached blobs, and `config` rather than
-//! `cache` — a setting should survive `rm -rf ~/.cache`.
+//! `cache`: a setting should survive `rm -rf ~/.cache`.
 
 use std::path::{Path, PathBuf};
 
@@ -38,10 +38,10 @@ pub(crate) struct Settings {
     pub(crate) quality: QualityLevel,
     pub(crate) show_all_services: bool,
     /// Which services the Explorer's default view lists, where that differs
-    /// from Studio's — see `explorer::ServiceOverrides`.
+    /// from Studio's, see `explorer::ServiceOverrides`.
     pub(crate) service_overrides: crate::explorer::ServiceOverrides,
     pub(crate) orthographic: bool,
-    /// The viewport's top-right orientation indicator — see
+    /// The viewport's top-right orientation indicator, see
     /// `crate::workspace_view::orientation`. Defaults on: it's meant to read
     /// as an always-there convention (the way Blender's own gizmo is), not
     /// an opt-in debug overlay.
@@ -53,14 +53,14 @@ pub(crate) struct Settings {
     /// the default, so no call site has to read `!show_through`.
     pub(crate) selection_occluded: bool,
     /// Studio's `Show Light Guides`: the lines drawn around a selected
-    /// light. Defaults on — Roblox's announcement of the feature tells
+    /// light. Defaults on, Roblox's announcement of the feature tells
     /// anyone who finds them in the way to turn them off in settings.
     pub(crate) light_guides: bool,
     pub(crate) icon_pack: IconPack,
-    /// The render loop's frame rate cap while the window is unfocused — see
+    /// The render loop's frame rate cap while the window is unfocused, see
     /// `pacing::FocusPacing`.
     pub(crate) unfocused_fps: UnfocusedFps,
-    /// The UI scale — one multiplier over every font size *and* the boxes
+    /// The UI scale, one multiplier over every font size *and* the boxes
     /// they sit in (`tokens::font_scale`). This is how a native app meets
     /// WCAG 1.4.4's 200% resize, since there is no browser zoom to lean on;
     /// the range is Blender's Resolution Scale range, for the same reason.
@@ -79,7 +79,7 @@ pub(crate) struct Settings {
     /// before [`Self::font_scale`] multiplies it. See [`VIEWPORT_FONT_SIZE`].
     pub(crate) viewport_font_size: f32,
     /// Raises the minimum pointer target from WCAG 2.5.8's 24px floor to
-    /// 2.5.5's 44px one — Blender's "editor-area padding" idea, which its
+    /// 2.5.5's 44px one, Blender's "editor-area padding" idea, which its
     /// own manual describes as improving usability "on pen tablets, touch
     /// screens, or for users with visual or physical accessibility issues".
     pub(crate) large_targets: bool,
@@ -88,8 +88,8 @@ pub(crate) struct Settings {
     /// an accessibility preference that can only be set with an environment
     /// variable is not a setting anybody has.
     pub(crate) reduce_motion: Option<bool>,
-    /// The dock layout — which panel is on which edge, and how big each
-    /// edge is — so it survives a relaunch, the reference doc's Stage 2
+    /// The dock layout, which panel is on which edge, and how big each
+    /// edge is, so it survives a relaunch, the reference doc's Stage 2
     /// item 9. Not a separate file: a layout is a preference like any
     /// other, and a second persistence path is a second thing to keep in
     /// step.
@@ -115,16 +115,16 @@ pub(crate) struct Settings {
     /// reveal reads as an insert that did nothing.
     pub(crate) increment_names: bool,
     pub(crate) expand_on_select: bool,
-    /// The dragger guides' switches — see [`DraggerSettings`].
+    /// The dragger guides' switches, see [`DraggerSettings`].
     pub(crate) dragger: DraggerSettings,
-    /// The camera's feel and the snap increments — see [`Controls`].
+    /// The camera's feel and the snap increments, see [`Controls`].
     pub(crate) controls: Controls,
     /// The Argon dock's address field, as it stood the last time Connect
-    /// actually succeeded — not every keystroke of a draft, and not an
+    /// actually succeeded, not every keystroke of a draft, and not an
     /// address that never connected. Empty means "nothing saved yet",
     /// which `Shell` reads as its own hardcoded `localhost:8000` default.
     pub(crate) argon_address: String,
-    /// Argon's own plugin settings, per level — see [`argon::ArgonSettings`].
+    /// Argon's own plugin settings, per level, see [`argon::ArgonSettings`].
     pub(crate) argon: argon::ArgonSettings,
     pub(crate) discord_presence: bool,
     /// Defaults on: names are hidden unless the user opts in.
@@ -188,7 +188,7 @@ pub(crate) fn clamp_script_font_size(size: f32) -> f32 {
 pub(crate) const VIEWPORT_FONT_SIZE: f32 = 12.;
 
 /// What the Viewport Font Size field accepts: down to the script range's
-/// floor, and up to 200% of the default — WCAG 1.4.4's figure on its own,
+/// floor, and up to 200% of the default, WCAG 1.4.4's figure on its own,
 /// before the UI scale doubles it again. Larger and a guide label covers
 /// the part it is measuring.
 pub(crate) const VIEWPORT_FONT_SIZE_RANGE: (f32, f32) = (8., 24.);
@@ -226,7 +226,7 @@ impl Default for Settings {
             reduce_motion: None,
             argon_address: String::new(),
             argon: argon::ArgonSettings::default(),
-            // Empty means "whatever the shell's own default is" — the
+            // Empty means "whatever the shell's own default is", the
             // defaults live with the layout in `shell::layout`, and
             // duplicating them here is how the two drift apart.
             docks: SavedLayout::default(),
@@ -500,13 +500,13 @@ fn read_extent(value: &serde_json::Value, key: &str) -> Option<f32> {
 /// Deliberately forgiving in one direction only: anything malformed is
 /// simply left out, and `shell::Layout::restore` puts the missing panels
 /// back on their own edges. That is the same contract every other field
-/// here has — a hand-edited or future-version settings file must not stop
+/// here has, a hand-edited or future-version settings file must not stop
 /// the editor from opening.
 fn read_docks(value: &serde_json::Value) -> SavedLayout {
     value.get("docks").map(read_layout).unwrap_or_default()
 }
 
-/// One saved layout's object — `docks`, or a named layout's `layout`.
+/// One saved layout's object, `docks`, or a named layout's `layout`.
 fn read_layout(docks: &serde_json::Value) -> SavedLayout {
     let names = |value: Option<&serde_json::Value>| -> Vec<String> {
         value
@@ -573,7 +573,7 @@ fn read_layout(docks: &serde_json::Value) -> SavedLayout {
 }
 
 /// Any value other than exactly 25 falls back to the default preset rather
-/// than erroring — a hand-edited or future-version settings file must not
+/// than erroring, a hand-edited or future-version settings file must not
 /// stop the editor from opening.
 fn parse_unfocused_fps(fps: u64) -> UnfocusedFps {
     if fps == u64::from(UnfocusedFps::Fps25.fps()) {
@@ -759,7 +759,7 @@ fn save_to(settings: &Settings, path: &Path) -> Result<(), SettingsError> {
 
 /// Roblox's own `Enum.QualityLevel` spelling, the same format `Shell`'s
 /// dropdown labels and command line already parse back with
-/// [`QualityLevel::from_str`] — `QualityLevel` has no `Display` impl of its
+/// [`QualityLevel::from_str`], `QualityLevel` has no `Display` impl of its
 /// own to reuse.
 fn format_quality(quality: QualityLevel) -> String {
     match quality {
@@ -795,7 +795,7 @@ pub(crate) fn default_config_dir() -> Option<PathBuf> {
     }
     // %APPDATA% is Windows' roaming per-user data dir, the natural match for
     // a small settings file (unlike %LOCALAPPDATA%, used for the asset
-    // cache — see rbx_assets::AssetCache). Checked before HOME so a
+    // cache, see rbx_assets::AssetCache). Checked before HOME so a
     // Windows-native launch never depends on HOME being set.
     if let Some(appdata) = non_empty_env("APPDATA") {
         return Some(PathBuf::from(appdata).join("rbx-native"));
@@ -911,7 +911,7 @@ mod tests {
         std::fs::write(&path, br#"{"quality": "Automatic"}"#).unwrap();
 
         // Empty is what `Shell` reads as "nothing saved yet, fall back to
-        // the hardcoded localhost:8000 default" — see `shell.rs`'s own
+        // the hardcoded localhost:8000 default", see `shell.rs`'s own
         // `argon_address` field init.
         assert_eq!(load_from(&path).argon_address, "");
     }
@@ -930,8 +930,8 @@ mod tests {
     }
 
     /// The selection box shows through geometry unless someone has asked
-    /// otherwise, so a file written before the toggle existed — and one
-    /// written after it, with the toggle never touched — both read as off.
+    /// otherwise, so a file written before the toggle existed, and one
+    /// written after it, with the toggle never touched, both read as off.
     #[test]
     fn a_settings_file_with_no_selection_occlusion_recorded_defaults_it_off() {
         let path = temp_settings_path();
@@ -1006,7 +1006,7 @@ mod tests {
     fn default_dir_honors_xdg_config_home_over_the_home_fallback() {
         // SAFETY: env var mutation is process-global; guarded by ENV_LOCK so
         // this can't interleave with the other tests below that also mutate
-        // XDG_CONFIG_HOME/APPDATA/HOME — scope the check to the
+        // XDG_CONFIG_HOME/APPDATA/HOME, scope the check to the
         // pure-computation helper rather than asserting on the process-wide
         // environment anywhere else.
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -1072,7 +1072,7 @@ mod tests {
 
     /// The UI scale is the app's answer to WCAG 1.4.4, so a settings file
     /// someone has hand-edited to something absurd must still open the
-    /// editor — at the nearest usable scale, not at 10x and not at the
+    /// editor, at the nearest usable scale, not at 10x and not at the
     /// default that silently discards what they asked for.
     #[test]
     fn a_font_scale_outside_the_supported_range_is_clamped_rather_than_dropped() {
@@ -1255,7 +1255,7 @@ mod tests {
     }
 
     /// The dock layout is the one preference a user can wreck by accident
-    /// — a column dragged to four pixels wide saves that way — so "Reset
+    /// a column dragged to four pixels wide saves that way, so "Reset
     /// Layout" exists, and a saved layout has to actually come back.
     #[test]
     fn a_dock_layout_round_trips_and_a_missing_one_falls_back() {

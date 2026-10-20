@@ -96,7 +96,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // A `ForceField` does not paint its image on: its red channel picks which
     // texels show at this moment and its alpha how strongly (see
-    // `force_field_window`), in the part's own colour — the image's own
+    // `force_field_window`), in the part's own colour, the image's own
     // colour and alpha never reach the frame.
     var alpha = sample.a * in.color.a;
     if input.kind == KIND_FORCE_FIELD {
