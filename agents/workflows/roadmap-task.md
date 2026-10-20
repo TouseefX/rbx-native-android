@@ -5,10 +5,8 @@ Codex, Gemini, or anything else) working unattended on this repository:
 pick something from [`ROADMAP.md`](../../ROADMAP.md), implement it, stay in
 sync with everyone else doing the same thing, and land it as a reviewable
 pull request. [`agents/AGENTS.md`](../AGENTS.md) grants the authorization
-this workflow exercises — read that first if you haven't. Every tool-
-specific entry point (the Claude Code skill in `.claude/skills/roadmap-task/`,
-a root `GEMINI.md`, `AGENTS.md`) points here for the actual procedure rather
-than repeating it.
+this workflow exercises — read that first if you haven't. `AGENTS.md`
+points here for the actual procedure instead of repeating it.
 
 ## 0. Orient
 
