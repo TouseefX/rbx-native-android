@@ -35,7 +35,7 @@ fn vector3(size: Vec3) -> Variant {
 }
 
 /// A DOM under construction: parts and the lights hanging off them, each with
-/// its own referent, all parented under a synthetic `Workspace` — `local_lights`
+/// its own referent, all parented under a synthetic `Workspace`, `local_lights`
 /// only ever looks there now (see [`super::local_lights`]).
 pub(super) struct Fixture {
     pub(super) dom: WeakDom,
@@ -116,7 +116,7 @@ fn a_point_light_defaults_to_studios_own_property_sheet() {
 }
 
 /// What a light inserted from the Explorer holds: nothing stored at all, so
-/// every value is its class default — the ones the Properties sheet shows.
+/// every value is its class default, the ones the Properties sheet shows.
 #[test]
 fn a_cone_light_with_nothing_stored_shines_from_its_front_with_studios_defaults() {
     for class in ["SpotLight", "SurfaceLight"] {

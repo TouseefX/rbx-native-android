@@ -1,5 +1,5 @@
 //! A gesture's two ends: what a press that has turned into a drag takes
-//! hold of, and what letting go does — a click's pick, a marquee's
+//! hold of, and what letting go does, a click's pick, a marquee's
 //! selection, a drawn element, a reorder landing.
 
 use gpui_kit::*;

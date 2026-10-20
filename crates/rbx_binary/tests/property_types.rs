@@ -172,7 +172,7 @@ fn test_place_unique_ids_come_from_two_save_sessions() {
         .collect();
     assert_eq!(ids.len(), 81);
 
-    // No two instances share an identifier — but the index alone is not it: Sky
+    // No two instances share an identifier, but the index alone is not it: Sky
     // and Packages both got 0x3ae, in two different sessions.
     let unique: BTreeSet<(u32, u32, i64)> = ids
         .iter()

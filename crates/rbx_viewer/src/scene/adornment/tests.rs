@@ -397,7 +397,7 @@ fn the_classes_with_no_serialized_geometry_draw_nothing() {
 }
 
 /// An adornment renders where Roblox says it does: under the `Workspace`,
-/// or where GUI objects are rendered — here, `StarterGui`.
+/// or where GUI objects are rendered, here, `StarterGui`.
 #[test]
 fn only_an_adornment_somewhere_rendered_is_planned() {
     let database = ReflectionDatabase::embedded();
@@ -415,7 +415,7 @@ fn only_an_adornment_somewhere_rendered_is_planned() {
 }
 
 /// A `Model` has no orientation of its own, so it gets the world-axis
-/// -aligned box round everything beneath it — and every part under it is
+/// -aligned box round everything beneath it, and every part under it is
 /// what a move has to re-plan against.
 #[test]
 fn a_container_adornee_takes_the_box_around_its_parts() {
@@ -474,7 +474,7 @@ fn a_selection_box_with_no_adornee_draws_nothing() {
 }
 
 /// A handle adornment, by contrast, is documented as drawing "into the
-/// `Workspace`" with no adornee at all — its own `CFrame` is then a world
+/// `Workspace`" with no adornee at all, its own `CFrame` is then a world
 /// frame.
 #[test]
 fn a_handle_with_no_adornee_stands_in_world_space() {

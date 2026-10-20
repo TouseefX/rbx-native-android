@@ -1,5 +1,5 @@
 //! Reads a `Trail` instance and resolves its two `Attachment` endpoints into
-//! world *positions* — the identical walk `scene::beam::attachment` does,
+//! world *positions*, the identical walk `scene::beam::attachment` does,
 //! reused directly through `scene::beam`'s re-export rather than duplicated,
 //! since a `Trail` follows the exact same `Attachment0`/`Attachment1` Refs a
 //! `Beam` does.
@@ -21,7 +21,7 @@ use crate::textures::asset_uri;
 const CLASS: &str = "Trail";
 
 /// Studio's own defaults, so a `Trail` that omits a property lands where the
-/// property sheet shows it — the same reasoning `scene::beam::instance`'s own
+/// property sheet shows it, the same reasoning `scene::beam::instance`'s own
 /// constants document.
 const DEFAULT_LIFETIME: f32 = 2.0;
 const DEFAULT_MIN_LENGTH: f32 = 0.1;
@@ -30,13 +30,13 @@ const DEFAULT_TEXTURE_LENGTH: f32 = 1.0;
 /// A `Trail`'s static definition: both attachments' world position, resolved
 /// once at scene-build time, and every appearance property
 /// [`super::ribbon`]/`renderer::trail` need. `renderer::trail` feeds
-/// `position0`/`position1` to a [`super::Recorder`] every frame — in this
+/// `position0`/`position1` to a [`super::Recorder`] every frame, in this
 /// viewer that is the same pair forever, which is exactly why nothing is ever
 /// recorded past the first sample (see `scene::trail`'s module doc).
 ///
 /// `FaceCamera` is not a field: this viewer always draws a trail facing the
 /// camera (see `renderer::trail::ribbon`'s doc), a deliberate v1 scope note
-/// rather than an oversight — the same way `scene::beam::instance::TextureMode`
+/// rather than an oversight, the same way `scene::beam::instance::TextureMode`
 /// folds `Wrap`/`Static` together. `TextureMode` itself is out of scope for
 /// the same reason: `texture_length` is always "studs per repeat" here (see
 /// the task brief), i.e. `Beam`'s `Wrap` behaviour unconditionally.
@@ -44,8 +44,8 @@ const DEFAULT_TEXTURE_LENGTH: f32 = 1.0;
 pub(crate) struct Trail {
     pub(crate) position0: Vec3,
     pub(crate) position1: Vec3,
-    /// `false` does not hide a trail that already has history — only new
-    /// segments stop being recorded (see `Trail.Enabled`'s docs) — so
+    /// `false` does not hide a trail that already has history, only new
+    /// segments stop being recorded (see `Trail.Enabled`'s docs), so
     /// `renderer::trail` reads this to gate `Recorder::record`, never to drop
     /// the trail outright the way `scene::beam` drops a disabled `Beam`.
     pub(crate) enabled: bool,
@@ -59,10 +59,10 @@ pub(crate) struct Trail {
     pub(crate) texture: AssetRef,
     pub(crate) texture_length: f32,
     pub(crate) light_emission: f32,
-    /// The `Trail` instance this was read from — see `scene::particles::Emitter`'s
+    /// The `Trail` instance this was read from, see `scene::particles::Emitter`'s
     /// identical field.
     pub(crate) referent: Ref,
-    /// The two attachments the trail is drawn between — see `Beam`'s
+    /// The two attachments the trail is drawn between, see `Beam`'s
     /// identical field.
     pub(crate) attachments: [Ref; 2],
 }

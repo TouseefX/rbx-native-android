@@ -14,14 +14,14 @@
 //!
 //! An attribute's *value* renders through exactly the same `RowEditor`/
 //! `render_editor` machinery an ordinary property row uses (see
-//! `attribute_value`) — reached through a `PropertyRow` whose name is
+//! `attribute_value`), reached through a `PropertyRow` whose name is
 //! prefixed (`properties::attributes::row_name`) so `shell::edit::apply_edit`
 //! can route its commit to `properties::attributes::set_attribute_value`
 //! instead of `WeakDom::set_property`. Only the *name* column (a label, or an
 //! `Input` while renaming) and the add/remove chrome around it are new here;
 //! nothing about how a value itself is typed or edited is reimplemented.
 //!
-//! Every mutation — add, remove, rename, a value edit, add/remove tag — goes
+//! Every mutation, add, remove, rename, a value edit, add/remove tag, goes
 //! through the same push-history/reflect/record sequence
 //! `shell::edit::apply_edit` uses for an ordinary property, so each one costs
 //! exactly one undo step.
@@ -52,12 +52,12 @@ struct Renaming {
     _subscription: Subscription,
 }
 
-/// The section's own live widgets — the rename box (if any), the "add
+/// The section's own live widgets, the rename box (if any), the "add
 /// attribute"/"add tag" rows' fields, and the last rejected attempt's
 /// message. Kept here rather than as further fields on `Shell` for the same
 /// reason `shell::edit::Edits` is; cleared on every selection change
 /// alongside it (see `Shell::selection_changed`). An attribute's *value*
-/// widgets are not here — they live in `shell::edit::Edits` like any other
+/// widgets are not here, they live in `shell::edit::Edits` like any other
 /// row, keyed by `properties::attributes::row_name`.
 #[derive(Default)]
 pub(super) struct AttributeEdits {
@@ -65,7 +65,7 @@ pub(super) struct AttributeEdits {
     new_name: Option<Entity<InputState>>,
     new_type: Option<Entity<SelectState<AttributeTypeOptions>>>,
     new_tag: Option<Entity<InputState>>,
-    /// Kept alive only to stay subscribed — see `shell::edit::RowEdit`'s
+    /// Kept alive only to stay subscribed, see `shell::edit::RowEdit`'s
     /// identical convention.
     _subscriptions: Vec<Subscription>,
     /// Kept separate from `tag_error` so a rejected tag never shows up under
@@ -94,7 +94,7 @@ impl Shell {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         // One instance only. Every mutation here writes the anchor alone,
-        // and Studio's own behaviour for several is not documented — so a
+        // and Studio's own behaviour for several is not documented, so a
         // multi-selection shows neither section rather than one instance's
         // attributes under a header naming them all.
         let [reference] = *self.selected_all() else {

@@ -1,4 +1,4 @@
-//! A host for real Roblox Studio plugins — and for rbx-native's own Luau
+//! A host for real Roblox Studio plugins, and for rbx-native's own Luau
 //! plugins, which run through the same host with one extra global.
 //!
 //! Each plugin gets its own sandboxed Luau VM that lives as long as the host,

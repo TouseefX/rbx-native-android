@@ -9,7 +9,7 @@
 //! - **Stepping** needs a call before every instruction (`debugstep`). The
 //!   VM only makes those calls when the thread was entered in single-step
 //!   mode, and that mode cannot be switched on mid-run, so a run always
-//!   starts in it — which costs little on its own — and the per-instruction
+//!   starts in it, which costs little on its own, and the per-instruction
 //!   callback is installed only while a step is in progress or a
 //!   breakpoint line is being watched (see `hook`).
 //! - **Stop** is checked in the `interrupt` callback, which Luau calls at
@@ -17,7 +17,7 @@
 //!   never reaches a breakpoint.
 //!
 //! Whenever the script pauses, the caller's `on_pause` runs synchronously on
-//! the script's own thread — that is what "paused" means here. Whatever it
+//! the script's own thread, that is what "paused" means here. Whatever it
 //! does before returning (block on a channel, evaluate watches, walk the
 //! call stack) happens with the script frozen mid-line.
 

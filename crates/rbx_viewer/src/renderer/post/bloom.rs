@@ -1,8 +1,8 @@
 //! How `BloomEffect.Size` becomes a blur: the depth of the downsample chain and
 //! the width of the tent each upsample spreads with.
 //!
-//! The chain is the usual one — halve until the wanted radius is a couple of
-//! texels away, then walk back up adding each level into the one below it — so
+//! The chain is the usual one, halve until the wanted radius is a couple of
+//! texels away, then walk back up adding each level into the one below it, so
 //! "how wide is the blur" is answered by how many times it was halved, and the
 //! remainder by the tent.
 

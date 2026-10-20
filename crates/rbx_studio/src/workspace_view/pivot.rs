@@ -4,7 +4,7 @@
 //!
 //! The gestures are Move's and Rotate's own ([`Drag::Axis`], [`Drag::Ring`],
 //! and the free-drag ball's [`Drag::Plane`]), measured by the same
-//! [`gizmo::advance`]; only what a step changes differs — the pivot, which
+//! [`gizmo::advance`]; only what a step changes differs, the pivot, which
 //! `Shell` writes as a `PivotOffset` or a `WorldPivot` (see
 //! `rbx_lua::pivot::set_pivot`). With Snap on, a free drag lands on the
 //! nearest of the selection's hotspots instead of wherever the cursor is

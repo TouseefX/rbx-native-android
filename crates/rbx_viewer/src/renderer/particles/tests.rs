@@ -94,8 +94,8 @@ fn texture_refs_are_deduplicated_in_first_seen_order() {
 
 // A `ParticleEmitter` with no texture at all draws through the built-in
 // white slot and has nothing to ask the loader for. Leaving `Empty` in the
-// list would leave it untried for the life of the session — see
-// `renderer::rebuild::untried` — and re-evaluated on every rebuild.
+// list would leave it untried for the life of the session, see
+// `renderer::rebuild::untried`: and re-evaluated on every rebuild.
 #[test]
 fn a_textureless_emitter_asks_for_nothing() {
     let emitters = [emitter(AssetRef::Empty), emitter(texture(1))];
