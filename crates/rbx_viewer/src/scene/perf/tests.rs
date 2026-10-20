@@ -292,3 +292,121 @@ fn patching_a_reparent_into_the_workspace_adds_the_part() {
 
     assert!(metrics.report(Metric::Density).readout(part).is_some());
 }
+
+/// What measuring costs on a real place: `marked.rbxl` from the fixtures
+/// repository `RBX_FIXTURES` names, read against the real asset cache, then
+/// the same place with its parts copied `PERF_COPIES` times over (default
+/// 100) — and what a frame costs with the heat tint on and off.
+/// `RBX_FIXTURES=… cargo test --release -p rbx_viewer --lib perf::tests::measures -- --ignored --nocapture`
+#[test]
+#[ignore = "needs RBX_FIXTURES, a filled asset cache and a GPU"]
+fn measures_a_real_place() {
+    let path = std::path::Path::new(&std::env::var("RBX_FIXTURES").expect("RBX_FIXTURES"))
+        .join("places/marked.rbxl");
+    let dom = crate::read_place(&path).expect("marked.rbxl");
+    let copies: usize = std::env::var("PERF_COPIES").map_or(100, |n| n.parse().unwrap());
+    bench("marked.rbxl", dom.clone());
+    bench(&format!("marked.rbxl x{copies}"), scaled(dom, copies));
+}
+
+/// `dom` with every part under its `Workspace` copied `copies - 1` more
+/// times, each copy 600 studs further along X.
+fn scaled(mut dom: WeakDom, copies: usize) -> WeakDom {
+    let database = ReflectionDatabase::shared();
+    let workspace = dom
+        .root_refs()
+        .iter()
+        .copied()
+        .find(|&r| dom.get(r).unwrap().class() == "Workspace")
+        .unwrap();
+    let parts: Vec<Ref> = crate::scene::workspace_descendants(&dom, database)
+        .filter(|&r| is_drawable(&dom, database, r))
+        .collect();
+    for copy in 1..copies {
+        for &part in &parts {
+            let instance = dom.get(part).unwrap();
+            let (class, name) = (instance.class().to_string(), instance.name().to_string());
+            let mut properties = instance.properties().clone();
+            if let Some(Variant::CFrame(cframe)) = properties.get_mut("CFrame") {
+                cframe.position.x += 600.0 * copy as f32;
+            }
+            let copy = dom.new_instance(&class, &name, Some(workspace));
+            for (key, value) in properties {
+                dom.set_property(copy, &key, value).unwrap();
+            }
+        }
+    }
+    dom.take_changes();
+    dom
+}
+
+fn bench(label: &str, mut dom: WeakDom) {
+    use std::time::{Duration, Instant};
+    let cache = rbx_assets::AssetCache::new(None).expect("an asset cache");
+    let mut fetch = |asset: &AssetRef| match asset {
+        AssetRef::Id(id) => cache.get_id(*id),
+        AssetRef::Native(path) => cache.get_native(path),
+        _ => None,
+    };
+    let started = Instant::now();
+    let mut metrics = Metrics::new(&dom, &mut fetch);
+    println!("[{label}] build: {} parts in {:?}", metrics.len(), started.elapsed());
+    for metric in Metric::ALL {
+        let started = Instant::now();
+        let report = metrics.report(metric);
+        println!("[{label}] {metric:?} report: {:?} — {}", started.elapsed(), report.summary);
+    }
+
+    // One drag step's worth of edits: a `CFrame` written on 50 parts.
+    let parts: Vec<Ref> = metrics.entries.keys().copied().take(50).collect();
+    for &part in &parts {
+        let cframe = dom.get(part).unwrap().properties()["CFrame"].clone();
+        dom.set_property(part, "CFrame", cframe).unwrap();
+    }
+    let changes = dom.take_changes();
+    let started = Instant::now();
+    metrics.patch(&dom, &changes, &mut fetch);
+    let patched = started.elapsed();
+    let started = Instant::now();
+    let report = metrics.report(Metric::Triangles);
+    println!(
+        "[{label}] patch of {} parts: {patched:?}, report after it: {:?}",
+        parts.len(),
+        started.elapsed()
+    );
+
+    // Frame time, heat off and on, 1280x720, after the assets settle.
+    let mut headless = crate::Headless::from_dom(&dom, true).expect("a GPU");
+    let settling = Instant::now();
+    while (headless.assets_in_flight() > 0 || headless.swap_assets())
+        && settling.elapsed() < Duration::from_secs(120)
+    {}
+    let mut frames = |headless: &mut crate::Headless| {
+        for _ in 0..60 {
+            headless.render_frame(1280, 720).unwrap();
+        }
+        let mut times: Vec<Duration> = (0..120)
+            .map(|_| {
+                let started = Instant::now();
+                headless.render_frame(1280, 720).unwrap();
+                started.elapsed()
+            })
+            .collect();
+        headless.take_frame().unwrap();
+        times.sort();
+        (times[times.len() / 2], times[times.len() * 95 / 100])
+    };
+    // Off, on, off again: the first off still pays for whatever the load
+    // left settling, which the second does not.
+    let off = frames(&mut headless);
+    let started = Instant::now();
+    headless.set_heat(report.bins.clone());
+    let set = started.elapsed();
+    let on = frames(&mut headless);
+    headless.set_heat(Vec::new());
+    let again = frames(&mut headless);
+    println!(
+        "[{label}] frame median/p95: off {:?}/{:?}, heat on {:?}/{:?}, off again {:?}/{:?} (set_heat {set:?})",
+        off.0, off.1, on.0, on.1, again.0, again.1
+    );
+}

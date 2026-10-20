@@ -395,6 +395,9 @@ pub(crate) struct WorkspaceView {
     /// gesture; `render` only ever shows it while `dragging()` is true, so a
     /// value left over from the drag just released is simply never painted.
     drag_readout: Option<(Point<Pixels>, SharedString)>,
+    /// What the Performance view says about the part under the cursor,
+    /// shown beside it while nothing is held — see `Shell::perf_readout`.
+    heat_readout: Option<SharedString>,
     /// Studio's dragger guides: what they show now, and what they keep
     /// between one event and the next (see [`guides`]).
     guides: guides::State,
@@ -541,6 +544,7 @@ impl WorkspaceView {
             held: Targets::default(),
             dragged: false,
             drag_readout: None,
+            heat_readout: None,
             guides: guides::State::default(),
             summon: summon::Summon::default(),
             snapped: None,
@@ -922,6 +926,20 @@ impl WorkspaceView {
     pub(crate) fn set_screen_gui_shown(&self, shown: bool, cx: &mut Context<Self>) {
         self.pump.screen_gui_shown(shown);
         cx.notify();
+    }
+
+    /// The Performance view's heat tint — see `rbx_viewer::perf`. An empty
+    /// list clears it.
+    pub(crate) fn set_heat(&mut self, bins: Vec<rbx_viewer::perf::HeatBin>) {
+        self.pump.heat(bins);
+    }
+
+    /// The Performance view's line about the hovered part, `None` to hide it.
+    pub(crate) fn set_heat_readout(&mut self, text: Option<SharedString>, cx: &mut Context<Self>) {
+        if self.heat_readout != text {
+            self.heat_readout = text;
+            cx.notify();
+        }
     }
 
     pub(crate) fn set_selection_occluded(&mut self, occluded: bool, cx: &mut Context<Self>) {
@@ -1325,6 +1343,27 @@ impl Render for WorkspaceView {
                             .absolute()
                             .left(position.x)
                             .top(position.y)
+                            .px_2()
+                            .py_0p5()
+                            .bg(tokens::viewport_badge())
+                            .text_size(crate::tokens::viewport_text(12.))
+                            .text_color(tokens::viewport_badge_text())
+                            .child(text),
+                    )
+                },
+            )
+            .when_some(
+                self.heat_readout
+                    .clone()
+                    .filter(|_| !self.dragging())
+                    .zip(self.cursor),
+                |this, (text, cursor)| {
+                    let at = readout::position(cursor, self.viewport.get().origin, scale);
+                    this.child(
+                        div()
+                            .absolute()
+                            .left(at.x)
+                            .top(at.y)
                             .px_2()
                             .py_0p5()
                             .bg(tokens::viewport_badge())

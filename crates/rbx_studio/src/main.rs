@@ -80,6 +80,9 @@
 //! `joint=<name>`, `save`, `graph`, `graph-demo`, `play`, …) as the matching
 //! click would — the same aid, for the Animation Editor (see
 //! `shell::animation::debug` for every step).
+//!
+//! `RBX_STUDIO_PERF=<word of a measure's name>` turns the Performance view
+//! on with that measure (see `shell::perf_view`).
 
 mod accent;
 mod align;

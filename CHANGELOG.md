@@ -2,6 +2,17 @@
 
 ## 2026-10-20
 
+- **A Performance view for the place being edited.** The Viewport dock's
+  new Performance section tints every part by what it costs — part
+  density per 32-stud cell, triangles, decoded texture memory (shared
+  images counted once), collision (fidelity, CanCollide, unanchored
+  assemblies) or draw batches — on a colour-blind-safe ramp, with a
+  legend, the place's total, the part under the cursor read out beside
+  it, and the 20 costliest parts, each a click away from being selected
+  and framed. Figures are worked out on a thread of their own from the
+  asset cache and follow edits part by part; nothing is written to the
+  place. — @chteau
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its

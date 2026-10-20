@@ -19,8 +19,8 @@ use super::super::{chrome, Shell};
 use super::Toggle;
 
 /// Every control on the right of a row is this wide.
-const CONTROL_WIDTH: f32 = 150.;
-const CONTROL_HEIGHT: f32 = 26.;
+pub(super) const CONTROL_WIDTH: f32 = 150.;
+pub(super) const CONTROL_HEIGHT: f32 = 26.;
 const ROW_HEIGHT: f32 = 28.;
 /// A row's hover bleeds this far past its section's edges.
 const ROW_BLEED: f32 = 8.;
@@ -71,7 +71,7 @@ pub(super) fn horizontal_rule() -> Div {
 
 /// 28px, the label at the left in `text2` (truncating), the control
 /// flush right, 16px between; the hover bleeds 8px past the section.
-fn row(label: &'static str, control: impl IntoElement) -> Div {
+pub(super) fn row(label: &'static str, control: impl IntoElement) -> Div {
     h_flex()
         .h(px(ROW_HEIGHT))
         .mx(px(-ROW_BLEED))

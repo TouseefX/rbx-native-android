@@ -120,13 +120,24 @@ impl Metric {
         )
     }
 
-    /// `value` in this metric's own unit.
+    /// `value` with its unit, for a readout.
     pub fn format(self, value: f32) -> String {
+        match self {
+            Metric::Density => format!("{} instances", grouped(value.round() as u64)),
+            Metric::Triangles => format!("{} triangles", grouped(value.round() as u64)),
+            Metric::Collision => format!("score {value:.2}"),
+            Metric::DrawCost => format!("{value:.3} of a batch"),
+            Metric::TextureMemory => self.short(value),
+        }
+    }
+
+    /// `value` alone, for the legend's narrow labels.
+    pub fn short(self, value: f32) -> String {
         match self {
             Metric::Density | Metric::Triangles => grouped(value.round() as u64),
             Metric::TextureMemory => bytes(value as u64),
             Metric::Collision => format!("{value:.2}"),
-            Metric::DrawCost => format!("{value:.3} batch"),
+            Metric::DrawCost => format!("{value:.3}"),
         }
     }
 }
@@ -249,6 +260,8 @@ pub struct Metrics {
     /// Decoded bytes by image, `None` while the image is not in the cache.
     images: HashMap<AssetRef, Option<u64>>,
     shapes: Vec<(ShapeKind, u32)>,
+    /// Union triangle counts by bake — see `union::triangles`.
+    unions: HashMap<AssetRef, Option<u32>>,
 }
 
 impl Metrics {
@@ -260,6 +273,7 @@ impl Metrics {
             meshes: HashMap::new(),
             images: HashMap::new(),
             shapes: Vec::new(),
+            unions: HashMap::new(),
         };
         let all: Vec<Ref> = super::workspace_descendants(dom, metrics.database).collect();
         for referent in all {
@@ -385,7 +399,7 @@ impl Metrics {
             .iter()
             .enumerate()
             .map(|(step, &color)| {
-                (color, metric.format(unscale(step as f32 / steps as f32)))
+                (color, metric.short(unscale(step as f32 / steps as f32)))
             })
             .collect();
 
@@ -435,8 +449,7 @@ impl Metrics {
                 details.insert(
                     referent,
                     format!(
-                        "{} instances in its {CELL_STUDS}-stud cell ({} its own)",
-                        grouped(u64::from(count)),
+                        "in its {CELL_STUDS}-stud cell, {} its own",
                         entry.instances
                     ),
                 );
@@ -460,15 +473,13 @@ impl Metrics {
             let (count, detail) = match &entry.geometry {
                 Geometry::Shape(kind) => {
                     let count = self.shape_triangles(*kind);
-                    (Some(count), format!("{} triangles ({kind:?} primitive)", grouped(count.into())))
+                    (Some(count), format!("{kind:?} primitive"))
                 }
                 Geometry::Mesh(asset) => match self.meshes.get(asset).copied().flatten() {
-                    Some(count) => (Some(count), format!("{} triangles (mesh)", grouped(count.into()))),
+                    Some(count) => (Some(count), "mesh".to_string()),
                     None => (None, "mesh not downloaded yet".to_string()),
                 },
-                Geometry::Union(Some(count)) => {
-                    (Some(*count), format!("{} triangles (union)", grouped((*count).into())))
-                }
+                Geometry::Union(Some(count)) => (Some(*count), "union".to_string()),
                 Geometry::Union(None) => (None, "union with no baked mesh to count".to_string()),
             };
             if count.is_none() {
@@ -513,8 +524,7 @@ impl Metrics {
                     match entry.textures.len() {
                         0 => "no textures".to_string(),
                         n => format!(
-                            "{} across {n} texture{}{}",
-                            bytes(share as u64),
+                            "{n} texture{}{}",
                             if n == 1 { "" } else { "s" },
                             if shared > 0 {
                                 format!(", {shared} shared")
@@ -752,7 +762,7 @@ impl Metrics {
             textures.extend(child.properties().get("TextureId").and_then(reference));
             Geometry::Mesh(mesh)
         } else if union {
-            Geometry::Union(union_triangles(properties, fetch))
+            Geometry::Union(union_triangles(properties, fetch, &mut self.unions))
         } else {
             Geometry::Shape(resolve_shape(dom, database, instance, size).kind)
         };
