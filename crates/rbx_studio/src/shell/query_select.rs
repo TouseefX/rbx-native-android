@@ -1,6 +1,6 @@
 //! The Explorer search field's query mode: the field takes a
 //! `crate::query` query instead of a name, the tree narrows to what it
-//! matches, and Enter (or the status line's Select) selects every match —
+//! matches, and Enter (or the status line's Select) selects every match,
 //! so the viewport outlines them and the Properties panel edits them all at
 //! once. The Command Bar reaches the same selection through
 //! `:select <query>`, which never starts a Luau run.
