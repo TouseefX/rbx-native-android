@@ -185,7 +185,9 @@ fn with_remembered(mut list: Vec<RecentPlace>, mut place: RecentPlace) -> Vec<Re
     list
 }
 
+mod game;
 mod template;
+pub(crate) use game::open_whole_game;
 pub(crate) use template::Template;
 
 /// Where Home's New place writes: `places/Baseplate.rbxl`, or the first
@@ -235,6 +237,18 @@ pub(crate) struct OpenError {
     pub(crate) message: String,
 }
 
+impl OpenError {
+    fn from_cloud(err: CloudError) -> Self {
+        OpenError {
+            status: match &err {
+                CloudError::Http { status, .. } => Some(*status),
+                _ => None,
+            },
+            message: err.to_string(),
+        }
+    }
+}
+
 impl From<String> for OpenError {
     fn from(message: String) -> Self {
         OpenError {
@@ -260,13 +274,7 @@ pub(crate) fn open_experience(
         _ => {
             let bytes = client
                 .download_place(experience.root_place_id)
-                .map_err(|err| OpenError {
-                    status: match &err {
-                        CloudError::Http { status, .. } => Some(*status),
-                        _ => None,
-                    },
-                    message: err.to_string(),
-                })?;
+                .map_err(OpenError::from_cloud)?;
             let ext = match Format::sniff(&bytes) {
                 Format::Binary => "rbxl",
                 Format::Xml => "rbxlx",

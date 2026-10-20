@@ -2,6 +2,21 @@
 
 ## 2026-10-20
 
+- **Every place of a game in one window.** Roblox Studio edits one place
+  per window; File › Open Game… (or a card's new "Open every place as one
+  game" on Home, which downloads the experience's places) opens them all
+  together, listed in a `.rbxgame` manifest beside the place files —
+  nothing about the game is written into a place file. A Places bar swaps
+  the place on screen at once, each keeping its own undo history,
+  selection, camera and script tabs, and a place is only read when first
+  shown. Find in Game searches every script of every place (place ›
+  script › line, click to open) and replaces with a preview, one undo step
+  per place. Model › Mark as Shared tags a Model, Folder or ModuleScript
+  with an `RbxNativeSharedId` attribute, and Sync Shared copies the active
+  place's version to every place holding the same id, with each asset's
+  diff and a per-place switch. Save All and Publish All report per place.
+  — @chteau
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its

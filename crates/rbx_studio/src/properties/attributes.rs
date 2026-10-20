@@ -378,7 +378,7 @@ pub(crate) fn set_attribute_value(
     write_attributes(dom, reference, &current)
 }
 
-fn write_attributes(
+pub(crate) fn write_attributes(
     dom: &mut WeakDom,
     reference: Ref,
     attributes: &BTreeMap<String, Variant>,
