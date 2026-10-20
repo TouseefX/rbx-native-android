@@ -4,7 +4,7 @@
 //! A tab's text reaches `Source` through `script_editor::source::write`, which
 //! ends at the same `WeakDom::set_property` every other property edit does,
 //! with a `Shell::push_history` snapshot taken immediately before it exactly
-//! as `shell::edit` takes one — so undo, redo and Ctrl+S need to know nothing
+//! as `shell::edit` takes one, so undo, redo and Ctrl+S need to know nothing
 //! about scripts.
 
 use std::rc::Rc;
@@ -31,7 +31,7 @@ const MENU_VARIABLE: &str = "RBX_STUDIO_GRAPH_MENU";
 /// How long typing must pause before a tab's text is written to the DOM.
 ///
 /// Long enough that a run of typing lands as one undo step rather than one
-/// per keystroke — Studio coalesces a typing run into a single waypoint the
+/// per keystroke, Studio coalesces a typing run into a single waypoint the
 /// same way, and at one snapshot per keystroke a 50-deep history would hold
 /// about a sentence. Short enough to be imperceptible. Correctness never
 /// rides on it: everything that needs an up-to-date DOM (Ctrl+S, undo/redo,
@@ -39,7 +39,7 @@ const MENU_VARIABLE: &str = "RBX_STUDIO_GRAPH_MENU";
 const COMMIT_DELAY: Duration = Duration::from_millis(400);
 
 impl Shell {
-    /// Opens `reference` — an instance in the tree the Explorer shows — in
+    /// Opens `reference`, an instance in the tree the Explorer shows, in
     /// the script editor, or brings its existing tab to the front. Anything
     /// that is not a script is ignored, so this is safe to call for any
     /// double-clicked Explorer row.
@@ -102,7 +102,7 @@ impl Shell {
             return;
         }
 
-        // An already-open script keeps its editor untouched — re-seeding it
+        // An already-open script keeps its editor untouched, re-seeding it
         // would throw away an edit in progress.
         // Argon's Open In Editor: a synced script opens in the OS editor
         // through the server instead of here.
@@ -160,8 +160,8 @@ impl Shell {
 
     /// `RBX_STUDIO_OPEN_SCRIPT=<name>[,<name>...]`: opens each named script
     /// through the exact path a double-click does, once, at startup. The only
-    /// way to get a tab open for a screenshot — nothing else can double-click
-    /// the Explorer on the editor's behalf (see `AGENTS.md`'s safety rules).
+    /// way to get a tab open for a screenshot, nothing else can double-click
+    /// the Explorer on the editor's behalf.
     pub(super) fn apply_debug_open_script(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Ok(spec) = std::env::var(OPEN_VARIABLE) else {
             return;
@@ -221,7 +221,7 @@ impl Shell {
     ///
     /// A tab whose script is gone closes; a tab whose `Source` moved
     /// underneath it is re-seeded. A tab holding uncommitted typing is left
-    /// alone — that text is what would be destroyed, and its own commit is
+    /// alone, that text is what would be destroyed, and its own commit is
     /// what reaches the DOM next.
     pub(super) fn resync_scripts(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // Tabs belong to the edited place, stashed while a live view shows.
@@ -260,7 +260,7 @@ impl Shell {
     /// Whether an open script editor currently holds focus.
     ///
     /// While one does, Ctrl+Z belongs to that editor's own text history and
-    /// not to the place's — the same split Studio makes, where the script
+    /// not to the place's, the same split Studio makes, where the script
     /// editor undoes typing and the place's history undoes everything else.
     /// Running both would step two stacks on one keypress, reverting an
     /// unrelated earlier edit along with the typing. Nothing is lost by
@@ -334,7 +334,7 @@ impl Shell {
         let before = self.dom.clone();
         if !source::write(&mut self.dom, reference, &text) {
             // Nothing reached the DOM. The referent stopped resolving between
-            // the guard above and here — a tab outlives its script for the
+            // the guard above and here, a tab outlives its script for the
             // frame between a delete and the `resync_scripts` that closes it,
             // and a debounce firing in that window lands exactly here. The
             // tab is marked clean because there is no longer anywhere to
@@ -348,7 +348,7 @@ impl Shell {
         self.properties.dom_changed(&[]);
         // A `Source` write is exactly one property write, so undoing it takes
         // the same fast in-place viewport patch every other single edit does
-        // rather than a full reload — but only if the log that write produced
+        // rather than a full reload, but only if the log that write produced
         // is attached to the snapshot (see `shell::history`).
         let changes = self.dom.take_changes();
         self.record_history_change(changes);

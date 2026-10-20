@@ -1,4 +1,4 @@
-//! The ghost boxes an editor draws to show where something *would* land —
+//! The ghost boxes an editor draws to show where something *would* land,
 //! today the Align tool's live preview, which `studio/align-tool.md`
 //! describes as "dynamically previewing the point of alignment before
 //! confirming".

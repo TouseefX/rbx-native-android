@@ -254,7 +254,7 @@ pub(crate) fn constructors(lua: &Lua) -> Result<Table> {
     table.set(
         "FromNormalId",
         lua.create_function(|_, item: Value| {
-            // Right, Top, Back, Left, Bottom, Front — `Enum.NormalId`'s order.
+            // Right, Top, Back, Left, Bottom, Front, `Enum.NormalId`'s order.
             let [x, y, z] = match enum_value(&item, "NormalId")? {
                 0 => [1.0, 0.0, 0.0],
                 1 => [0.0, 1.0, 0.0],

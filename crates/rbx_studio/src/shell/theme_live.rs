@@ -11,7 +11,7 @@ use crate::packs::{self, IconOverlay};
 use crate::theme::{self, ThemePack};
 
 impl Shell {
-    /// Polls for a theme change for as long as the window lives — see
+    /// Polls for a theme change for as long as the window lives, see
     /// `theme::watch` for why this polls.
     pub(super) fn watch_theme(&self, cx: &mut Context<Self>) {
         cx.spawn(async move |shell, cx| loop {
@@ -30,7 +30,7 @@ impl Shell {
 
     /// Reads `appearance.json` again and applies the theme it names. A theme
     /// that no longer loads is reported in the Output dock and the one on
-    /// screen stays — an author mid-edit sees what is wrong with the file
+    /// screen stays, an author mid-edit sees what is wrong with the file
     /// rather than their theme vanishing.
     pub(in crate::shell) fn reload_theme(&mut self, cx: &mut Context<Self>) {
         let appearance = packs::Appearance::load();

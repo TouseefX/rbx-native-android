@@ -7,7 +7,7 @@
 //! colour, radius or size: the geometry is the `RbxNative - Studio App`
 //! frame's, measured rather than guessed.
 //!
-//! Chrome icons are Lucide, straight out of the toolkit's bundled catalog —
+//! Chrome icons are Lucide, straight out of the toolkit's bundled catalog,
 //! the same set the design is drawn with. The Explorer is the exception and
 //! keeps this project's own class icons, because there the icon *is* the
 //! class (see [`crate::class_icons`]).
@@ -30,7 +30,7 @@ use super::Shell;
 /// air), so the thumb never lands on a row's trailing control.
 pub(crate) const SCROLLBAR_GUTTER: Pixels = px(12.);
 
-/// A vertical scrollbar for a scroll area, added as the area's own child —
+/// A vertical scrollbar for a scroll area, added as the area's own child,
 /// in place of the kit's `vertical_scrollbar`, which measures its track
 /// from its own layout box. Inside the area that box is shifted by the
 /// scroll offset like any other child, so scrolling down slid the whole
@@ -54,7 +54,7 @@ impl<E: ParentElement> ScrollbarY for E {}
 
 /// The mark at the top-left, exported from the same Figma file as the rest
 /// of this frame. GPUI paints an SVG as a mask, so this renders as a white
-/// silhouette of the logo rather than with its own fills — which is what
+/// silhouette of the logo rather than with its own fills, which is what
 /// the frame shows anyway.
 const LOGO: &[u8] = include_bytes!("../../../../assets/icons/brand/rbxnative-logo.svg");
 
@@ -66,9 +66,9 @@ pub(crate) enum Document {
     #[default]
     Viewport,
     Scripts,
-    /// The 2D canvas and the style sheets — see `shell::ui_editor`.
+    /// The 2D canvas and the style sheets, see `shell::ui_editor`.
     UiEditor,
-    /// The dope sheet and the Animation Graph — see `shell::animation`.
+    /// The dope sheet and the Animation Graph, see `shell::animation`.
     Animation,
 }
 
@@ -100,7 +100,7 @@ impl Document {
 }
 
 /// A drag in progress: which edge, where the pointer went down, and how
-/// big that edge was at that moment. The last two are both needed —
+/// big that edge was at that moment. The last two are both needed,
 /// tracking only the delta since the previous move accumulates rounding
 /// drift over a long drag.
 ///
@@ -116,7 +116,7 @@ pub(crate) struct Drag {
 
 /// The draggable width of a resize handle. The frame draws no divider at
 /// all between a dock and what it sits beside, so this one is invisible
-/// until pointed at — but it is still four pixels wide, because an edge you
+/// until pointed at, but it is still four pixels wide, because an edge you
 /// have to hit to the pixel is an edge you miss.
 pub(super) const HANDLE_HIT: Pixels = px(4.);
 /// The window buttons, and the logo block mirroring them on the other side
@@ -183,7 +183,7 @@ impl Shell {
         )
     }
 
-    /// **Row A** — which document the centre column shows.
+    /// **Row A**: which document the centre column shows.
     ///
     /// One Tab stop for the whole strip, arrows within it, Enter/Space to
     /// switch: the APG Tabs pattern with *manual* activation, so browsing
@@ -232,7 +232,7 @@ impl Shell {
                     }),
             )
             // The frame's "+": this editor's three documents are fixed, so
-            // what it adds is another place — a new Baseplate or a file,
+            // what it adds is another place, a new Baseplate or a file,
             // the same as File › New and Open….
             .child(super::menu::dropdown(
                 self,
@@ -259,7 +259,7 @@ impl Shell {
             ))
     }
 
-    /// **Row B** — the ribbon's category tabs, in the black strip above it.
+    /// **Row B**: the ribbon's category tabs, in the black strip above it.
     pub(super) fn ribbon_tabs(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let active = self.ribbon_tab;
         self.ribbon_tabs_nav
@@ -314,7 +314,7 @@ impl Shell {
 }
 
 /// One document tab: icon, title, close. Sized to its own content, not to a
-/// fixed slot — the reference floats each tab's label at its own width, and
+/// fixed slot, the reference floats each tab's label at its own width, and
 /// three fixed documents never reflow the strip the way an arbitrary count
 /// of them might.
 fn document_tab(
@@ -361,7 +361,7 @@ fn document_tab(
         .child(Icon::new(document.icon()).size(px(13.)))
         .child(div().truncate().child(label))
     // No close mark. The frame draws one, and §11 already rejects it on
-    // a dock tab as "a control that lies" — a document here is a view
+    // a dock tab as "a control that lies", a document here is a view
     // of the one open place, not a file that closes independently, so
     // the identical argument applies.
 }
@@ -411,7 +411,7 @@ pub(crate) fn topbar_frame(title: SharedString) -> Div {
                 // The move starts on a *drag*, not on a press. Handing
                 // `start_window_move` to mouse-down grabs the pointer at
                 // the compositor on the first press of every double
-                // click, and the second press is then never delivered —
+                // click, and the second press is then never delivered,
                 // which is exactly why double-clicking to maximize did
                 // nothing until the second attempt. Waiting for actual
                 // motion costs nothing (a drag always moves) and leaves
@@ -443,7 +443,7 @@ pub(crate) fn topbar_frame(title: SharedString) -> Div {
         )
 }
 
-/// [`topbar_frame`] with minimise, maximise and close — for a window with
+/// [`topbar_frame`] with minimise, maximise and close, for a window with
 /// no tab order of its own (the launcher's). A fixed-size window leaves
 /// maximise out (`resizable`); `on_close` decides what closing means.
 pub(crate) fn window_topbar(
@@ -536,7 +536,7 @@ fn titlebar_button(
         .child(Icon::new(icon).size(tokens::text_md()))
 }
 
-/// The title bar a **secondary window** wears — today the sequence graph
+/// The title bar a **secondary window** wears, today the sequence graph
 /// (`crate::sequence_window`), which is its own fixed-size floating window
 /// rather than a dock.
 ///
@@ -544,7 +544,7 @@ fn titlebar_button(
 /// header of its own: same height, same ground, the same logo block, the
 /// same button treatment and the same drag-to-move stretch, so a second
 /// window of this application reads as one. The difference is what such a
-/// window actually has — one button, because it only closes, where the main
+/// window actually has, one button, because it only closes, where the main
 /// window also minimizes and zooms.
 /// `grab` is how the bar tells a *move* it started from a press that
 /// started *here*. GPUI hands a mouse-move to whatever the pointer is over,
@@ -620,7 +620,7 @@ pub(crate) fn panel_topbar(
 /// One tab in a dock's strip: the frame's pill, dimmed when it is not the
 /// one showing.
 ///
-/// Unwired on purpose — the caller adds the id, the click that shows it and
+/// Unwired on purpose, the caller adds the id, the click that shows it and
 /// the drag that moves it (see `shell::workspace`), because a tab is the
 /// grab handle for its whole panel and only the caller knows which panel
 /// that is.
@@ -650,8 +650,8 @@ pub(super) fn dock_tab(
 /// A dock tab's pill alone, with no close mark: what a panel's own sub-tabs
 /// wear (see `shell::ui_editor`), which switch a view rather than shut one.
 ///
-/// `solo` is the only tab its strip has — Properties and Explorer, almost
-/// always — and reads the way the reference's plain `DockHeader` does: bold
+/// `solo` is the only tab its strip has, Properties and Explorer, almost
+/// always, and reads the way the reference's plain `DockHeader` does: bold
 /// title text on the dock's own ground, no pill fill, nothing to say
 /// "selected" because there is nothing beside it to be selected over. A
 /// real choice (Output/Argon/Wally) keeps the pill so the active one is
@@ -702,7 +702,7 @@ pub(super) fn tab_pill(
 }
 
 /// The strip a dock's tabs sit in, with its own trailing cell for an
-/// overflow menu — or, with `toolbar`, for a row of controls that takes the
+/// overflow menu, or, with `toolbar`, for a row of controls that takes the
 /// rest of the strip (see [`super::layout::Panel::has_toolbar`]).
 pub(super) fn dock_strip(
     tabs: Vec<AnyElement>,
@@ -788,7 +788,7 @@ pub(super) fn dock_options_trigger(
 }
 
 /// A small icon button for panel chrome: an overflow "…", a collapse
-/// chevron. Icon-only, so it carries a tooltip — which doubles as the
+/// chevron. Icon-only, so it carries a tooltip, which doubles as the
 /// control's accessible label.
 pub(super) fn icon_button(
     id: impl Into<ElementId>,
@@ -886,7 +886,7 @@ pub(super) fn button(
         .child(label.into())
 }
 
-/// A resize handle. The frame has none — its docks are fixed at 228px — so
+/// A resize handle. The frame has none, its docks are fixed at 228px, so
 /// this draws nothing until it is pointed at, and then only a hairline.
 pub(super) fn resize_handle(
     edge: Edge,
@@ -899,7 +899,7 @@ pub(super) fn resize_handle(
     };
     // The handle carries the dock's own surface rather than letting the
     // window's black ground show through. A 4px black slot between a dock
-    // and the viewport reads as a crack, not as an edge — the hairline the
+    // and the viewport reads as a crack, not as an edge, the hairline the
     // dock already draws is the edge.
     seam_handle(id, edge.is_vertical(), Some(tokens::dock()), on_down)
 }
@@ -973,7 +973,7 @@ impl Trigger {
         }
     }
 
-    /// A trigger whose children depend on whether its popover is open —
+    /// A trigger whose children depend on whether its popover is open,
     /// the snap pills, which each take an accent border while the popover
     /// shows. `build` gets the open state and draws everything itself;
     /// `render` adds no styling of its own.
@@ -989,7 +989,7 @@ impl Trigger {
 
     /// Paints this trigger with a transform tool's own pastel while its
     /// popover is showing, wash-border-and-icon exactly as an active tool
-    /// button — for the ribbon buttons that *are* tools but whose state
+    /// button, for the ribbon buttons that *are* tools but whose state
     /// lives in a popover rather than in `Transform::tool`.
     pub(super) fn accent(mut self, accent: Rgba) -> Self {
         self.accent = Some(accent);
@@ -999,7 +999,7 @@ impl Trigger {
     /// The trigger's hover label. Given here rather than on the element so
     /// it can be left off while the menu is open: GPUI cancels a pending or
     /// showing tooltip once its element stops registering one, and nothing
-    /// else does — a label queued by the hover before a quick click would
+    /// else does, a label queued by the hover before a quick click would
     /// otherwise pop up over the menu's first row.
     pub(super) fn tooltip(mut self, label: impl Into<SharedString>) -> Self {
         self.tooltip = Some(label.into());

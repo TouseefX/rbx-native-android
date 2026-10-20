@@ -1,12 +1,12 @@
 //! `NumberSequence`/`ColorSequence` as typed text: keypoints separated by
-//! `;`, the numbers inside one keypoint by `,` — the same comma-joined
+//! `;`, the numbers inside one keypoint by `,`: the same comma-joined
 //! spelling every other composite value in this panel uses, one level deeper.
 //!
 //! Nobody types this: the graph in `crate::sequence_window` is what edits a
 //! sequence, and a row draws one rather than showing a field. The text is
-//! how that graph *commits* — through the panel's existing per-type path,
+//! how that graph *commits*, through the panel's existing per-type path,
 //! which is also the only path an attribute's value is allowed to take (see
-//! `properties::attributes::edit_kind`) — so the graph is a second input to
+//! `properties::attributes::edit_kind`), so the graph is a second input to
 //! one mutation path rather than a second mutation path, and a sequence
 //! becomes creatable as an attribute with no second editor anywhere.
 
@@ -33,7 +33,7 @@ pub(super) fn number_sequence_text(sequence: &NumberSequence) -> String {
 /// colour in this panel is typed in (see `properties::color3`). A
 /// `ColorSequenceKeypoint`'s own envelope is deliberately not in the text:
 /// Roblox's engine ignores it entirely, so a field for it would be three
-/// characters of noise per keypoint — [`parse_color_sequence`] carries the
+/// characters of noise per keypoint, [`parse_color_sequence`] carries the
 /// stored one through instead.
 pub(super) fn color_sequence_text(sequence: &ColorSequence) -> String {
     join(&sequence.keypoints, |k| {
@@ -78,7 +78,7 @@ pub(super) fn parse_number_sequence(text: &str) -> Result<NumberSequence, String
 /// [`color_sequence_text`]): each keypoint keeps whatever the keypoint at
 /// its own index held, and a keypoint the sequence did not have before
 /// starts at zero. Positional like this because the engine ignores the field
-/// anyway — the point is only that editing a colour does not silently
+/// anyway, the point is only that editing a colour does not silently
 /// rewrite a value some other tool wrote.
 pub(super) fn parse_color_sequence(
     current: &ColorSequence,
@@ -124,7 +124,7 @@ pub(super) fn parse_color_sequence(
 /// One list of numbers per `;`-separated keypoint, each split by
 /// [`super::parse_numbers`] so the brackets and braces that spelling
 /// tolerates are tolerated inside a keypoint too. A trailing `;` is ignored
-/// rather than read as an empty keypoint — it is what someone typing the
+/// rather than read as an empty keypoint, it is what someone typing the
 /// next one leaves behind, not a value.
 fn keypoint_numbers(text: &str) -> Result<Vec<Vec<f32>>, String> {
     text.split(';')
@@ -139,7 +139,7 @@ fn keypoint_numbers(text: &str) -> Result<Vec<Vec<f32>>, String> {
 /// [`MAX_KEYPOINTS`] of them, in non-descending time order, the first at time
 /// 0 and the last at time 1. Checked here rather than left to whatever reads
 /// the value later because `rbx_viewer`'s `eval_number`/`eval_color` walk the
-/// list assuming exactly that — a keypoint whose time goes backwards is not
+/// list assuming exactly that, a keypoint whose time goes backwards is not
 /// drawn slightly wrong, it is never reached at all.
 fn validate(times: &[f32]) -> Result<(), String> {
     if times.len() < MIN_KEYPOINTS || times.len() > MAX_KEYPOINTS {

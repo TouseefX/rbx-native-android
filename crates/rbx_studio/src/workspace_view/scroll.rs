@@ -1,12 +1,12 @@
 //! The wheel over a `ScrollingFrame` drawn in the viewport: Studio's edit
 //! view scrolls the frame's canvas rather than zooming the camera, so the
-//! render thread — the only side that knows where the overlay's frames were
-//! laid out (see `rbx_viewer::Headless::gui_scroll_target`) — is asked first,
+//! render thread, the only side that knows where the overlay's frames were
+//! laid out (see `rbx_viewer::Headless::gui_scroll_target`), is asked first,
 //! and the camera only gets the notch nothing scrollable was under.
 //!
 //! `RBX_STUDIO_SCROLL=<x>,<y>,<dx>,<dy>` injects one such wheel event at
 //! viewport pixel `(x, y)` with `dx`/`dy` notches (`dy` positive away from
-//! the user) once the first frame is up — a screenshot aid, since nothing
+//! the user) once the first frame is up, a screenshot aid, since nothing
 //! else can roll the wheel over the viewport on the editor's behalf.
 
 use gpui_kit::{Pixels, Point, ScrollDelta};

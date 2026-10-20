@@ -30,7 +30,7 @@ impl Rect {
 
     /// The `(time, value)` a pointer at this window position is over.
     /// Deliberately unclamped in time so a drag that leaves the plot still
-    /// reads as "past the end" rather than freezing — [`super::Editor::drag_to`]
+    /// reads as "past the end" rather than freezing, [`super::Editor::drag_to`]
     /// clamps against the neighbours, which is the rule that actually matters.
     pub(crate) fn at(&self, x: f32, y: f32, ceiling: f32) -> (f32, f32) {
         let time = if self.width > 0.0 {
@@ -94,7 +94,7 @@ pub(crate) fn distance(time: f32, value: f32, at_time: f32, at_value: f32, ceili
     (dt * dt + dv * dv).sqrt()
 }
 
-/// The sequence at `t`, linearly between the stops either side — the same
+/// The sequence at `t`, linearly between the stops either side, the same
 /// rule `rbx_viewer`'s `eval_number`/`eval_color` apply, including two stops
 /// at one time reading as a hard step.
 pub(crate) fn sample(stops: &[Stop], t: f32) -> Stop {

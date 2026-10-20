@@ -4,7 +4,7 @@
 # version as the `wasm-bindgen` crate in Cargo.lock:
 #   rustup target add wasm32-unknown-unknown
 #   cargo install wasm-bindgen-cli --version <that version> --locked
-# Then serve it (the page cannot reach Roblox's CDNs itself — see
+# Then serve it (the page cannot reach Roblox's CDNs itself, see
 # crates/rbx_viewer/src/serve.rs):
 #   rbxview --serve crates/rbx_viewer/web [place.rbxl]
 set -euo pipefail

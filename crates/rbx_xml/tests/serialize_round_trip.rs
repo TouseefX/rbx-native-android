@@ -8,7 +8,7 @@
 //! order on every parse (see `deserializer::assign_referents`), so a `Ref` that
 //! was `7` in the fixture may come back as a different number here. Instead,
 //! both trees are walked in the same deterministic pre-order (root list, then
-//! each instance's `children()` in order — both of which this crate's writer
+//! each instance's `children()` in order, both of which this crate's writer
 //! and reader preserve), and instances are paired up by position in that walk.
 
 use std::collections::HashMap;

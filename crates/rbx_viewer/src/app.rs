@@ -105,8 +105,8 @@ struct Viewer<'a> {
     last_shown_speed: f32,
     speed_title_until: Option<Instant>,
     /// Per-second frame rate for the title bar. Runs whether the quality level
-    /// is pinned or `--quality auto`-managed — unlike `automatic`, which only
-    /// exists in the latter case — the same way `rbxstudio`'s Viewport dock
+    /// is pinned or `--quality auto`-managed, unlike `automatic`, which only
+    /// exists in the latter case, the same way `rbxstudio`'s Viewport dock
     /// shows its own reading regardless of quality mode.
     fps: FrameRate,
 }
@@ -176,7 +176,7 @@ impl Viewer<'_> {
         let now = Instant::now();
         let dt = now.duration_since(self.last_frame);
         self.last_frame = now;
-        // Counts this same redraw, not a second measurement of it — see `fps`.
+        // Counts this same redraw, not a second measurement of it, see `fps`.
         let fps_updated = self.fps.record(now);
         let elapsed = self.start.elapsed();
         // Raw `dt` is wall-clock noise around an actually-steady vsync cadence (see
@@ -187,7 +187,7 @@ impl Viewer<'_> {
 
         let bounds = self.world.scene.bounds();
         // The windowed interactive viewer has no orthographic toggle of its
-        // own (only the offscreen `--orthographic` screenshot path does —
+        // own (only the offscreen `--orthographic` screenshot path does,
         // see `capture::write_png`), so the wheel always dollies here.
         let from = self
             .controller

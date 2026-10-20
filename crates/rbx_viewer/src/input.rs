@@ -62,7 +62,7 @@ const MOVEMENT_KEYS: [CameraKey; 6] = [
 ];
 
 /// Polled once per frame by the camera controller, which then drains the deltas
-/// it consumed — held keys and the look button stay until their own release
+/// it consumed, held keys and the look button stay until their own release
 /// event, everything else (deltas) is one frame's worth only.
 #[derive(Debug, Default)]
 pub(crate) struct Input {
@@ -112,7 +112,7 @@ impl Input {
     }
 
     /// Local-space movement direction (x right, y up, z forward), normalized so a
-    /// diagonal isn't faster than a straight line — Studio does the same.
+    /// diagonal isn't faster than a straight line, Studio does the same.
     pub(crate) fn movement_vector(&self) -> Vec3 {
         let axis = |positive: CameraKey, negative: CameraKey| {
             f32::from(self.key_held(positive)) - f32::from(self.key_held(negative))

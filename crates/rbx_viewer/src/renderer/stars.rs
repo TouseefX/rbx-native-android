@@ -79,14 +79,14 @@ impl Stars {
         })
     }
 
-    /// Whether the buffers already hold `field` — see [`Stars::count`].
+    /// Whether the buffers already hold `field`: see [`Stars::count`].
     pub(super) fn holds(&self, field: &[Star]) -> bool {
         self.count == field.len()
     }
 
     /// Swaps in another field, keeping the pipeline and the camera bind group:
     /// what a scene rebuild does for a `StarCount` edit. `field` must not be
-    /// empty — a place with no stars drops the pass instead (see
+    /// empty, a place with no stars drops the pass instead (see
     /// [`Stars::new`]).
     pub(super) fn replace(&mut self, device: &wgpu::Device, field: &[Star]) {
         let (vertices, indices) = buffers(device, field);

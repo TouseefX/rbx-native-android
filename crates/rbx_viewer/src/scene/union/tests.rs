@@ -11,7 +11,7 @@ pub(super) fn database() -> ReflectionDatabase {
 }
 
 /// `plan` needs a `Catalog` only to register a fallback part's material slot,
-/// irrelevant to these DOM-walking tests — build a fresh, throwaway one.
+/// irrelevant to these DOM-walking tests, build a fresh, throwaway one.
 pub(super) fn plan_of(dom: &WeakDom, database: &ReflectionDatabase) -> Plan {
     plan(dom, database, &mut Catalog::new(dom, database))
 }
@@ -179,9 +179,9 @@ fn resolves_the_real_rock_union_from_a_real_place_fixture() {
     assert!(suppressed > 0, "a resolved union must hide its box");
 }
 
-/// Checks the real rock's boolean result on its own terms — signed volume
+/// Checks the real rock's boolean result on its own terms, signed volume
 /// against its additive base leaf's own volume, and a single connected
-/// piece — the same ground this module's `csg` unit tests cover with
+/// piece, the same ground this module's `csg` unit tests cover with
 /// synthetic boxes, but against the real 29-leaf, 28-negation asset this
 /// resolver exists for. Ignored for the same reason as the fixture test
 /// above (network); run alongside it.
@@ -196,8 +196,8 @@ fn the_real_rock_boolean_is_a_single_positively_oriented_solid() {
 
     // Mirrors `csg::additive_volume_bound`: a leaf's own `negate` flag is
     // always false (only its wrapping `Operation` carries `negate: true`),
-    // so a negated child's whole subtree — however many additive-looking
-    // leaves are inside it — must be skipped entirely, not just the leaf
+    // so a negated child's whole subtree, however many additive-looking
+    // leaves are inside it, must be skipped entirely, not just the leaf
     // itself, or this sums in the very geometry the boolean is meant to cut.
     fn base_volume(node: &tree::Node) -> f64 {
         match node {
@@ -237,12 +237,12 @@ fn the_real_rock_boolean_is_a_single_positively_oriented_solid() {
     );
     // Ground truth from the asset itself, not a guess: `marked.rbxl`'s own
     // Rock instance (`rbxdump`'d against this same asset) carries `size` =
-    // `InitialSize` = (4.000002, 2.00309, 4.000001) — the bounding box
+    // `InitialSize` = (4.000002, 2.00309, 4.000001), the bounding box
     // *Roblox's own Studio bake* computed for this union. A carved rock is
     // squashed down from the 4x4x4 additive base to barely 2 studs tall
     // (most of the top and bottom got cut away), so comparing the carved
     // volume against the *uncarved* base's volume alone can't tell a correct
-    // result from a sliver — the right yardstick is whether the boolean's
+    // result from a sliver, the right yardstick is whether the boolean's
     // own bounding box lands on Studio's. It does, to 4+ decimal places,
     // which is the strongest evidence this module's geometry is right.
     let bounds_size = [
@@ -276,7 +276,7 @@ fn the_real_rock_boolean_is_a_single_positively_oriented_solid() {
 /// `Entry::placement()` for the world matrix a builder's post-bake resize
 /// (`size` vs `InitialSize`) leaves behind. A local 2x2x2 box minus its
 /// [1,2]^3 corner is 7/8 of the base, and that ratio must survive the
-/// uniform 2x `size`/`InitialSize` scale unchanged — volume scales with the
+/// uniform 2x `size`/`InitialSize` scale unchanged, volume scales with the
 /// cube of a uniform scale factor, so both numerator and denominator scale
 /// by the same 2^3 and the ratio cancels.
 #[test]
@@ -320,7 +320,7 @@ fn a_hand_built_tree_keeps_its_volume_ratio_through_entry_placement() {
         casts_shadow: true,
     };
     // A pure uniform 2x scale, no rotation or extra translation baked in
-    // beyond the union's own placement — `placement()` is `cframe *
+    // beyond the union's own placement, `placement()` is `cframe *
     // scale(size / initial_size)`.
     let (scale, rotation, translation) = entry.placement().to_scale_rotation_translation();
     assert_eq!(scale, Vec3::splat(2.0));
@@ -371,7 +371,7 @@ fn test_leaf(at: f32, negate: bool, color: Option<[u8; 3]>) -> tree::Node {
 }
 
 /// A carving as `Evaluations` holds one: the tree, plus the computed mesh
-/// only where the boolean is meant to have succeeded — which is exactly what
+/// only where the boolean is meant to have succeeded, which is exactly what
 /// tells a union drawn as one mesh from one drawn as its pieces.
 fn carving(children: Vec<tree::Node>, carved: bool) -> Evaluated {
     let tree = tree::Node::Operation {
@@ -408,7 +408,7 @@ fn union_dom() -> WeakDom {
 
 // `Scene::resync_part` re-plans a union through `replan`/`patched` against
 // the boolean this place already carved. That carving is what lets a colour
-// coming from the pieces (`UsePartColor` off) be repainted here too — it is
+// coming from the pieces (`UsePartColor` off) be repainted here too, it is
 // read off the very tree `resolve` reads it off.
 #[test]
 fn a_replanned_union_takes_its_colour_from_itself_or_from_its_tree() {
@@ -444,7 +444,7 @@ fn a_replanned_union_takes_its_colour_from_itself_or_from_its_tree() {
 }
 
 // A mesh this renderer never uploaded is the one thing a re-planned union
-// still cannot draw on its own — an edit that points it at another asset.
+// still cannot draw on its own, an edit that points it at another asset.
 #[test]
 fn a_union_whose_computed_mesh_is_not_resident_does_not_patch() {
     let database = database();
@@ -461,7 +461,7 @@ fn a_union_whose_computed_mesh_is_not_resident_does_not_patch() {
 
 // The piece identity the renderer addresses each fallback piece by: its
 // position in the tree's additive order. Re-deriving the same tree at another
-// placement — the union moved — has to hand every leaf the same number back,
+// placement, the union moved, has to hand every leaf the same number back,
 // or an edit would rewrite the record of a different piece than it moved.
 #[test]
 fn a_unions_pieces_are_numbered_in_tree_order_and_keep_their_numbers() {
@@ -546,13 +546,12 @@ fn a_union_with_no_additive_leaf_recovers_no_pieces() {
 /// root whose `ChildData` is a nested `.rbxm` of one large additive base box
 /// and `leaves` small `NegateOperation` boxes scattered through it, the same
 /// shape (one additive leaf, many negations) as the real rock asset this
-/// module was reverse-engineered against — see `REAL_ROCK_ASSET_ID` above.
+/// module was reverse-engineered against, see `REAL_ROCK_ASSET_ID` above.
 /// `seed` scatters the negations differently per call so two calls never
 /// serialize to identical bytes (real unions in a place never do either).
 ///
 /// Used both to profile [`resolve`]'s CSG cost against a place with many
-/// unions (no network, no committed asset — see `agents/AGENTS.md`'s asset
-/// rules) and, via [`synthetic_plan`], to check a parallel evaluation order
+/// unions (no network, no committed asset, see `CONTRIBUTING.md`) and, via [`synthetic_plan`], to check a parallel evaluation order
 /// against this module's sequential one.
 fn synthetic_asset_bytes(seed: u32, leaves: usize) -> Vec<u8> {
     let mut nodes = vec![tests_support::Leaf::additive(Vec3::ZERO, 10.0)];
@@ -570,7 +569,7 @@ fn synthetic_asset_bytes(seed: u32, leaves: usize) -> Vec<u8> {
 
 /// A [`Plan`] of `unions` entries, each its own distinct synthetic asset of
 /// `leaves_per_union` leaves (see [`synthetic_asset_bytes`]), plus the byte
-/// map [`resolve`] needs to evaluate every one of them — a synthetic stand-in
+/// map [`resolve`] needs to evaluate every one of them, a synthetic stand-in
 /// for a real, CSG-heavy place with many different unions.
 fn synthetic_plan(
     unions: usize,
@@ -612,7 +611,7 @@ fn synthetic_plan(
 /// (`evaluate_all`) rather than one at a time on the caller's own thread,
 /// since each asset's boolean is independent of every other. This checks
 /// that the evaluation order never changes the result: each asset's mesh
-/// must come out byte-for-byte identical to evaluating it alone — a race or
+/// must come out byte-for-byte identical to evaluating it alone, a race or
 /// an ordering bug in the parallel path would show up here as a mismatched
 /// vertex/index list, not as a crash, which is exactly the kind of silent
 /// regression a "just check it's faster" test would miss.
@@ -625,7 +624,7 @@ fn parallel_csg_evaluation_matches_evaluating_each_asset_alone() {
     let dom = WeakDom::new();
     let mut materials = Catalog::new(&dom, &database);
     // More entries than `MAX_CSG_WORKERS` so every worker thread actually
-    // picks up more than one asset — the scenario a single-asset run can't
+    // picks up more than one asset, the scenario a single-asset run can't
     // exercise at all.
     let (plan, assets) = synthetic_plan(12, 6, &materials);
 
@@ -668,7 +667,7 @@ fn parallel_csg_evaluation_matches_evaluating_each_asset_alone() {
 
 // A reload re-plans every union and resolves the same assets again: with the
 // evaluations kept, the second resolve must hand out the very meshes the
-// first carved — the same allocation, not an equal one computed again — and
+// first carved, the same allocation, not an equal one computed again, and
 // still resolve every instance exactly as the first did.
 #[test]
 fn a_second_resolve_reuses_every_boolean_already_carved() {
@@ -735,8 +734,7 @@ fn a_known_asset_resolves_without_its_bytes() {
 /// Manual profiling harness, not part of the regular gate: run with
 /// `cargo test --release -p rbx_viewer --lib union::tests::profile_synthetic_csg_heavy_place -- --ignored --nocapture`
 /// to see where `resolve`'s time actually goes on a synthetic, CSG-heavy
-/// place (this repository ships no real one — see `agents/AGENTS.md`'s asset
-/// rules). Prints wall time only; a caller comparing before/after times it
+/// place (this repository ships no real one, see `CONTRIBUTING.md`). Prints wall time only; a caller comparing before/after times it
 /// externally (`/usr/bin/time` or similar) to also see CPU time and thread
 /// fan-out.
 #[test]

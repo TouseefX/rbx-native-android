@@ -2,7 +2,7 @@
 //! (`argon-rbx/argon-roblox@30fd38d`, `src/Config.luau`) so that the Argon
 //! dock behaves the way the plugin does.
 //!
-//! The plugin keeps three levels of overrides — Place, Game and Global —
+//! The plugin keeps three levels of overrides, Place, Game and Global,
 //! and resolves a setting by walking them in that order, falling back to
 //! the setting's default (`Config.luau:105-121`). An override equal to the
 //! default is not stored at all (`:147`), and restoring defaults empties
@@ -117,7 +117,7 @@ impl Setting {
         }
     }
 
-    /// A stored value, if it is the kind this setting takes — the plugin
+    /// A stored value, if it is the kind this setting takes, the plugin
     /// casts to the default's type (`Config.luau:146`); anything that
     /// doesn't cast keeps the default.
     fn parse(self, json: &serde_json::Value) -> Option<Value> {
@@ -218,7 +218,7 @@ impl ArgonSettings {
             .unwrap_or_else(|| setting.default())
     }
 
-    /// The override stored at exactly `level`, if any — the plugin's
+    /// The override stored at exactly `level`, if any, the plugin's
     /// `Config:get(setting, level, true)` (`Config.luau:91-93`).
     pub(crate) fn exact(&self, setting: Setting, level: Level, keys: &LevelKeys) -> Option<Value> {
         self.overrides(level, keys)?.get(&setting).cloned()
@@ -318,7 +318,7 @@ impl ArgonSettings {
     }
 
     /// A key whose overrides are all gone is not worth a line in the file
-    /// — the plugin deletes the level's setting outright then
+    /// the plugin deletes the level's setting outright then
     /// (`Config.luau:155-156`).
     fn prune(&mut self) {
         self.game.retain(|_, overrides| !overrides.is_empty());

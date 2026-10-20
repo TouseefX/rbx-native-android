@@ -1,5 +1,5 @@
 //! The two text properties that change an element's geometry, `TextScaled`
-//! and `AutomaticSize`, both of which need the text measured — and layout is
+//! and `AutomaticSize`, both of which need the text measured, and layout is
 //! pure CPU with no font system of its own. [`TextMeasure`] is the hole the
 //! renderer fills with its cosmic-text-backed typesetter; a test fills it
 //! with a fixed advance per character.
@@ -14,8 +14,8 @@ const MAX_SIZE: f32 = 100.0;
 
 /// Measures a text the way it will be drawn.
 pub(crate) trait TextMeasure {
-    /// The pixel bounds of `text` laid out at `size` — width of the widest
-    /// line, height of every line — wrapped at `max_width` where given.
+    /// The pixel bounds of `text` laid out at `size`, width of the widest
+    /// line, height of every line, wrapped at `max_width` where given.
     fn measure(&mut self, text: &Text, size: f32, max_width: Option<f32>) -> [f32; 2];
 }
 
@@ -40,7 +40,7 @@ pub(crate) struct Typeset {
     pub(crate) size: f32,
 }
 
-/// The width the text wraps at inside `rect`, `None` where it runs free —
+/// The width the text wraps at inside `rect`, `None` where it runs free,
 /// which an `AutomaticSize` on the X axis makes it, since the box then takes
 /// its width from the text rather than the other way round.
 pub(super) fn wrap_width(text: &Text, rect: &Rect) -> Option<f32> {
@@ -75,7 +75,7 @@ pub(super) fn typeset(text: &Text, rect: &mut Rect, measure: &mut dyn TextMeasur
 
 /// The largest whole pixel size in `min..=max` at which the wrapped text still
 /// fits the box. Bounds only grow with size, so a binary search finds it in a
-/// handful of measurements — each of which shapes the whole string.
+/// handful of measurements, each of which shapes the whole string.
 fn fit(text: &Text, rect: &Rect, measure: &mut dyn TextMeasure, min: f32, max: f32) -> f32 {
     // Half a pixel of slack: a line whose advance rounds to the box's width
     // fits it as far as anyone looking can tell.

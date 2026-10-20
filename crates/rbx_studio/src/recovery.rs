@@ -12,7 +12,7 @@
 //! never touched by another: each session holds an OS lock beside its copy,
 //! and a second editor on the same place writes its own (see [`claim`]).
 //! Unlike
-//! Studio's, a recovered copy loses nothing that tied it to its place — a
+//! Studio's, a recovered copy loses nothing that tied it to its place, a
 //! place here is a local file, and the copy is the same kind of file.
 
 use std::fs::{File, TryLockError};

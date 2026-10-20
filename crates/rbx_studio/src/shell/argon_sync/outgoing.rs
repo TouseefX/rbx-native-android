@@ -45,7 +45,7 @@ impl Shell {
 
     /// `Shell::reflect_changes`'s own hook (called at the end of that
     /// function): notes which local instances a genuine edit just touched,
-    /// then schedules a debounced `POST write` — unless this same batch is
+    /// then schedules a debounced `POST write`: unless this same batch is
     /// a remote one being applied, see this module's doc comment.
     pub(in crate::shell) fn forward_to_argon(
         &mut self,
@@ -75,7 +75,7 @@ impl Shell {
                         self.argon.removed.push(id);
                     }
                 }
-                // Argon's `UpdatedSnapshot` has no parent field — a
+                // Argon's `UpdatedSnapshot` has no parent field, a
                 // reparent made locally isn't representable as an update
                 // on this protocol, so it isn't forwarded. Any property,
                 // name or class edit on the same instance still syncs.
@@ -173,18 +173,18 @@ impl Shell {
 
 /// Orders a dirty set so a referent is only emitted once its parent is
 /// either already known outside this batch, or already placed earlier in
-/// the same batch — a package install (or any multi-instance edit) dirties
+/// the same batch, a package install (or any multi-instance edit) dirties
 /// a parent `Folder`/`ModuleScript` alongside its own children in one go,
 /// and `flush_argon_write` needs the parent's `ArgonRef` to exist before it
 /// can name it as a child's parent. Draining the `HashSet` directly (as
 /// this used to) processes referents in arbitrary hash order, so a child
 /// could be visited before its own not-yet-assigned parent and silently
-/// fall back to [`ArgonRef::ROOT`] — the wrong place on the Argon side.
+/// fall back to [`ArgonRef::ROOT`], the wrong place on the Argon side.
 ///
 /// Bounded by the batch's own depth (a handful of iterations for anything
 /// this editor would realistically dirty in one edit); a `retain` pass
-/// that places nothing at all — which a real tree can't produce, since a
-/// root-level referent is always immediately ready — is treated as a
+/// that places nothing at all, which a real tree can't produce, since a
+/// root-level referent is always immediately ready, is treated as a
 /// malformed edge case rather than looped on forever, and whatever's left
 /// is appended in whatever order it was in.
 pub(super) fn ordered_parent_first(dom: &WeakDom, dirty: HashSet<Ref>) -> Vec<Ref> {

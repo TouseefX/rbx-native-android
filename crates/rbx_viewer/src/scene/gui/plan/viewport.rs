@@ -1,5 +1,5 @@
 //! Reads a `ViewportFrame`: the `Camera` it looks through, the lighting its
-//! docs give it — one directional lamp plus an ambient term, nothing else —
+//! docs give it, one directional lamp plus an ambient term, nothing else,
 //! and every `BasePart` under it, built into the very same `Part`s the
 //! `Workspace`'s own become (`scene::build_part`, against the scene's one
 //! material catalog) so the renderer can draw them through its ordinary
@@ -45,7 +45,7 @@ pub(crate) struct ViewCamera {
 impl ViewCamera {
     /// World to clip space for a target of `aspect` (width over height), on
     /// the same reversed-Z, infinite-far projection the main camera draws
-    /// with — so the frame's depth buffer is cleared and compared the same
+    /// with, so the frame's depth buffer is cleared and compared the same
     /// way (see `crate::camera`).
     pub(crate) fn view_projection(&self, aspect: f32) -> Mat4 {
         // A zero-sized frame would make the projection singular; a square one
@@ -74,14 +74,14 @@ pub(crate) struct Viewport {
     pub(crate) ambient: [f32; 3],
     /// `LightColor`, linear.
     pub(crate) light_color: [f32; 3],
-    /// Unit vector pointing *at* the lamp — `L` in `dot(N, L)`, the way
+    /// Unit vector pointing *at* the lamp, `L` in `dot(N, L)`, the way
     /// `crate::lighting::Lighting::sun_direction` is held.
     pub(crate) light: Vec3,
     /// `ImageColor3`, linear, and `1 - ImageTransparency`: what the rendered
     /// image is multiplied by on its way into the GUI.
     pub(crate) tint: [f32; 3],
     pub(crate) alpha: f32,
-    /// Every `BasePart` under the frame, wherever in its subtree it sits —
+    /// Every `BasePart` under the frame, wherever in its subtree it sits,
     /// nested `GuiObject`s are unsupported by Roblox itself, so nothing under
     /// the frame is anything but 3D content or a `Camera`.
     pub(crate) parts: Vec<Part>,
@@ -112,7 +112,7 @@ pub(in crate::scene::gui) fn read(
     // never say which way round, but read as the direction the light *travels*
     // the default `(-1, -1, -1)` lights a part's top and its camera-facing
     // side, and read the other way it would light only the faces the camera
-    // cannot see — so the lamp sits opposite the vector.
+    // cannot see, so the lamp sits opposite the vector.
     let direction = vector3(properties, "LightDirection").unwrap_or(DEFAULT_LIGHT_DIRECTION);
     let light = -direction.normalize_or(DEFAULT_LIGHT_DIRECTION.normalize());
 
@@ -129,9 +129,9 @@ pub(in crate::scene::gui) fn read(
 
 /// `CurrentCamera` where it points at a live `Camera`, which is what a tree
 /// built in code has; otherwise the pose Studio writes onto the frame itself.
-/// `CurrentCamera` is `CanSave: false` — "when you set this property,
+/// `CurrentCamera` is `CanSave: false`: "when you set this property,
 /// `Camera.CFrame` and `Camera.FieldOfView` will be saved and replicate with
-/// the `ViewportFrame` internally" — and a saved place carries those two as
+/// the `ViewportFrame` internally", and a saved place carries those two as
 /// the hidden `CameraCFrame` and `CameraFieldOfView` (the latter in radians,
 /// unlike the `Camera`'s own property).
 fn camera(
@@ -217,7 +217,7 @@ fn find<'a>(
 
 /// Every part of every `ViewportFrame` in `node`'s subtree, for the material
 /// re-read a scene does once the packs have landed (see
-/// `Scene::resolve_materials`) — a frame's parts point at the same layers
+/// `Scene::resolve_materials`), a frame's parts point at the same layers
 /// the workspace's do, and go plastic-then-textured the same way.
 pub(in crate::scene::gui) fn each_part(node: &mut super::Node, apply: &mut impl FnMut(&mut Part)) {
     if let Some(viewport) = &mut node.viewport {

@@ -40,7 +40,7 @@ pub(crate) fn lines_of(others: &[Rect], axis: usize) -> Vec<f32> {
     others.iter().flat_map(|other| other.lines(axis)).collect()
 }
 
-/// How far to shift `moving` so it snaps onto `others`, per axis — zero on
+/// How far to shift `moving` so it snaps onto `others`, per axis, zero on
 /// an axis with nothing within `reach`.
 pub(crate) fn snap_move(moving: &Rect, others: &[Rect], reach: f32) -> [f32; 2] {
     [0, 1].map(|axis| snap_axis(&moving.lines(axis), &lines_of(others, axis), reach).unwrap_or(0.0))

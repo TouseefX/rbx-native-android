@@ -59,7 +59,7 @@ pub(crate) fn arrange(
 }
 
 /// Sibling indices in the order a layout walks them: `SortOrder.Name`, or
-/// `LayoutOrder` with ties in tree order — stable, so equal orders keep the
+/// `LayoutOrder` with ties in tree order, stable, so equal orders keep the
 /// order they were added to the parent in.
 pub(in crate::scene::gui::layout) fn ordered(nodes: &[Node], by_name: bool) -> Vec<usize> {
     let mut order: Vec<usize> = (0..nodes.len()).collect();

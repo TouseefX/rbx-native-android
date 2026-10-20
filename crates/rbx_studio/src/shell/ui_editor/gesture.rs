@@ -5,7 +5,7 @@
 //! what it grabbed ([`Held`]), never step on step: the boxes the canvas is
 //! hit-tested against come back from the render thread a frame after each
 //! write, and a gesture that read them mid-drag would chase its own tail.
-//! Every step writes through `Shell::write_drag` — one undo entry per
+//! Every step writes through `Shell::write_drag`: one undo entry per
 //! gesture, the Properties panel's own commit.
 
 mod frame;
@@ -30,7 +30,7 @@ use crate::ui_canvas::{self, box_of, rotate, Handle, Rect};
 /// How far the pointer travels, in panel pixels, before a press is a drag.
 const DRAG_THRESHOLD: f32 = 3.0;
 /// How near, in panel pixels, a handle has to be to be grabbed rather than
-/// what is under it — and how near a line has to come to snap onto another.
+/// what is under it, and how near a line has to come to snap onto another.
 pub(super) const HANDLE_REACH: f32 = 6.0;
 pub(super) const SNAP_REACH: f32 = 6.0;
 /// How far above the top edge, in panel pixels, the rotation knob stands.
@@ -44,7 +44,7 @@ pub(super) enum Press {
     /// An element: a drag moves the selection. A press outside the
     /// selection has already picked `hit`; one inside it held the selection
     /// for the drag, and so a click there `repick`s what is under it on
-    /// release instead — toggling it with `extend`.
+    /// release instead, toggling it with `extend`.
     Element {
         hit: Ref,
         repick: bool,
@@ -57,7 +57,7 @@ pub(super) enum Press {
     },
     /// With a tool armed: a drag draws that class, a click puts one down.
     Draw(&'static str),
-    /// A corner's radius handle, by which side of the box it is on — that
+    /// A corner's radius handle, by which side of the box it is on, that
     /// corner alone with Alt held, Sketch's convention, all four without.
     Radius([i8; 2], bool),
     /// A gap or a side of the padding in the auto layout on show.
@@ -76,8 +76,8 @@ pub(super) enum Gesture {
         shift: [f32; 2],
         first: bool,
     },
-    /// The selection's frame — its one element's own box, or the box
-    /// round several — dragged by a handle: `frame` as grabbed, `shown` as
+    /// The selection's frame, its one element's own box, or the box
+    /// round several, dragged by a handle: `frame` as grabbed, `shown` as
     /// it stands now, and each element's box as it stands now.
     Resize {
         at: [f32; 2],
@@ -111,7 +111,7 @@ pub(super) enum Gesture {
         to: [f32; 2],
     },
     /// The corner radius dragged by `corner`'s handle on `frame`: `start`
-    /// is what it was, `grab` what the pointer read where it took hold —
+    /// is what it was, `grab` what the pointer read where it took hold,
     /// the handle stands clear of a square corner, and taking hold of it
     /// must not round the corner by that much.
     Radius {
@@ -140,7 +140,7 @@ pub(super) enum Gesture {
 
 impl Shell {
     /// The canvas's boxes, if the frame on hand is the one the canvas asks
-    /// for — the screen's own frame first, then every element (see
+    /// for, the screen's own frame first, then every element (see
     /// `rbx_viewer::GuiCanvas::boxes`).
     pub(super) fn canvas_boxes(&self, cx: &App) -> Option<(GuiBox, Vec<GuiBox>)> {
         let request = self.canvas_request()?;
@@ -162,7 +162,7 @@ impl Shell {
     }
 
     /// The frame the handles are drawn on: the one selected element's own
-    /// box, turned as it is, or the box round several — see [`frame_of`].
+    /// box, turned as it is, or the box round several, see [`frame_of`].
     pub(super) fn selection_frame(&self, boxes: &[GuiBox]) -> Option<(Rect, f32)> {
         frame_of(
             self.selected_all()
