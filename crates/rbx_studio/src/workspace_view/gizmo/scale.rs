@@ -1,5 +1,5 @@
 //! The Scale tool's balls: which one a press holds and the drag that opens,
-//! and what one step of that drag does — a lone part's `Size` along one of
+//! and what one step of that drag does, a lone part's `Size` along one of
 //! its own axes, or a model or group scaled whole by one factor. Either
 //! scales from the face opposite the one pulled, or, with `Ctrl` held,
 //! about the pivot.
@@ -22,7 +22,7 @@ use super::{snapped, Change, Drag, Landing, WorkspaceView, MAX_SIZE, MIN_SIZE};
 /// Whether a Scale drag scales about the pivot rather than from the face
 /// opposite the grabbed one: Studio's `shouldScaleFromCenter` is its
 /// `isCtrlKeyDown`. `Cmd` stands in for it on macOS as it does for this
-/// editor's other `Ctrl` chords — the disassembly does not say which key
+/// editor's other `Ctrl` chords, the disassembly does not say which key
 /// Studio reads there.
 pub(super) fn from_pivot(modifiers: Modifiers) -> bool {
     modifiers.control || modifiers.platform
@@ -125,10 +125,10 @@ fn regrab(
 ///
 /// No guessing at which axis the user meant: a ball sits *on* one of the
 /// part's own faces, and `BasePart.Size` is expressed along exactly those axes
-/// — so the handle names the component that stretches outright, whichever way
+/// so the handle names the component that stretches outright, whichever way
 /// the world/local toggle stands.
 ///
-/// `lock_shape` is `Alt` at the moment of the grab (see `press`) — free to
+/// `lock_shape` is `Alt` at the moment of the grab (see `press`), free to
 /// repurpose here because a click that reaches a handle at all never reads
 /// `Alt` for anything else (unlike a click that falls through to a pick,
 /// where it means "cycle selection").
@@ -159,7 +159,7 @@ pub(super) fn grab_face(
 
 /// Which face of a model's or group's box a Scale ball stands on, and the
 /// whole-selection drag grabbing it opens: pulling the face scales every part
-/// by the same factor about the opposite face, which holds still — or about
+/// by the same factor about the opposite face, which holds still, or about
 /// `pivot` with `centred`.
 ///
 /// One factor rather than one axis: a group's parts stand at every angle to
@@ -229,7 +229,7 @@ pub(super) fn advance(drag: Drag, ray: Ray, landing: Landing) -> Option<(Drag, C
                 // the ball centred on both of them. Clamped independently,
                 // since a ball dragged from an already-uneven size (its
                 // Y or Z started closer to `MAX_SIZE` than X did) can still
-                // run out of room on one axis before another — a corner
+                // run out of room on one axis before another, a corner
                 // case worth a comment, not a reason to hold every axis to
                 // whichever one clamps first.
                 for other in 0..3 {
@@ -239,7 +239,7 @@ pub(super) fn advance(drag: Drag, ray: Ray, landing: Landing) -> Option<(Drag, C
                 }
             }
             if cylinder && component != 0 {
-                // `component` is 1 (Y) or 2 (Z) — the round pair, since a
+                // `component` is 1 (Y) or 2 (Z), the round pair, since a
                 // Cylinder's length always sits on the part's own X (see
                 // `Target::cylinder`'s own doc comment). Grabbing X itself
                 // (`component == 0`) leaves this branch untouched, which is

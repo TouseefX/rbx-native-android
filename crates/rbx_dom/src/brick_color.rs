@@ -1,5 +1,5 @@
 //! Roblox's `BrickColor` table: the 208 named colours, each with its number,
-//! its RGB, and — for 128 of them — its place in the palette Studio's colour
+//! its RGB, and, for 128 of them, its place in the palette Studio's colour
 //! picker shows. Transcribed from creator-docs'
 //! `reference/engine/datatypes/BrickColor.yaml`, so that everything that
 //! names a `BrickColor` (the Properties panel, a script) agrees on it.

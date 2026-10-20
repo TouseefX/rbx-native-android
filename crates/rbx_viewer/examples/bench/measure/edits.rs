@@ -1,6 +1,6 @@
 //! The edits: one part's property write, an insert, a delete, a hundred
 //! parts moved at once, a legacy union drawn as its recovered fallback
-//! pieces moved and recoloured, and the undo of each — all through
+//! pieces moved and recoloured, and the undo of each, all through
 //! `Headless::apply_changes`, exactly as the editor reflects them, with the
 //! undo handing over the *mutation's* own change log against the restored
 //! DOM the way `rbxstudio`'s history does.
@@ -26,18 +26,18 @@ use super::{drain_upload_budget, patchables, wait_for_frame, walk, Phase, NUDGE}
 use crate::args::Args;
 use crate::stats::Samples;
 
-/// How many parts the batch move carries — a script's `for _, part in
+/// How many parts the batch move carries, a script's `for _, part in
 /// workspace:GetChildren()` on a small model, and enough to tell one
 /// coalesced upload from a hundred separate ones.
 const BATCH: usize = 100;
 
-/// `Headless::apply_changes` after one `BasePart`'s `CFrame` moves — the
+/// `Headless::apply_changes` after one `BasePart`'s `CFrame` moves, the
 /// Properties-panel edit, as the one-write change log it produces.
 pub(super) fn patch(path: &Path, dom: &mut WeakDom, args: &Args) -> Result<Option<Phase>, String> {
     let mut headless = Headless::load(path, args.textures)?;
     // The target, its pipelines and the freshly loaded place's textures must
     // all be on the GPU already, or the first patches would be charged for
-    // finishing the load — see `drain_upload_budget`.
+    // finishing the load, see `drain_upload_budget`.
     drain_upload_budget(&mut headless, args)?;
 
     let Some(&(referent, cframe)) = patchables(&mut headless, dom, 1)?.first() else {
@@ -164,7 +164,7 @@ fn insert(
 }
 
 /// `part`'s whole subtree removed, as the Explorer's Delete does; then put
-/// back — every instance re-inserted under its old parent — and reflected
+/// back, every instance re-inserted under its old parent, and reflected
 /// with the delete's own log.
 fn delete(
     viewer: &mut Viewer,
@@ -196,8 +196,8 @@ fn delete(
     Ok((forward.phase("delete part"), backward.phase("undo delete")))
 }
 
-/// Every part in `parts` nudged in one go — what a script moving a model
-/// writes, or a group drag's one step — then moved back with the same log.
+/// Every part in `parts` nudged in one go, what a script moving a model
+/// writes, or a group drag's one step, then moved back with the same log.
 fn batch_move(
     viewer: &mut Viewer,
     dom: &mut WeakDom,
@@ -242,7 +242,7 @@ fn batch_move(
 /// The union edits: a legacy `UnionOperation` drawn as the fallback pieces
 /// recovered from its operation tree, moved and recoloured, with the undo of
 /// each. Kept apart from [`phases`] because a place has to *have* such a
-/// union for any of it to mean anything — one whose boolean succeeded draws
+/// union for any of it to mean anything, one whose boolean succeeded draws
 /// as a single computed mesh and is an ordinary mesh-instance patch, already
 /// covered by `patch instance`.
 ///
@@ -273,7 +273,7 @@ pub(super) fn unions(
 /// Asked of the renderer rather than guessed from the class: whether a given
 /// `UnionOperation` is drawn as one computed mesh or as its pieces depends on
 /// what its asset carved to, and a place usually has both. The whole tree is
-/// searched, unlike `patchables`' capped candidate list — a place's unions
+/// searched, unlike `patchables`' capped candidate list, a place's unions
 /// are wherever the builder put them, and this costs one walk outside
 /// everything measured.
 fn fallback_union(headless: &Headless, dom: &WeakDom) -> Option<Ref> {
@@ -282,7 +282,7 @@ fn fallback_union(headless: &Headless, dom: &WeakDom) -> Option<Ref> {
         .find(|&referent| headless.fallback_pieces(referent) > 0)
 }
 
-/// The union nudged, then put back with the move's own log — the drag, and
+/// The union nudged, then put back with the move's own log, the drag, and
 /// the undo of it.
 fn union_move(
     viewer: &mut Viewer,
@@ -311,9 +311,9 @@ fn union_move(
 }
 
 /// The union's own `Color3uint8` written, then put back with the write's own
-/// log. A union drawn as its pieces does not repaint them — they keep the
+/// log. A union drawn as its pieces does not repaint them, they keep the
 /// colours of the parts they were recovered from, which is what a rebuild
-/// draws too — so this measures the edit, not a change of picture: the point
+/// draws too, so this measures the edit, not a change of picture: the point
 /// is that a Properties row nobody can see the effect of still must not cost
 /// a reload.
 fn union_colour(
@@ -360,7 +360,7 @@ fn cframe_of(dom: &WeakDom, referent: Ref) -> Result<CFrameData, String> {
 }
 
 /// The union's colour as it stands, or the studio default for one that has
-/// never been painted — so the undo half writes the value the place had.
+/// never been painted, so the undo half writes the value the place had.
 fn colour_of(dom: &WeakDom, referent: Ref) -> Variant {
     dom.get(referent)
         .and_then(|instance| instance.properties().get("Color3uint8"))
@@ -379,7 +379,7 @@ fn set(dom: &mut WeakDom, referent: Ref, name: &str, value: Variant) -> Result<(
 }
 
 /// The viewer as the editor keeps it: on its own thread, with a copy of the
-/// DOM that each edit's snapshot brings in step — see the module doc.
+/// DOM that each edit's snapshot brings in step, see the module doc.
 struct Viewer {
     headless: Headless,
     mirror: WeakDom,

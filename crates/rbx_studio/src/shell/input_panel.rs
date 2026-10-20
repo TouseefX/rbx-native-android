@@ -1,7 +1,7 @@
 //! The Input Actions dock: every `InputContext` in the place as a section,
 //! its `InputAction`s as rows, and each action's `InputBinding`s sorted into
 //! one column per device family (`crate::input_actions`). Selecting a
-//! context, action or binding — here or in the Explorer — opens it in the
+//! context, action or binding, here or in the Explorer, opens it in the
 //! inspector beside the table, which edits every property the API dump
 //! saves for its class. Check mode marks what `input_actions::check` finds
 //! inline.
@@ -77,7 +77,7 @@ fn widget_key(referent: Ref, property: &str) -> SharedString {
 /// property with neither a stored value nor a reflection default
 /// (`InputBinding.Deadzone` has none in the defaults file, though Studio
 /// saves `0.1, 1` on a new binding). The value is
-/// then parsed against a zero of the dump's type — which only shapes the
+/// then parsed against a zero of the dump's type, which only shapes the
 /// parse; nothing is written unless the typed text parses.
 pub(super) fn commit_typed(
     dom: &mut WeakDom,

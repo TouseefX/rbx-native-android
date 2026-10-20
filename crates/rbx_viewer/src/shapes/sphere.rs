@@ -1,4 +1,4 @@
-//! A ~24x16 UV sphere, radius 0.5 so a part's `size` becomes its diameter —
+//! A ~24x16 UV sphere, radius 0.5 so a part's `size` becomes its diameter,
 //! matching `Part.shape == Ball` and `SpecialMesh.MeshType == Sphere` alike (the
 //! two differ only in whether the caller clamps `size` to a uniform diameter
 //! before it is used as the scale; see `scene::shape`).

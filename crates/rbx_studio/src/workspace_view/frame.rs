@@ -17,7 +17,7 @@ pub(super) struct Viewport {
 }
 
 impl Viewport {
-    /// The panel at `origin`, `size` across — or, emulating a `screen`, the
+    /// The panel at `origin`, `size` across, or, emulating a `screen`, the
     /// largest box of that screen's shape centred in it, the rest left as
     /// bars: the view a device of that shape would have, at the size the
     /// panel can show it. The scene renders at this box's size, 1:1 with

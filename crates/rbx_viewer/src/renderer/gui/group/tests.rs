@@ -1,5 +1,5 @@
 //! Unit tests for [`super`]: the local frame a group's run is moved into,
-//! and — on a GPU — the one blend a flattened group comes to.
+//! and, on a GPU, the one blend a flattened group comes to.
 
 use std::collections::HashMap;
 use std::sync::mpsc;
@@ -55,7 +55,7 @@ fn group(rect: GuiRect, alpha: f32, descendants: usize) -> GuiElement {
 }
 
 // A group's run is painted in the group's own frame: origin at its corner,
-// and its rotation — which every descendant carries — taken back out, so the
+// and its rotation, which every descendant carries, taken back out, so the
 // picture is upright and turns as one with the group's quad.
 #[test]
 fn a_run_is_moved_into_the_groups_own_upright_frame() {
@@ -95,7 +95,7 @@ fn a_run_is_moved_into_the_groups_own_upright_frame() {
 // Two opaque children overlapping under a half-transparent group must come
 // to *one* blend with what is behind the group: half red over black is
 // exactly half red, wherever both or only one of the children paints. Two
-// blends — each child faded on its own — would leave the overlap at three
+// blends, each child faded on its own, would leave the overlap at three
 // quarters.
 #[test]
 fn a_half_transparent_group_blends_its_overlapping_children_once() {

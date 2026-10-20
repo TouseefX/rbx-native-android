@@ -3,7 +3,7 @@
 //! to.
 //!
 //! Two passes. The first re-draws the highlighted geometry, position only,
-//! into a one-byte-per-pixel *mask* holding which highlight owns each pixel —
+//! into a one-byte-per-pixel *mask* holding which highlight owns each pixel,
 //! instanced against the same unit shapes and file-mesh buffers the colour
 //! pass uses, so the silhouette is the object's own and not the box around
 //! it. The second reads that mask back and paints: the interior wherever a
@@ -50,7 +50,7 @@ use pipelines::{Composite, Mask, MaskInstance, Paint};
 type ShapeBatches = Keyed<ShapeKind, (), MaskInstance, Claim, PartId>;
 
 /// The highlighted file meshes, one batch per mesh asset, against
-/// position-only geometry of their own — [`casters::MeshGeometry`], which the
+/// position-only geometry of their own, [`casters::MeshGeometry`], which the
 /// shadow pass builds from the same meshes for the same reason.
 type MeshBatches = Keyed<AssetRef, MeshGeometry, MaskInstance, Claim>;
 
@@ -82,7 +82,7 @@ pub(super) struct Highlights {
     /// The claims in play, in the order the mask draws them (see
     /// [`draw_order`]).
     order: Vec<Claim>,
-    /// Which runs of which batch each claim in `order` draws — a walk of
+    /// Which runs of which batch each claim in `order` draws, a walk of
     /// every batch per claim, so it is kept until a batch changes rather
     /// than walked again every frame. `None` when it is owed.
     runs: Option<Vec<ClaimRuns>>,
@@ -117,7 +117,7 @@ impl Highlights {
     }
 
     /// Re-uploads the mask geometry of `meshes`, skinned meshes whose pose
-    /// changed — see `casters::refresh`.
+    /// changed, see `casters::refresh`.
     pub(super) fn refresh_meshes(
         &self,
         queue: &wgpu::Queue,
@@ -154,7 +154,7 @@ impl Highlights {
         pass
     }
 
-    /// Follows a new sample count — see
+    /// Follows a new sample count, see
     /// `renderer::switch::Renderer::rebuild_pipelines`. The pipelines are
     /// rebuilt only if this scene ever had any; the mask texture goes either
     /// way, since its sample count has to match the depth buffer it shares a
@@ -186,7 +186,7 @@ impl Highlights {
         self.rebuild(device, queue, frame, scene);
     }
 
-    /// Brings the mask in line with one edited unit-shape part — the same
+    /// Brings the mask in line with one edited unit-shape part, the same
     /// four outcomes `shaped::Shaped::sync` has. A part no highlight covers
     /// is never in these batches to begin with, so this is a no-op for all
     /// but a handful of the edits a drag reports.
@@ -215,7 +215,7 @@ impl Highlights {
     }
 
     /// Uploads what [`Self::sync_part`] and [`Self::sync_mesh`] rewrote in
-    /// place — a moved part's record is only marked, like every other
+    /// place, a moved part's record is only marked, like every other
     /// pass's (see `slots::Slots::flush`), so a highlight or cue left
     /// unflushed stays drawn where its part used to stand.
     pub(super) fn flush(&mut self, queue: &wgpu::Queue) {
@@ -225,7 +225,7 @@ impl Highlights {
 
     /// [`Self::sync_part`] for a resolved file mesh. `false` when the mesh is
     /// one this renderer never downloaded, which is the caller's cue to fall
-    /// back to a full reload — the same answer `casters::sync_mesh` gives.
+    /// back to a full reload, the same answer `casters::sync_mesh` gives.
     pub(super) fn sync_mesh(
         &mut self,
         device: &wgpu::Device,
@@ -253,7 +253,7 @@ impl Highlights {
     }
 
     /// Whether this frame has anything to draw at all. A place with no
-    /// `Highlight` in it — which is most of them — allocates no mask and
+    /// `Highlight` in it, which is most of them, allocates no mask and
     /// opens neither pass.
     pub(super) fn is_empty(&self) -> bool {
         self.claims.is_empty()
@@ -263,7 +263,7 @@ impl Highlights {
     ///
     /// Runs after every other scene pass (see `Renderer::draw`) because a
     /// highlight is documented as calling attention to an object rather than
-    /// as being part of it — and before the resolve, so it is tone mapped
+    /// as being part of it, and before the resolve, so it is tone mapped
     /// with the rest of the frame, the way this renderer's other in-scene
     /// cues already are.
     pub(super) fn draw(
@@ -295,7 +295,7 @@ impl Highlights {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         // Zero is "no highlight here", so a cleared mask is an
-                        // empty one — see `highlight.wgsl`.
+                        // empty one, see `highlight.wgsl`.
                         load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                         store: wgpu::StoreOp::Store,
                     },
@@ -345,7 +345,7 @@ impl Highlights {
     }
 
     /// Every claim's runs, in draw order: each batch split into the runs of
-    /// instances one claim's pipeline is for — the same [`visible_runs`]
+    /// instances one claim's pipeline is for, the same [`visible_runs`]
     /// split the main and shadow passes already cull with, asked a
     /// different question.
     fn plan_runs(&self) -> Vec<ClaimRuns> {
@@ -429,7 +429,7 @@ impl Highlights {
     }
 
     /// The mask target, allocated at `size` and kept until the frame changes
-    /// shape — a window resize would otherwise cost one texture per frame of
+    /// shape, a window resize would otherwise cost one texture per frame of
     /// the drag.
     fn fit(&mut self, device: &wgpu::Device, size: (u32, u32), samples: u32) {
         let Some(gpu) = &self.gpu else {

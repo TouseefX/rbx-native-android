@@ -1,6 +1,6 @@
 //! `CanvasGroup` compositing. The docs apply `GroupColor3` and
 //! `GroupTransparency` "to the rendered result" of the group's descendants,
-//! flattened — so two overlapping children under a half-transparent group
+//! flattened, so two overlapping children under a half-transparent group
 //! blend with the screen once, as one picture, not twice. That needs the
 //! subtree painted on its own first: [`flatten`] paints each tinted group's
 //! run of elements into a texture of the group's pixel size, with the very
@@ -46,7 +46,7 @@ impl Baked {
     }
 
     /// Every texture a run can name: the atlas' slots first, then the groups
-    /// in the order [`flatten`] baked them — which is the order it numbered
+    /// in the order [`flatten`] baked them, which is the order it numbered
     /// their [`GuiGroup::texture`] in.
     pub(super) fn bindings(&self, atlas: &Atlas) -> Vec<wgpu::BindGroup> {
         let mut bindings = atlas.groups().to_vec();
@@ -99,8 +99,8 @@ pub(super) fn flatten(bake: &mut Bake, elements: Vec<GuiElement>) -> Vec<GuiElem
 }
 
 /// A group's run of elements moved into the group's own frame: the group's
-/// corner at the origin, and its rotation — which every descendant carries
-/// as part of its own — taken back out, since the finished picture turns as
+/// corner at the origin, and its rotation, which every descendant carries
+/// as part of its own, taken back out, since the finished picture turns as
 /// one when the group's quad does. The group itself loses its ancestors'
 /// scissor (the quad is clipped by it instead) and its group-ness (or it
 /// would be flattened again).
@@ -135,7 +135,7 @@ fn local(run: &[GuiElement]) -> Vec<GuiElement> {
 }
 
 /// Whole pixels, at least one each way, and no bigger than the device can
-/// hold — the docs themselves warn a group "consumes extra texture memory".
+/// hold, the docs themselves warn a group "consumes extra texture memory".
 fn texture_size(device: &wgpu::Device, rect: &GuiRect) -> (u32, u32) {
     let cap = device.limits().max_texture_dimension_2d;
     let side = |extent: f32| (extent.ceil().max(1.0) as u32).min(cap);
@@ -161,7 +161,7 @@ fn offscreen(
         dimension: wgpu::TextureDimension::D2,
         format,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-        // Painted through its encoded twin, like every other GUI target —
+        // Painted through its encoded twin, like every other GUI target,
         // see `pipeline::encoded`.
         view_formats: &[super::pipeline::encoded(format)],
     })

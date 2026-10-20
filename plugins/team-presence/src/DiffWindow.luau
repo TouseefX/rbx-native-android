@@ -2,7 +2,7 @@
 --// "Changes while you were away", drawn like rbx-native's diff window: a
 --// header with the change counts as filters and a search, the changed
 --// instances on the left (their Explorer icons, grouped as rbx-native
---// groups them), and the selected one on the right — its class, its path,
+--// groups them), and the selected one on the right, its class, its path,
 --// and a table of the properties collaborators edited, with each one's
 --// current value, who edited it and when.
 --//

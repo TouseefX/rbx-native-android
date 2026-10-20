@@ -80,7 +80,7 @@ impl SkyFace {
 /// The sun and the moon a `Sky` asks for, unless `CelestialBodiesShown` is off.
 ///
 /// Both textures have a Studio default, so a `Sky` that never set them still
-/// gets a sun — which is why these are read as "missing means the default"
+/// gets a sun, which is why these are read as "missing means the default"
 /// rather than "missing means nothing".
 ///
 pub(super) fn celestial_bodies(dom: &WeakDom, referent: Ref) -> Vec<(AssetRef, Body)> {
@@ -146,7 +146,7 @@ pub(super) fn star_count(dom: &WeakDom, referent: Ref) -> u32 {
 }
 
 /// Reads the six skybox panels off a `Sky`, or `None` if any of them is empty
-/// or unparseable — a partial sky is worse than the plain black background.
+/// or unparseable, a partial sky is worse than the plain black background.
 pub(super) fn panels(dom: &WeakDom, referent: Ref) -> Option<Vec<(AssetRef, Quad)>> {
     let properties = dom.get(referent)?.properties();
 
@@ -165,7 +165,7 @@ pub(super) fn panels(dom: &WeakDom, referent: Ref) -> Option<Vec<(AssetRef, Quad
 ///
 /// The corners come out in image order (top-left, top-right, bottom-right,
 /// bottom-left). Since the basis is the exterior-facing one, that order winds
-/// both triangles *away* from the centre of the cube — which is why the sky
+/// both triangles *away* from the centre of the cube, which is why the sky
 /// pipeline draws with culling disabled rather than relying on the winding.
 pub(crate) fn quad(face: SkyFace) -> Quad {
     let (normal, u, v) = face.basis();
@@ -343,7 +343,7 @@ mod tests {
     }
 
     // Winding: with the exterior-facing basis the triangles face away from the
-    // centre, so the sky pipeline cannot cull back faces — see `quad`.
+    // centre, so the sky pipeline cannot cull back faces, see `quad`.
     #[test]
     fn the_wound_triangles_face_away_from_the_centre() {
         for face in SKY_FACES {

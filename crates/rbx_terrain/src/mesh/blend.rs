@@ -4,8 +4,8 @@
 //! A surface vertex stands for one cell of 8 voxels, and its share of a
 //! material is how much of that cell's solid fill is that material. A
 //! triangle can only interpolate weights for materials its three corners
-//! name in the same order, so the list is chosen per quad — the heaviest
-//! [`BLEND`] over its four corners — and a vertex is shared only between
+//! name in the same order, so the list is chosen per quad, the heaviest
+//! [`BLEND`] over its four corners, and a vertex is shared only between
 //! quads that chose the same list.
 
 use crate::{Cell, Material};

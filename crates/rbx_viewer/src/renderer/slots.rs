@@ -3,8 +3,8 @@
 //! moves a part between GPU batches (opaque to blended, box to ball, caster
 //! to non-caster) stay a single-instance operation instead of a full reload.
 //!
-//! [`Roster`] is the CPU mirror — every referent, its GPU record and any
-//! CPU-only sidecar (a cull sphere, say) in buffer order — and the only part
+//! [`Roster`] is the CPU mirror, every referent, its GPU record and any
+//! CPU-only sidecar (a cull sphere, say) in buffer order, and the only part
 //! with any bookkeeping to get wrong, so it is the part with tests. [`Slots`]
 //! wraps one in the `wgpu::Buffer` it mirrors; [`keyed::Keyed`] groups several
 //! under a batch key and keeps the referent index across them.
@@ -26,7 +26,7 @@ use wgpu::util::DeviceExt;
 /// Removal is a swap-remove: the last instance drops into the freed slot
 /// rather than everything after it shifting down, so a removal costs one
 /// buffer write and one index update however long the buffer is. The price
-/// is that buffer order is not DOM order — nothing here relies on it; the
+/// is that buffer order is not DOM order, nothing here relies on it; the
 /// blended passes (which do care about order) re-sort every frame anyway.
 pub(super) struct Roster<T, S = (), Id = Ref> {
     ids: Vec<Id>,
@@ -83,7 +83,7 @@ impl<T: Copy, S: Copy, Id: Copy> Roster<T, S, Id> {
     }
 
     /// Frees `offset` by dropping the last instance into it, and names the
-    /// instance that just moved there so the caller can re-index it — `None`
+    /// instance that just moved there so the caller can re-index it, `None`
     /// when `offset` *was* the last one and nothing moved.
     pub(super) fn swap_remove(&mut self, offset: usize) -> Option<Id> {
         self.ids.swap_remove(offset);
@@ -97,7 +97,7 @@ impl<T: Copy, S: Copy, Id: Copy> Roster<T, S, Id> {
 ///
 /// The buffer is allocated with slack and only `count()` instances of it are
 /// ever drawn, so a push that fits is one slot's write; one that does not
-/// reallocates at double the size and re-uploads the roster — rare enough
+/// reallocates at double the size and re-uploads the roster, rare enough
 /// (a bucket crossing is one instance per edit) that it is not worth a
 /// smarter growth policy.
 ///
@@ -187,7 +187,7 @@ impl<T: Pod, S: Copy, Id: Copy> Slots<T, S, Id> {
 
     /// Uploads every slot an edit touched since the last flush, as one
     /// write of the span they lie in. Must run before a pass reads the
-    /// buffer — `Renderer::draw` does, first thing.
+    /// buffer, `Renderer::draw` does, first thing.
     pub(super) fn flush(&mut self, queue: &wgpu::Queue) {
         let Some(span) = self
             .dirty
@@ -219,7 +219,7 @@ fn widened(dirty: Option<(usize, usize)>, first: usize, last: usize) -> (usize, 
 /// The slots a flush actually writes for a dirty `(first, last)` over a
 /// roster `len` long: the span clipped to the roster, since a removal
 /// marks the slot it vacated and that slot may since have fallen off the
-/// end — or the roster may have emptied altogether, in which case nothing
+/// end, or the roster may have emptied altogether, in which case nothing
 /// is owed. `None` for nothing to write.
 fn span((first, last): (usize, usize), len: usize) -> Option<std::ops::Range<usize>> {
     (first < len).then(|| first..last.min(len - 1) + 1)
@@ -251,7 +251,7 @@ mod tests {
     }
 
     // The freed slot is refilled from the end, and the caller is told which
-    // referent now lives there — an index still pointing it at the old end
+    // referent now lives there, an index still pointing it at the old end
     // would draw the wrong instance, or read past `len`.
     #[test]
     fn removing_from_the_middle_moves_the_last_one_in_and_names_it() {
@@ -294,7 +294,7 @@ mod tests {
     }
 
     // A removal marks the slot it vacated, which may have fallen off the
-    // end by flush time — and a batch's last instance leaving is a removal
+    // end by flush time, and a batch's last instance leaving is a removal
     // that marks slot 0 of a roster with nothing left to write.
     #[test]
     fn a_span_is_clipped_to_the_roster_and_an_empty_roster_owes_nothing() {

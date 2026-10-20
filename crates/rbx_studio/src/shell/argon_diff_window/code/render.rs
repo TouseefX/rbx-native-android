@@ -89,7 +89,7 @@ impl ArgonDiffWindow {
                             .child(value.map(|n| n.to_string()).unwrap_or_default())
                     };
                     // A run carries its font and colour; the size and the
-                    // line height are the row element's, below — gpui lays
+                    // line height are the row element's, below, gpui lays
                     // styled text out at the enclosing element's size, not
                     // the runs'.
                     let style = TextStyle {

@@ -94,7 +94,7 @@ pub(in crate::shell) fn copy(setting: Setting) -> (&'static str, &'static str) {
 }
 
 impl Shell {
-    /// The column: header row, then the sections — in their own scroll
+    /// The column: header row, then the sections, in their own scroll
     /// area with a 12px gutter when `own_scroll`, at natural height
     /// otherwise (the body scrolls instead).
     pub(super) fn argon_settings_column(

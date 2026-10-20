@@ -1,7 +1,7 @@
 //! Pointer capture while the camera looks around.
 //!
 //! GPUI exposes no pointer-lock API at all, so the lock is spoken straight to
-//! the windowing system — the X server, or Win32: hide the cursor, then warp it
+//! the windowing system, the X server, or Win32: hide the cursor, then warp it
 //! back to the viewport centre after every reported move. That is what keeps a
 //! long look drag from wandering onto the Explorer and losing the rest of the
 //! turn. Wayland's equivalent lives in a protocol GPUI does not forward, so
@@ -165,7 +165,7 @@ fn narrow_x11_id<T: TryInto<u32>>(id: T) -> Option<u32> {
 /// Whether the session is one the X11 lock may talk to.
 ///
 /// A Wayland session usually answers on `DISPLAY` too, through Xwayland, where
-/// the warp would move a pointer the compositor does not follow — so it is ruled
+/// the warp would move a pointer the compositor does not follow, so it is ruled
 /// out by the environment rather than by whether the connection succeeds.
 #[cfg(target_os = "linux")]
 fn x11_session(session: Option<&str>, wayland: Option<&str>) -> bool {

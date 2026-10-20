@@ -1,4 +1,4 @@
-//! Reading the `Decal` and `Texture` children of one BasePart — and the
+//! Reading the `Decal` and `Texture` children of one BasePart, and the
 //! `AdGui` children, which are the same thing in the only state this viewer
 //! can draw them in.
 
@@ -15,7 +15,7 @@ const DECAL_ANCESTOR: &str = "Decal";
 /// The immersive-ad surface. Not a `SurfaceGui` (the two are siblings under
 /// `SurfaceGuiBase`) and not a GUI tree at all: what it shows is served at
 /// run time, and what it shows when nothing is served is one image on one
-/// face — which is a `Decal` in all but name, so it is read as one here
+/// face, which is a `Decal` in all but name, so it is read as one here
 /// rather than given a canvas of its own.
 const AD_GUI_CLASS: &str = "AdGui";
 
@@ -184,7 +184,7 @@ fn worn(dom: &WeakDom, referent: Ref, placement: &Placement) -> Vec<(AssetRef, F
 ///
 /// Roblox documents an ad surface as showing "the creator-supplied
 /// `FallbackImage`, or a default Roblox fallback image when that property is
-/// empty" whenever no ad is available — which, in a viewer that serves no
+/// empty" whenever no ad is available, which, in a viewer that serves no
 /// ads, is always. The creator's image is drawn; Roblox's own default is not
 /// this project's to ship, so an `AdGui` with no `FallbackImage` draws
 /// nothing rather than a stand-in for someone else's artwork.
@@ -349,7 +349,7 @@ mod tests {
     }
 
     /// A place with an ad surface on it draws the creator's own fallback
-    /// image on the face it adorns, since this viewer serves no ads — and
+    /// image on the face it adorns, since this viewer serves no ads, and
     /// draws nothing at all where the creator supplied none.
     #[test]
     fn an_ad_surface_draws_its_fallback_image_on_its_own_face() {

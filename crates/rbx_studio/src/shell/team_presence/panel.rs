@@ -54,7 +54,7 @@ fn plural(n: usize, one: &'static str, many: &'static str) -> &'static str {
     }
 }
 
-/// "Ada made 3 edits to 2 properties across 1 instance" — with singulars.
+/// "Ada made 3 edits to 2 properties across 1 instance", with singulars.
 fn author_line(a: &rbx_presence::catchup::AuthorChange) -> String {
     format!(
         "{} made {} {} to {} {} across {} {}",

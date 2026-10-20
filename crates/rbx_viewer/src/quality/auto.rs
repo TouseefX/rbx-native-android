@@ -6,8 +6,8 @@
 //! by default): the client moves the internal level between 1 and 21 while the
 //! game runs to hold its frame-rate target, which is why a place looks blurrier
 //! for a moment after a busy scene loads. No algorithm, no thresholds and no
-//! step sizes are published anywhere, so everything below — the window length,
-//! the two thresholds, the dwell times, the leap of four — is chosen to behave
+//! step sizes are published anywhere, so everything below, the window length,
+//! the two thresholds, the dwell times, the leap of four, is chosen to behave
 //! plausibly, not to reproduce the engine.
 //!
 //! Time is measured in the frame times fed to [`FrameRateManager::record`]
@@ -109,7 +109,7 @@ impl FrameRateManager {
         }
     }
 
-    /// One rendered frame, as long as it took the host to produce — everything
+    /// One rendered frame, as long as it took the host to produce, everything
     /// the level can change, and nothing the host spent waiting for a clock.
     pub fn record(&mut self, frame: Duration) {
         self.push(frame);

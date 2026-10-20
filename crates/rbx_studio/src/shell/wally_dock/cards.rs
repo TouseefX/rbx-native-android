@@ -1,4 +1,4 @@
-//! The Home and Installed pages: a header row, then a grid of cards —
+//! The Home and Installed pages: a header row, then a grid of cards,
 //! the featured packages, a search's results, or the place's installed
 //! packages. The skeletons and the two centred states are in `states`.
 

@@ -1,8 +1,8 @@
 //! `StarterGui.ShowDevelopmentGui`, which "determines whether the contents of
 //! `StarterGui` is visible in Studio" (the property's own page).
 //!
-//! The viewer draws a place the way Studio's edit view does — it never copies
-//! `StarterGui` into a `PlayerGui` — so the flag is ours to honour: with it
+//! The viewer draws a place the way Studio's edit view does, it never copies
+//! `StarterGui` into a `PlayerGui`: so the flag is ours to honour: with it
 //! off, nothing under that service is drawn, neither the `ScreenGui` overlays
 //! nor the `BillboardGui`/`SurfaceGui` canvases the docs' "contents" covers.
 //! `rbxview --show-development-gui` is the way back to what a player sees.
@@ -28,7 +28,7 @@ pub(in crate::scene::gui) fn hides_contents(
 
 /// Whether a `ScreenGui` at `referent` is one Studio's edit view puts on
 /// screen: only those under `StarterGui` are. One kept anywhere else in a
-/// place — `ServerScriptService`, `ReplicatedStorage`, `Workspace` — is a
+/// place, `ServerScriptService`, `ReplicatedStorage`, `Workspace`, is a
 /// template a script clones at run time, never drawn. The test is "no
 /// service but `StarterGui` above it" rather than "`StarterGui` above it" so
 /// a model file, which has no services at all, still shows its screens.
