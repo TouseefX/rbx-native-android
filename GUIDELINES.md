@@ -21,7 +21,7 @@ Rust uses strict casing conventions defined by standard RFCs.
 - Prefer **4 spaces** for indentation.
 
 > **Official Reference:**
-> - [Rust API Guidelines — Naming Conventions (```C-CASE```)](https://rust-lang.github.io/api-guidelines/naming.html)
+> - [Rust API Guidelines, Naming Conventions (```C-CASE```)](https://rust-lang.github.io/api-guidelines/naming.html)
 
 ---
 
@@ -58,8 +58,8 @@ pub struct DbClient {
 - **```//```**: Inline implementation notes. Use exclusively for technical reasoning, complex math formulas, or `SAFETY:` guarantees in `unsafe` blocks.
 
 > **Official References:**
-> - [The Rust Programming Language — Chapter 14.2: Documentation Comments](https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#commenting-contained-items)
-> - [Rust API Guidelines — Documentation (```C-DOC```)](https://rust-lang.github.io/api-guidelines/documentation.html)
+> - [The Rust Programming Language, Chapter 14.2: Documentation Comments](https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#commenting-contained-items)
+> - [Rust API Guidelines, Documentation (```C-DOC```)](https://rust-lang.github.io/api-guidelines/documentation.html)
 
 ---
 
@@ -90,9 +90,9 @@ pub struct OrderId(pub u64);
 - **Implement Standard Traits**: Derive standard behavior (```Debug```, ```Clone```, ```PartialEq```, ```Eq```, ```Default```) where applicable.
 
 > **Official References:**
-> - [The Rust Programming Language — Chapter 4: Ownership](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html)
-> - [Rust API Guidelines — Deref Coercion (```C-DEREF```)](https://rust-lang.github.io/api-guidelines/flexibility.html#types-that-have-a-clear-target-type-implement-deref-coercion-c-deref)
-> - [Rust Design Patterns — Newtype Pattern](https://rust-unofficial.github.io/patterns/patterns/behavioural/newtype.html)
+> - [The Rust Programming Language, Chapter 4: Ownership](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html)
+> - [Rust API Guidelines, Deref Coercion (```C-DEREF```)](https://rust-lang.github.io/api-guidelines/flexibility.html#types-that-have-a-clear-target-type-implement-deref-coercion-c-deref)
+> - [Rust Design Patterns, Newtype Pattern](https://rust-unofficial.github.io/patterns/patterns/behavioural/newtype.html)
 
 ---
 
@@ -121,8 +121,8 @@ fn read_config(path: &str) -> Result<String, io::Error> {
   - **```anyhow```**: For flexible application-level error handling.
 
 > **Official References:**
-> - [The Rust Programming Language — Chapter 9: Error Handling](https://doc.rust-lang.org/book/ch09-00-error-handling.html)
-> - [Rust by Example — The ```?``` Operator](https://doc.rust-lang.org/rust-by-example/error/result/enter_question_mark.html)
+> - [The Rust Programming Language, Chapter 9: Error Handling](https://doc.rust-lang.org/book/ch09-00-error-handling.html)
+> - [Rust by Example, The ```?``` Operator](https://doc.rust-lang.org/rust-by-example/error/result/enter_question_mark.html)
 
 ---
 
@@ -153,8 +153,8 @@ let Some(user) = fetch_user(id) else {
 ```
 
 > **Official References:**
-> - [The Rust Programming Language — Chapter 13.2: Processing a Series of Items with Iterators](https://doc.rust-lang.org/book/ch13-02-iterators.html)
-> - [The Rust Reference — ```let else``` Statements](https://doc.rust-lang.org/reference/statements.html#let-statements)
+> - [The Rust Programming Language, Chapter 13.2: Processing a Series of Items with Iterators](https://doc.rust-lang.org/book/ch13-02-iterators.html)
+> - [The Rust Reference, ```let else``` Statements](https://doc.rust-lang.org/reference/statements.html#let-statements)
 
 ---
 
@@ -205,9 +205,9 @@ For medium-to-large applications, avoid monolithic crates. Break the codebase in
 - Use feature flags (```[features]```) to keep default builds lean and avoid compiling unused features.
 
 > **Official References:**
-> - [The Rust Programming Language — Chapter 7: Managing Growing Projects with Packages, Crates, and Modules](https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html)
-> - [The Cargo Book — Workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)
-> - [Rust API Guidelines — Module Hierarchy (```C-MODULE```)](https://rust-lang.github.io/api-guidelines/naming.html#module-names-follow-snake_case-c-module)
+> - [The Rust Programming Language, Chapter 7: Managing Growing Projects with Packages, Crates, and Modules](https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html)
+> - [The Cargo Book, Workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)
+> - [Rust API Guidelines, Module Hierarchy (```C-MODULE```)](https://rust-lang.github.io/api-guidelines/naming.html#module-names-follow-snake_case-c-module)
 
 ---
 
@@ -227,5 +227,5 @@ cargo test
 ```
 
 > **Official References:**
-> - [The Cargo Book — Continuous Integration](https://doc.rust-lang.org/cargo/guide/continuous-integration.html)
+> - [The Cargo Book, Continuous Integration](https://doc.rust-lang.org/cargo/guide/continuous-integration.html)
 > - [Clippy Documentation](https://doc.rust-lang.org/clippy/)

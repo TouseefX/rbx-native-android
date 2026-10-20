@@ -88,7 +88,7 @@ fn a_point_inside_the_cone_and_range_lands_inside_the_clip_volume() {
 }
 
 // Behind the light is the one direction `Selected::view_projection` must never
-// show anything for — a caster there would otherwise wrap around and darken
+// show anything for, a caster there would otherwise wrap around and darken
 // the light's own front.
 #[test]
 fn a_point_behind_the_light_is_culled() {
@@ -104,8 +104,8 @@ fn a_point_behind_the_light_is_culled() {
 }
 
 /// A 16 by 2 ceiling panel shines its cone from every point of its face, so
-/// its map has to take in the whole frustum that face lights — out to the
-/// far corner of the floor it reaches — and nothing of the part behind it.
+/// its map has to take in the whole frustum that face lights, out to the
+/// far corner of the floor it reaches, and nothing of the part behind it.
 #[test]
 fn a_face_lights_map_covers_the_whole_frustum_it_lights() {
     let range = 16.0;
@@ -165,7 +165,7 @@ fn packing_fills_only_the_selected_indices_with_their_own_layer() {
 }
 
 /// A point light takes a cube of the other array, and says so in the second
-/// slot rather than the first — the two kinds never share a record.
+/// slot rather than the first, the two kinds never share a record.
 #[test]
 fn packing_gives_a_point_light_a_cube_and_no_layer() {
     let lights = [spot(Vec3::new(5.0, 0.0, 0.0), true), point(Vec3::ZERO)];

@@ -1,10 +1,10 @@
 //! The main pass's own visibility test, and turning any per-instance
 //! visibility test into the contiguous index ranges a draw call can skip.
 //!
-//! An instance buffer's order never changes just because the camera moved —
+//! An instance buffer's order never changes just because the camera moved,
 //! `shaped::Shaped` and `shadow::casters` both keep a fixed offset per
 //! instance so a single Properties edit can patch straight into the buffer
-//! (see their own `patch`) — so culling has to omit whole runs of the
+//! (see their own `patch`), so culling has to omit whole runs of the
 //! *existing* order rather than reorder it.
 
 use std::ops::Range;
@@ -17,7 +17,7 @@ use crate::camera::Frustum;
 /// its quality level's own render distance.
 ///
 /// Deliberately not what the shadow pass culls its casters against (see
-/// `super::shadow::fit::Fit::visible`) — a caster just outside this test can
+/// `super::shadow::fit::Fit::visible`), a caster just outside this test can
 /// still need to land a shadow inside it, which is exactly the regression
 /// this split exists to avoid.
 pub(super) struct MainCull<'a> {
@@ -40,7 +40,7 @@ impl<'a> MainCull<'a> {
     /// `max_distance` (the top quality band) skips the distance half of the
     /// test exactly like the shader-side fade it stands in for
     /// (`render_distance_visible` in atmosphere.wgsl) does for that same
-    /// value — nothing here culls anything that fade would still show.
+    /// value, nothing here culls anything that fade would still show.
     pub(super) fn visible(&self, center: Vec3, radius: f32) -> bool {
         if self.max_distance.is_finite() && self.eye.distance(center) - radius >= self.max_distance
         {

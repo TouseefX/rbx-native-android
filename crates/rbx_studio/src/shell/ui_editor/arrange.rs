@@ -1,5 +1,5 @@
 //! Align, distribute and group for the canvas's selection. The geometry is
-//! `ui_canvas::arrange`'s; this is where it meets the DOM — every result
+//! `ui_canvas::arrange`'s; this is where it meets the DOM, every result
 //! is a `Position`/`Size` write through `Shell::write_drag`, or, for a
 //! group, through the one push/record pair `shell::group` uses, so each is
 //! one Ctrl+Z.
@@ -16,7 +16,7 @@ use crate::ui_canvas::arrange::{self, Member};
 use crate::ui_canvas::{box_of, position_shift, rotate, shifted_in, udim2_text, Rect};
 
 impl Shell {
-    /// Lines the selected elements' `mode` sides up on `axis` — or one
+    /// Lines the selected elements' `mode` sides up on `axis`, or one
     /// element's with its parent's content box, as Figma's Position buttons
     /// do with a lone layer.
     pub(super) fn align_gui(&mut self, axis: usize, mode: Mode, cx: &mut Context<Self>) {
@@ -102,8 +102,8 @@ impl Shell {
     }
 
     /// Ctrl+G on `GuiObject`s: wraps them in a transparent `Frame` fitted
-    /// round them, where a `Model` would mean nothing to a GUI. `false` —
-    /// leaving the ordinary group to go ahead — unless every one of
+    /// round them, where a `Model` would mean nothing to a GUI. `false`,
+    /// leaving the ordinary group to go ahead, unless every one of
     /// `selected` is a `GuiObject` laid out on the canvas.
     pub(in crate::shell) fn group_gui(
         &mut self,
@@ -133,7 +133,7 @@ impl Shell {
         let Some(held) = held else {
             return false;
         };
-        // Every member resolves in the same box — they share a parent — and
+        // Every member resolves in the same box, they share a parent, and
         // `None` there means a `ScrollingFrame`'s canvas, which the group
         // then measures from its first member (see `arrange::group`).
         let content = held
@@ -182,7 +182,7 @@ impl Shell {
 
     /// Ctrl+Shift+G on `Frame`s on the canvas: each one's elements move up
     /// into its parent where they stand on screen, each value keeping its
-    /// mode, and the frame goes — with the modifiers that styled it, as a
+    /// mode, and the frame goes, with the modifiers that styled it, as a
     /// Figma group's own fill goes. `false`, leaving the ordinary ungroup
     /// to go ahead, unless every one of `selected` is such a frame.
     pub(in crate::shell) fn ungroup_gui(

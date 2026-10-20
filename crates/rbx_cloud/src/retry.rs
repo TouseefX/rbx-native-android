@@ -12,8 +12,8 @@
 //! (creator-docs `content/en-us/cloud/reference/rate-limits.md`, which also
 //! warns that undocumented limits apply for DDoS protection.)
 //!
-//! Without this a place whose images are private — every one of them a keyed
-//! request — leaves a scattering of them undecoded whenever a load crosses the
+//! Without this a place whose images are private, every one of them a keyed
+//! request, leaves a scattering of them undecoded whenever a load crosses the
 //! quota, and which ones varies run to run.
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -112,7 +112,7 @@ fn backoff(
         _ if only_rate_limits => return None,
         // A rate limit, or the load balancer having a moment. `error_for_status`
         // has not run yet, so these are still raw statuses here; the service's
-        // own `retry-after` beats our guess, but only upwards — a second refusal
+        // own `retry-after` beats our guess, but only upwards, a second refusal
         // must back off further, not repeat the same wait. A 500 is deliberately
         // absent: it is as likely to be this exact request every time.
         Ok(response) if matches!(response.status, 429 | 502..=504) => retry_after(response)
@@ -133,7 +133,7 @@ fn retry_after(response: &RawResponse) -> Option<Duration> {
 }
 
 /// What to say about a last attempt that still failed, or `None` if it did
-/// not — the status alone, never the body, which can hold a signed CDN URL.
+/// not, the status alone, never the body, which can hold a signed CDN URL.
 fn refusal(outcome: &Result<RawResponse, CloudError>) -> Option<String> {
     match outcome {
         Err(err) => Some(err.to_string()),

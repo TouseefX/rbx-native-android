@@ -1,6 +1,6 @@
 //! An isolated view draws the rig under its root on a flat grey backdrop
-//! and nothing else of the place — not a wall behind it, however large and
-//! however bright — and lifting the isolation draws the place exactly as
+//! and nothing else of the place, not a wall behind it, however large and
+//! however bright, and lifting the isolation draws the place exactly as
 //! before.
 //!
 //! Needs a GPU. Without one the test says so and passes, rather than being

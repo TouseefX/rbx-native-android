@@ -1,7 +1,7 @@
 //! Several [`Slots`] buffers under one instance index: a pass's batches,
 //! keyed by whatever decides which batch an instance draws in (its unit
 //! shape, its mesh asset, its mesh-and-skin), with the entry points a
-//! single-instance edit needs — [`Keyed::sync`], [`Keyed::remove`] — and
+//! single-instance edit needs, [`Keyed::sync`], [`Keyed::remove`], and
 //! the [`Keyed::flush`] a frame runs before reading what they wrote.
 
 use std::collections::HashMap;
@@ -20,12 +20,12 @@ pub(in crate::renderer) struct Group<K, G, T: Pod, S: Copy, Id = Ref> {
 }
 
 /// The batches of one pass. A group is never dropped once made, even when
-/// its last instance leaves — an empty batch draws nothing and costs one
+/// its last instance leaves, an empty batch draws nothing and costs one
 /// small buffer, and keeping it means group positions are stable enough to
 /// index by.
 pub(in crate::renderer) struct Keyed<K, G, T: Pod, S: Copy, Id = Ref> {
     groups: Vec<Group<K, G, T, S, Id>>,
-    /// Which group, and which slot in it, holds each instance's record — by
+    /// Which group, and which slot in it, holds each instance's record, by
     /// whatever identifies one to this pass (see [`Roster`]'s own `Id`).
     index: HashMap<Id, (usize, u32)>,
     label: &'static str,
@@ -65,7 +65,7 @@ impl<K: PartialEq, G, T: Pod, S: Copy, Id: Copy + Eq + std::hash::Hash> Keyed<K,
     }
 
     /// Takes the batches apart, for a scene rebuild that keeps each one's
-    /// payload — a file mesh's vertex buffers — wherever the new scene asks
+    /// payload, a file mesh's vertex buffers, wherever the new scene asks
     /// for the same key again (see `renderer::rebuild`). The instances go
     /// with the old scene; nothing of them is worth keeping.
     pub(in crate::renderer) fn into_groups(self) -> Vec<Group<K, G, T, S, Id>> {
@@ -75,13 +75,13 @@ impl<K: PartialEq, G, T: Pod, S: Copy, Id: Copy + Eq + std::hash::Hash> Keyed<K,
     /// Brings this pass in line with one instance's new state: `wanted` is
     /// the batch it belongs in now and the record to hold there, or `None`
     /// when it no longer belongs in this pass at all. Whichever batch held
-    /// it before is left consistent either way — rewritten in place if it is
+    /// it before is left consistent either way, rewritten in place if it is
     /// still the right one, or vacated if not.
     ///
     /// `extra` is asked for a new batch's payload only when the instance
     /// lands in a key no batch has yet; `None` from it means the batch could
     /// not be built (a mesh this renderer never uploaded), and the instance
-    /// is left out — the `false` return is the caller's cue to fall back to
+    /// is left out, the `false` return is the caller's cue to fall back to
     /// a full reload.
     pub(in crate::renderer) fn sync(
         &mut self,
@@ -121,7 +121,7 @@ impl<K: PartialEq, G, T: Pod, S: Copy, Id: Copy + Eq + std::hash::Hash> Keyed<K,
         }
     }
 
-    /// Uploads what every batch's edits left owed to its buffer — see
+    /// Uploads what every batch's edits left owed to its buffer, see
     /// [`Slots::flush`].
     pub(in crate::renderer) fn flush(&mut self, queue: &wgpu::Queue) {
         for group in &mut self.groups {

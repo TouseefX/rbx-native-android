@@ -58,7 +58,7 @@ pub enum FetchError {
     #[error("fetching asset {id} was refused: {message}")]
     Refused { id: u64, message: String },
 
-    /// The request did not get an answer worth keeping — a rate limit, an
+    /// The request did not get an answer worth keeping, a rate limit, an
     /// outage, a dropped connection. About the machine and the moment, not
     /// about the asset, so a later try may well succeed.
     #[error("fetching asset {id} failed: {message}")]

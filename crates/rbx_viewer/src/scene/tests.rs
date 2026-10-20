@@ -86,8 +86,8 @@ fn a_suppressed_part_still_offers_a_placement_to_outline() {
     );
 }
 
-// An invisible part is still part of the scene's extent — the camera frames
-// where the place is built, not only what happens to be painted — and a Decal on
+// An invisible part is still part of the scene's extent, the camera frames
+// where the place is built, not only what happens to be painted, and a Decal on
 // one still needs its placement, so only the drawing stops.
 #[test]
 fn a_fully_transparent_part_is_not_drawn_but_keeps_its_placement() {
@@ -165,7 +165,7 @@ fn bounds_wrap_the_corners_of_a_rotated_box() {
 }
 
 // Studio only writes `CastShadow` when a builder has turned it off, so its
-// absence has to mean the part casts — anything else would leave a whole place
+// absence has to mean the part casts, anything else would leave a whole place
 // shadowless.
 #[test]
 fn cast_shadow_is_on_unless_a_place_says_otherwise() {
@@ -270,7 +270,7 @@ fn union_referents(scene: &Scene) -> Vec<Ref> {
         .collect()
 }
 
-// Two legacy unions whose asset bytes land on separate streaming ticks — the
+// Two legacy unions whose asset bytes land on separate streaming ticks, the
 // normal case, since the pool answers each whenever it answers it. Every tick
 // runs the file mesh pass and then the union pass, and both put the
 // accumulated unions back into the resolved set: the second tick must end
@@ -330,8 +330,8 @@ fn re_resolving_with_no_new_union_bytes_changes_nothing() {
 
 // `union::resolve` answers for every union whose asset it can evaluate, so a
 // union carved on an earlier tick is answered for again on every tick after
-// it. Absorbing that answer twice would append its instance — and, where the
-// boolean failed, each of its recovered pieces — a second time.
+// it. Absorbing that answer twice would append its instance, and, where the
+// boolean failed, each of its recovered pieces, a second time.
 #[test]
 fn absorbing_the_same_union_twice_merges_it_once() {
     let database = ReflectionDatabase::embedded();

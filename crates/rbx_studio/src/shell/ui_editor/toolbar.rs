@@ -1,5 +1,5 @@
 //! The document's strip: the two sub-tabs as dock-tab pills (the same
-//! pill and strip every dock wears — `chrome::tab_pill`/`dock_strip`), and,
+//! pill and strip every dock wears, `chrome::tab_pill`/`dock_strip`), and,
 //! on the canvas, its tools in the strip's trailing cell: align, distribute
 //! and group for the selection, the simulated screen, and the zoom.
 
@@ -248,7 +248,7 @@ impl Shell {
     }
 
     /// Keeps the two size fields showing the resolution, unless one is
-    /// being typed in — called while rendering, the only time there is a
+    /// being typed in, called while rendering, the only time there is a
     /// `Window` to write a field with, which a menu pick does not have.
     pub(in crate::shell) fn sync_size_fields(
         &mut self,

@@ -3,7 +3,7 @@
 //! framing the contents, what in `Workspace` can be cloned in, and how a
 //! camera flight folds into undo steps.
 //!
-//! No GPUI here — `shell::ui_editor::frame_sheet` drives this and writes
+//! No GPUI here, `shell::ui_editor::frame_sheet` drives this and writes
 //! through the editor's own history. Nothing is cached either: every read
 //! is of the DOM as it stands.
 
@@ -21,14 +21,14 @@ const CAMERA_CLASS: &str = "Camera";
 const DEFAULT_FOV_DEGREES: f32 = 70.0;
 
 /// Where a fit with no view to keep looks from: a three-quarter view from
-/// the front-right, a little above — the angle an item thumbnail is
+/// the front-right, a little above, the angle an item thumbnail is
 /// usually shot at.
 pub(crate) const THREE_QUARTER: (f32, f32) = (std::f32::consts::FRAC_PI_4, 0.35);
 
 /// The `Camera` `frame` looks through: `CurrentCamera` where it names one,
 /// otherwise a `Camera` already under the frame. The second matters on
 /// every reopened place: `CurrentCamera` does not save (the API dump marks
-/// it `DoesNotSerialize`), while the `Camera` under the frame does — so a
+/// it `DoesNotSerialize`), while the `Camera` under the frame does, so a
 /// reloaded frame has its camera back but no pointer to it, and reusing it
 /// beats leaving a stray second one behind on the first flight.
 pub(crate) fn camera_of(dom: &WeakDom, database: &ReflectionDatabase, frame: Ref) -> Option<Ref> {
@@ -52,7 +52,7 @@ pub(crate) fn camera_of(dom: &WeakDom, database: &ReflectionDatabase, frame: Ref
 /// The pose the frame is seen from: its camera's `CFrame` and
 /// `FieldOfView`, else the `CameraCFrame`/`CameraFieldOfView` a saved place
 /// carries on the frame itself (the latter in radians). `None` for a frame
-/// with neither — nothing to fly from until a fit picks a view.
+/// with neither, nothing to fly from until a fit picks a view.
 pub(crate) fn pose_of(dom: &WeakDom, database: &ReflectionDatabase, frame: Ref) -> Option<Pose> {
     let (cframe, fov_degrees) = match camera_of(dom, database, frame) {
         Some(camera) => {
@@ -95,7 +95,7 @@ pub(crate) fn pose_of(dom: &WeakDom, database: &ReflectionDatabase, frame: Ref) 
 /// `CurrentCamera` at it first if it has none. The pose is written twice:
 /// on the camera, which is what a script reading the frame finds, and on
 /// the frame's hidden `CameraCFrame`/`CameraFieldOfView`, which is what a
-/// saved place keeps — "when you set this property, `Camera.CFrame` and
+/// saved place keeps, "when you set this property, `Camera.CFrame` and
 /// `Camera.FieldOfView` will be saved and replicate with the
 /// `ViewportFrame` internally" (`ViewportFrame.yaml`). Returns the camera.
 pub(crate) fn write_pose(
@@ -192,14 +192,14 @@ pub(crate) struct Insertable {
     pub(crate) depth: usize,
     pub(crate) name: String,
     pub(crate) class: String,
-    /// The names of what it sits in, below `Workspace`, outermost first —
+    /// The names of what it sits in, below `Workspace`, outermost first,
     /// what tells two same-named parts apart in a filtered list.
     pub(crate) path: Vec<String>,
     pub(crate) model: bool,
 }
 
-/// Every `Model` and `BasePart` in `Workspace` — what a clone into a frame
-/// draws — in tree order. Models are looked into, parts are not: a part's
+/// Every `Model` and `BasePart` in `Workspace`: what a clone into a frame
+/// draws, in tree order. Models are looked into, parts are not: a part's
 /// children are not things a frame can show on their own.
 pub(crate) fn insertable(dom: &WeakDom, database: &ReflectionDatabase) -> Vec<Insertable> {
     let Some(workspace) = dom
@@ -239,7 +239,7 @@ pub(crate) fn insertable(dom: &WeakDom, database: &ReflectionDatabase) -> Vec<In
 }
 
 /// Where `query` sits in `name`, case-insensitively, as a byte range of
-/// `name` — what a filtered row lights up. `None` where it does not.
+/// `name`: what a filtered row lights up. `None` where it does not.
 pub(crate) fn matched(name: &str, query: &str) -> Option<std::ops::Range<usize>> {
     let query = query.trim();
     if query.is_empty() {
@@ -257,7 +257,7 @@ pub(crate) fn matched(name: &str, query: &str) -> Option<std::ops::Range<usize>>
 
 /// Whether `row` is already in `frame`: a direct child of the same name and
 /// class. A clone keeps no link to what it was cloned from, so this is the
-/// nearest the sheet can tell — and the one that matters, since a second
+/// nearest the sheet can tell, and the one that matters, since a second
 /// copy of the same thing is rarely what a click meant.
 // ponytail: name+class match; tag clones with their source only if a false
 // tick ever bites.
@@ -270,7 +270,7 @@ pub(crate) fn already_in(dom: &WeakDom, frame: Ref, row: &Insertable) -> bool {
     })
 }
 
-/// `referent`'s children, each with `path` — reversed so a stack pops them
+/// `referent`'s children, each with `path`: reversed so a stack pops them
 /// in tree order.
 fn children_of(dom: &WeakDom, referent: Ref, path: &[String]) -> Vec<(Ref, Vec<String>)> {
     dom.get(referent)
@@ -286,7 +286,7 @@ fn children_of(dom: &WeakDom, referent: Ref, path: &[String]) -> Vec<(Ref, Vec<S
 }
 
 /// What a `ViewportFrame` holds that its Contents list shows: its models
-/// and parts, in order — not its `Camera`, nor anything else under it.
+/// and parts, in order, not its `Camera`, nor anything else under it.
 pub(crate) fn contents_of(
     dom: &WeakDom,
     database: &ReflectionDatabase,
@@ -309,7 +309,7 @@ pub(crate) fn contents_of(
 }
 
 /// Steepest the orbit tool tips the view, short of looking straight down
-/// its own axis — the free camera's own limit.
+/// its own axis, the free camera's own limit.
 const MAX_PITCH: f32 = 89.0 * std::f32::consts::PI / 180.0;
 
 /// `pose` turned about `pivot` by `yaw`/`pitch` radians, keeping its
@@ -342,8 +342,8 @@ pub(crate) fn pan(pose: Pose, right: f32, up: f32) -> Pose {
 
 /// How a camera flight lands in the history: one undo step per gesture, not
 /// one per frame. A gesture opens with the first step that moves the pose
-/// and closes once nothing steers any more — every button and key up and
-/// every eased move settled — so a flight that coasts to a stop after the
+/// and closes once nothing steers any more, every button and key up and
+/// every eased move settled, so a flight that coasts to a stop after the
 /// keys are let go is still that one step.
 #[derive(Debug, Default)]
 pub(crate) struct Gesture {
@@ -373,7 +373,7 @@ impl Gesture {
         step
     }
 
-    /// Ends the gesture in flight, so the next move opens a new step — for
+    /// Ends the gesture in flight, so the next move opens a new step, for
     /// an edit made in between (a fit, an undo) that the flight must not
     /// fold itself into.
     pub(crate) fn close(&mut self) {

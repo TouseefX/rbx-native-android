@@ -1,8 +1,8 @@
 //! Script debugging: the breakpoints set in the Script Editor's gutter, and
 //! the session that runs a script with them (see [`session`]).
 //!
-//! Breakpoints live in the editor session only, never in the place file —
-//! Studio keeps them out of the saved place too — so closing the editor
+//! Breakpoints live in the editor session only, never in the place file,
+//! Studio keeps them out of the saved place too, so closing the editor
 //! forgets them.
 
 pub(crate) mod session;
@@ -51,7 +51,7 @@ pub(crate) struct Stored {
     /// A disabled breakpoint keeps its condition and message but is not
     /// handed to the debugger.
     pub(crate) enabled: bool,
-    /// Removed once the run it was set for is over — Studio's "Remove
+    /// Removed once the run it was set for is over, Studio's "Remove
     /// Breakpoint on Hit", which it describes as removing itself after the
     /// first playtest session.
     pub(crate) temporary: bool,
@@ -213,7 +213,7 @@ impl Edit {
 
     /// Where 1-based `line` is after the edit. A line above the edited block
     /// stays put, one below it moves with it; one inside it stays within
-    /// what the block became, and goes if the block was deleted outright —
+    /// what the block became, and goes if the block was deleted outright,
     /// a breakpoint on a deleted line is deleted with it.
     fn remap(&self, line: u32) -> Option<u32> {
         let index = line as usize - 1;

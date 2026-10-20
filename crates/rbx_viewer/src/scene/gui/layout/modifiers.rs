@@ -62,7 +62,7 @@ pub(crate) struct GradientPx {
 
 /// The four radii in pixels, top-left first then clockwise. Per the docs a
 /// radius' scale is a fraction of the *shorter* side, and anything past half
-/// of it is a pill — so that is where each is clamped, which also keeps two
+/// of it is a pill, so that is where each is clamped, which also keeps two
 /// radii on one side from ever overlapping.
 pub(super) fn radii(corner: Option<&Corner>, size: [f32; 2]) -> [f32; 4] {
     let Some(corner) = corner else {

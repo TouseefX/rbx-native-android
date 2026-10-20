@@ -26,7 +26,7 @@ pub(super) struct LocalLightRaw {
     direction_cone: [f32; 4],
     /// x: cosine of the inner half-angle the edge is smoothed from, strictly
     /// greater than `direction_cone.w`. yzw: half the emitting face along its
-    /// first axis, as a vector — its length is the extent, its direction the
+    /// first axis, as a vector, its length is the extent, its direction the
     /// axis, which is what fits the face in four `vec4`s. Zero for a point
     /// source, which the shader then treats exactly as one.
     cone_face: [f32; 4],

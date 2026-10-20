@@ -39,8 +39,8 @@ impl ReflectionDatabase {
         })
     }
 
-    /// Adds what the API dump leaves out — class defaults and the names
-    /// properties are saved under (see `defaults`) — from a
+    /// Adds what the API dump leaves out, class defaults and the names
+    /// properties are saved under (see `defaults`), from a
     /// `reflection-defaults.json`. Without it a database still answers
     /// everything else; those lookups just find nothing.
     pub fn with_defaults(mut self, json: &str) -> Result<Self, ReflectionError> {
@@ -72,7 +72,7 @@ impl ReflectionDatabase {
         self.classes.get(name)
     }
 
-    /// Every class the dump names, in no particular order — the backing map is
+    /// Every class the dump names, in no particular order, the backing map is
     /// a `HashMap`, so a caller that shows these to a person has to sort them
     /// itself rather than inherit an order that changes between runs.
     pub fn class_names(&self) -> impl Iterator<Item = &str> {
@@ -218,7 +218,7 @@ mod tests {
     fn resolves_property_category() {
         let db = database();
 
-        // Declared directly on Part, and inherited from Instance — both
+        // Declared directly on Part, and inherited from Instance, both
         // carry a real Category, not the "Function"/"Event" members' blank
         // default (see `parse::RawMember::category`).
         assert_eq!(
@@ -244,7 +244,7 @@ mod tests {
 
         // Position/Orientation are tagged Hidden since Studio only exposes
         // them through the dedicated Position/Orientation UI, not as a raw
-        // property row — and the dump marks both non-serializable too.
+        // property row, and the dump marks both non-serializable too.
         let position = db.resolve_property("BasePart", "Position").unwrap();
         assert!(position.tags.iter().any(|tag| tag == "Hidden"));
         assert!(position.is_hidden());
@@ -273,7 +273,7 @@ mod tests {
         let db = database();
 
         // Instance.Parent: CanSave is false but the dump never tags it
-        // ReadOnly — the two signals are independent, both must count.
+        // ReadOnly, the two signals are independent, both must count.
         let parent = db.resolve_property("Instance", "Parent").unwrap();
         assert!(!parent.is_hidden());
         assert!(parent.can_load);

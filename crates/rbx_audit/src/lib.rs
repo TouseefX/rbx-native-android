@@ -1,4 +1,4 @@
-//! A whole-place security and consistency audit of a place's scripts — a
+//! A whole-place security and consistency audit of a place's scripts, a
 //! pass Roblox Studio itself doesn't have.
 //!
 //! Every script is parsed with `full_moon` and walked once, resolving
@@ -8,7 +8,7 @@
 //!
 //! 1. **Unvalidated remote arguments**: inside an `OnServerEvent` /
 //!    `OnServerInvoke` handler, the client-supplied parameters are tainted and
-//!    followed through locals into sensitive sinks — currency and leaderstats
+//!    followed through locals into sensitive sinks, currency and leaderstats
 //!    `Value`s, `Health`, `CFrame`/`Position`, `Parent`, `:Destroy()`,
 //!    `Instance.new`, DataStore writes, `MarketplaceService`, `require`,
 //!    `loadstring`. A name mentioned in an `if`/`assert` condition counts as
@@ -29,7 +29,7 @@
 //! It is a heuristic, not a type checker: taint is per handler (it does not
 //! follow calls into other functions), bindings are one flat table per
 //! script, and a path that only exists at run time is unknown rather than
-//! missing — except a name some script assigns to `.Name`, which is assumed
+//! missing, except a name some script assigns to `.Name`, which is assumed
 //! to be created at run time and never reported missing.
 
 mod resolve;

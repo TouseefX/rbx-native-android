@@ -13,7 +13,7 @@ use crate::load::Answered;
 use crate::quality::QualityProfile;
 
 /// Where one image's bind groups live, and the pixel size `ScaleType.Fit`/
-/// `Crop` need to letterbox or crop — the plan and layout stages never see an
+/// `Crop` need to letterbox or crop, the plan and layout stages never see an
 /// actual texture, so this is the first point anything does.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Slot {
@@ -44,7 +44,7 @@ pub(super) struct Atlas {
     /// The glyph texture behind slot [`GLYPHS`] and its side, replaced when
     /// the CPU atlas grows past it.
     glyphs: Option<(u32, wgpu::Texture)>,
-    /// Kept alive beside the bind groups that view them — identical role to
+    /// Kept alive beside the bind groups that view them, identical role to
     /// `renderer::trail::Slot`.
     #[allow(dead_code)]
     uploads: Vec<texture::Uploaded>,
@@ -52,7 +52,7 @@ pub(super) struct Atlas {
     /// asset is missing draws nothing, the way Roblox itself leaves it blank.
     slot_of: HashMap<AssetRef, Slot>,
     /// Every reference [`Atlas::extend`] ever tried, the failed ones
-    /// included — `slot_of` cannot tell those from one never asked for, and
+    /// included, `slot_of` cannot tell those from one never asked for, and
     /// a scene rebuild must not fetch a missing asset again on every edit.
     tried: HashMap<AssetRef, ()>,
 }
@@ -114,7 +114,7 @@ impl Atlas {
         };
         // The white texel is only ever sampled by an untextured quad
         // (`quads::WHITE`), addressed by that fixed index directly rather
-        // than through `slot_of` — one bind group is all it ever needs. Slot
+        // than through `slot_of`: one bind group is all it ever needs. Slot
         // `GLYPHS` is taken right after it so the image slots never move;
         // the first `sync_glyphs` replaces it with the real glyph atlas.
         let uploaded = texture::Uploaded::color(device, queue, &white);
@@ -132,7 +132,7 @@ impl Atlas {
     }
 
     /// Uploads the glyph atlas into slot [`GLYPHS`] if it changed since the
-    /// last call — after every quad build, before the draw that samples it.
+    /// last call, after every quad build, before the draw that samples it.
     pub(super) fn sync_glyphs(
         &mut self,
         device: &wgpu::Device,
@@ -226,7 +226,7 @@ impl Atlas {
         }
     }
 
-    /// Uploads `image` once and binds it twice, linear then nearest — the two
+    /// Uploads `image` once and binds it twice, linear then nearest, the two
     /// bind groups end up at adjacent indices, but `Slot` is what every
     /// caller actually addresses them by, so that is not load-bearing.
     fn push(
@@ -259,8 +259,8 @@ impl Atlas {
         }
     }
 
-    /// Binds a texture the renderer produced rather than downloaded — a baked
-    /// `ViewportFrame` — under `key`, replacing in place whatever the key
+    /// Binds a texture the renderer produced rather than downloaded, a baked
+    /// `ViewportFrame`: under `key`, replacing in place whatever the key
     /// held before so a re-bake never grows the group list. Both samplings
     /// share the one group: nothing produced here is ever `Pixelated`.
     pub(super) fn adopt(
@@ -322,7 +322,7 @@ mod tests {
     use crate::scene::{GuiAlign, GuiText, GuiTextSpan};
 
     // The glyph slot has to be there before any image slot, and be replaced
-    // in place — not appended — once real glyphs land, or every `ImageLabel`
+    // in place, not appended, once real glyphs land, or every `ImageLabel`
     // would sample the wrong texture.
     #[test]
     fn the_glyph_slot_is_reserved_up_front_and_filled_in_place() {

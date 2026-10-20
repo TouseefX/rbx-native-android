@@ -51,7 +51,7 @@ Four scripts, injected by `rbx_play::inject`:
 | Name | Class | Parent | Role |
 |---|---|---|---|
 | `__rbxnative_codec` | ModuleScript | ReplicatedStorage | value ⇄ JSON (`rbx_play::value`'s table) |
-| `__rbxnative_live` | ModuleScript | ReplicatedStorage | tree ids, snapshot, diffs, watch, edits — the same code on both sides |
+| `__rbxnative_live` | ModuleScript | ReplicatedStorage | tree ids, snapshot, diffs, watch, edits, the same code on both sides |
 | `__rbxnative_probe` | Script | ServerScriptService | HTTP, logs, commands, client relay |
 | `__rbxnative_mirror` | LocalScript | StarterPlayerScripts | the client side of `live` over the remote |
 
@@ -105,13 +105,13 @@ field optional, each read in its own pcall; Roblox docs, 2026-10-14):
 | Field | Server | Client |
 |---|---|---|
 | `fps` | `RunService.Heartbeat` firings / s | `RunService.RenderStepped` firings / s |
-| `physics_fps` | `workspace:GetRealPhysicsFPS()` | — |
+| `physics_fps` | `workspace:GetRealPhysicsFPS()` |, |
 | `frame_ms` | `Stats.HeartbeatTime` × 1000 | `Stats.FrameTime` × 1000 (client only) |
 | `memory_mb` | `Stats:GetTotalMemoryUsageMb()` | same |
 | `instances` | `Stats.InstanceCount` | same |
 | `send_kbps` / `receive_kbps` | `Stats.DataSendKbps` / `DataReceiveKbps` | same |
-| `ping_ms` | — | `LocalPlayer:GetNetworkPing()` × 1000 (round trip) |
-| `players` | `#Players:GetPlayers()` | — |
+| `ping_ms` |: | `LocalPlayer:GetNetworkPing()` × 1000 (round trip) |
+| `players` | `#Players:GetPlayers()` |, |
 
 (`Stats.HeartbeatTimeMs` is deprecated in favour of `HeartbeatTime`, in
 seconds.) The Test ribbon shows one line per side and every number in the
@@ -133,7 +133,7 @@ line's tooltip.
 ### Client mirror additions
 
 - `Live.new("client", send)` where `send` batches messages and fires
-  `remote:FireServer({kind = "msg", message = m})` — at most 20 fires per
+  `remote:FireServer({kind = "msg", message = m})`: at most 20 fires per
   second, a tree chunk of 300 nodes per fire.
 - `remote.OnClientEvent` → `{kind = "cmd"}` → the same `Live` methods.
 

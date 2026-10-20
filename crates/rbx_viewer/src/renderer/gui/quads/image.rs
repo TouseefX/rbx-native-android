@@ -2,14 +2,14 @@
 //! single quad for `Stretch`/`Tile`/`Fit`/`Crop`, nine for `Slice`.
 //!
 //! This is the one place the source image's own pixel size is known (`size`,
-//! read off the atlas's `Slot`) — `crate::scene::gui::plan` and `::layout`
+//! read off the atlas's `Slot`), `crate::scene::gui::plan` and `::layout`
 //! only ever see a `UDim2` or a raw pixel count off `ImageRectOffset`/
 //! `ImageRectSize`, never the texture itself, so `Fit`/`Crop`'s letterbox and
 //! crop math, and the UV side of a sub-rect, all have to live here.
 //!
 //! Roblox's docs give no rule for combining `Slice` or `Tile` with
 //! `ImageRectOffset`/`ImageRectSize`, so both approximate: `Slice` always
-//! slices the whole texture, and `Tile` always tiles the whole texture too —
+//! slices the whole texture, and `Tile` always tiles the whole texture too,
 //! a wrapping sampler cannot repeat a sub-rect, only the whole image it
 //! addresses (see the comment on the `Tile` arm below).
 
@@ -34,7 +34,7 @@ pub(super) fn build(
         // ponytail: an exact tiled sub-rect needs a `fract()` over the
         // sub-rect bounds in `gui.wgsl`, since `Repeat` addressing wraps the
         // whole texture, not an arbitrary window into it. Add that if this
-        // combination turns out to matter — `Tile` is rare enough combined
+        // combination turns out to matter, `Tile` is rare enough combined
         // with a sprite-sheet sub-rect that this viewer just tiles the whole
         // image instead, same as before `ImageRectOffset`/`Size` existed.
         GuiImageScale::Tile => {
@@ -61,7 +61,7 @@ pub(super) fn build(
     }
 }
 
-/// The UV bounds `ImageRectOffset`/`ImageRectSize` carve out of the texture —
+/// The UV bounds `ImageRectOffset`/`ImageRectSize` carve out of the texture,
 /// `(0, 0)`..`(1, 1)`, the whole image, where the property is unset (either
 /// dimension of `rect_size` being `0`, per `ImageRectSize`'s own docs) or
 /// `texture_size` is degenerate.
@@ -79,7 +79,7 @@ fn sub_rect(image: &Painted, texture_size: [f32; 2]) -> ([f32; 2], [f32; 2]) {
 
 /// `ScaleType.Fit`: the drawn quad shrinks to the sub-image's own aspect
 /// ratio instead of the box being cropped, with letterbox bars left to
-/// whatever `rect`'s own background already painted — Roblox draws no bars
+/// whatever `rect`'s own background already painted, Roblox draws no bars
 /// of its own either.
 fn fit(rect: &GuiRect, image: &Painted, texture_size: [f32; 2]) -> (GuiRect, [f32; 2], [f32; 2]) {
     let (uv0, uv1) = sub_rect(image, texture_size);
@@ -128,8 +128,8 @@ fn crop(rect: &GuiRect, image: &Painted, texture_size: [f32; 2]) -> ([f32; 2], [
     )
 }
 
-/// `ScaleType.Slice`: nine quads — four fixed-size corners, four edges that
-/// stretch along one axis, and a centre stretching along both — from
+/// `ScaleType.Slice`: nine quads, four fixed-size corners, four edges that
+/// stretch along one axis, and a centre stretching along both, from
 /// `SliceCenter`'s boundaries in the texture and `SliceScale`'s multiplier on
 /// how big they draw.
 fn slice(

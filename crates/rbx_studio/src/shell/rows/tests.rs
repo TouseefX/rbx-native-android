@@ -29,8 +29,8 @@ fn the_focus_ring_clears_three_to_one_over_any_tag_colour() {
     }
 }
 
-/// The accent stays the ring wherever it is legible — an untagged selected
-/// row, a brick-red tag — and gives way where it is not: on a pale grey tag
+/// The accent stays the ring wherever it is legible, an untagged selected
+/// row, a brick-red tag, and gives way where it is not: on a pale grey tag
 /// it measures under 2:1, so the ring goes white.
 #[test]
 fn the_ring_keeps_the_accent_only_where_it_is_legible() {

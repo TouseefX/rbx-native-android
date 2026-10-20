@@ -18,7 +18,7 @@ fn colour(rgb: [f32; 3]) -> Variant {
 }
 
 /// The attribute blob `StyleRule.PropertiesSerialize` and
-/// `Instance.AttributesSerialize` both hold — see `rbx_dom::attributes`, which
+/// `Instance.AttributesSerialize` both hold, see `rbx_dom::attributes`, which
 /// reads it back.
 fn blob(entries: &[(&str, Variant)]) -> Variant {
     let mut bytes = (entries.len() as u32).to_le_bytes().to_vec();
@@ -398,7 +398,7 @@ fn a_place_with_no_style_link_is_untouched() {
     );
 }
 
-// One tree planned on its own — what an editor's drag re-plans every step —
+// One tree planned on its own, what an editor's drag re-plans every step,
 // has to come out exactly as the whole place's plan has it, links above it
 // and inside it applied in the same order: here `StarterGui`'s own link,
 // listed after the screen, overrides the screen's.

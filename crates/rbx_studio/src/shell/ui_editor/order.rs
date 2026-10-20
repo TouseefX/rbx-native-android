@@ -4,7 +4,7 @@
 //!
 //! Siblings paint by `ZIndex`, then by their order under the parent, so an
 //! element stepping over a neighbour takes that neighbour's `ZIndex` and
-//! the place after (or before) it — one step in what is seen, whatever
+//! the place after (or before) it, one step in what is seen, whatever
 //! either held. A layout orders by `LayoutOrder` instead, which a reorder
 //! renumbers.
 
@@ -94,7 +94,7 @@ impl Shell {
     }
 
     /// Puts `moved` at `index` among its layout's children as `order` holds
-    /// them, renumbering every one's `LayoutOrder` to match — and making
+    /// them, renumbering every one's `LayoutOrder` to match, and making
     /// the layout sort by it, which a renumbering is otherwise lost on.
     pub(super) fn reorder_gui(
         &mut self,

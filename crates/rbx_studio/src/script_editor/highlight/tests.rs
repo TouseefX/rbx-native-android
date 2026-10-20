@@ -2,7 +2,7 @@ use super::runs;
 use crate::script_editor::luau::tokenize;
 
 /// The runs `runs` produces for the whole of `source`, as
-/// `(text, highlight name)` — the byte arithmetic is what is under test, but
+/// `(text, highlight name)`: the byte arithmetic is what is under test, but
 /// a raw range tells a reader nothing.
 fn covering(source: &str) -> Vec<(&str, Option<&'static str>)> {
     runs(&tokenize(source), &(0..source.len()))
@@ -44,7 +44,7 @@ fn a_whole_buffer_is_covered_run_by_run() {
 #[test]
 fn an_uncoloured_identifier_merges_into_the_gap_around_it() {
     // `value` is an ordinary identifier with no highlight name, so it must
-    // not be split out as a run of its own — it is simply not coloured.
+    // not be split out as a run of its own, it is simply not coloured.
     assert_eq!(
         covering("a value b"),
         [("a value b", None)],

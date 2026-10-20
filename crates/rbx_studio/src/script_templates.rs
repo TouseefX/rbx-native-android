@@ -1,5 +1,5 @@
 //! User-defined starter scripts, read from disk so people can add and share
-//! them without a rebuild — the same idea as the editor's icon and theme
+//! them without a rebuild, the same idea as the editor's icon and theme
 //! packs, for what the Model menu and the ribbon's Script tile seed a new
 //! script with.
 //!
@@ -26,8 +26,8 @@
 //! one made in the editor), and `Shell` reloads the whole directory whenever
 //! its fingerprint changes (see `Shell::watch_script_templates`). A template
 //! file is data a stranger may have authored, so the loader refuses what it
-//! cannot use rather than guessing — an unreadable or non-UTF-8 file, one
-//! over [`MAX_BYTES`] — and keeps a [`Skipped`] entry saying so. A file that
+//! cannot use rather than guessing, an unreadable or non-UTF-8 file, one
+//! over [`MAX_BYTES`], and keeps a [`Skipped`] entry saying so. A file that
 //! is not `.luau`, or a folder that is not a script class, is simply not a
 //! template and is ignored. None of those stops the editor starting.
 
@@ -169,8 +169,8 @@ impl ScriptTemplates {
         }
         // Directory order is whatever the filesystem says; a menu that
         // reshuffles between machines is not one anybody can learn. Classes
-        // follow `CLASSES` — the order of the built-in rows these are listed
-        // after — rather than alphabetically.
+        // follow `CLASSES`: the order of the built-in rows these are listed
+        // after, rather than alphabetically.
         templates
             .extras
             .sort_by_cached_key(|t| (class_rank(t.class), t.name.to_lowercase(), t.name.clone()));

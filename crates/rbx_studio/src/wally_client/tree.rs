@@ -2,17 +2,17 @@
 //! the same Rojo convention Argon's own snapshot decoding already assumes:
 //! a directory holding `init.lua`/`init.luau` becomes the `ModuleScript`
 //! its siblings are children of; a bare `.lua`/`.luau` file is a leaf
-//! `ModuleScript`; anything else — a `README`, a `.toml`, a vendored test
+//! `ModuleScript`; anything else, a `README`, a `.toml`, a vendored test
 //! suite, whatever else a package's repo happens to ship (confirmed by
 //! hand this session: real packages can ship a lot more than their
-//! installable Lua) — is skipped, not curated around. That's exactly what
+//! installable Lua), is skipped, not curated around. That's exactly what
 //! a Rojo-style syncer turns into instances and nothing else.
 
 use std::collections::BTreeMap;
 
 /// One instance-to-be: `source` is `Some` for a `ModuleScript` (a `.lua`/
 /// `.luau` file, or a directory whose own `init.lua`/`init.luau` supplies
-/// it), `None` for a plain `Folder` — a directory with no init file of its
+/// it), `None` for a plain `Folder`: a directory with no init file of its
 /// own, just a container for what's inside it.
 pub(crate) struct PackageNode {
     pub(crate) name: String,
@@ -25,8 +25,8 @@ enum Entry {
     Dir(BTreeMap<String, Entry>),
 }
 
-/// Builds the tree from a flat `(forward-slash path, raw bytes)` list —
-/// what unzipping hands back — and the package's own name (its `wally.
+/// Builds the tree from a flat `(forward-slash path, raw bytes)` list,
+/// what unzipping hands back, and the package's own name (its `wally.
 /// toml`'s bare name, e.g. `"net"` for `sleitnick/net`), which becomes the
 /// root node's name since the zip root itself has none of its own.
 pub(crate) fn build(files: &[(String, Vec<u8>)], root_name: &str) -> PackageNode {
@@ -40,7 +40,7 @@ pub(crate) fn build(files: &[(String, Vec<u8>)], root_name: &str) -> PackageNode
 
 /// A plain slice, not a generic iterator: a version of this that recursed
 /// over `impl Iterator` (re-wrapping it `.peekable()` at each level) hits
-/// `overflow evaluating the requirement Peekable<Peekable<...>>` — every
+/// `overflow evaluating the requirement Peekable<Peekable<...>>`: every
 /// recursive call would monomorphize a new, one-level-deeper concrete
 /// type, which is unbounded at compile time even though the actual
 /// recursion depth is small at runtime. A slice sidesteps that: `&[&str]`
@@ -59,7 +59,7 @@ fn insert(dir: &mut BTreeMap<String, Entry>, segments: &[&str], bytes: &[u8]) {
             .entry((*segment).to_owned())
             .or_insert_with(|| Entry::Dir(BTreeMap::new()));
         let Entry::Dir(child_dir) = child else {
-            // A path collided a file with a directory (a malformed zip) —
+            // A path collided a file with a directory (a malformed zip),
             // there is nothing sane to insert into a file, so this entry
             // is dropped rather than panicking on a hostile/corrupt zip.
             return;

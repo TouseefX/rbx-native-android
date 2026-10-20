@@ -13,7 +13,7 @@ use super::plan::{Align, GroupTint, Node, Screen, Span, Viewport};
 use super::space::SpaceGui;
 use super::wheel::ScrollWindow;
 // Reaches all the way to `renderer::gui::quads::image`, unlike everything
-// else `plan` hands this module — see the type's own doc comment.
+// else `plan` hands this module, see the type's own doc comment.
 pub(crate) use super::plan::PixelRect;
 
 mod arrange;
@@ -41,11 +41,11 @@ pub(in crate::scene::gui) use walk::{children, Context, Scope};
 /// One `GuiObject` at its final pixel position, ready to be drawn on its own.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Element {
-    /// The `GuiObject` this was laid out for — a `ScrollingFrame`'s bar
+    /// The `GuiObject` this was laid out for, a `ScrollingFrame`'s bar
     /// segments carry the frame's own. What an editor hit-tests against.
     pub(crate) referent: Ref,
     /// What an editor needs to write this element's `UDim2`s back without
-    /// deriving the layout a second time — see [`Editable`].
+    /// deriving the layout a second time, see [`Editable`].
     pub(crate) editable: Editable,
     pub(crate) rect: Rect,
     /// The scissor rect inherited from the nearest `ClipsDescendants`
@@ -59,7 +59,7 @@ pub(crate) struct Element {
     pub(crate) background: [f32; 3],
     pub(crate) background_alpha: f32,
     /// `BorderSizePixel` and `BorderColor3`, `None` for a zero-width border
-    /// — or for any rounded box, since a square outline around one is not
+    /// or for any rounded box, since a square outline around one is not
     /// what a `UICorner` shows; the docs say nothing about the two together.
     pub(crate) border: Option<(f32, [f32; 3])>,
     /// How far inside `rect` the border's outer edge sits, per `BorderMode`.
@@ -72,7 +72,7 @@ pub(crate) struct Element {
     pub(crate) corner_radii: [f32; 4],
     /// Every `UIStroke`, in the order they are painted.
     pub(crate) strokes: Vec<StrokePx>,
-    /// Every `UIShadow`, in the order they are painted — all before the
+    /// Every `UIShadow`, in the order they are painted, all before the
     /// element itself.
     pub(crate) shadows: Vec<ShadowPx>,
     pub(crate) gradient: Option<GradientPx>,
@@ -139,11 +139,11 @@ pub struct SafeInsets {
 }
 
 /// Every element of every screen, in paint order: `DisplayOrder` first, then
-/// `ZIndex` among siblings, then tree order — and a child always over its
+/// `ZIndex` among siblings, then tree order, and a child always over its
 /// parent, which is what `ZIndexBehavior.Sibling` (the default) means.
 ///
 /// Text is laid out at `TextSize` as is, unmeasured: what a test with no font
-/// system wants, and what the renderer never calls — see [`resolve_with`].
+/// system wants, and what the renderer never calls, see [`resolve_with`].
 #[cfg(test)]
 pub(crate) fn resolve(screens: &[Screen], viewport: [f32; 2]) -> Vec<Element> {
     resolve_with(screens, viewport, &mut text::Unmeasured)
@@ -159,7 +159,7 @@ pub(crate) fn resolve_on_device(
     resolve_inset(screens, viewport, insets, &mut text::Unmeasured)
 }
 
-/// [`resolve`] with the text measured by `measure` — what the renderer calls,
+/// [`resolve`] with the text measured by `measure`: what the renderer calls,
 /// so `TextScaled` and an `AutomaticSize` text box come out at the size the
 /// glyphs will actually take.
 #[cfg(test)]
@@ -243,7 +243,7 @@ pub(crate) fn resolve_canvas(gui: &SpaceGui) -> Vec<Element> {
     resolve_canvas_with(gui, &mut text::Unmeasured)
 }
 
-/// [`resolve_canvas`] with the text measured — see [`resolve_with`].
+/// [`resolve_canvas`] with the text measured, see [`resolve_with`].
 pub(crate) fn resolve_canvas_with(gui: &SpaceGui, measure: &mut dyn TextMeasure) -> Vec<Element> {
     let frame = canvas(gui.canvas);
     let mut elements = Vec::new();
@@ -338,9 +338,9 @@ pub(in crate::scene::gui) fn emit(
 
     // Roblox's own docs describe two modes here, gated on the (NotScriptable,
     // RolloutState) `StarterGui.ClipsDescendantsSupportsRotation`: enabled,
-    // clipping works correctly against rotated shapes; not enabled — the
+    // clipping works correctly against rotated shapes; not enabled, the
     // mode this models, since there is no scriptable way to read the flag at
-    // all — a non-zero `Rotation` on this element or any ancestor makes
+    // all, a non-zero `Rotation` on this element or any ancestor makes
     // `ClipsDescendants` a no-op rather than clipping to a box that no longer
     // matches what is actually drawn on screen.
     let rotated = context.rotated || node.rotation != 0.0;
@@ -390,7 +390,7 @@ pub(in crate::scene::gui) fn emit(
 
     // "Descendants of `CanvasGroup` will be rendered as a flattened texture
     // only when the ancestor `LayerCollector` has its `ZIndexBehavior` set to
-    // `Sibling`" — which is also the only mode that leaves them contiguous
+    // `Sibling`", which is also the only mode that leaves them contiguous
     // behind the group here, since [`resolve`] re-sorts a `Global` screen.
     if let Some(tint) = node.group.filter(|_| !context.global_z_index) {
         into[start].group = Some(Grouped {
@@ -413,7 +413,7 @@ pub(super) fn offset(align: Align, extent: f32, length: f32) -> f32 {
 /// Standard `UDim2` resolution: `extent` is the size every size modifier has
 /// already had its say on, the position is a fraction of the parent plus a
 /// pixel offset against the parent's own corner, and `AnchorPoint` then slides
-/// the box back by that fraction of its own size — the default `(0, 0)`
+/// the box back by that fraction of its own size, the default `(0, 0)`
 /// putting the element's top-left corner on `Position`.
 pub(super) fn place(position: Span, extent: [f32; 2], anchor: [f32; 2], parent: &Rect) -> Rect {
     let origin = position.against(parent.size());

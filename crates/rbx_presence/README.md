@@ -1,17 +1,17 @@
-# rbx_presence — Team Presence over a relay
+# rbx_presence: Team Presence over a relay
 
 Team Presence lets rbx-native users and Roblox Studio collaborators (running the
-`plugins/team-presence` plugin) see where each other are — camera, selection,
-the open script, recent property edits — without speaking Roblox's own Team
+`plugins/team-presence` plugin) see where each other are, camera, selection,
+the open script, recent property edits, without speaking Roblox's own Team
 Create protocol. Everything here uses **official Roblox APIs only**: Studio's
 side is a plugin talking to a relay over `HttpService`; this crate is the
 editor's side of the same relay.
 
 Two transports, both official:
 
-- **Worker** — the signed-WebSocket relay in `relay/` (a Cloudflare Worker). It
+- **Worker**: the signed-WebSocket relay in `relay/` (a Cloudflare Worker). It
   keeps the live room in memory and fans out snapshots.
-- **ntfy** — a plain [ntfy](https://ntfy.sh) pub/sub server. It runs none of our
+- **ntfy**: a plain [ntfy](https://ntfy.sh) pub/sub server. It runs none of our
   code; each client publishes its signed presence to an unguessable topic and
   reconstructs the room from the message stream. Peers trust each other by HMAC,
   never the server. The community fallback is a public ntfy instance.
@@ -38,14 +38,14 @@ the ntfy **topic name is unguessable** without the secret.
 
 ### What is already enforced
 
-- **Replay** — the Worker DO requires each user's signed timestamp to strictly
+- **Replay**: the Worker DO requires each user's signed timestamp to strictly
   increase for mutating requests (POST/DELETE), checked *after* the signature so
   an unsigned request cannot advance the guard (`room.ts::checkTime`).
-- **Clock skew** — a signed timestamp more than 60 s from the relay's / peer's
+- **Clock skew**: a signed timestamp more than 60 s from the relay's / peer's
   clock is rejected (`CLOCK_SKEW_MS`, both transports).
-- **Rate + user caps (Worker)** — a per-user token bucket (burst 8, 4/s) and a
+- **Rate + user caps (Worker)**: a per-user token bucket (burst 8, 4/s) and a
   32-user room cap (`room.ts`). ntfy relies on the ntfy server's own limits.
-- **Message size** — the relay refuses bodies over 16 KiB (`MAX_BODY_BYTES`).
+- **Message size**: the relay refuses bodies over 16 KiB (`MAX_BODY_BYTES`).
   **ntfy.sh additionally caps a message at ~4 KiB**, below our 16 KiB, so the
   ntfy sender shrinks each envelope to fit `NTFY_MAX_BODY` (4096) before signing
   (`ntfy::fit_encode` / `Ntfy.fitEncode`): it sheds the oldest edits, then
@@ -57,10 +57,10 @@ the ntfy **topic name is unguessable** without the secret.
 
 **Trust boundary:** the place secret *is* the capability. Anyone who holds it is
 treated as a collaborator. The relay operator is **not** trusted for
-confidentiality or integrity of identity — see below.
+confidentiality or integrity of identity, see below.
 
-- **Confidentiality (closed by encryption, see below).** Every payload —
-  presence states, journal entries, ntfy messages, co-editing ops — is
+- **Confidentiality (closed by encryption, see below).** Every payload,
+  presence states, journal entries, ntfy messages, co-editing ops, is
   sealed with a key derived from the place secret. The relay operator and
   anyone reading a public ntfy topic see only the signature envelope
   (user id, editor kind, timestamps, sizes, edit times and opaque journal
@@ -68,7 +68,7 @@ confidentiality or integrity of identity — see below.
   how much they send.
 - **Impersonation (residual, inherent to a shared secret).** The key is shared
   per place, so any collaborator who holds the secret can sign presence or edits
-  as *any* `userId` — the relay checks that the header, signature and
+  as *any* `userId`: the relay checks that the header, signature and
   `state.userId` agree, but cannot verify the human behind them. Within official
   APIs there is no offline way to bind a message to a specific Roblox identity
   (that would need per-user OAuth tokens the relay could verify). **Residual
@@ -78,7 +78,7 @@ confidentiality or integrity of identity — see below.
   that forging requires edit access in the first place.
 - **Secret exposure via the place file.** The secret is stored in
   `ServerStorage`. That keeps it from game clients and shares it with
-  collaborators, but **anyone with a copy of the place file can read it** — most
+  collaborators, but **anyone with a copy of the place file can read it**, most
   importantly an **uncopylocked place gives the secret away**, letting a stranger
   join the room (and, once encryption lands, decrypt it). Treat presence on an
   uncopylocked place as public. Rotate the secret (below) after any place leak.
@@ -93,7 +93,7 @@ clients closed:
    collaborators receive it.
 2. The new secret derives a different key and therefore a **different room id and
    ntfy topic**. Clients still holding the old secret connect to the old room and
-   simply find themselves alone — they never see, and can never decrypt, the new
+   simply find themselves alone, they never see, and can never decrypt, the new
    room. That is the desired fail-closed behaviour.
 3. Everyone reconnects (toggle Share my presence off/on, or it reconnects on the
    next place reload) and lands in the new room.
@@ -158,11 +158,11 @@ public ntfy.sh is not workable; see `relay.rs`).
   settle on the newer announcement within a minute. Quick tunnels have no
   uptime promise.
 
-## Offline catch-up — what each transport can reconstruct
+## Offline catch-up: what each transport can reconstruct
 
 On reconnect (or opening a place), presence can summarise "while you were away".
 What is reconstructable depends entirely on the transport, and in every case is
-limited to **property edits that collaborators' running plugins reported** — a
+limited to **property edits that collaborators' running plugins reported**, a
 period when nobody ran the plugin reconstructs nothing, and nothing here is a
 substitute for the place's own save history.
 
@@ -170,13 +170,13 @@ substitute for the place's own save history.
   the retention window and rebuilds a **value-less journal** (who, which instance
   paths, how many distinct properties, how many edits) from the `edits` carried
   in those presence messages. Values are dropped on the way in.
-- **Worker** keeps only the live room in memory — no history — **except** for the
+- **Worker** keeps only the live room in memory, no history, **except** for the
   bounded, value-less journal the Durable Object now keeps: up to
   `JOURNAL_CAP` (256) entries for `JOURNAL_TTL_MS` (12 h), served on a signed
   `GET /v1/rooms/<room>/journal?since=N`. Each entry is `{userId, name, path,
-  property, at}` — **never the edited value**.
-- **Neither transport reconstructs instance add/remove** — the presence schema
-  carries only property edits, not structural changes — and neither carries edit
+  property, at}`: **never the edited value**.
+- **Neither transport reconstructs instance add/remove**: the presence schema
+  carries only property edits, not structural changes, and neither carries edit
   *values*. For a true structural+value diff, presence persists the last-seen
   place snapshot per place id and opens the existing Argon **Diff** window
   between that snapshot and the current place ("View changes"). That DOM diff is

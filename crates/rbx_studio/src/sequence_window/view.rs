@@ -1,7 +1,7 @@
 //! The window's contents: its title bar, the plot under it, and the footer
 //! that reads and edits whichever stop is selected.
 //!
-//! Every colour, radius and size here comes from `crate::tokens` — see that
+//! Every colour, radius and size here comes from `crate::tokens`, see that
 //! module's own rule about inventing one.
 
 use gpui_kit::component::color_picker::ColorPicker;
@@ -17,14 +17,14 @@ use super::paint::{self, Look};
 use super::{field_text, sequence_fields, SequenceWindow};
 
 /// A ramp needs far less height than a curve: it carries one dimension.
-/// (A curve has no constant here — it fills whatever the window gives it.)
+/// (A curve has no constant here, it fills whatever the window gives it.)
 const RAMP_HEIGHT: f32 = 56.0;
 /// Room under the ramp for the stop markers, which hang below it.
 const MARKER_ROOM: f32 = 16.0;
 
 impl Render for SequenceWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // The value as the DOM holds it this frame — see the module doc for
+        // The value as the DOM holds it this frame, see the module doc for
         // why this window keeps no copy of it.
         let Some(editor) = self.editor(cx) else {
             // The row is gone: the selection moved, or a script deleted the
@@ -58,9 +58,9 @@ impl Render for SequenceWindow {
             .bg(tokens::chrome())
             .font_family(tokens::font_ui())
             .text_color(tokens::text_strong())
-            // A drag that leaves the plot — which is most of them, since
+            // A drag that leaves the plot, which is most of them, since
             // pushing a keypoint past the top of the axis is how the axis
-            // grows — still has to be followed and still has to end.
+            // grows, still has to be followed and still has to end.
             .on_mouse_move(cx.listener(|view, event: &MouseMoveEvent, _, cx| {
                 view.drag_to(event.position, cx);
             }))
@@ -235,7 +235,7 @@ impl SequenceWindow {
 }
 
 /// Writes `seed` into `input` unless it holds focus (a keystroke in
-/// progress must win over an external update) or already shows it — the
+/// progress must win over an external update) or already shows it, the
 /// same rule `shell::edit::resync_field` applies to a property row, for the
 /// same reason: `set_value` resets the caret unconditionally, which would
 /// be visible jitter on every frame of a drag.

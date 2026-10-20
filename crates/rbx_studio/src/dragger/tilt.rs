@@ -4,7 +4,7 @@
 //! Nothing here is incremental. Every step starts again from the
 //! selection's orientation at the grab, `basis`: seen from the target's
 //! frame, and with Align Dragged Objects on, squared onto the frame's axes
-//! by the smallest turn that does it — whichever of the selection's axes
+//! by the smallest turn that does it, whichever of the selection's axes
 //! lies nearest the face's normal goes onto it, and the others onto the
 //! face's edges. The quarter turns `R` and `T` have added (`tilt`) come after
 //! that, so they keep meaning "this many turns from lying on the face"
@@ -96,7 +96,7 @@ pub(crate) fn frame_rotation(frame: &SurfaceFrame) -> Mat3 {
 }
 
 /// Studio's `rot`: the grab-time orientation `basis` in `frame`'s space,
-/// squared onto its axes when `align` — Align Dragged Objects on and `Alt`
+/// squared onto its axes when `align`: Align Dragged Objects on and `Alt`
 /// up.
 pub(crate) fn in_frame(frame: &SurfaceFrame, basis: Mat3, align: bool) -> Mat3 {
     let rotation = frame_rotation(frame).transpose() * basis;
@@ -109,8 +109,8 @@ pub(crate) fn in_frame(frame: &SurfaceFrame, basis: Mat3, align: bool) -> Mat3 {
 
 /// One `R` or `T` press: a quarter turn, right-handed, about whichever axis
 /// of the selection as it lies on `frame` (before any earlier turn) points
-/// most nearly along `axis` — the face's normal for `R`, the camera's right
-/// for `T` — added in front of the turns made so far.
+/// most nearly along `axis`: the face's normal for `R`, the camera's right
+/// for `T`: added in front of the turns made so far.
 pub(crate) fn turned(
     frame: &SurfaceFrame,
     basis: Mat3,

@@ -1,7 +1,7 @@
 //! Roving tabindex: the keyboard model WAI-ARIA's Toolbar and Tabs patterns
 //! ask for, and the one thing a dense editor cannot be usable without.
 //!
-//! The rule is that a composite widget — the ribbon, a tab strip — is
+//! The rule is that a composite widget, the ribbon, a tab strip, is
 //! **one** stop in the window's Tab order, not one stop per button. Tab
 //! moves between regions; arrows move inside one. Without it, reaching the
 //! Explorer from the menu bar means pressing Tab past every ribbon button
@@ -18,7 +18,7 @@
 //! - `focus_visible` styles an element only when focus arrived by keyboard,
 //!   so the ring needs no modality tracking of its own;
 //! - a focused element already turns Enter and Space into a real
-//!   `on_click`, which *is* the APG's "manual activation" — no separate
+//!   `on_click`, which *is* the APG's "manual activation", no separate
 //!   activation path to write, and no way for the two to drift apart.
 //!
 //! So: every item owns a focus handle, exactly one of them (the current
@@ -40,7 +40,7 @@ pub(crate) const CONTEXT: &str = "RbxShell";
 /// [`TabOrder::step`].
 ///
 /// A binding, not a key listener, because the toolkit's `Root` binds Tab as
-/// an **action** — and GPUI resolves a keystroke to an action *before* it
+/// an **action**: and GPUI resolves a keystroke to an action *before* it
 /// runs any key listener, so a `capture_key_down` on this window's root
 /// never saw the key at all. Matching on a deeper key context is the way to
 /// win that, and it is why the root element carries [`CONTEXT`].
@@ -60,7 +60,7 @@ pub(crate) fn install(cx: &mut gpui_kit::App) {
 ///   registers no tab stop at all, so a dock wrapped in one is simply
 ///   unreachable. The whole region-band idea went with it.
 /// - **Two stops with the same `tab_index` do not advance.** Tab reaches
-///   the first of them and stays there — a keyboard trap, and the reason
+///   the first of them and stays there, a keyboard trap, and the reason
 ///   the three window buttons could swallow focus entirely.
 ///
 /// So every stop gets its own number, handed out in paint order, which is
@@ -79,9 +79,9 @@ pub(crate) struct TabOrder {
     order: RefCell<Vec<FocusHandle>>,
     /// Where the walk last left off.
     ///
-    /// Some stops hand focus straight on to something else — the Explorer's
+    /// Some stops hand focus straight on to something else, the Explorer's
     /// door focuses the tree inside it, a field's wrapper focuses the
-    /// field — so by the next keystroke nothing in `order` holds focus any
+    /// field, so by the next keystroke nothing in `order` holds focus any
     /// more. Without this the walk would restart from the top every time it
     /// passed one of those, and the Explorer would be a wall.
     last: Cell<usize>,
@@ -131,7 +131,7 @@ impl TabOrder {
     ///
     /// This walks **this** list rather than calling `Window::focus_next`,
     /// and the reason is not preference. GPUI's tab order cannot escape a
-    /// group of stops that share an index — and every toolkit control that
+    /// group of stops that share an index, and every toolkit control that
     /// never asked for one sits at 0, so focus that wanders in stays there
     /// (measured: 49 consecutive presses, both directions). Nor can that be
     /// papered over by calling `focus_next` in a loop and checking where it
@@ -195,7 +195,7 @@ impl Move {
     /// Where `current` lands, given `len` items.
     ///
     /// Previous/Next **wrap**, which the APG marks optional for toolbars
-    /// and tab lists — taken here because these strips are short and
+    /// and tab lists, taken here because these strips are short and
     /// circular, so running off the end and stopping reads as the key
     /// having failed rather than as a boundary.
     pub(super) fn apply(self, current: usize, len: usize) -> usize {
@@ -236,7 +236,7 @@ pub(super) fn clamp(current: Option<usize>, len: usize) -> Option<usize> {
 ///
 /// The interior mutability is deliberate. Handles have to be created while
 /// the element tree is being built, and the builders that create them run
-/// behind `&Shell` — a render that took `&mut Shell` could not also hand
+/// behind `&Shell`: a render that took `&mut Shell` could not also hand
 /// `&Shell` to `menu::dropdown` in the same expression. Nothing here
 /// escapes a single render, so the `RefCell` is never held across a call
 /// that could re-enter it.
@@ -261,7 +261,7 @@ impl Roving {
         Roving::new(false)
     }
 
-    /// A stacked group — a property list — where Up/Down move and the
+    /// A stacked group, a property list, where Up/Down move and the
     /// horizontal arrows are left to whatever owns them.
     pub(crate) fn vertical() -> Self {
         Roving::new(true)
@@ -306,7 +306,7 @@ impl Roving {
         }
     }
 
-    /// The next index in build order — for a group whose items are built
+    /// The next index in build order, for a group whose items are built
     /// across several functions and can't conveniently be enumerated.
     pub(crate) fn claim<E: InteractiveElement>(&self, element: E, cx: &mut App) -> E {
         let index = self.cursor.get();
@@ -328,7 +328,7 @@ impl Roving {
     /// The index and the stop flag go on the **focus handle**, not on the
     /// element. `InteractiveElement::tab_index` and `tab_stop` only reach a
     /// handle that GPUI creates for itself, and an element with
-    /// `track_focus` already has one — so setting them on the element is
+    /// `track_focus` already has one, so setting them on the element is
     /// silently ignored, and every item ends up a stop at index 0. (That is
     /// not obvious from either method's documentation; it is
     /// `Interactivity::layout`'s `tracked_focus_handle.is_none()` guard.)
@@ -354,9 +354,9 @@ impl Roving {
     /// Returns whether it consumed the key.
     ///
     /// Only while one of the group's own items holds focus. The listener
-    /// sits on the group's container, and a container holds other things —
+    /// sits on the group's container, and a container holds other things,
     /// the Viewport dock's quality select, a Properties text field, the
-    /// ribbon's snap fields — whose keys bubble through it; a Home pressed
+    /// ribbon's snap fields, whose keys bubble through it; a Home pressed
     /// in an open dropdown belongs to the dropdown.
     ///
     /// Enter and Space are deliberately **not** here: GPUI already turns
@@ -378,7 +378,7 @@ impl Roving {
         true
     }
 
-    /// The item that stands for the group — the one focused, while focus is
+    /// The item that stands for the group, the one focused, while focus is
     /// in it.
     pub(crate) fn current(&self) -> usize {
         self.current.get()

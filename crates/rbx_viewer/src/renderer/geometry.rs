@@ -1,8 +1,8 @@
 //! The unit meshes every pass instances, uploaded once and shared.
 //!
-//! A part and the decals painted on it are drawn from the *same* geometry — the
+//! A part and the decals painted on it are drawn from the *same* geometry, the
 //! decal pass reprojects the part's own surface rather than floating a quad in
-//! front of it — so both take their vertex and index buffers from here.
+//! front of it, so both take their vertex and index buffers from here.
 
 use wgpu::util::DeviceExt;
 
@@ -57,7 +57,7 @@ impl Meshes {
         Meshes { entries }
     }
 
-    /// Builds `kind`'s mesh if no part instanced it when the scene loaded —
+    /// Builds `kind`'s mesh if no part instanced it when the scene loaded,
     /// what a `Part` edited from a box into the place's first ball needs
     /// before any batch can draw it. Nothing to do for a kind already here.
     pub(super) fn ensure(&mut self, device: &wgpu::Device, kind: ShapeKind) {
