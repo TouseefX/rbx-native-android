@@ -9,7 +9,7 @@
 //! glTF and is imported as a `Model` holding one `MeshPart` per mesh, each
 //! with a freshly created mesh asset of its own.
 //!
-//! Never call [`Client::create_model_asset`] from a test — it creates a real
+//! Never call [`Client::create_model_asset`] from a test, it creates a real
 //! asset in the key owner's inventory. Request construction and response
 //! parsing are unit-tested instead; the one live check is `#[ignore]`d.
 

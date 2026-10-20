@@ -1,10 +1,9 @@
 //! `RBX_STUDIO_DRAG` and `RBX_STUDIO_RESIZE`: one drag step each, applied
 //! once at startup through the exact `Shell::move_parts`/`Shell::resize_part`
-//! a real gizmo gesture ends with — debugging aids for a screenshot, or for
+//! a real gizmo gesture ends with, debugging aids for a screenshot, or for
 //! an `RBX_STUDIO_UNDO=1` run that reverts one, since nothing can send the
-//! viewport a real mouse drag on the editor's behalf (see `AGENTS.md`'s
-//! safety rules). Both are no-ops with nothing selected, or a target-less
-//! selection (a `Folder`, a `Model` — nothing with a placement to change).
+//! viewport a real mouse drag on the editor's behalf. Both are no-ops with nothing selected, or a target-less
+//! selection (a `Folder`, a `Model`: nothing with a placement to change).
 
 use glam::{Mat3, Vec3};
 use gpui_kit::Context;
@@ -17,13 +16,13 @@ use super::Shell;
 /// world-space offset, preserving their layout relative to each other and to
 /// the gizmo's anchor, through the exact same [`Targets::translate`] and
 /// `Shell::move_parts` a real gizmo or cursor drag ends a mouse gesture with
-/// — the aid for a group drag.
+/// the aid for a group drag.
 pub(crate) const DRAG_VARIABLE: &str = "RBX_STUDIO_DRAG";
 
 /// `RBX_STUDIO_RESIZE=<dx>,<dy>,<dz>`: grows the selected part's size by this
 /// much along its own axes, holding the face opposite each grown one still
 /// the way a Scale handle does, through the same `Shell::resize_part` a real
-/// Scale drag ends with — the aid for the Scale tool. Only the anchor part,
+/// Scale drag ends with, the aid for the Scale tool. Only the anchor part,
 /// exactly as a Scale drag over a multi-part selection resizes only that
 /// (see `Targets::set_anchor`).
 pub(crate) const RESIZE_VARIABLE: &str = "RBX_STUDIO_RESIZE";
@@ -76,7 +75,7 @@ impl Shell {
 }
 
 /// Parses `"<x>,<y>,<z>"` into a three-axis offset, or `None` for anything
-/// else — the only format either variable takes.
+/// else, the only format either variable takes.
 fn parse_delta(spec: &str) -> Option<Vec3> {
     let mut fields = spec.split(',').map(str::trim);
     let x = fields.next()?.parse().ok()?;
@@ -88,7 +87,7 @@ fn parse_delta(spec: &str) -> Option<Vec3> {
 /// Where a part of `size`, centred at `position` and facing `orientation`,
 /// stands once each of its axes has grown by `growth`: the centre moves by
 /// half the growth along each of the part's own axes, so the face opposite
-/// each grown one holds still — the rule a Scale handle applies to the one
+/// each grown one holds still, the rule a Scale handle applies to the one
 /// axis it drags (see `workspace_view::gizmo`'s `Drag::Size`). `None` when
 /// the growth would leave no size on some axis, the one thing a handle's own
 /// clamping never lets through.

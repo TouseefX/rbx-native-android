@@ -5,7 +5,7 @@ use super::{is, is_script, label, read, write, SOURCE_PROPERTY};
 use crate::history::{History, DEFAULT_CAP};
 
 /// A place holding one instance of `class`, with `Source` already set when
-/// `source` says so — a script read out of a real file always has one, a
+/// `source` says so, a script read out of a real file always has one, a
 /// script inserted through the Explorer does not yet.
 fn place(class: &str, source: Option<&str>) -> (WeakDom, Ref) {
     let mut dom = WeakDom::new();
@@ -118,8 +118,8 @@ fn the_label_is_the_instance_name_and_follows_a_rename() {
     );
 }
 
-/// What `shell::scripts::commit_script` does — snapshot, write, then attach
-/// the change log that write produced — using the same pieces it calls, so
+/// What `shell::scripts::commit_script` does, snapshot, write, then attach
+/// the change log that write produced, using the same pieces it calls, so
 /// the undo path can be exercised without a window around it. The log is what
 /// lets an undone `Source` take the fast viewport patch instead of a full
 /// reload; `shell::history`'s own tests read it back through the classifier.

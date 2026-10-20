@@ -1,6 +1,6 @@
 // An `ImageHandleAdornment`: its image on a flat quad in the adornment's own
-// frame, tinted by nothing — `GuiBase3d.Color3` colours the shapes, and
-// nothing documents it as tinting an image — and faded by the adornment's
+// frame, tinted by nothing, `GuiBase3d.Color3` colours the shapes, and
+// nothing documents it as tinting an image, and faded by the adornment's
 // own `Transparency`.
 
 struct VertexInput {

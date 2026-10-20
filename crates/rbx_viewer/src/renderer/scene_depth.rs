@@ -37,7 +37,7 @@ pub(super) fn with_source(shader: &str, reads: bool, samples: u32) -> String {
 }
 
 /// The layout [`bind`] builds against and the blended pipelines are built
-/// with — structurally equal wherever it is created, which is all WebGPU asks
+/// with, structurally equal wherever it is created, which is all WebGPU asks
 /// of a bind group and the pipeline it is used with.
 pub(super) fn layout(device: &wgpu::Device, samples: u32) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {

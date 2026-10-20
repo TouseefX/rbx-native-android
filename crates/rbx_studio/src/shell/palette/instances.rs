@@ -1,5 +1,5 @@
 //! Quick Open's instance rows: every instance in the place, by name and by
-//! path — Studio's "Quickest Open in the West!" (DevForum, 2020) searches
+//! path, Studio's "Quickest Open in the West!" (DevForum, 2020) searches
 //! "by instance name or path name".
 
 use gpui_kit::SharedString;

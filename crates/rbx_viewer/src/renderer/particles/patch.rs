@@ -11,14 +11,14 @@ use super::{Live, Particles};
 use crate::scene::{Emitter, Simulation};
 
 impl Particles {
-    /// Replaces the emitter set with `emitters` — the scene's freshly
-    /// re-planned list (see `Scene::replan_effect`) — keeping the running
+    /// Replaces the emitter set with `emitters`: the scene's freshly
+    /// re-planned list (see `Scene::replan_effect`), keeping the running
     /// simulation of every emitter still present, so a `Rate` or `Color`
     /// edit changes what the next frame spawns rather than restarting the
     /// effect, and pre-warming only an emitter that just appeared (`Enabled`
     /// flipped on) exactly as [`Particles::new`] would have.
     ///
-    /// An emitter whose texture this pass has no upload for is dropped —
+    /// An emitter whose texture this pass has no upload for is dropped,
     /// exactly as at load, and exactly as one whose texture failed to decode
     /// already was. There is nothing else to do about it here: the loader is
     /// the only thing that fetches an image (see `load::fetcher`), a `Texture`

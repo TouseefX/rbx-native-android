@@ -1,4 +1,4 @@
-//! `rbx_dom::Variant` ⇄ Argon's `EncodedValue` — a single-key MsgPack map
+//! `rbx_dom::Variant` ⇄ Argon's `EncodedValue`: a single-key MsgPack map
 //! whose key is Roblox's own canonical DataType name (`{Vector3: [x,y,z]}`,
 //! `{Enum: 256}`, ...), dispatched by tag exactly the way
 //! `rbx_xml::value::mod` dispatches XML property elements by tag name (that
@@ -8,7 +8,7 @@
 //! One quirk `argon-roblox`'s hand-rolled MsgPack encoder has that a
 //! from-scratch decoder must account for: a number is written as MsgPack
 //! int or float purely by its *value*, never by the property's declared
-//! type — a `Float64`-tagged whole number (say, `Part.Size.X == 4.0`)
+//! type, a `Float64`-tagged whole number (say, `Part.Size.X == 4.0`)
 //! arrives as a MsgPack integer. Every numeric decode below is therefore
 //! int-or-float tolerant.
 
@@ -38,7 +38,7 @@ fn as_bool(value: &Value) -> Option<bool> {
 }
 
 /// One `EncodedValue`'s payload, keyed by `tag` (already split out of its
-/// `{tag: payload}` wrapper by the caller — see [`decode`]).
+/// `{tag: payload}` wrapper by the caller, see [`decode`]).
 fn decode_tagged(tag: &str, payload: &Value) -> Option<Variant> {
     Some(match tag {
         "String" => Variant::String(payload.as_str()?.to_owned()),
@@ -177,12 +177,12 @@ fn decode_tagged(tag: &str, payload: &Value) -> Option<Variant> {
             Content::Uri(uri.to_owned())
         } else {
             // `Object` (a Ref-valued Content) isn't implemented by Argon's
-            // own plugin either — falls through to `None`.
+            // own plugin either, falls through to `None`.
             Content::None
         }),
         // Everything else (Font, PhysicalProperties, Axes/Faces,
         // SecurityCapabilities, UniqueId, Ray, Vector3int16, Rect2D, Ref)
-        // falls here — kept rather than refused, the same "degrade, don't
+        // falls here, kept rather than refused, the same "degrade, don't
         // drop the whole snapshot" choice `rbx_xml::value`'s own `_ =>
         // Variant::Unknown` fallback makes for a tag it doesn't recognize.
         _ => return None,
@@ -197,7 +197,7 @@ fn map_get<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
         .map(|(_, v)| v)
 }
 
-/// Decodes one `EncodedValue` — a `{Tag: payload}` single-key map — into a
+/// Decodes one `EncodedValue`, a `{Tag: payload}` single-key map, into a
 /// `Variant`. `None` for a tag this client doesn't (yet) decode, an empty
 /// map (Argon's own "unoccupied optional," e.g. a `PhysicalProperties` left
 /// as `"Default"`), or a payload shaped unlike what its tag promises.
@@ -207,7 +207,7 @@ pub(crate) fn decode(encoded: &Value) -> Option<Variant> {
 }
 
 /// The inverse of [`decode`], for write-back. Only the tags this client
-/// actually decodes are encoded — a `Variant` this client read as `Unknown`
+/// actually decodes are encoded, a `Variant` this client read as `Unknown`
 /// (because *decode* didn't recognize its tag) has nothing to round-trip
 /// back into, and is skipped by the caller before reaching here.
 pub(crate) fn encode(variant: &Variant) -> Option<Value> {
@@ -323,7 +323,7 @@ pub(crate) fn encode(variant: &Variant) -> Option<Value> {
                 Content::Uri(uri) => {
                     Value::Map(vec![(Value::from("Uri"), Value::from(uri.as_str()))])
                 }
-                // Not round-trippable — Argon's own encoder errors on this
+                // Not round-trippable, Argon's own encoder errors on this
                 // too (`Object serializing is not currently implemented`).
                 Content::Object(_) => return None,
             },

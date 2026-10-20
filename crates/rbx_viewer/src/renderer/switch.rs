@@ -2,7 +2,7 @@
 //!
 //! Nothing in a scene depends on the level: the meshes, the instance buffers and
 //! the decoded images are all the same whatever it is. So a switch re-views and
-//! rebinds rather than rebuilding — the texture cap becomes a `base_mip_level`
+//! rebinds rather than rebuilding, the texture cap becomes a `base_mip_level`
 //! (see `texture::Uploaded`), anisotropy a fresh sampler, the shadow map one
 //! reallocated depth texture, and the rest of the table lands in the uniforms the
 //! next frame writes anyway.
@@ -110,7 +110,7 @@ impl Renderer {
 
     /// Rebuilds bind group 0 for every pass that has one: the probe's view, the
     /// shadow map and the light buffer have all just been replaced (or may
-    /// have been, after a scene rebuild — see `renderer::rebuild`), and a bind
+    /// have been, after a scene rebuild, see `renderer::rebuild`), and a bind
     /// group is immutable once created.
     pub(super) fn rebind_frames(&mut self, device: &wgpu::Device) {
         let shared = Shared {

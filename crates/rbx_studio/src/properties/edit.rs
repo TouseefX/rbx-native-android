@@ -28,12 +28,12 @@ use sequence::{
     color_sequence_text, number_sequence_text, parse_color_sequence, parse_number_sequence,
 };
 
-/// `Name` is not a key in `Instance::properties()` — the panel synthesizes a
+/// `Name` is not a key in `Instance::properties()`: the panel synthesizes a
 /// row for it and [`commit`] routes it to `WeakDom::set_name` instead of
 /// `set_property`.
 pub(crate) const NAME_PROPERTY: &str = "Name";
 
-/// Not a real Roblox `Folder` property at all — see `crate::folder_colors`.
+/// Not a real Roblox `Folder` property at all, see `crate::folder_colors`.
 /// `Properties::rows` synthesizes this row only for a `Folder`, and
 /// `shell::folder_color::commit_folder_color` routes its commit to that
 /// module's local store instead of reaching this file's [`commit`] at all;
@@ -45,8 +45,8 @@ pub(crate) const FOLDER_COLOR_PROPERTY: &str = "Explorer Colour";
 /// [`parse`], which is why it can differ from the read-only column's
 /// rbxdump-style text (that one must match the dump byte for byte; this one
 /// only has to be typeable). `CFrame` in particular shows only its position
-/// here — a nine-term rotation matrix in a one-line field is not something
-/// anyone edits by hand — and [`parse`] carries the rotation through unchanged
+/// here, a nine-term rotation matrix in a one-line field is not something
+/// anyone edits by hand, and [`parse`] carries the rotation through unchanged
 /// when it is given three numbers, so the row still round-trips. The longer
 /// forms it also accepts (see [`parse_cframe`]) are what the viewport's Rotate
 /// drag writes through.
@@ -88,7 +88,7 @@ pub(crate) fn edit_text(value: &Variant) -> Option<String> {
         Variant::Color3uint8 { r, g, b } => Some(format!("{r}, {g}, {b}")),
         // The ordinal, not the item's name: resolving that needs the class
         // and a `ReflectionDatabase`, which this free function does not have.
-        // Typing the name still works — see `parse_enum`.
+        // Typing the name still works, see `parse_enum`.
         Variant::Enum(raw) => Some(raw.to_string()),
         Variant::UDim(u) => Some(format!("{}, {}", u.scale, u.offset)),
         Variant::UDim2(u) => Some(format!(
@@ -109,7 +109,7 @@ pub(crate) fn edit_text(value: &Variant) -> Option<String> {
         Variant::Ref(target) => Some(ref_text(*target)),
         Variant::Content(content) => Some(content_text(content)),
         // Keypoints along a `;`, each one's numbers along a `,`. Nobody
-        // types this — `crate::sequence_window`'s graph is the editor; see
+        // types this, `crate::sequence_window`'s graph is the editor; see
         // `sequence` for why its commits still come through here.
         Variant::NumberSequence(sequence) => Some(number_sequence_text(sequence)),
         Variant::ColorSequence(sequence) => Some(color_sequence_text(sequence)),
@@ -124,7 +124,7 @@ pub(crate) fn edit_text(value: &Variant) -> Option<String> {
 
 /// What a `PhysicalProperties::Default` becomes the moment the row's Custom
 /// box is ticked: Roblox's own defaults for `Plastic`, the material every
-/// newly inserted `Part` carries — density `0.7`, friction `0.3`, elasticity
+/// newly inserted `Part` carries, density `0.7`, friction `0.3`, elasticity
 /// `0.5`, and both weights `1`. There is no better answer available here,
 /// because `Default` means "derive these from the material" and this
 /// function is not given the part.
@@ -160,7 +160,7 @@ fn custom_or_default(physical: &PhysicalProperties) -> PhysicalProperties {
     }
 }
 
-/// The Custom box, then the five fields — the same two-shaped commit an
+/// The Custom box, then the five fields, the same two-shaped commit an
 /// `OptionalCFrame` row makes (see [`parse_optional_cframe`]). Unticking
 /// returns the value to `Default` rather than zeroing the numbers: the two
 /// are different physics, not the same physics written differently.
@@ -217,7 +217,7 @@ fn parse_optional_cframe(current: &Option<CFrameData>, text: &str) -> Result<Var
 /// Writes one row's edit into `dom`, taking the same latitude the Command Bar
 /// does: the caller owns handing `dom` in and back out around this call. On
 /// success, the value the write replaced (`Name`'s previous name, wrapped for
-/// uniformity). On failure, `dom` is untouched — every mutation happens after
+/// uniformity). On failure, `dom` is untouched, every mutation happens after
 /// parsing succeeds.
 pub(crate) fn commit(
     dom: &mut WeakDom,
@@ -333,7 +333,7 @@ pub(crate) fn parse(
             let n = parse_numbers(text, 3)?;
             // Rounded and clamped, not `as i16`. A raw cast truncates
             // toward zero (a dragged 3.7 lands on 3) and, outside i16's
-            // range, is a silent wrap — 40000 would become -25536.
+            // range, is a silent wrap, 40000 would become -25536.
             Ok(Variant::Vector3int16 {
                 x: to_i16(n[0]),
                 y: to_i16(n[1]),
@@ -399,12 +399,12 @@ pub(crate) fn parse(
     }
 }
 
-/// The sequence `text` spells, for a caller holding the text alone — the
+/// The sequence `text` spells, for a caller holding the text alone, the
 /// row's own preview and `crate::sequence_window`, which both need the
 /// keypoints rather than a string. `color` picks which of the two shapes to
 /// read it as, the same way [`crate::properties::EditKind::Sequence`] carries
 /// it. Colour envelopes come back zeroed, since text never carries them (see
-/// [`sequence::parse_color_sequence`]) — a preview does not use them, and the
+/// [`sequence::parse_color_sequence`]), a preview does not use them, and the
 /// panel reads the real ones off the value it opened on.
 pub(crate) fn sequence_value(color: bool, text: &str) -> Option<Variant> {
     if color {
@@ -437,7 +437,7 @@ fn parse_bool(text: &str) -> Result<bool, String> {
 
 /// Splits `text` into exactly `count` numbers. Brackets and braces are
 /// stripped first so `(1, 2, 3)`, `{1, 2}` and a bare `1, 2, 3` all read the
-/// same — the punctuation in [`edit_text`]'s output and in this module's doc
+/// same, the punctuation in [`edit_text`]'s output and in this module's doc
 /// comment is a hint for the reader, not syntax the parser requires.
 fn parse_numbers(text: &str, count: usize) -> Result<Vec<f32>, String> {
     let cleaned: String = text
@@ -460,7 +460,7 @@ fn parse_numbers(text: &str, count: usize) -> Result<Vec<f32>, String> {
 /// A `CFrame`, in as much of it as the text gives: three numbers are a
 /// position, nine are a rotation and twelve are both, in the order Roblox's
 /// own `CFrame.new(x, y, z, R00, R01, R02, R10, R11, R12, R20, R21, R22)`
-/// takes them — row by row (`creator-docs`,
+/// takes them, row by row (`creator-docs`,
 /// `reference/engine/datatypes/CFrame.yaml`). Whichever half is left out is
 /// carried through from `current` untouched, so typing a position into the
 /// Properties panel never loses a part's facing and a viewport rotate never
@@ -480,7 +480,7 @@ fn cframe_text(frame: &CFrameData) -> String {
 /// rotation matrix, 12 is a position plus a raw matrix.
 ///
 /// The 6 case carries the rule this whole module exists for. The panel's
-/// fields always submit all six numbers, whichever one was typed in — so
+/// fields always submit all six numbers, whichever one was typed in, so
 /// the angles are compared against what the row was *showing*, and the
 /// stored matrix is left **byte-identical** unless they actually changed.
 /// Without that, nudging a part's X position would quietly rewrite its
@@ -524,7 +524,7 @@ fn to_i16(value: f32) -> i16 {
 /// `count` comma-separated booleans, in the order the flag labels name.
 fn parse_flags(text: &str, count: usize) -> Result<Vec<bool>, String> {
     // Trimmed, because the text these parse is the same comma-joined form
-    // every other composite uses — with a space after each comma.
+    // every other composite uses, with a space after each comma.
     let flags: Result<Vec<bool>, String> = text
         .split(',')
         .map(|part| parse_bool(part.trim()))

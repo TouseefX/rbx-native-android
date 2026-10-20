@@ -87,7 +87,7 @@ impl ScriptTemplates {
         Ok(name.to_owned())
     }
 
-    /// Whether some file in `class` already has a stem `same` accepts —
+    /// Whether some file in `class` already has a stem `same` accepts,
     /// a refused file included, since writing over it would lose it.
     fn taken(&self, class: &str, same: &dyn Fn(&str) -> bool) -> bool {
         self.extras

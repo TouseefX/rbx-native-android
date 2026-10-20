@@ -1,7 +1,7 @@
 //! Backtick string interpolation: `` `Hello {player.Name}` ``.
 //!
 //! A hole holds an ordinary Luau expression, so it is lexed by the same
-//! [`super::tokenize`] the file itself is, recursively — which is also what
+//! [`super::tokenize`] the file itself is, recursively, which is also what
 //! makes a hole containing another interpolated string colour correctly, and
 //! what stops a backtick *inside* a hole from being mistaken for the outer
 //! literal's closing delimiter. [`MAX_DEPTH`] bounds the recursion so a
@@ -26,7 +26,7 @@ const MAX_DEPTH: usize = 3;
 /// One piece of a backtick string.
 ///
 /// A `Literal` carries the delimiters and the braces around each hole as well
-/// as the text between them — on screen those read as part of the string, the
+/// as the text between them, on screen those read as part of the string, the
 /// way a quote does, and it means the pieces tile the whole literal with no
 /// gap for the highlighter to leave uncoloured.
 enum Part {

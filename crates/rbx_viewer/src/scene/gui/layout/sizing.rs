@@ -8,7 +8,7 @@
 //!    thing that decides what a scale even means.
 //! 2. `UIScale`, documented purely as a multiplier on `AbsoluteSize`.
 //! 3. `AutomaticSize`, for which "the object's `Size` property controls its
-//!    minimum size" — so it has to see the size the first two produced.
+//!    minimum size", so it has to see the size the first two produced.
 //! 4. `UIAspectRatioConstraint`, which the docs say overrides a layout, so it
 //!    comes after anything that merely proposes a size.
 //! 5. `UISizeConstraint`, a hard pixel clamp, last so nothing can push the
@@ -29,7 +29,7 @@ pub(super) fn extent(node: &Node, parent: [f32; 2], measure: &mut dyn TextMeasur
         // Along an automatic axis the element's own size is what is being
         // worked out, so the box the children are measured in is zero wide
         // there and a child sized or positioned by scale contributes only its
-        // offsets — and then, separately, whatever its own content needs
+        // offsets, and then, separately, whatever its own content needs
         // (see `scaled_need`).
         let probe = [0, 1].map(|axis| match node.automatic_size[axis] {
             true => 0.0,
@@ -63,7 +63,7 @@ pub(super) fn extent(node: &Node, parent: [f32; 2], measure: &mut dyn TextMeasur
 /// scale`, the child's need being its content, recursively through further
 /// scale-sized children. Measured in Studio (2026-10-15): a `TextButton`
 /// with `AutomaticSize` Y holding a 20px title and a `(1, -20)` frame, whose
-/// `(1, 1)` child holds a 300px item, comes to 320 — the scale-sized
+/// `(1, 1)` child holds a 300px item, comes to 320, the scale-sized
 /// frame is measured by what it holds and the parent grows to fit it. A
 /// layout places its children itself, and a `ScrollingFrame` keeps its
 /// content on its canvas, so neither passes anything up.
@@ -90,7 +90,7 @@ fn scaled_need(node: &Node, automatic: [bool; 2], measure: &mut dyn TextMeasure)
     need
 }
 
-/// The box this element's children — and any layout arranging them — resolve
+/// The box this element's children, and any layout arranging them, resolve
 /// against: its own rect, less `UIPadding`.
 pub(super) fn padded(node: &Node, rect: &Rect) -> Rect {
     let Some(padding) = &node.constraints.padding else {
@@ -109,7 +109,7 @@ fn inset(rect: &Rect, sides: &[f32; 4]) -> Rect {
 }
 
 /// How much room this element's content asks for, `UIPadding` included, with
-/// the children measured inside a box of `probe` pixels — which box that is
+/// the children measured inside a box of `probe` pixels, which box that is
 /// along an `automatic` axis (`AutomaticSize`, or a `ScrollingFrame`'s
 /// `AutomaticCanvasSize`) is the caller's call, since the two differ.
 pub(super) fn content_extent(
@@ -134,7 +134,7 @@ pub(super) fn content_extent(
     };
 
     // A text object's own glyphs count as content too, measured at the size
-    // they will be drawn — `TextScaled` has no box to scale into yet, so it
+    // they will be drawn, `TextScaled` has no box to scale into yet, so it
     // is read as `TextSize` here.
     let mut low = [0.0f32; 2];
     let mut high = node.text.as_ref().map_or([0.0; 2], |text| {
@@ -158,7 +158,7 @@ pub(super) fn content_extent(
 
 /// `layout` with its flex turned off along every automatic axis: the docs say
 /// a flex layout "fills the space available", and along an axis the container
-/// takes from its content there is no such space yet — a zero-wide probe box
+/// takes from its content there is no such space yet, a zero-wide probe box
 /// would have `Fill` shrink every child into it.
 fn relaxed(layout: Layout, automatic: [bool; 2]) -> Layout {
     let Layout::List(mut list) = layout else {
@@ -175,8 +175,8 @@ fn relaxed(layout: Layout, automatic: [bool; 2]) -> Layout {
 }
 
 /// `UIAspectRatioConstraint`: the dominant axis keeps the size it already had
-/// and the other follows from `AspectRatio`, then the pair shrinks — together,
-/// so the ratio survives — until it fits the box the `AspectType` names.
+/// and the other follows from `AspectRatio`, then the pair shrinks, together,
+/// so the ratio survives, until it fits the box the `AspectType` names.
 ///
 /// `FitWithinMaxSize` fits it inside the element's own size, which makes the
 /// result "the maximum size possible within its own AbsoluteSize" whichever

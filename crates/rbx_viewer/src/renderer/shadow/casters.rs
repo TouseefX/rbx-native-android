@@ -30,7 +30,7 @@ pub(super) struct CasterRaw {
     model: [[f32; 4]; 4],
 }
 
-/// One world-space bounding sphere per caster, beside its record — what the
+/// One world-space bounding sphere per caster, beside its record, what the
 /// sun pass's own, deliberately wider visibility test (`Fit::visible`) checks
 /// each one against; see `Shadows::draw_casters`.
 pub(super) type Sphere = (Vec3, f32);
@@ -72,7 +72,7 @@ pub(super) fn shape_batches(device: &wgpu::Device, scene: &Scene) -> ShapeBatche
     batches
 }
 
-/// Brings the shape casters in line with one edited part — see
+/// Brings the shape casters in line with one edited part, see
 /// `renderer::shaped::Shaped::sync` for the same four outcomes.
 pub(super) fn sync_shape(device: &wgpu::Device, batches: &mut ShapeBatches, part: &Part) {
     let wanted = part
@@ -118,14 +118,14 @@ pub(super) fn mesh_batches(
 }
 
 /// Whether a resolved instance reaches the depth pass: the part's own
-/// `CastShadow`, and only while an isolation does not hide it — the same
+/// `CastShadow`, and only while an isolation does not hide it, the same
 /// two questions [`Part::casts_shadow`] answers for a box.
 fn casts(instance: &ResolvedInstance) -> bool {
     instance.casts_shadow && instance.is_drawn()
 }
 
 /// [`sync_shape`] for a resolved file mesh. `false` when the instance now
-/// casts through a mesh `resolved` never downloaded — which
+/// casts through a mesh `resolved` never downloaded, which
 /// `Scene::resync_part` already refuses, so this is a defensive
 /// answer rather than a documented case.
 pub(super) fn sync_mesh(
@@ -173,7 +173,7 @@ pub(in crate::renderer) fn geometry(
 }
 
 /// Re-uploads the positions of every caster batch drawing one of `meshes`
-/// from what `resolved` now holds for it — a skinned mesh's new pose. The
+/// from what `resolved` now holds for it, a skinned mesh's new pose. The
 /// highlight and selection masks hold the same batches and go through here
 /// too.
 pub(in crate::renderer) fn refresh<T: Pod, S: Copy>(

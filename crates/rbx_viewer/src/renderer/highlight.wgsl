@@ -1,7 +1,7 @@
 // The `Highlight` mask: which highlight, if any, owns each pixel of the frame.
 //
 // Position only, instanced against the same unit shapes and file meshes the
-// colour pass draws — the same trick `shadow.wgsl` uses, and for the same
+// colour pass draws, the same trick `shadow.wgsl` uses, and for the same
 // reason: a silhouette needs the geometry, never its material. The fragment
 // writes the highlight's own 1-based index into an R8Uint target, which
 // `highlight_composite.wgsl` then reads to find both the interior and the
@@ -13,7 +13,7 @@ struct VertexInput {
 };
 
 // The four columns of the instance's model matrix, then which highlight it
-// belongs to — see `renderer::highlight::MaskInstance`.
+// belongs to, see `renderer::highlight::MaskInstance`.
 struct InstanceInput {
     @location(1) model_0: vec4<f32>,
     @location(2) model_1: vec4<f32>,

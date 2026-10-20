@@ -1,5 +1,5 @@
 //! The parts of `rbxstudio`'s command line that answer before a window, a GPU
-//! or a place file are ever needed — `--help`, a usage error, and a `--run`
+//! or a place file are ever needed, `--help`, a usage error, and a `--run`
 //! script that isn't there.
 //!
 //! Unit tests cover the parser itself (`src/cli/tests.rs`); what they cannot
