@@ -3,7 +3,7 @@
 //! `rbx_assets::NativeContent` resolves `rbxasset://` paths against.
 //!
 //! [`super::panels_or_default`] reaches for this set whenever a place has no
-//! `Sky` at all, or the one it has leaves a panel empty or unparseable — a
+//! `Sky` at all, or the one it has leaves a panel empty or unparseable, a
 //! partial custom sky is worse than Roblox's own default, not better.
 
 use rbx_assets::AssetRef;
@@ -12,7 +12,7 @@ use rbx_dom::{Ref, WeakDom};
 use super::{quad, Quad, SkyFace, SKY_FACES};
 
 impl SkyFace {
-    /// The lowercase suffix Studio's own panel files use — matching the
+    /// The lowercase suffix Studio's own panel files use, matching the
     /// property name's own casing (`SkyboxUp` -> `up`, ...), not the GL/D3D
     /// cube map convention (`+y`, ...) some other engines use.
     fn default_suffix(self) -> &'static str {
@@ -28,7 +28,7 @@ impl SkyFace {
 }
 
 /// `rbxasset://sky/sky512_{up,dn,lf,rt,ft,bk}.tex`, on the same face basis a
-/// user-supplied `Sky` uses — so a default sky seams and orients exactly like
+/// user-supplied `Sky` uses, so a default sky seams and orients exactly like
 /// a real one would.
 pub(super) fn panels() -> Vec<(AssetRef, Quad)> {
     SKY_FACES
@@ -40,7 +40,7 @@ pub(super) fn panels() -> Vec<(AssetRef, Quad)> {
         .collect()
 }
 
-/// `sky`'s panels if fully resolvable, else Studio's own default skybox — no
+/// `sky`'s panels if fully resolvable, else Studio's own default skybox, no
 /// `Sky` and a `Sky` with a bad panel fall back alike.
 pub(in crate::textures) fn panels_or_default(
     dom: &WeakDom,

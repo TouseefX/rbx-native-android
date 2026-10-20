@@ -1,4 +1,4 @@
-//! The Properties-panel fast path for one resolved mesh instance — the
+//! The Properties-panel fast path for one resolved mesh instance, the
 //! file-mesh counterpart of `renderer::shaped::Shaped::sync` and
 //! `renderer::translucent::Translucent::sync`.
 
@@ -15,7 +15,7 @@ impl FileMeshes {
     /// Brings both passes in line with one edited instance: rewritten where
     /// it is if its (mesh, skin) batch and opaque/blended side are unchanged,
     /// otherwise taken out of whichever batch held it and put into the one
-    /// it belongs in now — built on the spot if no instance drew through
+    /// it belongs in now, built on the spot if no instance drew through
     /// that batch before, against `resolved`'s already-downloaded assets.
     ///
     /// `false` when that new batch would need a mesh or texture `resolved`
@@ -60,7 +60,7 @@ impl FileMeshes {
         self.remove_blended(referent);
     }
 
-    /// Uploads what the edits since the last frame owe the opaque batches —
+    /// Uploads what the edits since the last frame owe the opaque batches,
     /// see `slots::Slots::flush`. The blended batches re-upload every frame
     /// regardless (see `FileMeshes::prepare`).
     pub(in crate::renderer) fn flush(&mut self, queue: &wgpu::Queue) {
@@ -68,7 +68,7 @@ impl FileMeshes {
     }
 
     /// Re-uploads the vertices of every batch drawing one of `meshes` from
-    /// what `resolved` now holds for it — a skinned mesh's new pose. Only the
+    /// what `resolved` now holds for it, a skinned mesh's new pose. Only the
     /// vertex buffer is written: the same mesh with the same topology, in
     /// the same batch, under the same skin.
     pub(in crate::renderer) fn refresh(
@@ -101,7 +101,7 @@ impl FileMeshes {
     }
 
     /// Every vertex buffer drawing one of the meshes, with where its
-    /// position, normal and tangent sit — what `renderer::skinning` writes a
+    /// position, normal and tangent sit, what `renderer::skinning` writes a
     /// pose into.
     pub(in crate::renderer) fn skinning_targets(
         &self,
@@ -183,7 +183,7 @@ impl FileMeshes {
     }
 
     /// A new batch's geometry for `key`, binding its texture if no batch has
-    /// yet — `None` when the mesh or the image never downloaded.
+    /// yet, `None` when the mesh or the image never downloaded.
     fn geometry_for(
         &mut self,
         device: &wgpu::Device,

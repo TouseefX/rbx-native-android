@@ -44,7 +44,7 @@ runtime capture. Addresses below are VAs in this build.
   `studioLocationInfo` (`cloudEdit` is a Team Create concept); exact field-to-struct
   mapping not proven.
 - Starting/stopping a playtest sends `studioJoinTestGameActionInfo` /
-  `studioLeaveTestGameActionInfo` (`testGame` field) — presence-only, no game-join.
+  `studioLeaveTestGameActionInfo` (`testGame` field), presence-only, no game-join.
 
 **Unknown**: exact JSON value types/enums (`platformTypeId`, `deviceType`, `activeState`),
 which auth header the request carries. A mitmproxy capture of one pulse would settle both.
@@ -132,7 +132,7 @@ Results:
 - `-rbxTransportToken` is the constant base64 `"local_test"`.
 - The server accepts `-port` (RakNet, bound to 127.0.0.1) but **rejects `-rbxTransportPort`**
   ("Invalid Launch Intent! Too many arguments"). RbxTransport picks a random port and binds
-  **0.0.0.0** — exposed on the LAN with a constant token; a launcher must firewall or accept it.
+  **0.0.0.0**: exposed on the LAN with a constant token; a launcher must firewall or accept it.
   `DFInt/FIntDebugLocalRbxTransportOffset` had no effect.
 - A UDP relay on a fixed loopback port (passed to the client as `-rbxTransportPort`, forwarding
   to the port parsed from the server log line `Started RbxTransport network server 0.0.0.0|<port>`)
@@ -149,7 +149,7 @@ Timings (cold, Wine prefix warm, Vulkan):
 
 Breakdown of the parallel run: Vinegar/flatpak overhead ~0.5 s per process; server listening at
 4.3 s (place load + auth ~2 s); client connected at 5.6 s, playable at 7.1 s.
-Each process still boots the full Studio IDE (built-in plugins, Qt UI) — the biggest remaining cost.
+Each process still boots the full Studio IDE (built-in plugins, Qt UI), the biggest remaining cost.
 Idle resource use with one client: server ~1.8 GB RSS / ~90 % CPU, client ~2.0 GB / ~155 % CPU (uncapped).
 Both processes also log `ws://localhost:13469/studio` connect failures: that is the StudioMCP WS host
 they look for (possible control channel).

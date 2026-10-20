@@ -6,7 +6,7 @@
 //! scales to fit. During Play the embedded client is a foreign window that
 //! can be sized but never scaled, so the screen is the device's own size at
 //! 1:1 centred in the panel (`device_sim::centred`), with a plain backdrop
-//! around it — the same rect `Shell::play_embed_target` gives the client.
+//! around it, the same rect `Shell::play_embed_target` gives the client.
 //! Display scaling applies to Edit only; Play stays 1:1.
 //!
 //! A keyboard cover (`keyboard`) can sit over the bottom of the screen, and

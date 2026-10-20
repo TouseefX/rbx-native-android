@@ -1,5 +1,5 @@
 //! The Argon page: the plugin's fifteen settings, the same ones the Argon
-//! dock shows, at a scope picked here — Global, or the connected project's
+//! dock shows, at a scope picked here, Global, or the connected project's
 //! Game or Place. At Game and Place a row that doesn't override shows what
 //! it inherits, and changing it creates the override.
 
@@ -242,7 +242,7 @@ impl SettingsWindow {
     }
 
     /// The address is not one of the plugin's levelled settings: it is the
-    /// last one Connect succeeded with, the dock's own. Shown, not edited —
+    /// last one Connect succeeded with, the dock's own. Shown, not edited,
     /// the dock's field is where an address is typed and tried.
     fn argon_address_row(&self, address: &str, scope: Level) -> Row {
         let address = if address.is_empty() {

@@ -1,5 +1,5 @@
 //! One search result: the package, then the realm switch, the version
-//! picker and Add — beside it, or under it in two rows when the page is
+//! picker and Add, beside it, or under it in two rows when the page is
 //! narrow.
 
 use gpui_kit::assets::IconName;

@@ -1,5 +1,5 @@
-//! The handles a selection grows besides its frame's — each corner's
-//! radius — what a drag inside a list or grid does instead of moving, and
+//! The handles a selection grows besides its frame's, each corner's
+//! radius, what a drag inside a list or grid does instead of moving, and
 //! the right-click menu.
 
 use gpui_kit::*;
@@ -12,7 +12,7 @@ use super::{Gesture, Held};
 use crate::ui_canvas::{self, rotate, Rect};
 
 /// How far in from its corner, in panel pixels, a square corner's radius
-/// handle sits — clear of the resize handle on the corner itself.
+/// handle sits, clear of the resize handle on the corner itself.
 const RADIUS_INSET: f32 = 12.0;
 /// How small on screen an element's shorter side can get before its radius
 /// handles would crowd the resize handles out.
@@ -20,7 +20,7 @@ const RADIUS_ROOM: f32 = 64.0;
 
 impl Shell {
     /// A right-click: the Explorer's own context menu, on what is under the
-    /// pointer — picked first unless it is part of the selection already —
+    /// pointer, picked first unless it is part of the selection already,
     /// or on the screen itself.
     pub(in crate::shell::ui_editor) fn canvas_menu(
         &mut self,
@@ -58,7 +58,7 @@ impl Shell {
     }
 
     /// What a drag of `held` reorders instead of moving: its one element,
-    /// when a list or grid lays it out — `Position` means nothing there.
+    /// when a list or grid lays it out, `Position` means nothing there.
     pub(super) fn reorder_of(
         &self,
         held: &[Held],

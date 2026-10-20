@@ -3,14 +3,14 @@
 //! `crate::transform`.
 //!
 //! Moves each selected top-level object's own **Min**/**Center**/**Max**
-//! bound on the toggled **X**/**Y**/**Z** axes to match a reference value —
-//! in **World** or **Local** space — taken from either the whole selection's
+//! bound on the toggled **X**/**Y**/**Z** axes to match a reference value,
+//! in **World** or **Local** space, taken from either the whole selection's
 //! collective bounding box or a fixed **Active Object** (the object stays put;
 //! everything else moves to meet it).
 //!
 //! `studio/align-tool.md` is explicit that this "keeps the model intact":
 //! aligning a selected `Model` moves every part beneath it by the same
-//! offset rather than aligning each part on its own — which is why this
+//! offset rather than aligning each part on its own, which is why this
 //! operates on [`pick::Selected`] entries (one per top-level selected
 //! instance, each carrying every drawable part it covers) rather than on
 //! `crate::transform::Targets`' own flattened part list, which has already
@@ -20,10 +20,10 @@
 //! (a rotated part next to an axis-aligned one) and never spell out which
 //! frame "Local" measures a multi-part `Model` selection by, or a Selection
 //! Bounds reference with no one designated object. This implementation picks
-//! one axis frame for the whole operation — the Active Object's orientation
+//! one axis frame for the whole operation, the Active Object's orientation
 //! when relative to it, otherwise the selection's own anchor (its first
 //! entry, the same part `Targets::anchor` already treats as "the" object for
-//! a local toggle) — so every selected object's bound is measured, and moved,
+//! a local toggle), so every selected object's bound is measured, and moved,
 //! along the *same* local direction rather than each along its own, which is
 //! the only reading that makes "Local" comparable across objects that don't
 //! share an orientation at all.
@@ -62,7 +62,7 @@ impl Axis {
         }
     }
 
-    /// This axis's column of `orientation` — already unit length, since
+    /// This axis's column of `orientation`: already unit length, since
     /// `Target::orientation` divides `Size` back out.
     fn local_direction(self, orientation: Mat3) -> Vec3 {
         match self {
@@ -163,7 +163,7 @@ impl Options {
         self.axes[axis as usize] = !self.axes[axis as usize];
     }
 
-    /// Replaces every axis toggle at once — what a debug spec applies (see
+    /// Replaces every axis toggle at once, what a debug spec applies (see
     /// `shell::align::ALIGN_VARIABLE`), which names the exact set of axes a
     /// screenshot needs rather than toggling from whatever the toolbar's
     /// current state happens to be.
@@ -173,7 +173,7 @@ impl Options {
 }
 
 /// Every drawable part one top-level selected instance covers (see
-/// `pick::Selected::parts`), read as [`Target`]s — one entry per referent in
+/// `pick::Selected::parts`), read as [`Target`]s, one entry per referent in
 /// `referents`, in the same order, so its index lines up with wherever a
 /// caller tracks the active object (`crate::shell::selection::Selection`
 /// only ever appends, so its last entry is Studio's "last selected").
@@ -201,10 +201,10 @@ pub(crate) fn read_entries(
 /// How far `target`'s own oriented box reaches along `direction` (a unit
 /// vector), nearest and farthest: the standard support-function extent of a
 /// box, which reduces to a plain axis-aligned bound when `direction` is a
-/// world axis and to the same box measured along a rotated axis otherwise —
+/// world axis and to the same box measured along a rotated axis otherwise,
 /// one formula for both of [`Space`]'s cases.
 fn support(target: &Target, direction: Vec3) -> (f32, f32) {
-    let axes = target.rotation(); // still `Size`-scaled — see `Target::rotation`.
+    let axes = target.rotation(); // still `Size`-scaled, see `Target::rotation`.
     let half = 0.5
         * (axes.x_axis.dot(direction).abs()
             + axes.y_axis.dot(direction).abs()
@@ -231,7 +231,7 @@ fn bound_along<'a>(
 }
 
 /// The axis frame the whole alignment measures and moves along for one
-/// `Space::Local` run — see this module's doc comment for why it is one
+/// `Space::Local` run, see this module's doc comment for why it is one
 /// shared frame rather than each entry's own.
 fn local_frame(entries: &[Vec<Target>], active_index: usize, relative_to: RelativeTo) -> Mat3 {
     let anchor = match relative_to {
@@ -242,14 +242,14 @@ fn local_frame(entries: &[Vec<Target>], active_index: usize, relative_to: Relati
 }
 
 /// Every part's new position after aligning `entries` (one `Vec<Target>` per
-/// top-level selected instance, in selection order — see [`read_entries`])
+/// top-level selected instance, in selection order, see [`read_entries`])
 /// under `options`, relative to `entries[active_index]` when
 /// [`RelativeTo::ActiveObject`] is picked.
 ///
 /// A selection of fewer than two entries returns nothing: aligning a single
 /// object to itself (whether to the selection's own bounds or, with nothing
-/// else selected, to "the active object") is a no-op by construction — moved
-/// nowhere because it already *is* the reference — so there is nothing here
+/// else selected, to "the active object") is a no-op by construction, moved
+/// nowhere because it already *is* the reference, so there is nothing here
 /// worth writing back to the DOM. Selecting nothing behaves the same way.
 pub(crate) fn plan(
     entries: &[Vec<Target>],
@@ -262,8 +262,8 @@ pub(crate) fn plan(
     let deltas = deltas(entries, active_index, options);
 
     // The active object itself is left out of the result entirely, not just
-    // given a zero delta: `studio/align-tool.md` — "it will not move during
-    // the operation" — and a caller writing every returned position back to
+    // given a zero delta: `studio/align-tool.md`: "it will not move during
+    // the operation", and a caller writing every returned position back to
     // the DOM should not have to filter out a no-op write to something that
     // was never meant to move at all.
     moving(entries, active_index, options)
@@ -276,13 +276,13 @@ pub(crate) fn plan(
         .collect()
 }
 
-/// Where each moving object's own box would land — one per entry the
+/// Where each moving object's own box would land, one per entry the
 /// alignment moves, for the live preview `studio/align-tool.md` describes
 /// as "dynamically previewing the point of alignment before confirming".
 ///
 /// One box per top-level object, not per part: an entry with a single part
 /// keeps that part's own oriented box, and a `Model` gets the world-axis
-/// -aligned box around everything beneath it — the same two answers the
+/// -aligned box around everything beneath it, the same two answers the
 /// selection outline already gives (`renderer::outline::box_of`), moved by
 /// the delta the alignment would apply.
 pub(crate) fn preview(entries: &[Vec<Target>], active_index: usize, options: Options) -> Vec<Mat4> {
@@ -297,7 +297,7 @@ pub(crate) fn preview(entries: &[Vec<Target>], active_index: usize, options: Opt
         .collect()
 }
 
-/// The entries an alignment actually moves, with their index — everything
+/// The entries an alignment actually moves, with their index, everything
 /// selected except the active object, which the docs say "will not move
 /// during the operation".
 fn moving(
@@ -364,7 +364,7 @@ fn deltas(entries: &[Vec<Target>], active_index: usize, options: Options) -> Vec
         };
 
         // Every axis is measured from each entry's *original* placement, not
-        // from wherever an earlier axis in this same loop just moved it —
+        // from wherever an earlier axis in this same loop just moved it,
         // sound because World's three axes, and Local's three (columns of one
         // rotation matrix), are always mutually orthogonal: moving an entry
         // along one never changes its own projection onto another, so the

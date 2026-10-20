@@ -5,7 +5,7 @@
 //! raw property editing (`studio/ui-overview.md`, `ui/styling/editor.md`):
 //! sheets in a left column, and the selected sheet's rules with their
 //! properties in a main panel. This is the same material at this editor's
-//! fidelity — one list, a row per sheet, derive, rule and rule property.
+//! fidelity, one list, a row per sheet, derive, rule and rule property.
 //!
 //! Nothing here renders; `shell::style_panel` does that, and this module is
 //! pure DOM in and DOM out so it can be tested without a window.
@@ -35,7 +35,7 @@ pub(crate) const PRIORITY_PROPERTY: &str = "Priority";
 /// The `Ref` both `StyleLink` and `StyleDerive` name their sheet with.
 const SHEET_PROPERTY: &str = "StyleSheet";
 
-/// `Variant::Unknown`'s wire type id for a string-shaped blob — the one id
+/// `Variant::Unknown`'s wire type id for a string-shaped blob, the one id
 /// XML's `BinaryString` round-trips (see `rbx_xml::value::STRING_TYPE_ID`),
 /// so a blob written back under it survives a save in either format.
 const STRING_TYPE_ID: u8 = 0x01;
@@ -66,7 +66,7 @@ const FALLBACK_CLASSES: &[&str] = &[
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum StyleRow {
     /// A `StyleSheet` and the ancestor path it lives under, which can be
-    /// anywhere in the place — `ReplicatedStorage` by convention only.
+    /// anywhere in the place, `ReplicatedStorage` by convention only.
     Sheet {
         referent: Ref,
         name: String,
@@ -79,7 +79,7 @@ pub(crate) enum StyleRow {
         sheet: String,
         priority: i32,
     },
-    /// A `StyleRule`. `depth` is its nesting inside the sheet — a rule may
+    /// A `StyleRule`. `depth` is its nesting inside the sheet, a rule may
     /// hold rules, whose selectors merge with its own.
     Rule {
         referent: Ref,
@@ -167,7 +167,7 @@ fn gather_rule(dom: &WeakDom, referent: Ref, depth: usize, rows: &mut Vec<StyleR
 }
 
 /// `game.ReplicatedStorage.Design`-style path of `referent`'s ancestors, the
-/// sheet itself left off — a sheet may sit anywhere, so where it sits is
+/// sheet itself left off, a sheet may sit anywhere, so where it sits is
 /// worth showing beside its name.
 fn path_to(dom: &WeakDom, referent: Ref) -> String {
     let mut names = Vec::new();
@@ -184,7 +184,7 @@ fn path_to(dom: &WeakDom, referent: Ref) -> String {
 }
 
 /// The name of the sheet a `StyleLink`/`StyleDerive` points at, or `nil` when
-/// its reference no longer resolves — the same spelling the Properties panel
+/// its reference no longer resolves, the same spelling the Properties panel
 /// gives a dangling `Ref`.
 fn sheet_name(dom: &WeakDom, instance: &Instance) -> String {
     reference(instance)
@@ -223,14 +223,14 @@ fn text<'a>(instance: &'a Instance, name: &str) -> &'a str {
 ///
 /// A rule property carries no class to look its type up on, so the type comes
 /// from the reflection dump the same way the Properties panel's own
-/// `EditKind` does — resolved on the class the selector names, or on
-/// [`FALLBACK_CLASSES`] when it names none — and the text is then parsed
+/// `EditKind` does, resolved on the class the selector names, or on
+/// [`FALLBACK_CLASSES`] when it names none, and the text is then parsed
 /// against a zero value of that type by the very parser the Properties panel
 /// uses. A property already in the rule is parsed against its current value
 /// instead, so its type never changes under an edit.
 ///
 /// Text opening with `$` is a token reference and is stored verbatim,
-/// whatever the property's type — Studio's own "Link Token" workflow
+/// whatever the property's type, Studio's own "Link Token" workflow
 /// (`ui/styling/editor.md`), typed rather than picked from a menu.
 pub(crate) fn set_rule_property(
     dom: &mut WeakDom,
@@ -329,7 +329,7 @@ fn class_of<'a>(database: &ReflectionDatabase, selector: &'a str, name: &str) ->
 }
 
 /// A zero value of the type the dump gives `class.name`, for the text parser
-/// to reshape — the dump carries no defaults, and every type
+/// to reshape, the dump carries no defaults, and every type
 /// `properties::edit::parse` accepts is reachable from one of these.
 fn zero(database: &ReflectionDatabase, class: &str, name: &str) -> Option<Variant> {
     let value_type = &database.resolve_property(class, name)?.value_type;
@@ -382,7 +382,7 @@ fn selector_class(selector: &str) -> Option<&str> {
 /// Every property the panel and the cascade read is written up front:
 /// `properties::edit::commit` type-checks an edit against the value already
 /// there, so a rule with no `Selector` key could never have one typed into
-/// it — and a class whose instances disagree about which properties they
+/// it, and a class whose instances disagree about which properties they
 /// carry is what the binary serializer refuses to write.
 pub(crate) fn add_rule(dom: &mut WeakDom, sheet: Ref) -> Ref {
     let rule = dom.new_instance(RULE_CLASS, RULE_CLASS, Some(sheet));

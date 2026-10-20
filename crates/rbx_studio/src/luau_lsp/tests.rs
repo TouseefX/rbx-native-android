@@ -17,7 +17,7 @@ fn a_path_survives_the_round_trip_through_a_uri() {
 }
 
 /// Runs the bundled server (or `RBX_STUDIO_LUAU_LSP`'s). Needs the network
-/// only when the cache has no copy of Roblox's API yet — the same network
+/// only when the cache has no copy of Roblox's API yet, the same network
 /// `build.rs` needed to bundle the server in the first place.
 #[test]
 fn a_real_server_resolves_the_place_and_reports_problems_in_scripts_nobody_opened() {

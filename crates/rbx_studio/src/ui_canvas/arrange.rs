@@ -13,7 +13,7 @@ use crate::align::{self, Mode, Options, RelativeTo, Space};
 use crate::transform::Target;
 
 /// How far each box moves to line its `mode` side up with the selection's
-/// on `axis` (0 across, 1 down) — Min is left/top, Max right/bottom. Boxes
+/// on `axis` (0 across, 1 down), Min is left/top, Max right/bottom. Boxes
 /// already there are left out. Fewer than two boxes align nothing.
 pub(crate) fn align(boxes: &[(Ref, Rect)], axis: usize, mode: Mode) -> Vec<(Ref, [f32; 2])> {
     let entries: Vec<Vec<Target>> = boxes
@@ -48,7 +48,7 @@ pub(crate) fn align(boxes: &[(Ref, Rect)], axis: usize, mode: Mode) -> Vec<(Ref,
 }
 
 /// How far each box moves along `axis` for the gaps between them to come
-/// out equal, the first and last staying where they are — index for index
+/// out equal, the first and last staying where they are, index for index
 /// with `boxes`. Fewer than three boxes have nothing between them to space.
 pub(crate) fn distribute(boxes: &[Rect], axis: usize) -> Vec<f32> {
     let mut shifts = vec![0.0; boxes.len()];
@@ -78,7 +78,7 @@ pub(crate) fn distribute(boxes: &[Rect], axis: usize) -> Vec<f32> {
 
 /// `udim` with its offsets folded into its scales against a parent whose
 /// content is `parent` pixels across: the very same pixels at this size,
-/// and a box that grows and shrinks with its parent at any other — what
+/// and a box that grows and shrinks with its parent at any other, what
 /// "responsive" means for a `UDim2`. An axis with no parent extent to
 /// divide by is left as it was.
 pub(crate) fn to_scale(udim: Udim2, parent: [f32; 2]) -> Udim2 {
@@ -91,7 +91,7 @@ pub(crate) fn to_scale(udim: Udim2, parent: [f32; 2]) -> Udim2 {
     })
 }
 
-/// Whether a `Size` is pixels alone on both axes — a box drawn to a fixed
+/// Whether a `Size` is pixels alone on both axes, a box drawn to a fixed
 /// shape, which a responsive pass keeps that shape with an aspect ratio.
 pub(crate) fn is_fixed(size: Udim2) -> bool {
     size.iter().all(|&(scale, _)| scale == 0.0)
@@ -101,7 +101,7 @@ pub(crate) fn is_fixed(size: Udim2) -> bool {
 /// the `Position`/`Size` it came out there from.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Member {
-    /// Its box in its parent's own frame — turned back by the parent's
+    /// Its box in its parent's own frame, turned back by the parent's
     /// rotation, where the parent's content box is square to the axes.
     pub(crate) rect: Rect,
     pub(crate) anchor: [f32; 2],
@@ -109,7 +109,7 @@ pub(crate) struct Member {
     pub(crate) size: Udim2,
     /// `UIScale`: its resolved `Size` times this is the box drawn.
     pub(crate) size_scale: f32,
-    /// Which of the parent's axes each `Size` scale is taken against —
+    /// Which of the parent's axes each `Size` scale is taken against,
     /// `SizeConstraint`, `[0, 1]` unless it says otherwise.
     pub(crate) size_axes: [usize; 2],
 }
@@ -130,7 +130,7 @@ pub(crate) struct Grouping {
 /// Each value keeps the mode it had: a member placed or sized by scale on
 /// an axis is written as a scale of the new frame there, one in pixels as
 /// pixels, and the frame itself scales with its parent on any axis a member
-/// did — so a responsive layout stays responsive once grouped. `UIScale` is
+/// did, so a responsive layout stays responsive once grouped. `UIScale` is
 /// divided back out of a member's size, and `SizeConstraint` decides which
 /// of the frame's axes a size scale is taken against.
 ///
@@ -177,7 +177,7 @@ pub(crate) fn group(members: &[Member], parent: Option<Rect>) -> Option<Grouping
 }
 
 impl Member {
-    /// Which axes it is placed, then sized, by scale — the mode each of its
+    /// Which axes it is placed, then sized, by scale, the mode each of its
     /// values keeps when [`place`] moves it to another parent.
     pub(crate) fn scaled(&self) -> [[bool; 2]; 2] {
         [self.position, self.size].map(|udim| udim.map(|(scale, _)| scale != 0.0))
@@ -185,8 +185,8 @@ impl Member {
 }
 
 /// The `Position` and `Size` that draw `member`'s box where it is inside a
-/// parent whose content box starts at `corner` and is `extent` across —
-/// both in the parent's own frame — each axis a scale of `extent` where
+/// parent whose content box starts at `corner` and is `extent` across,
+/// both in the parent's own frame, each axis a scale of `extent` where
 /// `scaled` says so (position, then size) and pixels elsewhere. `UIScale`
 /// is divided back out of the size, and `SizeConstraint` picks the axis a
 /// size scale is taken against.

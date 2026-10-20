@@ -128,7 +128,7 @@ fn a_texture_shared_by_several_parts_is_written_once() {
 }
 
 /// `Overlay`: the colour map is baked over the part's red where it is clear,
-/// the tint is the base colour factor, and the other maps come as authored —
+/// the tint is the base colour factor, and the other maps come as authored,
 /// metalness and roughness packed for glTF, apart for OBJ.
 #[test]
 fn a_surface_appearance_exports_its_four_maps() {

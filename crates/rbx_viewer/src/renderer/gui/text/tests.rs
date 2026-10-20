@@ -28,7 +28,7 @@ fn plain(face: Face, size: f32) -> GuiText {
 }
 
 /// A typesetter that believes `family` has landed with these
-/// (weight, italic) faces — with no font file at all, which the
+/// (weight, italic) faces, with no font file at all, which the
 /// attributes and metrics a shape asks for never need.
 fn believing(family: &AssetRef, faces: &[(u16, bool)]) -> Typesetter {
     let mut fonts = Typesetter::new();
@@ -81,7 +81,7 @@ fn text_size_is_the_line_box_and_the_em_a_fifth_smaller() {
 }
 
 // A family with a single regular face serves a bold request with that
-// face, as Roblox does, rather than with some bold system font — and
+// face, as Roblox does, rather than with some bold system font, and
 // asks for it dilated once the request reaches SemiBold.
 #[test]
 fn a_weight_the_family_lacks_shapes_in_the_face_that_landed_emboldened() {
@@ -184,8 +184,8 @@ fn a_fake_bold_glyph_is_dilated_by_the_em_fraction() {
     );
 }
 
-// A face file that will not parse — a truncated download, a cloud asset
-// that turned out not to be a font — must not be taken as the family: its
+// A face file that will not parse, a truncated download, a cloud asset
+// that turned out not to be a font, must not be taken as the family: its
 // text keeps shaping in the fallback, and the file is not tried again.
 #[test]
 fn a_face_that_is_not_a_font_is_never_adopted() {

@@ -6,20 +6,20 @@
 
 /// `ClassName -> icon slug`, extracted from the class icon kit's own spec
 /// (`assets/icons/README.md`'s "Tiles" section, which lists each SVG's
-/// filename against the classes it covers) — 329 classes onto 142 of the
+/// filename against the classes it covers), 329 classes onto 142 of the
 /// kit's 152 tiles; a class missing here falls back to a Lucide glyph
 /// (`explorer::icon`), same as a class undocumented in Roblox's own sheet
 /// used to.
 ///
 /// The spec covers what Roblox's own `ExplorerImageIndex` metadata covers,
-/// which is not everything a creator inserts — the insert picker (see
+/// which is not everything a creator inserts, the insert picker (see
 /// `shell::explorer_edit::picker`) lists every browsable class, so classes
 /// the metadata skips show up there with nothing but a Lucide glyph. Those
 /// are mapped here too: to the nearest tile in the kit's own families where
 /// one fits (a `FileMesh` is a mesh, a `KeyframeSequence` is an animation),
-/// and to one of the five tiles authored beyond the sheet's 147 —
+/// and to one of the five tiles authored beyond the sheet's 147,
 /// `style-sheet`, `style-rule`, `style-link`, `intersect-operation`,
-/// `body-colors` — where none did.
+/// `body-colors`: where none did.
 pub(super) const CLASS_ICON_SLUGS: &[(&str, &str)] = &[
     ("Accessory", "accessory"),
     ("AccessoryDescription", "humanoid-description"),

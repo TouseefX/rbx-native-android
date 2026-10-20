@@ -86,7 +86,7 @@ fn colour_channels_may_be_typed_as_zero_to_one() {
     assert_eq!(parsed.keypoints[0].color.g, 0.5);
 }
 
-/// One scale for the field, not one per keypoint — `1` beside a `255` is a
+/// One scale for the field, not one per keypoint, `1` beside a `255` is a
 /// full channel on the 0-255 scale, not a white one on the 0-1 scale.
 #[test]
 fn one_channel_scale_is_picked_for_the_whole_sequence() {
@@ -143,7 +143,7 @@ fn keypoint_times_may_not_go_backwards() {
     assert!(parse_number_sequence("0, 0, 0; 0.7, 1, 0; 0.3, 1, 0; 1, 0, 0").is_err());
 }
 
-/// Two keypoints at one time are a hard step, which Studio allows — see
+/// Two keypoints at one time are a hard step, which Studio allows, see
 /// `rbx_viewer`'s `two_keypoints_at_the_same_time_step`.
 #[test]
 fn two_keypoints_at_the_same_time_are_allowed() {

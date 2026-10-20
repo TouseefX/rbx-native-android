@@ -7,7 +7,7 @@
 //! comes out smaller than the bake. Real case: asset 7339267514 (28 unions in
 //! FindTheCode.rbxl) holds a 0.0186-stud-wide sphere beside a 0.0547-stud
 //! cylinder. As stored, they span 0.0640 studs on X; with the sphere at 0.05
-//! they span 0.07973 — the union's `InitialSize.x` (0.0797348) to five
+//! they span 0.07973, the union's `InitialSize.x` (0.0797348) to five
 //! digits, while Y and Z already matched.
 //!
 //! Which minimum a given asset was baked under is not recorded anywhere, so

@@ -4,12 +4,12 @@
 //! Properties panel, whose `Origin` row reads and writes the same thing.
 //!
 //! A part's pivot is its `CFrame` times its `PivotOffset`. A model's is its
-//! `PrimaryPart`'s when it has one, else its `WorldPivot`, else — a file from
-//! before pivots, which stores none — the centre of its parts' bounds, where
+//! `PrimaryPart`'s when it has one, else its `WorldPivot`, else, a file from
+//! before pivots, which stores none, the centre of its parts' bounds, where
 //! Studio's pivot Reset puts it.
 //!
 //! Moving the pivot itself, with the instance left where it is, is
-//! [`set_pivot`] and [`reset`] — see `edit`.
+//! [`set_pivot`] and [`reset`], see `edit`.
 
 use std::collections::HashSet;
 
@@ -80,8 +80,8 @@ pub fn pivot_to(
     Some(move_to(dom, db, reference, &from, to, &mut HashSet::new()))
 }
 
-/// Carries `reference` — a part, or every part and model under a model,
-/// itself included — by what takes its pivot from `from` to `to`: a part's
+/// Carries `reference`: a part, or every part and model under a model,
+/// itself included, by what takes its pivot from `from` to `to`: a part's
 /// `CFrame` and a model's `WorldPivot`, as Roblox's `PivotTo` transforms
 /// every descendant `PVInstance`. A model that stores no `WorldPivot` (a
 /// file from before pivots) is given its pivot carried, so `GetPivot`
@@ -138,8 +138,8 @@ pub fn move_to(
 }
 
 /// `frame` carried along with a pivot moving from `from` to `to`. Only the
-/// position changing — the panel leaves a rotation it did not change
-/// byte-identical — moves `frame` by the difference alone, so no rotation
+/// position changing, the panel leaves a rotation it did not change
+/// byte-identical, moves `frame` by the difference alone, so no rotation
 /// passes through an inverse and comes back a rounding error off.
 fn carried(frame: &CFrameData, from: &CFrameData, to: &CFrameData) -> CFrameData {
     if from.rotation == to.rotation {
@@ -157,7 +157,7 @@ fn carried(frame: &CFrameData, from: &CFrameData, to: &CFrameData) -> CFrameData
 }
 
 /// The centre of the bounds of every part under `reference`, the box
-/// squared to `rotation` (and facing that way) rather than to the world —
+/// squared to `rotation` (and facing that way) rather than to the world,
 /// `Model:GetBoundingBox` orients a model's box by its pivot.
 fn bounds_centre(
     dom: &WeakDom,

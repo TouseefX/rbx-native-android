@@ -12,7 +12,7 @@ use crate::scene::gui::plan::{Node, Page};
 /// whatever its own `Size` says, and the pages are laid end to end along the
 /// fill direction with `Padding` between them. The still frame is the layout
 /// at rest, so the run is shifted to put `CurrentPage` exactly over the
-/// container and its neighbours just outside — which is what the container's
+/// container and its neighbours just outside, which is what the container's
 /// own `ClipsDescendants` then hides.
 ///
 /// `HorizontalAlignment`/`VerticalAlignment`, inherited from
@@ -25,7 +25,7 @@ pub(super) fn pages(nodes: &[Node], page: &Page, parent: &Rect) -> Vec<Rect> {
     let step = extent[along] + page.padding.0 * extent[along] + page.padding.1;
 
     // "If no page has been explicitly navigated to, it defaults to the first
-    // visible GuiObject sibling in layout order" — slot 0 of the run, since
+    // visible GuiObject sibling in layout order", slot 0 of the run, since
     // `nodes` holds only the visible siblings to begin with.
     let current = order
         .iter()

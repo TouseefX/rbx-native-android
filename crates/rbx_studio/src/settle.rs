@@ -4,8 +4,8 @@
 //! the part on the face under the cursor, so dragging across a scene carries
 //! it up onto a platform and back down again, the way an object dragged
 //! across a tabletop rides over whatever lies on it. Where exactly it lands on
-//! that face — the grid measured from the face's nearest corner, and the
-//! face's own edges and centre lines it aligns with — is Studio's
+//! that face, the grid measured from the face's nearest corner, and the
+//! face's own edges and centre lines it aligns with, is Studio's
 //! `DragHelper`, in `crate::dragger::free`.
 //!
 //! The split across the editor mirrors `workspace_view::gizmo`: the view
@@ -14,8 +14,8 @@
 //! [`settled`]. Everything in between is pure geometry, so it can be tested
 //! without a window or a GPU.
 //!
-//! Every answer is a function of the cursor alone — nothing here feeds the
-//! part's previous position back in — which is what keeps a part from
+//! Every answer is a function of the cursor alone, nothing here feeds the
+//! part's previous position back in, which is what keeps a part from
 //! oscillating between two surfaces when the cursor holds still on the edge
 //! between them.
 
@@ -35,8 +35,8 @@ use crate::dragger::{target, tilt};
 pub(crate) struct Settle {
     /// The ray under the cursor now.
     pub(crate) cursor: Ray,
-    /// Where the dragged point — the point the drag holds the selection by,
-    /// fixed at the press — stood relative to the anchor part's centre then.
+    /// Where the dragged point, the point the drag holds the selection by,
+    /// fixed at the press, stood relative to the anchor part's centre then.
     pub(crate) grabbed: Vec3,
     /// The grid in force for this step (`0.0` for none: snapping off, or
     /// `Shift` held).
@@ -75,8 +75,8 @@ pub(crate) struct Settled {
     pub(crate) grid: f32,
 }
 
-/// Where the parts `held` — each where it stood at the grab, the anchor
-/// first — come to rest for this step, or `None` when the cursor is over
+/// Where the parts `held`: each where it stood at the grab, the anchor
+/// first, come to rest for this step, or `None` when the cursor is over
 /// nothing and no step has landed yet: the caller keeps its own flat-plane
 /// answer for that.
 ///
@@ -128,7 +128,7 @@ pub(crate) fn settled(
     };
     let landing = land(settle.tilt);
     // Turned as the box was, about the dragged point, which lands where the
-    // landing says — or, while a turn eases in, part way from where it
+    // landing says, or, while a turn eases in, part way from where it
     // stood before the turn, as Studio's tween lerps the two.
     let (turn, dragged) = match settle.turning {
         Some((from, eased)) => {

@@ -11,7 +11,7 @@ use super::{PixelRect, Rect};
 /// An `ImageLabel`/`ImageButton`'s `ScaleType`, resolved as far as this layer
 /// can: a `Tile`'s `UDim2` is already turned into a repeat count (in
 /// [`Painted::repeat`]), but `Fit`/`Crop`'s letterbox and crop math need the
-/// source image's own pixel size, which only the renderer's atlas knows — see
+/// source image's own pixel size, which only the renderer's atlas knows, see
 /// `renderer::gui::quads::image`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum ImageScale {

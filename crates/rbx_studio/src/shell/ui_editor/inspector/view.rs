@@ -87,7 +87,7 @@ pub(super) fn words(text: &'static str) -> AnyElement {
         .into_any_element()
 }
 
-/// A caption in a row, muted — what a group of controls is.
+/// A caption in a row, muted, what a group of controls is.
 pub(in crate::shell::ui_editor) fn caption(text: &'static str) -> AnyElement {
     div()
         .flex_none()
@@ -142,7 +142,7 @@ pub(super) fn grid(
 
 impl Shell {
     /// `key`'s field: its label, which a sideways drag scrubs, the value,
-    /// and `suffix` — a unit — after it.
+    /// and `suffix`, a unit, after it.
     pub(super) fn field(
         &mut self,
         key: Key,

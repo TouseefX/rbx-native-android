@@ -280,8 +280,8 @@ impl Embedded {
         self.type_keys(&[Key::Escape])
     }
 
-    /// Types `keys` into the window with XTest — real key events, which
-    /// clients accept where they drop `SendEvent` ones — on the typing
+    /// Types `keys` into the window with XTest, real key events, which
+    /// clients accept where they drop `SendEvent` ones, on the typing
     /// thread (`Typist`), so this returns at once.
     pub fn type_keys(&self, keys: &[Key]) -> Result<(), EmbedError> {
         send(Job::Type {
