@@ -36,7 +36,7 @@ fn placeholder_image() -> Image {
 /// slot: `Some(old)` where slot `old` held the very same asset's real image,
 /// `None` where the group needs a placeholder and a deferred upload of its
 /// own. `still_pending` names the old slots whose real image never got its
-/// turn in [`Textured::upload_pending`] — what they hold is the placeholder,
+/// turn in [`Textured::upload_pending`], what they hold is the placeholder,
 /// not the asset, so they are not worth taking over.
 fn reuse_plan(
     previous: &[AssetRef],
@@ -91,7 +91,7 @@ const DEPTH_BIAS: wgpu::DepthBiasState = wgpu::DepthBiasState {
 };
 
 /// One face instance on the GPU: where the part stands, and how the image is
-/// projected onto it — see `textured.wgsl` for how a fragment turns this into a
+/// projected onto it, see `textured.wgsl` for how a fragment turns this into a
 /// UV, and [`crate::textures::Projection`] for the projection itself.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
@@ -103,7 +103,7 @@ struct DecalRaw {
     uv_transform: [f32; 4],
     tint: [f32; 4],
     /// 1 on a wedge, whose slope belongs to the Front face however its normal
-    /// classifies — the shader has no other way to tell one mesh from another.
+    /// classifies, the shader has no other way to tell one mesh from another.
     wedge: u32,
 }
 
@@ -135,8 +135,8 @@ impl DecalRaw {
     }
 }
 
-/// One pass's batches, keyed by (image slot, shape) — the same key a
-/// [`DecalRaw`] instance is grouped by in [`add_batches`] — with the
+/// One pass's batches, keyed by (image slot, shape), the same key a
+/// [`DecalRaw`] instance is grouped by in [`add_batches`], with the
 /// referent index [`Textured::sync`] moves a single edited instance through.
 type Batches = Keyed<(usize, ShapeKind), (), DecalRaw, ()>;
 
@@ -151,13 +151,13 @@ pub(super) struct Textured {
     image_layout: wgpu::BindGroupLayout,
     images: Vec<wgpu::BindGroup>,
     /// Whether each image (by the same slot as `images`) carries any
-    /// transparent pixels at all — [`Textured::sync`]'s own copy of the test
+    /// transparent pixels at all, [`Textured::sync`]'s own copy of the test
     /// [`Group`]'s own image answered once at load time, so a patched
     /// instance sorts into the same pass a full reload would put it in
     /// without needing the decoded image kept around just to ask again.
     image_alpha: Vec<bool>,
     /// Real images [`Textured::rebuild`] hasn't uploaded to their slot yet,
-    /// each tagged with which one it belongs to — see
+    /// each tagged with which one it belongs to, see
     /// [`Textured::upload_pending`].
     pending: Pending<(usize, Arc<Image>)>,
     /// Which asset each slot's image is, so a scene rebuild can take an
@@ -197,7 +197,7 @@ impl Textured {
 
     /// Replaces every batch with `groups`' face instances, keeping the
     /// pipelines and, wherever a group's asset was already uploaded for the
-    /// previous scene, that upload — slot by slot, so `images[i]` is still
+    /// previous scene, that upload, slot by slot, so `images[i]` is still
     /// `groups[i]`'s image afterwards, whatever slot it sat in before.
     ///
     /// A group whose asset is new (or whose upload was still queued, and so
@@ -272,13 +272,13 @@ impl Textured {
     }
 
     /// Uploads up to `budget` of the real images [`Textured::rebuild`] deferred,
-    /// replacing that slot's placeholder bind group with the real one —
+    /// replacing that slot's placeholder bind group with the real one,
     /// called once per drawn frame (see `Renderer::draw`) with a bounded
     /// budget so a place with many textures spreads their GPU upload cost
     /// across the frames after load instead of paying for all of them before
     /// the first one. Pass [`usize::MAX`] to finish every remaining upload
     /// at once, for a caller with no next frame to spread the rest across
-    /// (the single-shot `--screenshot` path — see `Renderer::finish_loading`).
+    /// (the single-shot `--screenshot` path, see `Renderer::finish_loading`).
     pub(super) fn upload_pending(
         &mut self,
         device: &wgpu::Device,
@@ -305,7 +305,7 @@ impl Textured {
     /// Brings both passes in line with one `Decal`/`Texture` instance: its
     /// projection rewritten in place if its (image, shape) batch is
     /// unchanged, moved to the batch it belongs in now, or added if this
-    /// renderer never drew the instance — a decal just inserted, or one
+    /// renderer never drew the instance, a decal just inserted, or one
     /// whose part just moved into `Workspace`. The image slot is looked up
     /// by `reference`, the asset the face names *now*, so a `Texture`
     /// property pointed at another image the place already uses lands in
@@ -347,7 +347,7 @@ impl Textured {
     }
 
     /// Uploads what the edits since the last frame owe both passes' buffers
-    /// — see `slots::Slots::flush`.
+    /// see `slots::Slots::flush`.
     pub(super) fn flush(&mut self, queue: &wgpu::Queue) {
         self.opaque.flush(queue);
         self.blended.flush(queue);

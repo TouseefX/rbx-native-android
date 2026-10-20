@@ -8,7 +8,7 @@ use glam::{Mat3, Mat4, Vec3};
 /// -aligned box that contains every one of `models`, the oriented boxes its
 /// parts occupy. `None` for an empty selection.
 ///
-/// The centre of the *bounds*, not the mean of the parts' own centres — those
+/// The centre of the *bounds*, not the mean of the parts' own centres, those
 /// differ as soon as the selection is lopsided (three small parts at one end
 /// and one large at the other), and the bounds are what the user sees the
 /// selection occupying. `creator-docs` never states where the gizmo sits for a
@@ -17,8 +17,8 @@ use glam::{Mat3, Mat4, Vec3};
 /// point to the **center** of an object or model's bounding box"
 /// (`studio/pivot-tools.md`).
 ///
-/// One part is the same answer as before — its own bounding box is centred on
-/// it — so this needs no special case for a single selection.
+/// One part is the same answer as before, its own bounding box is centred on
+/// it, so this needs no special case for a single selection.
 pub fn centre_of(models: impl IntoIterator<Item = Mat4>) -> Option<Vec3> {
     bounds_of(models).map(|(min, max)| (min + max) * 0.5)
 }
@@ -38,7 +38,7 @@ pub fn centre_of(models: impl IntoIterator<Item = Mat4>) -> Option<Vec3> {
 /// - A model, or anything else with one `pivot` (rigid, no `Size` in its
 ///   columns), stands on the box round its parts squared to the pivot's own
 ///   axes with `local` on, or to the world's anchored on the pivot with it
-///   off — then grown until it holds the pivot, so a pivot standing outside
+///   off, then grown until it holds the pivot, so a pivot standing outside
 ///   the parts still lies on or inside the box the drag scales.
 /// - Several things with no one pivot stand on the world-aligned box round
 ///   them all. Studio squares that one to the first item's pivot with
@@ -64,7 +64,7 @@ pub fn scale_box(
 }
 
 /// A lone part's own box, or a group's squared to `axes` (a rotation) rather
-/// than to the world's — how `Model:GetBoundingBox` squares a model's box to
+/// than to the world's, how `Model:GetBoundingBox` squares a model's box to
 /// its pivot, and `rbx_lua::pivot::reset` with it. What Edit Pivot's
 /// hotspots stand on, so they turn with the pivot.
 pub fn box_along(models: impl IntoIterator<Item = Mat4>, axes: Mat3) -> Option<Mat4> {
@@ -76,7 +76,7 @@ pub fn box_along(models: impl IntoIterator<Item = Mat4>, axes: Mat3) -> Option<M
 }
 
 /// The box round every one of `models` squared to `axes`, even for just one
-/// — `Model:GetBoundingBox`, which the selection outline of a model is
+/// `Model:GetBoundingBox`, which the selection outline of a model is
 /// ("matches the selection box rendered in Studio when the model is
 /// selected"). `None` for none.
 pub fn bounds_along(models: impl IntoIterator<Item = Mat4>, axes: Mat3) -> Option<Mat4> {

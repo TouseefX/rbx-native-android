@@ -1,8 +1,8 @@
 //! The code card: a script's unified diff (context, added and removed
 //! rows with both line numbers, hunk rows that expand what they hide) or
 //! its whole source (an added or removed script), virtualised with
-//! gpui's variable-height `list()` — code rows are 20, hunk and tail rows
-//! 28 — and cut off at Diff Lines Limit.
+//! gpui's variable-height `list()`: code rows are 20, hunk and tail rows
+//! 28, and cut off at Diff Lines Limit.
 
 use std::collections::HashSet;
 use std::ops::Range;

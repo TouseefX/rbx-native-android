@@ -1,4 +1,4 @@
-//! Recoloring an already-rasterized icon to a `Folder`'s own tag colour —
+//! Recoloring an already-rasterized icon to a `Folder`'s own tag colour,
 //! split out of `class_icons.rs` to keep that file (already bulky with its
 //! 300-class slug table) under `GUIDELINES.md` §6's line budget.
 
@@ -9,7 +9,7 @@ use image::{Frame, RgbaImage};
 
 /// Recolors every non-transparent pixel of an already-rasterized icon to
 /// `color` (0-255 sRGB, the space `properties::EditKind::Color` already
-/// edits in), keeping each pixel's own alpha — so an anti-aliased edge stays
+/// edits in), keeping each pixel's own alpha, so an anti-aliased edge stays
 /// exactly as soft as the original, just a flat tag colour instead of the
 /// tile's own palette. A byte-buffer pass over the existing bitmap rather
 /// than another `resvg` render: the shape (and, cheaply, the file's own
@@ -19,7 +19,7 @@ use image::{Frame, RgbaImage};
 ///
 /// `RenderImage` stores BGRA bytes (see its own doc comment and
 /// `render_image::to_render_image`, which is what produced `image` in the
-/// first place) — this writes that same layout back out, so the result
+/// first place), this writes that same layout back out, so the result
 /// needs no further channel swap.
 pub(crate) fn tint(image: &RenderImage, color: (u8, u8, u8)) -> Option<Arc<RenderImage>> {
     let bytes = image.as_bytes(0)?;
@@ -62,14 +62,14 @@ mod tests {
             .iter()
             .zip(after.as_chunks::<4>().0)
         {
-            // BGRA — see this module's `tint` doc comment.
+            // BGRA, see this module's `tint` doc comment.
             assert_eq!(original[3], tinted[3], "alpha must survive untouched");
             if tinted[3] == 0 {
                 continue;
             }
             assert_eq!(tinted, &[30, 20, 10, tinted[3]]);
         }
-        // The tile does have some opaque pixels — otherwise the assertions
+        // The tile does have some opaque pixels, otherwise the assertions
         // above would vacuously pass without ever exercising the tint.
         assert!(after.as_chunks::<4>().0.iter().any(|pixel| pixel[3] != 0));
     }

@@ -1,6 +1,6 @@
 //! The unit cube as a [`MeshData`], for code that needs a `Part` block as
 //! plain triangles rather than the renderer's own GPU cube
-//! (`renderer::mesh::cube`) — the union CSG carves it.
+//! (`renderer::mesh::cube`), the union CSG carves it.
 
 use glam::Vec3;
 

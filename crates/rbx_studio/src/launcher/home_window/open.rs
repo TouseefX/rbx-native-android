@@ -89,7 +89,7 @@ impl HomeWindow {
         cx.notify();
     }
 
-    /// Opens `path` in the editor and closes Home — deferred a frame, so the
+    /// Opens `path` in the editor and closes Home, deferred a frame, so the
     /// dialog closing paints first and the blocking load doesn't run inside
     /// a click handler.
     pub(super) fn open_path_later(&mut self, path: PathBuf, cx: &mut Context<Self>) {

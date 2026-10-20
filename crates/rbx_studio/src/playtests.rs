@@ -5,7 +5,7 @@
 //! - `recorder`: turns a Play session's `Uplink`s into a [`Recording`].
 //! - `format`: the compact binary file a recording is saved as.
 //! - `store`: one folder per place; list, save, rename, delete.
-//! - `heat`: heat maps across recordings — time spent, deaths, stuck spots.
+//! - `heat`: heat maps across recordings, time spent, deaths, stuck spots.
 //! - `replay`: a recording at a moment, as lines and dots for the viewport.
 
 pub(crate) mod format;

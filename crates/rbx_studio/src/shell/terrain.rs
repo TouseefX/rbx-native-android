@@ -213,7 +213,7 @@ impl Shell {
 
     /// `RBX_STUDIO_TERRAIN=<tool>[,apply]` opens the Terrain Editor on that
     /// tool at startup, and with `apply` presses its main button (Generate,
-    /// Fill, Sea Level's Create, Clear, Import) — a screenshot aid, as
+    /// Fill, Sea Level's Create, Clear, Import), a screenshot aid, as
     /// `RBX_STUDIO_TOOL` is for the transform tools.
     pub(super) fn apply_debug_terrain(&mut self, cx: &mut Context<Self>) {
         let Ok(spec) = std::env::var("RBX_STUDIO_TERRAIN") else {
@@ -460,8 +460,8 @@ impl Shell {
         }
     }
 
-    /// Ends the stroke: written (`write`), or — a press that found nothing
-    /// to aim at — just put back.
+    /// Ends the stroke: written (`write`), or, a press that found nothing
+    /// to aim at, just put back.
     fn finish_stroke(&mut self, write: bool, cx: &mut Context<Self>) {
         let Some(stroke) = self.terrain.stroke.take() else {
             return;
@@ -669,7 +669,7 @@ impl Shell {
     }
 
     /// Re-applies the Transform drag: the chunks the last step changed put
-    /// back as they were, then the region moved to where it now stands —
+    /// back as they were, then the region moved to where it now stands,
     /// work in proportion to the region, not the map.
     fn apply_lift(&mut self, cx: &mut Context<Self>) {
         let placement = self.placement();

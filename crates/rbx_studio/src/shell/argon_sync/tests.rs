@@ -1,5 +1,5 @@
 // `Shell::argon_connect`/`apply_argon_changes`/etc. need a live GPUI
-// `Context<Shell>` this crate has no headless harness for — the same
+// `Context<Shell>` this crate has no headless harness for, the same
 // boundary `shell::history`'s own tests stop at. What's tested here is the
 // pure logic underneath: parsing the dock's address field,
 // `ordered_parent_first`'s dirty-set ordering, and `count_descendants` (a
@@ -134,7 +134,7 @@ fn count_descendants_counts_every_level_not_just_direct_children() {
             snapshot("B", Vec::new()),
         ],
     );
-    // A, A1, B — three descendants, not two (the direct-children count
+    // A, A1, B, three descendants, not two (the direct-children count
     // would undercount a nested folder of scripts).
     assert_eq!(count_descendants(&tree.children), 3);
 }

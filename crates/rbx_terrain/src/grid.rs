@@ -121,7 +121,7 @@ impl Voxels for VoxelGrid {
 
 /// A grid as it stood before an edit in progress: `chunks` holds the
 /// original of every chunk the edit has touched (`None` where there was
-/// none), copied as the edit first reaches it — so an editor can keep
+/// none), copied as the edit first reaches it, so an editor can keep
 /// aiming at, or restore, the old terrain without copying the whole map.
 pub struct Before<'a> {
     pub grid: &'a VoxelGrid,
@@ -287,7 +287,7 @@ impl VoxelGrid {
     }
 
     /// Puts `cells` (`None` for all Air) in place of a chunk, marking dirty
-    /// exactly the chunks whose meshes read a voxel that changed — what a
+    /// exactly the chunks whose meshes read a voxel that changed, what a
     /// renderer holding a copy of a grid needs to follow an editor's edits
     /// one chunk at a time.
     pub fn replace_chunk(&mut self, key: ChunkKey, cells: Option<Box<[Cell]>>) {

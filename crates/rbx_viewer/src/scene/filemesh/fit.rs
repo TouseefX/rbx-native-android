@@ -17,7 +17,7 @@ use crate::scene::cframe_matrix;
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Fit {
     /// `MeshPart`: native geometry is scaled componentwise so its own extent
-    /// matches `size` — `InitialSize` if the file carries it (undocumented but
+    /// matches `size`: `InitialSize` if the file carries it (undocumented but
     /// still round-tripped by Studio), otherwise the mesh's own bounds.
     Part {
         cframe: Mat4,

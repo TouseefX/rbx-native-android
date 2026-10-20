@@ -186,8 +186,8 @@ fn gltf_is_a_valid_two_point_oh_document_with_the_vertices_inline() {
 }
 
 /// A legacy union exports the boolean `scene::union` carved, keyed by its
-/// `AssetId` and placed the way it is drawn — `CFrame`, then the resize
-/// since `InitialSize` — rather than its box.
+/// `AssetId` and placed the way it is drawn, `CFrame`, then the resize
+/// since `InitialSize`: rather than its box.
 #[test]
 fn a_union_exports_its_computed_boolean() {
     let mut dom = WeakDom::new();

@@ -1,7 +1,7 @@
 //! Where everything on a node sits, in canvas units (pixels at 100%).
 //! Computed here rather than read back from the drawn elements, so a wire
 //! can be painted to a pin and a click found on one in the same frame the
-//! node is laid out — and so both are testable.
+//! node is laid out, and so both are testable.
 //!
 //! A node is a header over rows; row `n` holds input `n` on the left and
 //! output `n` on the right. Text widths are estimated from character

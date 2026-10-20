@@ -1,5 +1,5 @@
-//! The selection adornments — `SelectionBox`, `SelectionSphere` and
-//! `SurfaceSelection` — each of which wraps its adornee rather than being
+//! The selection adornments, `SelectionBox`, `SelectionSphere` and
+//! `SurfaceSelection`: each of which wraps its adornee rather than being
 //! placed by a `CFrame` of its own.
 
 use glam::{Mat4, Vec3};
@@ -39,8 +39,8 @@ pub(super) fn pieces(
     }
     if is("SelectionLasso") {
         // A lasso draws a line from a `Humanoid`'s torso to a part or a
-        // point, and both classes that carry that other end —
-        // `SelectionPartLasso` and `SelectionPointLasso` — are deprecated.
+        // point, and both classes that carry that other end,
+        // `SelectionPartLasso` and `SelectionPointLasso`: are deprecated.
         // The base class itself has nothing but the `Humanoid`, so there is
         // no line for one to draw. Recognized rather than left unhandled.
         return Some(Vec::new());
@@ -48,7 +48,7 @@ pub(super) fn pieces(
     if is("ParabolaAdornment") {
         // Every property a parabola has (`A`, `B`, `C`, `Range`,
         // `Thickness`) is tagged `Hidden` in the API dump, and Roblox
-        // publishes no page for the class at all — there is no documented
+        // publishes no page for the class at all, there is no documented
         // curve to draw. Recognized rather than guessed at.
         return Some(Vec::new());
     }
@@ -142,7 +142,7 @@ fn selection_sphere(context: &Context<'_>) -> Vec<Piece> {
     pieces
 }
 
-/// One face of the adornee, highlighted in `Color3` — a slab laid on the
+/// One face of the adornee, highlighted in `Color3`: a slab laid on the
 /// face `TargetSurface` names.
 fn surface_selection(context: &Context<'_>) -> Vec<Piece> {
     let Some(adornee) = context.adornee else {

@@ -4,7 +4,7 @@
 //! The window presents through the swapchain, so its frames are paced by the
 //! display whether they are cheap or not: a loop keeping up measures exactly one
 //! refresh per frame, and one that is not measures two or more. That is enough
-//! to see a level that is too high, and not enough to see headroom — which is
+//! to see a level that is too high, and not enough to see headroom, which is
 //! why the target handed to the manager sits below the refresh rate (see
 //! [`VSYNC_HEADROOM`]) and why, in this window, the level falls but rarely
 //! climbs back. The editor's viewport has no such blind spot: it renders

@@ -2,7 +2,7 @@
 //! the render thread (see `pump::canvas`), and the last frame that came back.
 //!
 //! The canvas is drawn by this view's render thread because that is where
-//! the viewer — and so the GUI renderer — lives; it is shown by `Shell`'s UI
+//! the viewer, and so the GUI renderer, lives; it is shown by `Shell`'s UI
 //! editor, which reads the frame from here and repaints on [`CanvasUpdated`].
 
 use std::sync::Arc;
@@ -22,7 +22,7 @@ impl gpui_kit::EventEmitter<CanvasUpdated> for WorkspaceView {}
 /// element as laid out, in paint order.
 pub(crate) struct Canvas {
     pub(crate) request: Request,
-    /// The size drawn — see `pump::canvas::Drawn::size`.
+    /// The size drawn, see `pump::canvas::Drawn::size`.
     pub(crate) size: (u32, u32),
     pub(crate) image: Arc<RenderImage>,
     pub(crate) boxes: Vec<GuiBox>,

@@ -17,8 +17,8 @@ use crate::assets::Image;
 use crate::scene::{AlphaMode, Appearance, Resolved};
 
 /// What a map kind contributes where the set does not carry it. White at zero
-/// alpha is the colour map's neutral, which under `Overlay` — the mode a set
-/// without a colour map is forced into — leaves the part's own colour untouched.
+/// alpha is the colour map's neutral, which under `Overlay`, the mode a set
+/// without a colour map is forced into, leaves the part's own colour untouched.
 fn neutral(kind: MapKind) -> [u8; 4] {
     match kind {
         MapKind::Color => [255, 255, 255, 0],
@@ -91,7 +91,7 @@ pub(super) fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 pub(super) struct Sets {
     sets: Vec<Set>,
     /// What each entry of `sets` was uploaded from. A resolved appearance is
-    /// its four map assets (only the ones that downloaded — see
+    /// its four map assets (only the ones that downloaded, see
     /// `scene::filemesh::Appearance::resolved`), its tint and its alpha mode,
     /// which is everything [`upload`] reads: an equal one uploads equal maps
     /// and an equal uniform, so a scene rebuild keeps the set (see
@@ -126,7 +126,7 @@ impl Sets {
     /// Re-indexes the sets to `resolved.appearances`' order, uploading only
     /// the appearances the previous scene did not have: a character's limbs
     /// re-resolved after an edit elsewhere in the place still wear the very
-    /// same maps. The bind groups are rebuilt regardless — they are indexed
+    /// same maps. The bind groups are rebuilt regardless, they are indexed
     /// by the new order, and a bind group is cheap next to a map upload.
     pub(super) fn rebuild(
         &mut self,

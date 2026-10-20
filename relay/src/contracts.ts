@@ -106,7 +106,7 @@ export interface Refusal {
 // }
 
 // ---- src/durable.ts ----
-// export class RoomObject implements DurableObject — one per room id. Holds a
+// export class RoomObject implements DurableObject, one per room id. Holds a
 // Room, the open WebSockets (userId per socket) and the pending long-polls.
 // fetch(request): routes by URL pathname suffix after /v1/rooms/<room>:
 //   POST /state, DELETE /state, GET /poll?since=N, GET /ws (upgrade),

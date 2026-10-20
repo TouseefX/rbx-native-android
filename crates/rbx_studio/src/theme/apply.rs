@@ -56,7 +56,7 @@ fn widgets(pack: &ThemePack, overrides: &Overrides, cx: &mut App) {
     Theme::change(mode, None, cx);
     // GPUI Kit only swaps its syntax palette for the one a theme file's
     // `highlight` block defines; a theme without one keeps whichever
-    // palette was there before, whatever its mode — the kit's *light* one
+    // palette was there before, whatever its mode, the kit's *light* one
     // at startup, which put navy keywords on the editor's near black.
     let theme = Theme::global(cx);
     let own = match mode {
@@ -76,7 +76,7 @@ fn widgets(pack: &ThemePack, overrides: &Overrides, cx: &mut App) {
 ///
 /// The theme takes one family name, not a CSS-style stack with fallbacks,
 /// and a name that isn't installed is used as-is rather than falling
-/// through — so the fallback has to happen here, by asking the text system
+/// through, so the fallback has to happen here, by asking the text system
 /// what exists before naming anything.
 fn design_fonts(pack: &ThemePack, cx: &mut App) {
     let wanted = &pack.palette.effects.fonts;

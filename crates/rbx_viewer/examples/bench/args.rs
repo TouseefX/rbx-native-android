@@ -1,5 +1,5 @@
 //! Command line for the benchmark, parsed by hand the way `crate::cli` parses
-//! the viewer's own — one small option set, no argument-parsing dependency
+//! the viewer's own, one small option set, no argument-parsing dependency
 //! pulled in for a developer tool.
 
 use std::path::PathBuf;
@@ -23,7 +23,7 @@ pub(crate) struct Args {
     pub(crate) levels: Vec<u8>,
     /// Downloads (textures, materials, file meshes) on or off. On by default:
     /// with them off a place loads a scene of plain boxes, which is not the
-    /// scene anybody waits for. Worth running both ways — on this machine the
+    /// scene anybody waits for. Worth running both ways, on this machine the
     /// two answers differ by more than a factor of two, and only one of them is
     /// steady enough to regression-test against (see BENCHMARKS.md).
     pub(crate) textures: bool,
@@ -157,7 +157,7 @@ fn levels(text: &str) -> Result<Vec<u8>, String> {
 /// The warmup counts the same way, for a reason of `Headless`'s making rather
 /// than of presentation: `render_frame` hands back the frame *before* the one
 /// it queues, so with nothing warmed up the first measured frame comes back as
-/// `None` and is discarded — a phase that reports zero samples having drawn
+/// `None` and is discarded, a phase that reports zero samples having drawn
 /// every frame it was asked to.
 fn count(flag: &str, text: &str) -> Result<usize, String> {
     let value = number(flag, text)?;

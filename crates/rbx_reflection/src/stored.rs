@@ -12,8 +12,8 @@ use crate::defaults::Rename;
 
 impl ReflectionDatabase {
     /// The value `name` holds on `instance` and the name it is stored under
-    /// — whichever spelling the instance stores it as, `Size` and `size`
-    /// alike — or, where it stores none, the class default and the name
+    /// whichever spelling the instance stores it as, `Size` and `size`
+    /// alike, or, where it stores none, the class default and the name
     /// Roblox saves it under. `None` when there is neither.
     pub fn stored_or_default<'a>(
         &'a self,
@@ -32,28 +32,28 @@ impl ReflectionDatabase {
     }
 
     /// The class default for a property under the name an instance stores
-    /// it as — `size` finds `Size`'s, `archivable` `Archivable`'s.
+    /// it as, `size` finds `Size`'s, `archivable` `Archivable`'s.
     pub fn stored_default(&self, class: &str, key: &str) -> Option<&Variant> {
         self.default_value(class, self.canonical_name(class, key))
     }
 
-    /// Renames every property `dom` holds under another spelling — `Color`,
-    /// `Size`, a lowercase legacy name — to the one Roblox saves it under
+    /// Renames every property `dom` holds under another spelling, `Color`,
+    /// `Size`, a lowercase legacy name, to the one Roblox saves it under
     /// (`Color3uint8`, `size`), which is the one the renderer, the
     /// Properties panel and the save path all read and write. A file that
     /// holds both keeps the saved one: a place carries its order of loading
     /// no further than the parser, so there is no telling which Studio would
     /// have let win.
     ///
-    /// A value is only moved when it fits the saved name's type — the one
+    /// A value is only moved when it fits the saved name's type, the one
     /// conversion is a `Color3` becoming the `Color3uint8` a part's colour
-    /// is saved as — and is otherwise left where it is.
+    /// is saved as, and is otherwise left where it is.
     pub fn normalize_names(&self, dom: &mut WeakDom) {
         self.rename_each(dom, |class| Some(self.renames(class)));
     }
 
     /// [`Self::normalize_names`] for a place whose property names are known
-    /// class by class — a binary one's, which stores each property once per
+    /// class by class, a binary one's, which stores each property once per
     /// class. Only the spellings `names` holds are looked for, and only on
     /// instances of the classes that hold them; for a place with none, the
     /// cost is one check per name rather than a walk of every instance.
@@ -115,8 +115,8 @@ impl ReflectionDatabase {
     }
 }
 
-/// `value` in the shape of `like` — the class default, which rbx-dom records
-/// in the shape a file saves it in — or back unchanged when it cannot be.
+/// `value` in the shape of `like`: the class default, which rbx-dom records
+/// in the shape a file saves it in, or back unchanged when it cannot be.
 fn conform(value: Variant, like: Option<&Variant>) -> Result<Variant, Variant> {
     match (value, like) {
         (Variant::Color3(color), Some(Variant::Color3uint8 { .. })) => {

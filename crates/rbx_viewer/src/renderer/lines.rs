@@ -1,4 +1,4 @@
-//! Plain world-space line segments an editor draws over the scene — Studio's
+//! Plain world-space line segments an editor draws over the scene, Studio's
 //! light guides and dragger guides. Nothing here knows what a segment means:
 //! the embedder works out where each one goes and hands the lot over, the
 //! way `renderer::preview` takes bare boxes.
@@ -7,14 +7,14 @@
 //! with the adornments: Studio's guides are single pixels of flat colour, and
 //! a line that thin drawn into the scene came out multisampled across two
 //! pixels, blended, bloomed and tone mapped into a grey smear. A segment
-//! whose two ends coincide is a dot instead — Studio's
+//! whose two ends coincide is a dot instead, Studio's
 //! `SphereHandleAdornment` markers, which its draggers size to stay constant
 //! on screen. The transform handles are stamped into a stencil first and
 //! every guide kept off them, since Studio draws its handles over its guides.
 //! Filled quads (`Fill`) are drawn first, depth-tested, so every guide sits
 //! on top of the heat-map cells they shade the ground with.
-//! Costs nothing until the first segment arrives — the pipelines are built
-//! then, not before — and draws nothing once the list is cleared again.
+//! Costs nothing until the first segment arrives, the pipelines are built
+//! then, not before, and draws nothing once the list is cleared again.
 
 use bytemuck::{Pod, Zeroable};
 use glam::Vec3;
@@ -39,7 +39,7 @@ pub struct Segment {
     pub width: f32,
 }
 
-/// A flat world-space quad an editor overlay fills — a heat map's cell on
+/// A flat world-space quad an editor overlay fills, a heat map's cell on
 /// the ground. Two triangles, `corners[0..3]` and `corners[0, 2, 3]`;
 /// hidden by whatever stands in front of it, and alpha-blended over the
 /// frame like the lines.
@@ -187,7 +187,7 @@ impl Lines {
 
     /// Draws every layer onto `target`, the frame the resolve just finished:
     /// the depth-tested lines first, then the ones drawn through, then the
-    /// dots over the lines they mark — every layer's lines before any
+    /// dots over the lines they mark, every layer's lines before any
     /// layer's dots, and none of them over `handles`, the transform
     /// handles' triangles this frame (see `renderer::gizmo::Draggers`).
     pub(super) fn draw(
@@ -239,7 +239,7 @@ impl Lines {
                 resource: wgpu::BindingResource::TextureView(scene.depth()),
             }],
         });
-        // The non-sRGB view, so the blend works on encoded values — see
+        // The non-sRGB view, so the blend works on encoded values, see
         // `lines.wgsl`'s `encoded`. The target was created with it among its
         // view formats, the same view `renderer::gui` composites through.
         let view = target.create_view(&wgpu::TextureViewDescriptor {
