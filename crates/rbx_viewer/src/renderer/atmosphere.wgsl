@@ -1,14 +1,14 @@
 // Classic fog and Roblox's `Atmosphere`, split out of lighting.wgsl to keep that
 // file under the 400-line limit (see `renderer::pipeline`, which concatenates
 // this snippet wherever it concatenates lighting.wgsl). Reads the same
-// `LightingUniform` and calls `sky_flat`, both declared there — WGSL compiles
+// `LightingUniform` and calls `sky_flat`, both declared there, WGSL compiles
 // every concatenated snippet as one module, so the split is for readability
 // only and changes nothing about how the shader resolves names.
 
 // Optical depth per stud per unit Density, split across RGB channels
 // (770/1200/1980 stud half-distances in blue/green/red at Density 1) to match
 // Roblox's blue-shifted distance haze. Empirical: Roblox publishes no formula.
-// Quartered from the initial fit across three captures, and still a trade-off —
+// Quartered from the initial fit across three captures, and still a trade-off,
 // a Density 0.2 canyon wants no haze at 200 studs while a Density 0.3 plate
 // wants more at 300, which no linear-in-Density exponential can give both.
 // The scale itself, 0.0013 as tuned, is `lighting.calibration.x`, which the
@@ -23,8 +23,8 @@ const RENDER_DISTANCE_FADE: f32 = 0.2;
 
 /// Colour the haze scatters toward, for a ray travelling `direction`.
 ///
-/// `Decay` is a hue rather than a radiance — Studio's haze away from the sun is
-/// as bright as `Color`, not as dark as `Decay` — so it is normalized to its own
+/// `Decay` is a hue rather than a radiance, Studio's haze away from the sun is
+/// as bright as `Color`, not as dark as `Decay`, so it is normalized to its own
 /// strongest channel before tinting, and fades out over the half of the sky
 /// facing the sun.
 fn haze_color(direction: vec3<f32>) -> vec3<f32> {
@@ -55,8 +55,8 @@ fn distant_color(to_eye: vec3<f32>) -> vec3<f32> {
 /// How much of a surface `studs` away survives the quality level's own render
 /// distance, 1 well inside it and 0 past the end.
 ///
-/// Roblox does not fade anything here — it stops streaming and culls what is too
-/// far to draw — so this is a stand-in for that, chosen to be the honest kind:
+/// Roblox does not fade anything here, it stops streaming and culls what is too
+/// far to draw, so this is a stand-in for that, chosen to be the honest kind:
 /// distant geometry sinks into the sky over the last stretch instead of popping
 /// out of existence at a hard edge.
 fn render_distance_visible(studs: f32) -> f32 {

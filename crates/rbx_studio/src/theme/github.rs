@@ -2,7 +2,7 @@
 //!
 //! The repository's archive is downloaded, the folder holding its
 //! `manifest.json` is unpacked beside the installed themes, and it is loaded
-//! exactly as the editor would load it — manifest, palette, widgets, icons —
+//! exactly as the editor would load it, manifest, palette, widgets, icons,
 //! before it replaces anything. A download that is not a valid theme leaves
 //! the themes folder as it was.
 //!
@@ -174,9 +174,9 @@ fn download(url: &str, progress: &Progress) -> Result<Vec<u8>, String> {
 
 /// Unpacks the theme in `archive` (a zip) into `<themes>/<id>`.
 ///
-/// The theme is the shallowest folder holding a `manifest.json` — a
+/// The theme is the shallowest folder holding a `manifest.json`, a
 /// GitHub archive wraps the repository in a `<repo>-<ref>/` folder, and a
-/// hand-made zip may not — and only that folder is unpacked.
+/// hand-made zip may not, and only that folder is unpacked.
 fn install_archive(themes: &Path, id: &str, archive: &[u8]) -> Result<Manifest, String> {
     let files = unzip(archive)?;
     let root = files

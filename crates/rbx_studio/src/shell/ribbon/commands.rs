@@ -1,5 +1,5 @@
-//! The ribbon's live commands as data — what each is called and what it
-//! does — read by the ribbon to build its tiles and menus, and by the
+//! The ribbon's live commands as data, what each is called and what it
+//! does, read by the ribbon to build its tiles and menus, and by the
 //! command palette to list them, so the two cannot drift apart. How a tile
 //! looks (its icon, its selected state, why it is greyed) stays in the
 //! ribbon; only the name and the effect live here.
@@ -18,12 +18,12 @@ use super::super::Shell;
 /// One insert-menu item.
 ///
 /// `shape` (`Enum.PartType`) is only ever `Some` for the Part menu's Sphere
-/// and Cylinder items — they're the only two of the five whose `class`
+/// and Cylinder items, they're the only two of the five whose `class`
 /// (`Part`) doesn't already say which shape they are. Block shares that same
 /// class but needs no override: `Shell::insert_instance`'s own defaults
 /// already land on `Enum.PartType.Block`. Wedge/CornerWedge disambiguate
 /// through their own class instead and never carry a `Shape` property at
-/// all — see `rbx_viewer::scene::shape::resolve`.
+/// all, see `rbx_viewer::scene::shape::resolve`.
 #[derive(Debug, PartialEq, Eq)]
 pub(in crate::shell) struct Insert {
     pub(in crate::shell) label: &'static str,

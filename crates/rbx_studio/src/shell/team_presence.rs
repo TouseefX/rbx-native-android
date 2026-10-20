@@ -1,7 +1,7 @@
 //! Team presence through the rbx-native presence plugin: collaborators who
 //! run the plugin in real Roblox Studio send where they are (selection,
 //! camera, open script, recent edits) to a relay, and so does this editor.
-//! Official APIs only — nothing here speaks Roblox's Team Create protocol —
+//! Official APIs only, nothing here speaks Roblox's Team Create protocol,
 //! which is also the catch: someone shows up only while they have Studio
 //! open with the plugin running, and the dock says so in plain words.
 //!
@@ -116,7 +116,7 @@ pub(super) struct TeamPresence {
     /// The place we are connected to, for persisting last-seen state.
     place_id: Option<u64>,
     /// The place as this client last saw it, loaded from the last-seen store
-    /// on connect — the "before" that a catch-up diff ("View changes")
+    /// on connect, the "before" that a catch-up diff ("View changes")
     /// compares the freshly loaded place against. `None` when nothing was
     /// stored or it could not be decoded.
     pub(super) before: Option<rbx_dom::WeakDom>,
@@ -765,7 +765,7 @@ impl Shell {
 
     /// Persists the connected place's last-seen timestamp, and its snapshot
     /// when `snapshot` is set. Best effort: a store that cannot be written
-    /// (no config dir, encode failure) is skipped — it only costs a wider
+    /// (no config dir, encode failure) is skipped, it only costs a wider
     /// catch-up next time.
     fn save_last_seen(&mut self, snapshot: bool) {
         let Some(place) = self.team_presence.place_id else {

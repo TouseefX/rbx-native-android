@@ -1,7 +1,7 @@
 //! Summarising a set of timings the way a performance claim has to be read.
 //!
-//! Median and p95, never a mean: one hitch — a driver recompiling a shader, a
-//! compositor taking the card for a frame — moves a mean far enough to hide a
+//! Median and p95, never a mean: one hitch, a driver recompiling a shader, a
+//! compositor taking the card for a frame, moves a mean far enough to hide a
 //! real regression, and the tail is what a user actually experiences as lag.
 
 use std::time::Duration;
@@ -33,7 +33,7 @@ impl Samples {
     /// Whether the run this summarises collected nothing at all.
     ///
     /// Every summary below answers `0.0` for an empty run, which is not a
-    /// timing and must never be printed as one — a report asks this first and
+    /// timing and must never be printed as one, a report asks this first and
     /// says so plainly instead (see `report::stat`).
     pub(crate) fn is_empty(&self) -> bool {
         self.taken.is_empty()

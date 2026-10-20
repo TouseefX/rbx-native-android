@@ -3,8 +3,8 @@
 //! One handler serves both instruction callbacks: `debugbreak`, for an
 //! instruction patched into `LOP_BREAK` on a breakpoint line, and
 //! `debugstep`, for every other instruction while that callback is
-//! installed. It decides two things — whether a breakpoint line is being
-//! passed through anew, and whether a step request is done — and pauses if
+//! installed. It decides two things, whether a breakpoint line is being
+//! passed through anew, and whether a step request is done, and pauses if
 //! either says so.
 //!
 //! **A pass through a breakpoint line.** Luau's `LOP_BREAK` fires on every
@@ -12,7 +12,7 @@
 //! the first of a pass from the rest. So the first `LOP_BREAK` counts, and
 //! the line is then *watched*: its patches are lifted and `debugstep` takes
 //! over until execution leaves it. While watched, a new pass is a new
-//! statement starting on the line — the chunk is compiled with statement
+//! statement starting on the line, the chunk is compiled with statement
 //! coverage, whose per-line counter (`lua_getcoverage`, the busiest of the
 //! line's statements) goes up once each time. That is what makes each
 //! iteration of `for i = 1, 3 do f() end` a pass of its own. The counter's
@@ -313,8 +313,8 @@ impl Session {
         }
     }
 
-    /// Ends every watch execution has left — back at or above the depth that
-    /// entered it, on another line — putting its `LOP_BREAK`s back.
+    /// Ends every watch execution has left, back at or above the depth that
+    /// entered it, on another line, putting its `LOP_BREAK`s back.
     unsafe fn leave_watches(&mut self, state: *mut ffi::lua_State, depth: c_int, line: c_int) {
         self.watches.retain(|watch| {
             let left = depth <= watch.depth && line != watch.line;

@@ -1,7 +1,7 @@
 //! The compressed axis-aligned rotations Roblox's formats share.
 //!
 //! A `CFrame` whose rotation is a multiple of 90 degrees about each axis is
-//! written as one byte instead of nine floats — in the binary format's
+//! written as one byte instead of nine floats, in the binary format's
 //! `CFrame` property and in the attribute blob's `CFrame` alike. The table
 //! lives here, once, because both readers and both writers must agree on it
 //! exactly: a disagreement does not fail, it silently turns a part.

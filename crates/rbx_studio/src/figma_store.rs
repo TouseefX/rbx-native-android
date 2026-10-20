@@ -1,5 +1,5 @@
 //! The Figma sign-in at rest: in the OS credential store next to the Open
-//! Cloud key (see `key_store`), as the tokens' JSON — never a plaintext file.
+//! Cloud key (see `key_store`), as the tokens' JSON, never a plaintext file.
 
 use gpui_kit::AsyncApp;
 use rbx_figma::oauth::Tokens;

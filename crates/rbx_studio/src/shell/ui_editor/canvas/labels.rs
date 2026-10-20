@@ -15,7 +15,7 @@ pub(super) fn distance_label(at: [f32; 2], length: f32) -> AnyElement {
 }
 
 /// The selection's width by height in canvas pixels, centred under the
-/// point `under` — Figma's size pill.
+/// point `under`: Figma's size pill.
 pub(super) fn size_badge(under: [f32; 2], size: [f32; 2]) -> AnyElement {
     // Wide enough for any size a screen can have, and centred on `under`
     // by laying the pill out in the middle of it.

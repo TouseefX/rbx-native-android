@@ -2,14 +2,14 @@
 //! Roblox client for Linux distributed as a Flatpak. Once it has been
 //! launched at least once, it holds a real Roblox Android client APK (a
 //! zip) bundling most of the same `rbxasset://textures/...` files Studio's
-//! own content packages carry — a useful alternative when
+//! own content packages carry, a useful alternative when
 //! `setup.rbxcdn.com` lacks a file or is unreachable.
 //! [`crate::native::NativeContent`] tries this only after its own CDN
 //! attempt has already failed.
 //!
 //! Nothing here touches the network or installs software on its own:
 //! [`Sober::install`] runs `flatpak install`, but only when a caller
-//! explicitly invokes it — see its doc comment.
+//! explicitly invokes it, see its doc comment.
 
 mod apk;
 mod error;
@@ -50,7 +50,7 @@ impl Sober {
 
     /// Whether `org.vinegarhq.Sober` is installed via Flatpak. Any failure
     /// to run `flatpak` (binary missing, non-zero exit, unparsable output)
-    /// is treated as "not installed" — this only ever gates a best-effort
+    /// is treated as "not installed", this only ever gates a best-effort
     /// fallback, so it must never panic or propagate an error.
     pub fn is_installed() -> bool {
         Self::is_installed_via("flatpak")
@@ -88,7 +88,7 @@ impl Sober {
     ///
     /// **No code in this crate calls this automatically.** It exists only
     /// for a caller (an editor UI action, a CLI flag the user explicitly
-    /// passed) that has already obtained the user's explicit consent —
+    /// passed) that has already obtained the user's explicit consent,
     /// mirroring this project's standing rule against invasive system
     /// actions without confirmation. Show [`Sober::install_prompt`] by
     /// default instead.
@@ -154,7 +154,7 @@ mod tests {
     /// Held by every test here that spawns a process.
     ///
     /// Linux refuses to `exec` a file that anybody currently has open for
-    /// writing (`ETXTBSY`), and a `fork` inherits the parent's descriptors —
+    /// writing (`ETXTBSY`), and a `fork` inherits the parent's descriptors,
     /// so a child spawned while another thread is still inside `fs::write`
     /// holds that write descriptor open across its own `exec`. One test below
     /// writes the fake `flatpak` it then runs and another spawns a process of
@@ -169,7 +169,7 @@ mod tests {
     static SPAWN: Mutex<()> = Mutex::new(());
 
     /// A poisoned lock means some other test panicked, which is its own
-    /// failure to report — it must not turn every test that follows into a
+    /// failure to report, it must not turn every test that follows into a
     /// second one.
     fn spawn_lock() -> MutexGuard<'static, ()> {
         SPAWN.lock().unwrap_or_else(PoisonError::into_inner)

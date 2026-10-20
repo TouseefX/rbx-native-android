@@ -1,6 +1,6 @@
 //! What a press, drag, wheel or key on the canvas does. A press is tested
-//! against `graph::layout` in priority order — pin, literal chip, node,
-//! empty canvas — so the small targets win over the node they sit on.
+//! against `graph::layout` in priority order, pin, literal chip, node,
+//! empty canvas, so the small targets win over the node they sit on.
 //!
 //! Blender's and Unreal's habits where they agree: drag from a pin to draw
 //! a wire, drop it on nothing to pick the node it should end on, drag a

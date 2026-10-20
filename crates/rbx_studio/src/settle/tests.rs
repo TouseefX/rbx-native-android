@@ -43,7 +43,7 @@ fn part_of(
 
 /// A ground whose top is y=0, a 4-stud block standing on it spanning x=18..22
 /// and z=-2..2, a 5 × 1 × 5 plate whose corners are off the world's grid,
-/// and a 2-stud crate resting on the ground at the origin — returned as
+/// and a 2-stud crate resting on the ground at the origin, returned as
 /// `(dom, crate)`. The crate is what every test drags.
 fn tabletop() -> (WeakDom, Ref) {
     let mut dom = WeakDom::new();
@@ -243,7 +243,7 @@ fn the_side_of_a_part_is_rested_against_rather_than_on() {
     let cursor = Ray::new(Vec3::new(10.0, 2.0, 0.0), Vec3::X);
     let rested = rest(&dom, dragged, from_above(cursor)).expect("the block's side");
     // Its +X face flush with the block's -X face at x=18, and the grabbed
-    // point — its top, a stud above its centre — level with where the cursor
+    // point, its top, a stud above its centre, level with where the cursor
     // met the wall.
     assert!(
         close(rested, Vec3::new(17.0, 1.0, 0.0)),
@@ -255,7 +255,7 @@ fn the_side_of_a_part_is_rested_against_rather_than_on() {
 fn a_snapped_drag_lands_on_the_grid_of_the_faces_nearest_corner() {
     let (dom, dragged) = tabletop();
     // Over the plate, whose nearest corner to the cursor is (-37.2, 1, 2.7):
-    // 1.7 and 1.8 in from it round to 2 and 2, which is (-39.2, 1, 0.7) —
+    // 1.7 and 1.8 in from it round to 2 and 2, which is (-39.2, 1, 0.7),
     // not the world grid's (-39, 1, 1).
     let mut settle = from_above(down_at(-38.9, 0.9));
     settle.grid = 1.0;
@@ -283,7 +283,7 @@ fn snap_to_parts_pulls_the_crate_flush_with_the_edge_it_is_near() {
 }
 
 /// An 8-wide wedge 2 high and 4 deep at the origin, its slope rising 1 in 2
-/// towards +Z, and a 4 × 1 × 2 plank off to the side — `(dom, plank)`.
+/// towards +Z, and a 4 × 1 × 2 plank off to the side, `(dom, plank)`.
 fn ramp() -> (WeakDom, Ref) {
     let mut dom = WeakDom::new();
     let workspace = dom.new_instance("Workspace", "Workspace", None);

@@ -3,7 +3,7 @@
 //! grabbed. Handle drags show Studio's own label instead (see
 //! `guides::label_element`).
 //!
-//! An rbx-native addition, not a Roblox Studio one — the roadmap item this
+//! An rbx-native addition, not a Roblox Studio one, the roadmap item this
 //! implements says so explicitly. `gizmo.rs`'s own drag math already knows
 //! the distance or growth by the time `WorkspaceView::drag_to` runs; this
 //! module only formats that number and places it on screen, the same split
@@ -11,7 +11,7 @@
 
 use gpui_kit::{px, Pixels, Point, SharedString};
 
-/// Fixed screen offset from the cursor, up and to the right of it — clear of
+/// Fixed screen offset from the cursor, up and to the right of it, clear of
 /// the pointer itself, with no attempt at collision-avoidance against other
 /// UI (see the roadmap item's own "keep this lazy" scope note).
 const OFFSET_X: Pixels = px(16.0);
@@ -25,7 +25,7 @@ pub(super) fn moved(distance: f32) -> SharedString {
 
 /// Where the readout sits: a fixed offset from the cursor, converted from
 /// the window-relative position `MouseMoveEvent` reports into the
-/// panel-relative coordinates `.absolute()` positions a child against — the
+/// panel-relative coordinates `.absolute()` positions a child against, the
 /// same origin subtraction `WorkspaceView::cursor_ray` already does to
 /// unproject a click, kept in logical pixels here instead of device ones
 /// since this places a GPUI element rather than casting a ray.
@@ -57,7 +57,7 @@ mod tests {
     }
 
     // A HiDPI display (scale 2.0) whose panel starts 40 physical pixels in
-    // from the window's own left edge — 20 logical pixels the cursor's
+    // from the window's own left edge, 20 logical pixels the cursor's
     // window-relative position has to be corrected for before the fixed
     // offset is added.
     #[test]

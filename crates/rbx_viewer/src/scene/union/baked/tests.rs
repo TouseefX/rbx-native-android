@@ -1,5 +1,5 @@
-//! `MeshData` blobs built here in the layout the module doc describes — no
-//! Roblox blob is committed (see `agents/AGENTS.md`); the one real check is
+//! `MeshData` blobs built here in the layout the module doc describes, no
+//! Roblox blob is committed (see `CONTRIBUTING.md`); the one real check is
 //! the ignored fixture test at the bottom.
 
 use std::collections::HashMap;

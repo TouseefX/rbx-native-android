@@ -1,10 +1,10 @@
 //! A ray against the unit solids every procedurally shaped part is drawn as,
 //! in the solid's own space: `[-0.5, 0.5]^3` for a box, radius 0.5 for a ball
-//! or a cylinder — the convention [`crate::shapes`] builds each mesh to, so a
+//! or a cylinder, the convention [`crate::shapes`] builds each mesh to, so a
 //! part's model matrix carries the same solid the GPU draws.
 //!
-//! Every solid here is convex, so a ray meets it along one contiguous span —
-//! where it enters and where it leaves — and each solid is the intersection
+//! Every solid here is convex, so a ray meets it along one contiguous span,
+//! where it enters and where it leaves, and each solid is the intersection
 //! of a few simpler spans: three slabs make a box, a slab and a quadratic make
 //! a cylinder, a box and a half-space make a wedge. One clipping loop serves
 //! them all instead of one bespoke test per shape.
@@ -19,7 +19,7 @@ const RADIUS: f32 = 0.5;
 
 // A part scaled to nothing on some axis has a singular model matrix, which
 // cannot be inverted into shape space at all. Rather than let the tests below
-// produce NaNs and non-deterministic hits, such a part simply isn't pickable —
+// produce NaNs and non-deterministic hits, such a part simply isn't pickable,
 // it has no visible surface to click on either.
 const SINGULAR: f32 = 1e-12;
 
@@ -55,7 +55,7 @@ pub(super) fn surface(kind: ShapeKind, model: Mat4, ray: Ray) -> Option<(Vec3, V
 /// answer except when the ray *starts inside* the shape: a part the camera
 /// sits inside is around the camera, not in front of it, so it is ordered by
 /// where the ray *leaves* it rather than by `0`. That puts it after whatever
-/// stands in front, letting `Alt`-cycling — and a plain click — reach a child
+/// stands in front, letting `Alt`-cycling, and a plain click, reach a child
 /// the camera is looking at directly, instead of always landing on the part
 /// the camera happens to be inside first.
 pub(super) fn hit_key(kind: ShapeKind, model: Mat4, ray: Ray) -> Option<f32> {
@@ -81,11 +81,11 @@ fn span_of(kind: ShapeKind, origin: Vec3, direction: Vec3) -> Option<Span> {
         ShapeKind::CylinderY => cylinder(origin, direction, 1),
         // Half the cube under the plane `y = z`: the slope climbs from the
         // front-bottom edge to the back-top one, and the vertical face stands
-        // at +Z — see `shapes::wedge`.
+        // at +Z, see `shapes::wedge`.
         ShapeKind::Wedge => cube(origin, direction)
             .and_then(|span| span.clip(half_space(origin, direction, Vec3::new(0.0, 1.0, -1.0)))),
         // The pyramid over the cube's floor whose apex is the (+X, +Y, -Z)
-        // corner: its two sloped faces are `y = -z` and `y = x` — see
+        // corner: its two sloped faces are `y = -z` and `y = x`, see
         // `shapes::corner_wedge`.
         ShapeKind::CornerWedge => cube(origin, direction)
             .and_then(|span| span.clip(half_space(origin, direction, Vec3::new(0.0, 1.0, 1.0))))
@@ -96,7 +96,7 @@ fn span_of(kind: ShapeKind, origin: Vec3, direction: Vec3) -> Option<Span> {
 /// `ray` moved into the space a unit solid is defined in.
 ///
 /// An affine map carries the ray parameter through unchanged, so a distance
-/// found here is a world one — except that the direction is renormalized, so
+/// found here is a world one, except that the direction is renormalized, so
 /// every test below works on a unit vector however the part is scaled (a
 /// 2048-stud baseplate would otherwise shrink it to where parallel-axis
 /// checks lose their meaning). `per_stud` undoes that on the way out.
@@ -165,8 +165,8 @@ impl Span {
         (span.entry <= span.exit).then_some(span)
     }
 
-    /// The first point of the span at or ahead of the ray's origin — zero
-    /// for an origin already inside — or `None` when the whole span lies
+    /// The first point of the span at or ahead of the ray's origin, zero
+    /// for an origin already inside, or `None` when the whole span lies
     /// behind it.
     fn first_ahead(self) -> Option<f32> {
         let entry = self.entry.max(0.0);

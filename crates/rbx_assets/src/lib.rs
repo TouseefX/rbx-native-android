@@ -2,7 +2,7 @@
 //! files (`rbxassetid://`, `rbxasset://`, legacy `roblox.com` URLs, ...).
 //!
 //! Entry points: [`AssetRef::parse`], [`sniff`], [`AssetCache`] and
-//! [`AssetResolver`]. This crate never talks to the Roblox asset API itself —
+//! [`AssetResolver`]. This crate never talks to the Roblox asset API itself,
 //! [`AssetFetcher`] is the seam a real network client (elsewhere, backed by
 //! `rbx_cloud`) plugs into.
 

@@ -1,5 +1,5 @@
 //! Where My Games comes from: the disk cache first, so the page fills at
-//! once, then Roblox in the background — the personal listing, a group's
+//! once, then Roblox in the background, the personal listing, a group's
 //! games when that group is picked in the owner dropdown, and the icons,
 //! downloading only the ones whose URL changed.
 
@@ -17,7 +17,7 @@ use crate::launcher::cache::{self, GamesCache};
 const ICON_DOWNLOADS: usize = 8;
 
 impl HomeWindow {
-    /// (Re)reads the key and My Games — at open, and after the key was
+    /// (Re)reads the key and My Games, at open, and after the key was
     /// replaced or removed in Roblox publishing.
     pub(super) fn reload(&mut self, cx: &mut Context<Self>) {
         self.recent = home::recent();
@@ -227,7 +227,7 @@ impl HomeWindow {
     }
 
     /// Asks for the current icon URLs of `ids` and downloads only those not
-    /// already cached from the same URL, a few at a time — each batch shows
+    /// already cached from the same URL, a few at a time, each batch shows
     /// and is saved as it lands, so a slow download never holds back the rest
     /// and quitting halfway keeps what arrived.
     fn refresh_icons(&mut self, ids: Vec<u64>, cx: &mut Context<Self>) {
@@ -276,7 +276,7 @@ impl HomeWindow {
     }
 
     /// The games the page shows for the picked owner: the account's own, or
-    /// one group's — its public list plus any of its experiences the key
+    /// one group's, its public list plus any of its experiences the key
     /// reached another way (a restricted scope).
     pub(super) fn owner_games(&self) -> Vec<Experience> {
         let Games::Loaded(listing) = &self.games else {
@@ -309,7 +309,7 @@ impl HomeWindow {
     }
 }
 
-/// Every cached icon, decoded — what the page shows before any network.
+/// Every cached icon, decoded, what the page shows before any network.
 fn cached_icons(ids: &[u64]) -> HashMap<u64, Arc<RenderImage>> {
     let chunk = ids.len().div_ceil(ICON_DOWNLOADS).max(1);
     std::thread::scope(|scope| {

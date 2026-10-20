@@ -60,7 +60,7 @@ fn every_offered_type_can_be_edited_after_it_is_created() {
         assert!(edit_kind(&value).is_some(), "{type_name}");
 
         // Committing a row back unchanged is the weakest edit there is, and
-        // the one every widget makes on a focus loss — so it must not be the
+        // the one every widget makes on a focus loss, so it must not be the
         // one that errors.
         set_attribute_value(&mut dom, &database(), part, "Thing", &text)
             .unwrap_or_else(|err| panic!("{type_name} refused its own text: {err}"));
@@ -122,7 +122,7 @@ fn a_sequence_attribute_is_edited_through_its_keypoint_text() {
 }
 
 /// Roblox's own constructors refuse these, so the panel refusing them is
-/// parity rather than an invention — and the value on the instance is left
+/// parity rather than an invention, and the value on the instance is left
 /// exactly as it was.
 #[test]
 fn an_illegal_sequence_is_refused_without_touching_the_stored_value() {
@@ -384,7 +384,7 @@ fn edit_kind_routes_through_the_same_per_type_mapping_ordinary_properties_use() 
 }
 
 /// A `SharedString` is not a type `Instance:SetAttribute` accepts, so it can
-/// only reach an attribute row by having been written by something else —
+/// only reach an attribute row by having been written by something else,
 /// and it is one of the four this project keeps deliberately read-only
 /// forever (`ROADMAP.md`), so it will not quietly grow an editor and stop
 /// covering this path.
@@ -395,7 +395,7 @@ fn a_type_with_no_properties_panel_editor_falls_back_to_read_only() {
 
 /// Both sequences used to be exactly that case. They are creatable types
 /// now, which means the panel has to hand their value the same editor an
-/// ordinary sequence property gets — the graph, not a text field.
+/// ordinary sequence property gets, the graph, not a text field.
 #[test]
 fn a_sequence_attribute_edits_through_the_graph() {
     use rbx_dom::{NumberSequence, NumberSequenceKeypoint};
@@ -499,7 +499,7 @@ fn the_filter_box_narrows_attributes_by_name() {
     assert!(names("nothing").is_empty());
 }
 
-/// An empty box is not a filter that matches nothing — it is no filter at
+/// An empty box is not a filter that matches nothing, it is no filter at
 /// all, which is what keeps the section visible until something is typed.
 #[test]
 fn an_empty_filter_keeps_every_attribute_and_tag() {

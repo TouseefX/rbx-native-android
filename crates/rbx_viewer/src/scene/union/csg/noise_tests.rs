@@ -104,7 +104,7 @@ fn a_carve_a_float_noise_short_of_a_face_still_closes() {
 #[test]
 fn parts_touching_only_along_an_edge_are_still_closed() {
     // A door frame's jamb and lintel set corner to corner: the edge they
-    // share is non-manifold — four faces meet on it — not a leak.
+    // share is non-manifold, four faces meet on it, not a leak.
     let tree = Node::Operation {
         negate: false,
         children: vec![
@@ -121,7 +121,7 @@ fn parts_touching_only_along_an_edge_are_still_closed() {
 #[test]
 fn a_gap_a_few_ten_thousandths_wide_is_a_sliver_not_a_hole() {
     // In weld cells (1e-4 studs): a cylinder's facet corner landing 6e-4 off
-    // a box's edge leaves this thin loop open — as it did on a real lamp.
+    // a box's edge leaves this thin loop open, as it did on a real lamp.
     let (p1, p2) = ((24999, -5000, -4994), (25000, -5000, -5000));
     let (p3, p4) = ((25000, 5000, -5000), (24999, 5000, -4994));
     assert!(only_slivers(&[(p1, p2), (p2, p3), (p3, p4), (p4, p1)]));

@@ -36,7 +36,7 @@ pub(in crate::renderer) struct Fit {
     /// rather than read off a constant: the map's size is a quality knob, and
     /// the PCF kernel only ever needs the step.
     pub(in crate::renderer) texel_uv: f32,
-    /// The light's own rotation (no translation — the light has no position,
+    /// The light's own rotation (no translation, the light has no position,
     /// only a direction) and the fitted box's light-space footprint, i.e.
     /// exactly what [`Fit::visible`] needs and nothing `view_projection`
     /// alone would hand back without inverting it every caster.
@@ -47,7 +47,7 @@ pub(in crate::renderer) struct Fit {
 }
 
 impl Fit {
-    /// What the uniform carries before anything is fitted — with
+    /// What the uniform carries before anything is fitted, with
     /// `GlobalShadows` off the map is never drawn and never sampled.
     pub(in crate::renderer) fn unfitted() -> Self {
         Fit {
@@ -58,9 +58,9 @@ impl Fit {
             light_view: Mat4::IDENTITY,
             x: 0.0,
             y: 0.0,
-            // Never actually drawn against — `Renderer::sun_shadow` only
+            // Never actually drawn against, `Renderer::sun_shadow` only
             // returns this when there is no shadow pass to cull casters for
-            // this frame — but infinite keeps `visible` honestly total rather
+            // this frame, but infinite keeps `visible` honestly total rather
             // than quietly culling everything if it somehow were.
             half: f32::INFINITY,
         }
@@ -75,7 +75,7 @@ impl Fit {
     /// nothing real can ever fail on that axis alone. Comparing per-axis
     /// against an expanded box rather than the sphere's true distance to the
     /// box is a coarser test (a sphere near a corner can read as overlapping
-    /// when it is just outside) — conservative in the cull's favor, never the
+    /// when it is just outside), conservative in the cull's favor, never the
     /// other way round, which is what a shadow-pass test has to be.
     pub(in crate::renderer) fn visible(&self, center: Vec3, radius: f32) -> bool {
         // A touching sphere must never be culled by rounding alone (in the
@@ -107,7 +107,7 @@ pub(in crate::renderer) fn fit(
         Vec3::Y
     };
     // The light has no position, only a direction, so its view matrix is a pure
-    // rotation about the world origin — which is also what keeps the texel grid
+    // rotation about the world origin, which is also what keeps the texel grid
     // snapping below anchored to the world rather than to the camera.
     let view = look_to_mat4(Vec3::ZERO, -light, up);
     let scene = light_space_extent(&view, bounds);
@@ -153,7 +153,7 @@ pub(in crate::renderer) fn fit(
 ///
 /// A sphere built from the corners' own centroid instead (the obvious thing to
 /// reach for) pays for the pyramid's full diagonal spread even though the far
-/// plane's own four corners already enclose every near-plane one — on a wide
+/// plane's own four corners already enclose every near-plane one, on a wide
 /// field of view that inflates the map's coverage well past the quality
 /// level's own `shadow_distance`, spending texels on empty space beyond the
 /// camera's frustum and coarsening every texel actually in view. This is

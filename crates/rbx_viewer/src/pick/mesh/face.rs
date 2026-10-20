@@ -10,13 +10,13 @@ use super::{nearest, Local, Ray};
 
 /// The flat face of a mesh a ray meets: the outline of the triangles lying
 /// in one plane with the one it hits, reached from it across shared edges, in
-/// world space — keeping only the outline's real edges (see [`CREASE`]). A
+/// world space, keeping only the outline's real edges (see [`CREASE`]). A
 /// curved region, where the outline is all soft edges, has no corners or
 /// sides at all.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlatFace {
     /// Where real sides meet and the outline turns: not every vertex along
-    /// it — a vertex only splitting a straight side is left out — nor the end
+    /// it, a vertex only splitting a straight side is left out, nor the end
     /// of a real side running into a soft one.
     pub corners: Vec<Vec3>,
     /// The outline's real sides: the edges only one of the face's triangles
@@ -33,7 +33,7 @@ const FLAT: f32 = 0.9995;
 /// triangles' normals, for the edge to be a real one to snap onto: 30
 /// degrees. Roblox publishes no such angle; this is this editor's choice. A
 /// box's, wedge's or tetrahedron's edges turn 45–110 degrees, while a
-/// mesh sphere or a character's body turns a few degrees per triangle — a
+/// mesh sphere or a character's body turns a few degrees per triangle, a
 /// sphere would need fewer than 12 segments round to reach it.
 const CREASE: f32 = 0.866;
 

@@ -1,15 +1,15 @@
 //! The Argon review prompt's "Diff" window: the pending batch as a list
 //! of changes on the left (additions with their subtrees, updates,
-//! removals) and the selected change on the right — its properties before
+//! removals) and the selected change on the right, its properties before
 //! and after, a script's source as a unified diff, what an added or
-//! removed container holds — with Accept and Cancel in its footer,
+//! removed container holds, with Accept and Cancel in its footer,
 //! calling the dock's own handlers. Resizable; under 760 px of content
 //! the list gives way to a picker bar over the detail.
 //!
 //! **This window holds no copy of the batch.** It reads
 //! [`Shell::argon_diff_nodes`] off whatever review is pending, keyed on
 //! the review's serial, so Accept or Cancel from the dock is reflected
-//! here at once; what it caches — the tree, and a script's line diff —
+//! here at once; what it caches, the tree, and a script's line diff,
 //! is dropped when the serial changes. Once nothing is pending (the review
 //! resolved, or the debug variable that can seed one, see
 //! [`super::argon_sync::DIFF_VARIABLE`], never ran) there is nothing left
@@ -70,9 +70,9 @@ struct CachedDiff {
 /// Where the window's rows come from.
 pub(crate) enum Provider {
     /// The pending Argon review, read live off the shell and keyed on its
-    /// serial — Accept or Cancel from the dock is reflected at once.
+    /// serial, Accept or Cancel from the dock is reflected at once.
     Argon,
-    /// A fixed two-DOM diff, computed once when the window opens — the
+    /// A fixed two-DOM diff, computed once when the window opens, the
     /// team-presence "View changes" (the last-seen snapshot vs the place as
     /// it is now). It does not track the live DOM: it is a snapshot of what
     /// changed while the user was away.
@@ -258,7 +258,7 @@ impl Render for ArgonDiffWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let nodes = self.nodes(cx);
         if nodes.is_empty() {
-            // Nothing pending any more — a window showing an empty review
+            // Nothing pending any more, a window showing an empty review
             // is worse than no window.
             window.remove_window();
             return div().into_any_element();
