@@ -3,7 +3,7 @@
 Recorded numbers for scene reload and rendering, so a change can be shown to
 have helped instead of asserted to have. Produced by `scripts/bench.sh`
 (`bench.ps1` on Windows), which builds and runs `crates/rbx_viewer/examples/bench`
-— read that example's module doc for why it is a plain harness rather than a
+read that example's module doc for why it is a plain harness rather than a
 criterion benchmark, and for exactly what each number covers.
 
 Not part of `scripts/check.sh` on purpose: this needs a GPU, takes minutes, and
@@ -29,7 +29,7 @@ than print a number nobody should record.
 | | |
 | :--- | :--- |
 | Recorded on | 2026-09-16 |
-| Commit | `bd4308f` (`dev`), plus the harness itself — the JSON records these runs as `"dirty": true` for that reason, and nothing under measurement differed from `bd4308f` |
+| Commit | `bd4308f` (`dev`), plus the harness itself, the JSON records these runs as `"dirty": true` for that reason, and nothing under measurement differed from `bd4308f` |
 | GPU | NVIDIA GeForce RTX 4070, Vulkan, driver 580.173.02 |
 | CPU | AMD Ryzen 7 7800X3D (8C/16T), `powersave` governor |
 | RAM | 30 GB |
@@ -40,7 +40,7 @@ than print a number nobody should record.
 
 Each table below is the median of three consecutive full runs; the rightmost
 column is how far those three run medians spread, as a percentage of their own
-median. Every timing is a median within its run — never a mean, see the `stats`
+median. Every timing is a median within its run, never a mean, see the `stats`
 module for why.
 
 `call` is wall clock around the `Headless` call alone; it returns with the GPU
@@ -54,14 +54,14 @@ The operations, in the order the harness reports them:
 | Operation | What it covers |
 | :--- | :--- |
 | `cold load` | `Headless::load` to the first drawable frame. Its assets are *not* in this: the load asks for them and returns, and they arrive afterwards. |
-| `load complete` | The same load through to the frame after the last asset has landed and been swapped in — the finished picture. |
+| `load complete` | The same load through to the frame after the last asset has landed and been swapped in, the finished picture. |
 | `full reload` | The whole scene re-derived from a DOM already in memory, against a place whose assets are all resident. |
 | `patch instance` | One `BasePart`'s `CFrame` moved, patched in place. |
-| `canvas drag step` | One `GuiObject`'s `Position` in the place's largest `ScreenGui` nudged, patched in place, and — for `readable` — the UI editor's canvas drawn and read back with `Headless::render_gui` at 1920x1080: one step of a canvas drag. Skipped in a place with no `ScreenGui`. |
-| `edit: new mesh` / `new texture` | One `MeshPart` edited to name a `MeshId`/`TextureID` this session has never decoded: what the person typing waits for. Staged with `Headless::forget_asset` and a reload, so the fetch behind it is a disk-cache read rather than a download — see `examples/bench/streaming.rs`. |
+| `canvas drag step` | One `GuiObject`'s `Position` in the place's largest `ScreenGui` nudged, patched in place, and, for `readable`, the UI editor's canvas drawn and read back with `Headless::render_gui` at 1920x1080: one step of a canvas drag. Skipped in a place with no `ScreenGui`. |
+| `edit: new mesh` / `new texture` | One `MeshPart` edited to name a `MeshId`/`TextureID` this session has never decoded: what the person typing waits for. Staged with `Headless::forget_asset` and a reload, so the fetch behind it is a disk-cache read rather than a download, see `examples/bench/streaming.rs`. |
 | `mesh swapped` / `texture swapped` | The same edit through to the frame that actually shows the asset; `call` is the swap-in rebuild alone. |
 
-## Baseline — `--no-textures`
+## Baseline: `--no-textures`
 
 The tracked number. Reproducible to under 7% run to run, so a regression in it
 means something.
@@ -86,10 +86,10 @@ Steady-state frame cost, view held still:
 | marked | Level11 | 0.30 ms | 0.53 ms | 0.16 ms | 0.14 ms |
 | marked | Level21 | 0.41 ms | 0.66 ms | 0.17 ms | 0.24 ms |
 
-## Baseline — with assets (default)
+## Baseline: with assets (default)
 
 What the editor actually does. The honest user-facing figure, and the one the
-target below is about — but see "Why the tracked number has assets off".
+target below is about, but see "Why the tracked number has assets off".
 
 | Fixture | Operation | call med | readable med | readable p95 | run-to-run |
 | :--- | :--- | ---: | ---: | ---: | ---: |
@@ -113,7 +113,7 @@ This reproduces the one-off profile in `CHANGELOG.md` (a `marked.rbxl` reload at
 0.9–1.15 s cold), which is the first evidence that the harness measures what
 that profile measured.
 
-## 2026-09-16 — assets off the render thread
+## 2026-09-16: assets off the render thread
 
 Same machine and settings, on `perf/async-assets`. Assets are resolved on a
 background pool and swapped into the picture as they land, so a cold load's
@@ -149,34 +149,34 @@ a cold load more than halved while the finished picture stayed where it was
 does. There is no `dd04b1e` number for the two edit phases: the harness stages
 them with `Headless::forget_asset`, which does not exist there, and the edit
 itself answers `Ok(false)` and becomes a full reload with a fetch in front of
-it — so ~29 ms plus a decode is the honest comparison, not a measured one.
+it, so ~29 ms plus a decode is the honest comparison, not a measured one.
 
 ## Target
 
 **Full reload of `marked.rbxl` under 0.5 s, first frame readable.**
 
-- With assets: **1.09 s** — 2.2x over.
-- Without assets: **0.40 s** — met.
+- With assets: **1.09 s**: 2.2x over.
+- Without assets: **0.40 s**: met.
 
 The gap between those two is the whole problem, and the three configurations
 above decompose it without touching the code:
 
 | Component | Cost | Measured as |
 | :--- | ---: | :--- |
-| New GPU device and full pipeline rebuild, every reload | ~245 ms | TestPlace reload, no assets — 81 instances, nothing to resolve, so almost none of it is the place |
+| New GPU device and full pipeline rebuild, every reload | ~245 ms | TestPlace reload, no assets, 81 instances, nothing to resolve, so almost none of it is the place |
 | Rebuilding a 16 742-instance scene and uploading it | ~132 ms | marked minus TestPlace, no assets |
 | Re-resolving assets the previous scene already had | ~665 ms | marked with assets minus marked without |
 | GPU work still queued when `reload` returns | ~26–49 ms | `readable` minus `call`, steady to within a few ms everywhere |
 
-`Headless::reload` builds a whole new `Offscreen` — which opens its own wgpu
-instance, adapter and device and rebuilds every pipeline — and re-resolves every
+`Headless::reload` builds a whole new `Offscreen`: which opens its own wgpu
+instance, adapter and device and rebuilds every pipeline, and re-resolves every
 texture, material and file mesh from the on-disk cache, for a scene whose assets
 are already resident. Those two together are roughly 900 ms of the 1.09 s.
 
 ## Edits
 
 `Headless::apply_changes` patches the instances a change log names in place;
-the harness times the edits the editor makes most — one part's `CFrame`
+the harness times the edits the editor makes most, one part's `CFrame`
 (`patch instance`), an insert, a delete, a hundred parts moved in one batch,
 and the undo of each, handed over the way `rbxstudio`'s history hands it: the
 mutation's own log against the restored DOM. Same machine, commit `d168421`
@@ -195,7 +195,7 @@ plus this branch, assets on, medians of 50:
 
 A single-instance edit is one frame, whatever the place's size: its `call` is
 at the resolution floor and its `readable` is the redraw. The batch move is
-not yet flat in the place's size — of its 2.3 ms, the parts themselves are
+not yet flat in the place's size, of its 2.3 ms, the parts themselves are
 under 0.5 ms and the rest is the one `SurfaceGui` among the hundred, whose
 canvas list is re-planned whole (a walk of the place's GUI trees) rather than
 re-placed alone; the same holds for a moved light (the local light list is
@@ -207,7 +207,7 @@ thing to make incremental.
 
 The table above stops at `Headless::apply_changes`. `rbxstudio` also has to
 get the edit *to* its render thread, and until review that was a clone of the
-whole DOM per edit — every mouse move of a drag included. The harness now
+whole DOM per edit, every mouse move of a drag included. The harness now
 times that hand-off as part of the call, the way the editor pays it (see
 `measure::edits`): a snapshot of the instances the log names, brought into
 the render thread's mirror of the DOM (`WeakDom::snapshot`/`mirror`). Same
@@ -226,8 +226,8 @@ row is the same harness with `dom.clone()` in the hand-off's place:
 | marked | move 100 parts | snapshot | 2.87 ms | 3.96 ms | 5.28 ms |
 
 The clone was the cost of the place, ~60 ms on 16 742 instances whatever the
-edit; the snapshot is the cost of the edit — one instance copied for one
-part's move, a hundred for the batch — and the edit rows are back to being
+edit; the snapshot is the cost of the edit, one instance copied for one
+part's move, a hundred for the batch, and the edit rows are back to being
 one redraw. The half-millisecond the batch move's `call` gained over the
 table above is those hundred copies.
 
@@ -244,7 +244,7 @@ asset `394314025`, whose boolean *succeeds*, so each draws as one computed mesh
 and patches through the ordinary mesh-instance path. `FindTheCode.rbxl` (7 167
 instances, 4 946 parts, 148 legacy unions of which 40 are drawn as 208 recovered
 pieces) is the fixture that has them, and the harness skips the phases on a
-place that does not — a skipped row says so rather than timing something else.
+place that does not, a skipped row says so rather than timing something else.
 
 Same machine, assets on, 1280x720, the union's own `CFrame` and `Color3uint8`
 written and put back the way `rbxstudio`'s history hands an undo. "before" is
@@ -256,19 +256,19 @@ medians of 50.
 | :--- | :--- | ---: | ---: | ---: |
 | FindTheCode | full reload | 30.51 ms | 33.98 ms | 49.63 ms |
 | FindTheCode | patch instance | 0.41 ms | 2.20 ms | 3.68 ms |
-| **FindTheCode** | **move union — before** | **22.25 ms** | **24.62 ms** | **30.13 ms** |
-| **FindTheCode** | **move union — after** | **0.42 ms** | **2.12 ms** | **3.63 ms** |
-| FindTheCode | undo move union — before | 21.89 ms | 23.78 ms | 29.45 ms |
-| FindTheCode | undo move union — after | 0.41 ms | 2.15 ms | 3.88 ms |
-| **FindTheCode** | **recolour union — before** | **23.33 ms** | **25.23 ms** | **29.95 ms** |
-| **FindTheCode** | **recolour union — after** | **0.41 ms** | **2.06 ms** | **3.62 ms** |
-| FindTheCode | undo recolour — before | 23.50 ms | 25.84 ms | 33.14 ms |
-| FindTheCode | undo recolour — after | 0.40 ms | 2.03 ms | 3.15 ms |
+| **FindTheCode** | **move union, before** | **22.25 ms** | **24.62 ms** | **30.13 ms** |
+| **FindTheCode** | **move union, after** | **0.42 ms** | **2.12 ms** | **3.63 ms** |
+| FindTheCode | undo move union, before | 21.89 ms | 23.78 ms | 29.45 ms |
+| FindTheCode | undo move union, after | 0.41 ms | 2.15 ms | 3.88 ms |
+| **FindTheCode** | **recolour union, before** | **23.33 ms** | **25.23 ms** | **29.95 ms** |
+| **FindTheCode** | **recolour union, after** | **0.41 ms** | **2.06 ms** | **3.62 ms** |
+| FindTheCode | undo recolour, before | 23.50 ms | 25.84 ms | 33.14 ms |
+| FindTheCode | undo recolour, after | 0.40 ms | 2.03 ms | 3.15 ms |
 
 Every union row lands on that fixture's own `patch instance` row and stays
 there: the edit costs the tree walk that re-places half a dozen pieces plus the
 redraw, not a re-walk of the place. What it does *not* show is two place sizes,
-because only one fixture in the set has a union drawn as its pieces at all —
+because only one fixture in the set has a union drawn as its pieces at all,
 the claim of flatness rests on the union rows tracking `patch instance`, which
 is measured flat from 81 to 16 742 instances in the tables above.
 
@@ -296,14 +296,14 @@ readable, for the same reason.
 The patch was never the cost: drawing the canvas was, and nearly all of that
 was text. Every edit lays the screen out again, and every `TextScaled`
 label binary-searches its size by shaping its whole string at each step of
-the search, then shapes it once more to draw it — 17–32 ms of the 25 ms draw.
+the search, then shapes it once more to draw it, 17–32 ms of the 25 ms draw.
 The typesetter now keeps what it measured and what it shaped, keyed on
 everything that decides each (`renderer::gui::text`), so a layout after an
 edit re-shapes only the text that changed. Reading the 1920x1080 canvas back
 costs about 0.8 ms of what is left.
 
 Re-planning only the tree an edit touched (`headless::changes::pending`) does
-not show here — this fixture has the one screen — but in a place with more
+not show here, this fixture has the one screen, but in a place with more
 than one it takes a drag step's patch from re-planning every screen to
 re-planning one.
 
@@ -312,15 +312,15 @@ re-planning one.
 With assets on, the reload timing is not unimodal. On `marked.rbxl` it settles
 into roughly 790–915 ms or roughly 1040–1130 ms and moves between the two within
 a single process; a 40-sample run split 16/24 between them. Raising the sample
-count from 15 to 25 did not fix it — more samples describe a two-humped
-distribution better, they do not make its median stable — and neither did
+count from 15 to 25 did not fix it, more samples describe a two-humped
+distribution better, they do not make its median stable, and neither did
 pinning to physical cores only (`taskset -c 0-7`) or sending the renderer's
 progress output to a file instead of `/dev/null`. The run-to-run spread stayed
 at 15% on `marked` and 30% on `TestPlace`.
 
 Turning assets off removes the variance entirely (6.6% and 6.9%), which locates
-it: it is in the asset-resolution path — a scoped thread pool spawned per call,
-re-reading and re-decoding a 271 MB on-disk cache — not in the scene rebuild,
+it: it is in the asset-resolution path, a scoped thread pool spawned per call,
+re-reading and re-decoding a 271 MB on-disk cache, not in the scene rebuild,
 not in the GPU upload, and not in the harness. So the assets-off run is what a
 before/after comparison should be made on, and the assets-on run is what the
 0.5 s target should be judged on. Record both.

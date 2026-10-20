@@ -1,7 +1,7 @@
-//! `GET /v1/package-search` — plain JSON, no auth. The one HTTP call this
+//! `GET /v1/package-search`: plain JSON, no auth. The one HTTP call this
 //! module makes twice for two different jobs: a free-text search for the
 //! dock's dropdown, and (filtered client-side to an exact `scope`/`name`)
-//! the resolver's only way to enumerate one package's published versions —
+//! the resolver's only way to enumerate one package's published versions,
 //! see this crate's module doc comment for why that's enough to skip a
 //! git-cloned registry index.
 
@@ -27,7 +27,7 @@ pub(crate) fn search(query: &str) -> Result<Vec<SearchResult>, String> {
         .map_err(|err| err.to_string())
 }
 
-/// Every published version of one exact `scope/name`, sorted ascending —
+/// Every published version of one exact `scope/name`, sorted ascending,
 /// the resolver's own version-discovery step, standing in for a real
 /// registry index clone (see the module-level doc comment on why this is
 /// close enough for this client, not full parity).
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn versions_from_results_sorts_by_real_semver_not_string_order() {
-        // String order would put "0.10.0" before "0.9.0" — real version
+        // String order would put "0.10.0" before "0.9.0", real version
         // order must not.
         let results = vec![result("scope", "pkg", &["0.10.0", "0.9.0", "0.2.0"])];
         let versions = versions_from_results(results, "scope", "pkg");

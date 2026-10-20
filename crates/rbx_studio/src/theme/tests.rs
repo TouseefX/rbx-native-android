@@ -464,8 +464,8 @@ const TEXT: [&str; 6] = [
 /// The colours drawn as text or glyphs besides the text ramp.
 const SIGNALS: [&str; 4] = ["check_on", "warning", "text_error", "diff_add"];
 
-/// WCAG 1.4.6 (AAA): 7:1 for body text — secondary labels included, as
-/// they are body-sized here — and 4.5:1 for the rest: placeholders, the
+/// WCAG 1.4.6 (AAA): 7:1 for body text, secondary labels included, as
+/// they are body-sized here, and 4.5:1 for the rest: placeholders, the
 /// accent as text, the status colours.
 #[test]
 fn high_contrast_clears_aaa() {

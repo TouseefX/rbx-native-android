@@ -1,7 +1,7 @@
 //! `game`: the DOM's root level seen as a pseudo-`DataModel`.
 //!
-//! A place file has no serialized `DataModel` instance — its services sit at the
-//! root of the DOM — so `game` is its own userdata whose children are
+//! A place file has no serialized `DataModel` instance, its services sit at the
+//! root of the DOM, so `game` is its own userdata whose children are
 //! `WeakDom::root_refs`.
 
 use mlua::{IntoLua, MetaMethod, UserData, UserDataFields, UserDataMethods, Value};

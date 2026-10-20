@@ -26,11 +26,11 @@ struct LocalLight {
 @group(0) @binding(6) var<storage, read> local_lights: array<LocalLight>;
 
 // One local light's own shadow map, if `renderer::shadow::local::select` chose
-// it this frame — a `LocalLight` and its `LightShadow` share an index, the way
+// it this frame, a `LocalLight` and its `LightShadow` share an index, the way
 // `local_lights` and `light_shadows` share a length.
 struct LightShadow {
     // World space to this light's own clip space. A `PointLight` has six of
-    // these instead, in `point_faces` — this one is then unused.
+    // these instead, in `point_faces`: this one is then unused.
     view_projection: mat4x4<f32>,
     // x: which layer of `local_shadow_map` holds this cone light's map,
     // negative when it casts none this frame (not selected, or
@@ -43,13 +43,13 @@ struct LightShadow {
 
 // One array, sized to the quality level's own cap rather than to the place's
 // light count (see `QualityProfile::local_shadow_lights_max`); read through
-// `shadow_sampler` above — a `sampler` is not tied to any one texture, so the
+// `shadow_sampler` above, a `sampler` is not tied to any one texture, so the
 // sun's own comparison sampler serves this array too.
 @group(0) @binding(7) var local_shadow_map: texture_depth_2d_array;
 @group(0) @binding(8) var<storage, read> light_shadows: array<LightShadow>;
 
 // The `PointLight` cubes: six layers per cube, and the matrix each layer was
-// drawn with — see `renderer::shadow::point`, which explains why these are
+// drawn with, see `renderer::shadow::point`, which explains why these are
 // six perspectives rather than a cube map.
 @group(0) @binding(9) var point_shadow_map: texture_depth_2d_array;
 @group(0) @binding(10) var<storage, read> point_faces: array<mat4x4<f32>>;
@@ -62,7 +62,7 @@ const POINT_SHADOW_TEXEL: f32 = 1.0 / 512.0;
 // without the sun map's wider (and costlier) kernel, which a light this close
 // to what it lights does not need.
 const LOCAL_PCF_HALF: i32 = 1;
-// Reciprocal of `renderer::shadow::LOCAL_SIZE`, which — unlike the sun's map —
+// Reciprocal of `renderer::shadow::LOCAL_SIZE`, which, unlike the sun's map,
 // is not a quality knob: the light count the level allows a map at all is (see
 // `local_shadow_lights_max`), so one fixed size covers every level.
 const LOCAL_SHADOW_TEXEL: f32 = 1.0 / 1024.0;
@@ -71,7 +71,7 @@ const LOCAL_SHADOW_TEXEL: f32 = 1.0 / 1024.0;
 const LOCAL_DEPTH_BIAS: f32 = 0.0015;
 
 /// Which of a cube's six faces a direction out of the light belongs to: the
-/// major axis, negative side second — the order `renderer::shadow::point`'s
+/// major axis, negative side second, the order `renderer::shadow::point`'s
 /// own `AXES` builds the matrices in.
 fn point_shadow_face(direction: vec3<f32>) -> i32 {
     let absolute = abs(direction);
@@ -140,7 +140,7 @@ fn local_light_visibility(world_position: vec3<f32>, facing: f32, index: u32) ->
 }
 
 /// The surface one light is being evaluated against: what `Surface` in
-/// lighting.wgsl carries that a light needs, and nothing else — this snippet
+/// lighting.wgsl carries that a light needs, and nothing else, this snippet
 /// comes first, so `Surface` itself is not declared yet.
 struct Receiver {
     position: vec3<f32>,
@@ -164,7 +164,7 @@ struct LocalTerms {
 /// reads from the outside. A `SurfaceLight` "emits from the entire surface":
 /// every point of its face shines the cone, which comes to measuring the
 /// distance and the angle from the face's nearest point rather than from its
-/// centre — the frustum its guide draws. A point source has no face, so that
+/// centre, the frustum its guide draws. A point source has no face, so that
 /// nearest point is the light's own position and this is the plain cone.
 fn local_terms(receiver: Receiver, count: u32) -> LocalTerms {
     var terms: LocalTerms;

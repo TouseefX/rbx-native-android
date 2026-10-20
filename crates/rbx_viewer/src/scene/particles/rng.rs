@@ -29,7 +29,7 @@ impl Rng {
     }
 
     /// Uniform float in `[min, max]`, or `min` itself when the range is empty or
-    /// inverted — a place file can set either.
+    /// inverted, a place file can set either.
     pub(crate) fn range(&mut self, min: f32, max: f32) -> f32 {
         if max <= min {
             min

@@ -297,7 +297,7 @@ fn quantize(color: Rgba) -> Rgba {
     Rgba { r, g, b, a: 1. }
 }
 
-/// Hue (0..1), lightness, saturation — Python's `colorsys.rgb_to_hls`.
+/// Hue (0..1), lightness, saturation, Python's `colorsys.rgb_to_hls`.
 pub(crate) fn hls(color: Rgba) -> (f32, f32, f32) {
     let (r, g, b) = (color.r, color.g, color.b);
     let (max, min) = (r.max(g).max(b), r.min(g).min(b));

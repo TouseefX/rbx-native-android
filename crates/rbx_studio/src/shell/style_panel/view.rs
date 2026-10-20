@@ -69,7 +69,7 @@ impl Shell {
     }
 
     /// What the tab shows before the place has a sheet: what one is for,
-    /// and the button that makes one — here instead of in a toolbar.
+    /// and the button that makes one, here instead of in a toolbar.
     pub(super) fn style_empty(&mut self, cx: &mut Context<Self>) -> AnyElement {
         v_flex()
             .size_full()
@@ -148,7 +148,7 @@ impl Shell {
     }
 
     /// One line of the list. A mouse-down selects its instance the way an
-    /// Explorer click does, so the Properties panel follows — which is
+    /// Explorer click does, so the Properties panel follows, which is
     /// where a rule's `Name` and anything else this tab omits is edited.
     pub(super) fn style_line(
         &self,
@@ -208,7 +208,7 @@ impl Shell {
     }
 
     /// A sheet's header: its name, where it lives, and the two things
-    /// Studio's editor offers on a sheet (`ui/styling/editor.md`) — a new
+    /// Studio's editor offers on a sheet (`ui/styling/editor.md`), a new
     /// rule, and a `StyleLink` onto the selected `ScreenGui`. The link stays
     /// visible but disabled until there is one to link to.
     #[allow(clippy::too_many_arguments)]
@@ -332,7 +332,7 @@ impl Shell {
     }
 
     /// A derive is the sheet it names and the priority that orders it, both
-    /// edited in the Properties panel — the line only says what it pulls in.
+    /// edited in the Properties panel, the line only says what it pulls in.
     pub(super) fn derive_line(
         &self,
         derive: Ref,

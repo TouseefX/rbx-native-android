@@ -176,7 +176,7 @@ fn neither_end_can_be_deleted_and_neither_can_the_last_pair() {
 }
 
 /// The ceiling is what a drag clamps against, so it has to cover the
-/// envelope band too — otherwise the top of a band is unreachable.
+/// envelope band too, otherwise the top of a band is unreachable.
 #[test]
 fn the_value_axis_fits_the_stops_and_their_envelopes() {
     // Never under 1, so a transparency curve is not squashed flat, and
@@ -337,7 +337,7 @@ fn a_colour_stop_offers_no_envelope_handle() {
 }
 
 /// A marker under a ramp has no height to aim at, so a grab has to be
-/// decided on time alone — otherwise a click halfway up the ramp misses
+/// decided on time alone, otherwise a click halfway up the ramp misses
 /// every stop and silently adds one instead.
 #[test]
 fn a_colour_stop_is_grabbed_by_time_alone() {

@@ -1,6 +1,6 @@
 //! Which rows an instance gets: every property Studio's own panel lists for
-//! its class, holding the value the file stored — under whichever name it
-//! was saved as — or else the class default, the way Studio fills in
+//! its class, holding the value the file stored, under whichever name it
+//! was saved as, or else the class default, the way Studio fills in
 //! whatever a file leaves out when it creates the instance.
 //!
 //! What to list is worked out once per class (a [`Sheet`]) and kept, since
@@ -13,12 +13,12 @@
 //!   which Studio edits through its own Position/Orientation UI instead.
 //! - `Deprecated` is out. Every deprecated member the dump does not already
 //!   hide is either an old spelling of a property listed under its current
-//!   name (`className`, `Fire.size`, `BodyGyro.maxTorque`) — listing it would
-//!   show one value twice — or, per its own `deprecation_message` in
+//!   name (`className`, `Fire.size`, `BodyGyro.maxTorque`), listing it would
+//!   show one value twice, or, per its own `deprecation_message` in
 //!   creator-docs, superseded or inert (`Sound.Pitch` for `PlaybackSpeed`,
 //!   `FormFactorPart.FormFactor`, which "no longer does anything").
 //! - Security and `NotScriptable` keep nothing out: creator-docs describes
-//!   `Lighting.Technology` — `NotScriptable`, `RobloxScriptSecurity` — as
+//!   `Lighting.Technology`, `NotScriptable`, `RobloxScriptSecurity`, as
 //!   "only modifiable in Studio", which is to say in this panel.
 //!
 //! A property with neither a stored value nor a recorded default is left
@@ -79,7 +79,7 @@ pub(super) struct Sheet {
     /// Where each entry sits in `entries`, by name.
     index: HashMap<String, usize>,
     /// Every stored name some reflected property of the class answers to,
-    /// listed or not — what keeps a hidden property, or a second spelling of
+    /// listed or not, what keeps a hidden property, or a second spelling of
     /// a listed one, out of the "Other" section.
     claimed: HashSet<String>,
 }
@@ -215,8 +215,8 @@ impl Properties {
             })
             .collect();
 
-        // What the dump has never heard of — a newer engine's property, say
-        // — still shows, under its canonical name, so an edit can reach it.
+        // What the dump has never heard of, a newer engine's property, say
+        // still shows, under its canonical name, so an edit can reach it.
         let mut unreflected = HashSet::new();
         for key in instance.properties().keys() {
             if sheet.claimed.contains(key)
@@ -286,7 +286,7 @@ impl Properties {
         ))
     }
 
-    /// What `name` holds on `instance`, stored or defaulted — through the
+    /// What `name` holds on `instance`, stored or defaulted, through the
     /// class's sheet, which already knows its names, rather than asking the
     /// database to walk the class hierarchy for them again. `computed`
     /// reads a dozen of these per part on every frame the panel draws.

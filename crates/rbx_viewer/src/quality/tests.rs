@@ -148,7 +148,7 @@ fn the_shadow_distance_steps_at_nine_and_at_sixteen() {
 }
 
 // Neon's glow is the tell for the bloom, and the community's reading puts it at
-// level 5 — the same level shadows arrive at.
+// level 5, the same level shadows arrive at.
 #[test]
 fn the_bloom_arrives_at_five_and_the_grade_at_three() {
     assert!(!QualityLevel::Level(4).profile().bloom);
@@ -207,7 +207,7 @@ fn texture_detail_climbs_in_two_steps_and_anisotropy_in_two_more() {
 
 // Reflections are the community's marker for level 8 (glass and water "below 8"
 // being the same boundary), and the view distance only stops being a limit at the
-// top band — which is what keeps a reference capture identical.
+// top band, which is what keeps a reference capture identical.
 #[test]
 fn reflections_start_at_eight_and_the_view_distance_ends_unlimited() {
     let profile = |level| QualityLevel::Level(level).profile();
@@ -237,7 +237,7 @@ fn decals_survive_every_level() {
 }
 
 // `renderer::texture` uploads to `table::MAX_TEXTURE_SIZE` and relies on no
-// band ever viewing past it — a band that did would be silently cropped.
+// band ever viewing past it, a band that did would be silently cropped.
 #[test]
 fn no_band_asks_to_view_past_the_upload_cap() {
     assert!(profiles()

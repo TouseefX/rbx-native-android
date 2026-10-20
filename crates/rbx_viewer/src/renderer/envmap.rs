@@ -4,7 +4,7 @@
 //!
 //! The mip chain is the prefilter the specular terms read: the rougher the
 //! surface, the smaller the level. The diffuse term does not sample the cube at
-//! all — it reads the six irradiance values `irradiance` integrates here, since
+//! all, it reads the six irradiance values `irradiance` integrates here, since
 //! no single texel of a sky is what an upward face is actually lit by.
 
 mod irradiance;
@@ -20,7 +20,7 @@ const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const CHANNELS: usize = 4;
 pub(super) const FACES: usize = irradiance::FACES;
 /// Face size the diffuse integral is taken at. The irradiance of a sky is a
-/// very low frequency signal — sixteen texels a side already agree with the
+/// very low frequency signal, sixteen texels a side already agree with the
 /// full-size integral to well under one sRGB step, at a 4096th of the cost.
 const IRRADIANCE_FACE_SIZE: u32 = 16;
 /// Mid grey, in the sRGB bytes the texture stores: what a scene with no `Sky`
@@ -162,7 +162,7 @@ impl EnvMap {
     }
 }
 
-/// The cube view a cap of `max_size` asks for, and the top mip level left in it —
+/// The cube view a cap of `max_size` asks for, and the top mip level left in it,
 /// which is the number the specular terms stretch Roblox's roughness curve over.
 fn viewed(cube: &wgpu::Texture, size: u32, levels: u32, max_size: u32) -> (wgpu::TextureView, f32) {
     let base = texture::skipped(size, levels, max_size);
@@ -317,7 +317,7 @@ mod tests {
         assert_eq!(sky_key(None), None);
     }
 
-    // A `Sky` edit that swaps one panel — or removes the sky outright — has
+    // A `Sky` edit that swaps one panel, or removes the sky outright, has
     // to invalidate: a stale probe would reflect a sky no longer drawn.
     #[test]
     fn a_changed_or_removed_panel_is_a_different_sky() {

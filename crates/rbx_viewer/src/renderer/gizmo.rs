@@ -1,7 +1,7 @@
 //! The transform gizmo, drawn as solid geometry over the scene.
 //!
 //! One unlit, vertex-coloured triangle pipeline and the small vertex buffer
-//! [`mesh`] rewrites each frame — never occluded, because a handle is a
+//! [`mesh`] rewrites each frame, never occluded, because a handle is a
 //! control rather than scenery.
 
 use glam::Vec3;
@@ -40,7 +40,7 @@ impl Draggers {
                 // Never occluded: a handle is a control, not scenery, and one
                 // buried inside the part it moves would be impossible to
                 // grab. `translucent` here is only borrowed for its second
-                // effect — leaving the depth buffer alone, which the
+                // effect, leaving the depth buffer alone, which the
                 // depth-of-field and fog passes downstream still read as the
                 // real scene's.
                 compare: wgpu::CompareFunction::Always,
@@ -89,7 +89,7 @@ impl Draggers {
         queue.write_buffer(&self.vertices, 0, bytemuck::cast_slice(&vertices));
     }
 
-    /// This frame's handle triangles, `None` with none drawn — what the
+    /// This frame's handle triangles, `None` with none drawn, what the
     /// line pass keeps its guides off (see `renderer::lines`).
     pub(super) fn triangles(&self) -> Option<(&wgpu::Buffer, u32)> {
         (self.count > 0).then_some((&self.vertices, self.count))

@@ -1,7 +1,7 @@
 //! `Origin`: the row Studio's Properties window shows for where an instance's
 //! pivot stands in the world, "the object based on its pivot point rather
-//! than its bounding box" (`studio/pivot-tools.md`) — `PVInstance:GetPivot`
-//! — and typing into it moves the instance there, as `PivotTo` does. The
+//! than its bounding box" (`studio/pivot-tools.md`), `PVInstance:GetPivot`
+//! and typing into it moves the instance there, as `PivotTo` does. The
 //! pivot itself is `rbx_lua::pivot`'s, the same one Luau's `GetPivot` and
 //! `PivotTo` use.
 

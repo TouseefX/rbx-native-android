@@ -158,7 +158,7 @@ fn the_rotation_rings_are_wound_outwards() {
 }
 
 /// A ball is a closed surface, so the same divergence-theorem check that
-/// catches an inside-out arrow catches an inside-out one of these — but only
+/// catches an inside-out arrow catches an inside-out one of these, but only
 /// about its own centre, which is why it is built at the origin here.
 #[test]
 fn a_scale_ball_is_wound_outwards() {
@@ -176,7 +176,7 @@ fn a_scale_ball_is_wound_outwards() {
 }
 
 /// Every vertex of a ball stands its radius off the face it is centred on, in
-/// every direction — the check that it is a sphere rather than a disc or a
+/// every direction, the check that it is a sphere rather than a disc or a
 /// cone.
 #[test]
 fn a_scale_ball_is_round() {
@@ -208,7 +208,7 @@ fn the_scale_balls_are_painted_back_to_front() {
 
     let mut previous = f32::INFINITY;
     for chunk in vertices.as_chunks::<VERTICES_PER_BALL>().0 {
-        // Which ball this is, by the face its vertices stand around — its own
+        // Which ball this is, by the face its vertices stand around, its own
         // vertices are all a radius off that, and no two faces are that close
         // together.
         let middle =
@@ -253,7 +253,7 @@ fn the_arms_are_painted_back_to_front() {
 }
 
 /// Three rings of one radius about one centre pass through each other's
-/// planes, so only a per-slice order can be right — whole rings have no
+/// planes, so only a per-slice order can be right, whole rings have no
 /// correct order at all.
 #[test]
 fn the_ring_slices_are_painted_back_to_front() {
@@ -385,7 +385,7 @@ fn a_held_handle_is_drawn_alone() {
 }
 
 /// Transform's combined gizmo is exactly Move's arrows, Scale's balls and
-/// Rotate's rings, all drawn at once — not a cut-down version of any of
+/// Rotate's rings, all drawn at once, not a cut-down version of any of
 /// them, since all three are grabbable handles of their own in this tool.
 #[test]
 fn a_transform_gizmo_draws_every_arm_ball_and_ring() {
@@ -400,7 +400,7 @@ fn a_transform_gizmo_draws_every_arm_ball_and_ring() {
 
 /// Depth-test-off painting only works if what's nearer the eye is painted
 /// last, and until Transform that was only ever checked *within* one kind
-/// (`the_arms_are_painted_back_to_front` and its siblings above) — nothing
+/// (`the_arms_are_painted_back_to_front` and its siblings above), nothing
 /// before mixed two kinds on screen at once. This checks the merge actually
 /// interleaves by eye distance rather than drawing one kind's six (or
 /// `RING_SEGMENTS`) pieces as an unbroken block before the next kind's.
@@ -408,7 +408,7 @@ fn a_transform_gizmo_draws_every_arm_ball_and_ring() {
 fn transform_interleaves_every_kind_by_eye_distance_not_by_kind() {
     // Move's and Rotate's reach (`handles().arm()`, 3 studs) is fixed on
     // screen regardless of the part's own size, but a Scale ball sits on the
-    // part's actual surface — so a part stretched far enough towards the eye
+    // part's actual surface, so a part stretched far enough towards the eye
     // pokes a ball closer to it than any arm tip or ring can reach, whatever
     // `handles()`'s own fixed arm length is. A part this long along Z, facing
     // the eye, is what forces that.
@@ -421,7 +421,7 @@ fn transform_interleaves_every_kind_by_eye_distance_not_by_kind() {
     let near_faces = Faces::new(long, pose(eye), false);
     let vertices = mesh(&Shape::Transform(handles(), near_faces), None, eye);
 
-    // The last-painted vertex — on top of everything else — has to be one of
+    // The last-painted vertex, on top of everything else, has to be one of
     // the near ball's, not an arm's or a ring's, which a per-kind-then-
     // per-kind composition (every arm, then every ring, then every ball, or
     // any other fixed kind order) would get wrong whenever a ball happens to
@@ -443,8 +443,8 @@ fn transform_interleaves_every_kind_by_eye_distance_not_by_kind() {
     );
 }
 
-/// Move's gizmo carries a small grey ball at its origin — the free-drag
-/// handle — painted between the arms that point away from the eye and the
+/// Move's gizmo carries a small grey ball at its origin, the free-drag
+/// handle, painted between the arms that point away from the eye and the
 /// ones that point towards it, and gone while one arrow is held alone.
 #[test]
 fn the_free_drag_ball_sits_at_the_origin_between_the_far_and_near_arms() {

@@ -223,7 +223,7 @@ fn with_state<R>(lua: &Lua, f: impl FnOnce(&mut EventState) -> R) -> R {
 /// attributes, bindables, remotes), then, by class
 /// (`Ctx::database().is_subclass_of`):
 /// - every instance: `WaitForChild(name, timeout?)` (the child, or nil
-///   after a warning — nothing loads later in the editor);
+///   after a warning, nothing loads later in the editor);
 /// - `GuiObject`: `MouseEnter`, `MouseLeave`, `MouseMoved`,
 ///   `MouseButton1Down`, `MouseButton1Up`, `MouseButton2Down`,
 ///   `MouseButton2Up`, `MouseWheelForward`, `MouseWheelBackward`,
@@ -261,7 +261,7 @@ fn is_plugin_signal(db: &ReflectionDatabase, class: &str, key: &str) -> bool {
         || has(PLUGIN_GUI_SIGNALS, "PluginGui")
 }
 
-/// `WaitForChild(name, timeout?)`: the child, or nil after a warning —
+/// `WaitForChild(name, timeout?)`: the child, or nil after a warning,
 /// nothing loads later in the editor.
 fn instance_function(lua: &Lua, ctx: &Ctx, referent: Ref, key: &str) -> Result<Option<Value>> {
     let ctx = ctx.clone();

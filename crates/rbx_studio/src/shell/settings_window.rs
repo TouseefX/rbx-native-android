@@ -230,7 +230,7 @@ impl SettingsWindow {
                 }
             },
         ));
-        // Anything that changes a setting elsewhere — the dock, a menu —
+        // Anything that changes a setting elsewhere, the dock, a menu,
         // notifies the shell; this window has nothing of its own to redraw
         // from.
         subscriptions.push(cx.observe(&shell, |_, _, cx| cx.notify()));

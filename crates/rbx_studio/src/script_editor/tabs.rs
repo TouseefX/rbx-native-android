@@ -3,7 +3,7 @@
 //!
 //! Only the bookkeeping: the editor widget behind each tab lives in
 //! [`super::ScriptEditor`], keyed by the same referent. Kept apart so the
-//! open/focus/close rules — the part with actual behaviour to get wrong — can
+//! open/focus/close rules, the part with actual behaviour to get wrong, can
 //! be exercised without a window.
 
 #[cfg(test)]
@@ -18,7 +18,7 @@ pub(crate) enum Opened {
     /// The script had no tab. The caller must seed a new editor from the DOM.
     New,
     /// A tab was already open; it has been brought to the front, and its
-    /// editor — including an in-progress, uncommitted edit — is untouched.
+    /// editor, including an in-progress, uncommitted edit, is untouched.
     Existing,
 }
 
@@ -76,7 +76,7 @@ impl Tabs {
     }
 
     /// Closes one tab. The tab to its right takes the front, falling back to
-    /// the one on its left and then to nothing — closing a tab should leave
+    /// the one on its left and then to nothing, closing a tab should leave
     /// the neighbour under the cursor in front, not jump to the far end.
     /// Closing a tab that is not in front leaves the front one alone.
     pub(crate) fn close(&mut self, reference: Ref) {
@@ -106,7 +106,7 @@ impl Tabs {
 
     /// Closes every tab whose script `keep` rejects, applying [`Self::close`]'s
     /// front-tab rule to each. Called after anything that can remove an
-    /// instance — an undo, a delete, a Command Bar script — so a tab never
+    /// instance, an undo, a delete, a Command Bar script, so a tab never
     /// outlives the script it was editing.
     pub(crate) fn retain(&mut self, keep: impl Fn(Ref) -> bool) {
         for reference in self.open.clone() {

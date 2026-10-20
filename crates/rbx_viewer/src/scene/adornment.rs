@@ -1,5 +1,5 @@
-//! The 3D adornment family — `Handles`, `ArcHandles`, the `*HandleAdornment`
-//! shapes, `SelectionBox`, `SelectionSphere` and `SurfaceSelection` — read
+//! The 3D adornment family, `Handles`, `ArcHandles`, the `*HandleAdornment`
+//! shapes, `SelectionBox`, `SelectionSphere` and `SurfaceSelection`: read
 //! off a DOM and resolved into the handful of primitives the renderer draws
 //! them from.
 //!
@@ -7,15 +7,15 @@
 //! are rendered in the world": a colour, a transparency and a `Visible`
 //! flag, adorned to something through an `Adornee`. Roblox renders one when
 //! it "is a descendant of the `Workspace` or anywhere where GUI objects are
-//! rendered" (`SelectionSphere`'s own page) — here that means `Workspace` or
+//! rendered" (`SelectionSphere`'s own page), here that means `Workspace` or
 //! `StarterGui`, which is already this viewer's stand-in for the player's
 //! own GUI (see `scene::gui::plan::starter`).
 //!
 //! Pure data, like every other module beside [`Scene`](super::Scene):
 //! everything below resolves to world-space primitives with no GPU handle
 //! and no camera, which is what lets the whole family be tested without a
-//! device. The one camera-dependent piece — the circle a `SelectionSphere`
-//! outlines itself with — is carried as a [`Ring`] for the renderer to face
+//! device. The one camera-dependent piece, the circle a `SelectionSphere`
+//! outlines itself with, is carried as a [`Ring`] for the renderer to face
 //! at the eye.
 //!
 //! Two things creator-docs describes are deliberately not read, because the
@@ -72,7 +72,7 @@ pub(crate) struct Adornment {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Piece {
     Solid(Solid),
-    /// A line whose width is in *pixels* — `LineHandleAdornment.Thickness`
+    /// A line whose width is in *pixels*, `LineHandleAdornment.Thickness`
     /// is documented in pixels, unlike `SelectionBox.LineThickness`, which
     /// is in studs and is drawn as [`Mesh::Box`] edges instead.
     Line(Line),
@@ -95,15 +95,15 @@ pub(crate) struct Solid {
 
 /// The shapes an adornment draws as.
 ///
-/// Where a shape has a length, it runs along the frame's own **-Z** — the
-/// axis Roblox calls a `CFrame`'s `LookVector` — from the frame's origin, so
+/// Where a shape has a length, it runs along the frame's own **-Z**, the
+/// axis Roblox calls a `CFrame`'s `LookVector`: from the frame's origin, so
 /// a handle aimed with `CFrame.lookAt(origin, target)`, the ordinary way
 /// plugin code aims one, points at the target. Roblox publishes no axis
 /// convention for the handle adornments at all; this is the one this
 /// renderer picks, not a documented fact.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Mesh {
-    /// Centred on the frame, `size` studs across — `BoxHandleAdornment.Size`
+    /// Centred on the frame, `size` studs across, `BoxHandleAdornment.Size`
     /// and every box-shaped piece built here.
     Box { size: Vec3 },
     /// Centred on the frame.
@@ -120,7 +120,7 @@ pub(crate) enum Mesh {
         sweep: f32,
     },
     /// A torus segment in the frame's XY plane, starting along +X and
-    /// sweeping `sweep` degrees — what an `ArcHandles` arc is drawn from.
+    /// sweeping `sweep` degrees, what an `ArcHandles` arc is drawn from.
     Arc { radius: f32, tube: f32, sweep: f32 },
 }
 
@@ -143,7 +143,7 @@ pub(crate) struct Ring {
 }
 
 /// `ImageHandleAdornment`: a flat, textured quad in the frame's own XY
-/// plane, `size` studs across. Not camera-facing — nothing documents it as a
+/// plane, `size` studs across. Not camera-facing, nothing documents it as a
 /// billboard, and its `CFrame` would have nothing to orient if it were.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Picture {
@@ -158,8 +158,8 @@ pub(crate) struct Picture {
 /// stands.
 pub(super) struct Context<'a> {
     pub(super) properties: &'a Properties,
-    /// The adornee's own rigid frame — its `CFrame` with the size divided
-    /// back out — and its extent in studs. `None` when the adornment names
+    /// The adornee's own rigid frame, its `CFrame` with the size divided
+    /// back out, and its extent in studs. `None` when the adornment names
     /// no adornee this scene draws.
     pub(super) adornee: Option<Adornee>,
     pub(super) color: [f32; 3],
@@ -183,7 +183,7 @@ pub(crate) fn plan(
     // Memoised per class, not asked per instance: this walks every instance
     // in the place, a superclass chain is several hash lookups deep, and a
     // place of tens of thousands of instances holds a few dozen distinct
-    // classes — the same trick `scene::gui::space` already plays on the
+    // classes, the same trick `scene::gui::space` already plays on the
     // same walk.
     let mut adornments: HashMap<String, bool> = HashMap::new();
     let mut found = Vec::new();
@@ -204,7 +204,7 @@ pub(crate) fn plan(
     found
 }
 
-/// Whether an adornment parented here is drawn at all — see this module's
+/// Whether an adornment parented here is drawn at all, see this module's
 /// own note on where Roblox renders one.
 fn rendered(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> bool {
     let mut current = dom.parent(referent);
@@ -273,7 +273,7 @@ fn build(
 /// against, plus every drawn part that answer was derived from.
 ///
 /// A `BasePart` adornee keeps its own oriented box, which turns with it. Any
-/// other adornee — a `Model`, a `Folder` — has no orientation to turn with,
+/// other adornee, a `Model`, a `Folder`, has no orientation to turn with,
 /// so it gets the world-axis-aligned box around every part beneath it, the
 /// same answer this renderer's own selection outline gives a container (see
 /// `renderer::outline::box_of`).
