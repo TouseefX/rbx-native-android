@@ -1,6 +1,6 @@
 //! The Network tile and its "Network simulation" popover: Preset, then
 //! Inbound and Outbound with Latency, Jitter and Packet loss each, then
-//! Reset (Delete for a saved preset), Save and Apply — Studio's layout.
+//! Reset (Delete for a saved preset), Save and Apply, Studio's layout.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{Input, InputEvent, InputState};

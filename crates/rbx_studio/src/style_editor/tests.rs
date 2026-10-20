@@ -1,7 +1,7 @@
 use super::*;
 
-/// The shape of the fixture every test below reads: two sheets — a token
-/// sheet and a design sheet that derives from it — and the design sheet's two
+/// The shape of the fixture every test below reads: two sheets, a token
+/// sheet and a design sheet that derives from it, and the design sheet's two
 /// rules, one of them with a property already set.
 fn styled() -> (WeakDom, Ref, Ref, Ref, Ref) {
     let mut dom = WeakDom::new();
@@ -125,7 +125,7 @@ fn a_property_written_to_a_rule_reads_back_out_of_the_blob() {
 }
 
 /// A `$Token` reference is an ordinary string value, so it survives an edit
-/// to a neighbouring property untouched — the cascade resolves it later.
+/// to a neighbouring property untouched, the cascade resolves it later.
 #[test]
 fn a_token_reference_survives_a_neighbouring_edit() {
     let (mut dom, _, _, card, _) = styled();
@@ -180,7 +180,7 @@ fn only_a_selector_that_opens_with_a_class_names_one() {
 }
 
 /// A property no GUI class has cannot be typed, so it is refused rather than
-/// guessed at — and the rule's blob is left exactly as it was.
+/// guessed at, and the rule's blob is left exactly as it was.
 #[test]
 fn an_unknown_property_name_is_refused_and_changes_nothing() {
     let (mut dom, _, _, card, _) = styled();
@@ -194,7 +194,7 @@ fn an_unknown_property_name_is_refused_and_changes_nothing() {
 }
 
 /// A new sheet lands where Studio's own Create Design puts one, and a new
-/// rule under it is immediately editable — every property the panel writes
+/// rule under it is immediately editable, every property the panel writes
 /// through is already present (see `add_rule`).
 #[test]
 fn a_new_sheet_and_rule_arrive_ready_to_edit() {

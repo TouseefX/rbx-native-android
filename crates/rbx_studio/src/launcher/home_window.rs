@@ -1,5 +1,5 @@
 //! Home: New / Recent / My Games, the sidebar with its
-//! key card, and the open flow — LocalCopy, Downloading, DownloadError —
+//! key card, and the open flow, LocalCopy, Downloading, DownloadError,
 //! that ends in the editor. State and flows live here; the pages are drawn
 //! in `view`.
 
@@ -38,7 +38,7 @@ pub(super) enum KeyState {
         owner: String,
         report: KeyReport,
     },
-    /// Stored, but the check failed (refused, network) — Home still lists
+    /// Stored, but the check failed (refused, network), Home still lists
     /// what it can.
     Unchecked,
 }

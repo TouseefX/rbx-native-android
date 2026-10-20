@@ -1,6 +1,6 @@
 //! LSP's base protocol: a `Content-Length` header block, a blank line, then
 //! exactly that many bytes of JSON. Nothing else in the header matters to
-//! this client — `luau-lsp` only ever sends `Content-Length`, and the spec's
+//! this client, `luau-lsp` only ever sends `Content-Length`, and the spec's
 //! one other header (`Content-Type`) has a single legal value.
 
 use std::io::{self, BufRead, Write};
@@ -14,7 +14,7 @@ pub(crate) fn write(out: &mut impl Write, message: &Value) -> io::Result<()> {
 }
 
 /// The next message, or `None` once the stream has ended cleanly between
-/// messages — the server exiting.
+/// messages, the server exiting.
 pub(crate) fn read(input: &mut impl BufRead) -> io::Result<Option<Value>> {
     let mut length = None;
     let mut line = String::new();

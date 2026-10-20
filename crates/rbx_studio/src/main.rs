@@ -4,22 +4,22 @@
 //!
 //! One place per process; the command line it takes lives in [`cli`], and
 //! `--help` prints it. `--select` and `--run` are the supported spelling of
-//! the first two variables below — same behaviour, the flag winning when both
+//! the first two variables below, same behaviour, the flag winning when both
 //! are given. The rest stay variables: they are aids for scripted
 //! screenshots, not a surface worth committing to.
 //!
 //! `RBX_STUDIO_SELECT=<target>[,<target>...]` pre-selects the first instance
-//! that target names — an Explorer path (`Workspace.Model.Part`) or a bare
-//! name, see `explorer::resolve` — at startup, then adds each
+//! that target names, an Explorer path (`Workspace.Model.Part`) or a bare
+//! name, see `explorer::resolve`: at startup, then adds each
 //! further comma-separated target to the selection exactly as a
-//! `Shift`/`Ctrl`/`Cmd`-click would — a debugging aid for scripted
+//! `Shift`/`Ctrl`/`Cmd`-click would, a debugging aid for scripted
 //! screenshots of the Properties panel and the viewport's multi-selection
 //! outline/gizmo, since nothing else can click the tree or the viewport on
 //! the editor's behalf; re-applied after `RBX_STUDIO_RUN` too, so a
 //! screenshot can show what a script just created without a click.
 //! `RBX_STUDIO_RUN=<source>` runs one Luau chunk against the place right
 //! after the window opens, exactly as typing it into the Command Bar and
-//! pressing Enter would — the same aid, for the Command Bar itself.
+//! pressing Enter would, the same aid, for the Command Bar itself.
 //! `RBX_STUDIO_TOOL=move[,local][,nosnap]` picks a transform tool (and its
 //! world/local orientation, and whether the move/scale snap starts switched
 //! on) at startup, the same aid for the transform toolbar and its viewport
@@ -35,11 +35,11 @@
 //! `RBX_STUDIO_SETTINGS=1` opens Studio Settings with the editor, on the
 //! page `RBX_STUDIO_SETTINGS_PAGE=<first word of its name>` names, with
 //! Viewport › Advanced open under `RBX_STUDIO_SETTINGS_ADVANCED=1` and the
-//! page scrolled `RBX_STUDIO_SETTINGS_SCROLL=<px>` down — the same aid, for
+//! page scrolled `RBX_STUDIO_SETTINGS_SCROLL=<px>` down, the same aid, for
 //! the Settings window (see `shell::settings_window`).
 //! `RBX_STUDIO_OPEN_SCRIPT=<name>[,<name>...]` opens each named
 //! `Script`/`LocalScript`/`ModuleScript` in the Script Editor panel exactly as
-//! double-clicking its Explorer row would — the same aid, for the script
+//! double-clicking its Explorer row would, the same aid, for the script
 //! editor and its Luau highlighting (see `shell::scripts`).
 //! `RBX_STUDIO_SCRIPT_VIEW=graph[=<file>]` then puts the front tab on its
 //! Graph side, first saving the graph JSON in `<file>` as its graph through
@@ -48,37 +48,37 @@
 //! `<query>` typed, as if a wire had been dropped from the first node's
 //! first value output (or as Shift+A would, on an empty graph).
 //! `RBX_STUDIO_UI_EDITOR=1|<width>x<height>` opens the UI Editor on its
-//! canvas at startup, at that simulated resolution when one is given — the
+//! canvas at startup, at that simulated resolution when one is given, the
 //! same aid, for the canvas (see `shell::ui_editor`).
 //! `RBX_STUDIO_FRAME_SHEET=1|picker|picker:<query>|fit` then opens the
 //! `ViewportFrame` sheet on the selected frame, with the Workspace picker
-//! (searching for `<query>`) or the Fit menu up — the same aid, for the
+//! (searching for `<query>`) or the Fit menu up, the same aid, for the
 //! sheet (see `shell::ui_editor::frame_sheet`).
 //! `RBX_STUDIO_GROUP=1` wraps the current selection in a new `Model` exactly
 //! as `Ctrl+G` would; `RBX_STUDIO_UNGROUP=1` unwraps it back out exactly as
-//! `Ctrl+Shift+G` would — the same aid, for the Explorer's Group/Ungroup
+//! `Ctrl+Shift+G` would, the same aid, for the Explorer's Group/Ungroup
 //! (see `shell::group`).
 //! Ctrl+S writes the place back to the file it was opened from, in the
 //! format it was opened in; `RBX_STUDIO_SAVE_AS=<path>` redirects one such
 //! save to a scratch path instead (see `save`).
 //! `RBX_STUDIO_ARGON_CONNECT=1|<host>:<port>` clicks Connect on the Script
-//! Editor's Argon dock at startup — the same aid, for a real connection to
+//! Editor's Argon dock at startup, the same aid, for a real connection to
 //! a running `argon serve` (see `shell::argon_sync`); the address form
 //! overrides the dock's own address field first.
 //! `RBX_STUDIO_WALLY_INSTALL=<scope>/<name>` resolves and installs that
 //! Wally package at startup exactly as clicking its search result row
-//! would — the same aid, for the Wally dock (see `shell::wally_sync`).
+//! would, the same aid, for the Wally dock (see `shell::wally_sync`).
 //! `RBX_STUDIO_ARGON_DIFF=1` opens the Argon review prompt's Diff window on
-//! a small synthetic batch at startup — the same aid, for a window that
+//! a small synthetic batch at startup, the same aid, for a window that
 //! otherwise only opens once a live `argon serve` session pushes five or
 //! more real changes at once (see `shell::argon_sync`).
 //! `RBX_STUDIO_TERRAIN=<tool>[,apply]` opens the Terrain Editor on that tool
 //! (`draw`, `sealevel`, `generate`, …) and with `apply` presses its main
-//! button — the same aid, for the Terrain Editor (see `shell::terrain`).
+//! button, the same aid, for the Terrain Editor (see `shell::terrain`).
 //! `RBX_STUDIO_ANIMATION=<step>[,<step>...]` opens the Animation Editor and
 //! runs each step (`rig=<name>`, `demo`, `import=<path>`, `time=<seconds>`,
 //! `joint=<name>`, `save`, `graph`, `graph-demo`, `play`, …) as the matching
-//! click would — the same aid, for the Animation Editor (see
+//! click would, the same aid, for the Animation Editor (see
 //! `shell::animation::debug` for every step).
 
 mod accent;
@@ -160,7 +160,7 @@ use settings::Settings;
 use shell::Shell;
 
 /// The fallback for `--select`, resolved into [`Launch`] below and read
-/// nowhere else — `shell` takes the whole comma list from there rather than
+/// nowhere else, `shell` takes the whole comma list from there rather than
 /// reaching back into the environment for it.
 const SELECT_VARIABLE: &str = "RBX_STUDIO_SELECT";
 
@@ -237,7 +237,7 @@ fn main() {
     // The full Lucide catalog: the menu bar's icons are well outside the
     // default bundle the components themselves use. The Explorer's own class
     // icons are rasterized straight from `class_icons`'s embedded SVGs, not
-    // painted through this asset source at all — see its own doc comment.
+    // painted through this asset source at all, see its own doc comment.
     let app = gpui_kit::application().with_assets(gpui_kit::assets::AllAssets);
     app.run(move |cx| {
         gpui_kit::init(cx);
@@ -416,13 +416,13 @@ struct Place {
     /// Cloned once per run into a fresh `rbx_lua::Runtime`, which takes
     /// ownership of its copy.
     database: ReflectionDatabase,
-    /// Where Ctrl+S writes back to, and in which format — see `save`.
+    /// Where Ctrl+S writes back to, and in which format, see `save`.
     /// `rbx_viewer::read_place` sniffs the same bytes internally but does not
     /// expose its choice, so `load` sniffs them a second time here rather
     /// than widening that crate's public surface for this.
     path: PathBuf,
     format: Format,
-    /// This place's `Folder` colour tags — see `folder_colors`. Loaded here
+    /// This place's `Folder` colour tags, see `folder_colors`. Loaded here
     /// (and pruned of any entry whose folder no longer resolves) rather than
     /// lazily on first use, since the Explorer's own tints are baked in by
     /// `Explorer::from_dom` from the moment the window opens.

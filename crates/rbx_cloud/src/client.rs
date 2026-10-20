@@ -135,7 +135,7 @@ impl Client {
     /// pagination cursor) are percent-encoded correctly.
     ///
     /// A GET is safe to repeat, so a rate limit or a dropped connection is
-    /// retried here rather than surfaced — see [`retry`]. `configure` is
+    /// retried here rather than surfaced, see [`retry`]. `configure` is
     /// therefore `Fn`: it builds a fresh request per attempt.
     pub(crate) fn get_with(
         &self,

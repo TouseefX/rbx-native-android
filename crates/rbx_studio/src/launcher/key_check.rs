@@ -1,5 +1,5 @@
 //! "Paste your key": the masked key field, the check against Roblox, and
-//! the permission table — shared by the setup wizard and the Roblox
+//! the permission table, shared by the setup wizard and the Roblox
 //! publishing window.
 //!
 //! Nothing here stores the key: the owner calls [`KeyCheck::key`] once the
@@ -63,7 +63,7 @@ impl KeyCheck {
         }
     }
 
-    /// Starts on a key already stored — the publishing window's own.
+    /// Starts on a key already stored, the publishing window's own.
     pub(super) fn with_key(key: String, cx: &mut Context<Self>) -> Self {
         let mut this = Self::new(cx);
         this.secret = key;

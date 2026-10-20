@@ -30,7 +30,7 @@ pub(in crate::scene::gui) fn billboard_canvas(size: [f32; 2]) -> [f32; 2] {
 /// Either way the canvas is stretched over the whole face, so the two only
 /// differ in how many pixels a `UDim2` offset comes to.
 ///
-/// Falls back to [`DEFAULT_CANVAS`] per axis where the result is degenerate —
+/// Falls back to [`DEFAULT_CANVAS`] per axis where the result is degenerate,
 /// a zero axis would ask for a texture no adapter will allocate.
 pub(in crate::scene::gui) fn surface_canvas(
     properties: &BTreeMap<String, Variant>,
@@ -56,7 +56,7 @@ pub(in crate::scene::gui) fn surface_canvas(
 /// World width and height of a `BillboardGui.Size`, in studs.
 ///
 /// Simplification: Roblox gives the two halves of that `UDim2` different
-/// units — the scale half is the billboard's stud size in 3D, the offset half
+/// units, the scale half is the billboard's stud size in 3D, the offset half
 /// a constant screen-pixel size that does not shrink with distance. Only the
 /// first is reproduced; an offset-only `Size` is read as studs at
 /// [`PIXELS_PER_STUD`], so such a billboard keeps a fixed *world* size instead
@@ -102,7 +102,7 @@ pub(in crate::scene::gui) fn face_corners(
 }
 
 /// Width and height in studs of a face quad in image order, as the part is
-/// actually placed — so a scaled `Placement` sizes the canvas like Roblox
+/// actually placed, so a scaled `Placement` sizes the canvas like Roblox
 /// sizes it off the part's own `Size`.
 pub(in crate::scene::gui) fn face_studs(corners: &[Vec3; 4]) -> [f32; 2] {
     [

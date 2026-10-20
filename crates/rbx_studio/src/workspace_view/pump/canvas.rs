@@ -4,7 +4,7 @@
 //!
 //! Unlike the 3D view, which draws every tick so animated content keeps
 //! moving, a canvas is only redrawn when something it could show has
-//! changed — a new request, an edit, an asset landing — since a still GUI
+//! changed, a new request, an edit, an asset landing, since a still GUI
 //! tree is a still picture.
 
 use rbx_dom::Ref;
@@ -40,7 +40,7 @@ fn unblend(black: &mut [u8], white: &[u8]) {
     }
 }
 
-/// Which screen to draw, and at what simulated resolution — and, while the
+/// Which screen to draw, and at what simulated resolution, and, while the
 /// UI editor's frame sheet is open, the one `ViewportFrame` it shows larger.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Request {

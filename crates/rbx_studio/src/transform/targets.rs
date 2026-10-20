@@ -19,21 +19,21 @@ use super::frame::{placement, rigid};
 pub(crate) struct Target {
     pub(crate) referent: Ref,
     pub(crate) model: Mat4,
-    /// Whether this resolves to a `Ball` right now — read once, here, rather
+    /// Whether this resolves to a `Ball` right now, read once, here, rather
     /// than re-resolved on every drag step: a Scale drag holds a `Target`
     /// snapshotted at the grab (see `Drag::Size`), and a part's `Shape`
     /// cannot change mid-gesture anyway. Reuses `rbx_viewer`'s own shape
     /// resolution (`resolved_shape_label`) rather than a second, possibly-
-    /// diverging check of the `Shape` property — see
+    /// diverging check of the `Shape` property, see
     /// `shell::keys::apply_part_defaults` for why only `Part` itself ever
     /// carries one.
     pub(crate) sphere: bool,
-    /// Whether this resolves to a real `Part.Shape == Cylinder` right now —
+    /// Whether this resolves to a real `Part.Shape == Cylinder` right now,
     /// same reasoning and same read as `sphere`, checked against
     /// `resolved_shape_label`'s `"CylinderX"` rather than the legacy
     /// mesh-child `"CylinderY"` case (`rbx_viewer::scene::shape::part_type`):
     /// `Enum.PartType.Cylinder` always draws with its length along the
-    /// part's own local X, round in Y/Z — a fixed convention, not something
+    /// part's own local X, round in Y/Z, a fixed convention, not something
     /// read per-instance, which is why nothing here stores *which* axis is
     /// which.
     pub(crate) cylinder: bool,
@@ -43,7 +43,7 @@ impl Target {
     /// Reads one instance's placement out of the DOM, or `None` for anything
     /// that isn't a part with a transform to drag. A container (a `Folder`, a
     /// service, a `Model`) has no `CFrame` or `Size` of its own to write, so
-    /// it never becomes a target itself — [`Targets::read`] resolves one to
+    /// it never becomes a target itself, [`Targets::read`] resolves one to
     /// the parts beneath it instead.
     pub(crate) fn read(
         dom: &WeakDom,
@@ -64,7 +64,7 @@ impl Target {
         self.model.w_axis.truncate()
     }
 
-    /// The part's own axes, still carrying its `Size` in their lengths —
+    /// The part's own axes, still carrying its `Size` in their lengths,
     /// `rbx_viewer::gizmo::basis` normalizes them.
     pub(crate) fn rotation(&self) -> Mat3 {
         Mat3::from_mat4(self.model)
@@ -80,14 +80,14 @@ impl Target {
         )
     }
 
-    /// The part's own orientation with its `Size` divided back out — the
+    /// The part's own orientation with its `Size` divided back out, the
     /// rotation a `CFrame` carries.
     pub(crate) fn orientation(&self) -> Mat3 {
         let [x, y, z] = gizmo::basis(Some(self.rotation()));
         Mat3::from_cols(x, y, z)
     }
 
-    /// The same part standing somewhere else — what a drag in progress shows
+    /// The same part standing somewhere else, what a drag in progress shows
     /// while `Shell` is still writing the move into the DOM.
     pub(crate) fn moved_to(self, position: Vec3) -> Self {
         Target {
@@ -131,7 +131,7 @@ impl Target {
 /// The transform gizmo stands at the [`centre`](Targets::centre) of the whole
 /// selection's bounds, exactly the way
 /// `rbx_viewer::renderer::selection::Selection::anchor` places the one it
-/// draws — both call `rbx_viewer::gizmo::centre_of`, so the handles the user
+/// draws, both call `rbx_viewer::gizmo::centre_of`, so the handles the user
 /// can grab and the handles they can see cannot disagree about where they
 /// are. The [`anchor`](Targets::anchor) is a different question: it is the
 /// first entry with a placement, and it is what Scale and Rotate actually
@@ -160,14 +160,14 @@ impl Targets {
     /// dropped: a viewport click selects the outermost `Model` around what it
     /// hit, so dropping them left the commonest selection of all with no
     /// target, no handles, and nothing on screen to explain why. A container
-    /// with no drawable geometry under it still yields nothing — there is
+    /// with no drawable geometry under it still yields nothing, there is
     /// genuinely nothing to transform.
     ///
     /// Selecting a `Model` *and* something inside it would otherwise name the
     /// same part twice, which a group drag would then move twice as far as
     /// the gizmo travelled. `pick::selection` drops the covered entry, here
     /// and for the outline `shell::selection::outlined` sends the renderer
-    /// alike — the dedup belongs to both of them, so neither holds a copy of
+    /// alike, the dedup belongs to both of them, so neither holds a copy of
     /// it that could drift from the other's.
     pub(crate) fn read(dom: &WeakDom, database: &ReflectionDatabase, referents: &[Ref]) -> Self {
         let entries = pick::selection(dom, database, referents);
@@ -184,8 +184,8 @@ impl Targets {
         Targets(parts, pivot, lone_part)
     }
 
-    /// The pivot of the one part or model selected, rigid — no `Size` in
-    /// its columns — or `None` for a selection of several (or of nothing
+    /// The pivot of the one part or model selected, rigid, no `Size` in
+    /// its columns, or `None` for a selection of several (or of nothing
     /// with a pivot). Move's and Rotate's handles stand on it, so a turn goes
     /// round it (`studio/pivot-tools.md`: "Once set, rotation and scaling
     /// occur around the pivot point"), and Edit Pivot moves it.
@@ -193,7 +193,7 @@ impl Targets {
         self.1
     }
 
-    /// The pivot put somewhere else — an Edit Pivot drag's running answer.
+    /// The pivot put somewhere else, an Edit Pivot drag's running answer.
     pub(crate) fn set_pivot(&mut self, pivot: Mat4) {
         if self.1.is_some() {
             self.1 = Some(pivot);
@@ -202,10 +202,10 @@ impl Targets {
 
     /// The first part the selection covers: what Scale and Rotate transform,
     /// and whose own frame the local-orientation toggle takes. For a selected
-    /// `Model` that is its own first descendant part — a `Model` has no
+    /// `Model` that is its own first descendant part, a `Model` has no
     /// `Size` or `CFrame` to write a resize or a turn into, exactly as a
     /// multi-part selection scales and rotates its anchor alone. Where the gizmo
-    /// *sits* is [`Targets::centre`] instead — see this type's own doc
+    /// *sits* is [`Targets::centre`] instead, see this type's own doc
     /// comment for why the two are separate questions.
     pub(crate) fn anchor(&self) -> Option<Target> {
         self.0.first().copied()
@@ -217,7 +217,7 @@ impl Targets {
     ///
     /// Shared with the renderer through `rbx_viewer::gizmo::centre_of` rather
     /// than worked out again here, for the same reason the handle geometry
-    /// itself is shared — two derivations of "where the gizmo is" are two
+    /// itself is shared, two derivations of "where the gizmo is" are two
     /// things that can drift apart.
     pub(crate) fn centre(&self) -> Option<Vec3> {
         gizmo::centre_of(self.0.iter().map(|target| target.model))
@@ -227,7 +227,7 @@ impl Targets {
         self.0.iter()
     }
 
-    /// The box the Scale handles stand on, `local` or square to the world —
+    /// The box the Scale handles stand on, `local` or square to the world,
     /// see `rbx_viewer::gizmo::scale_box`, which the renderer draws them
     /// from.
     pub(crate) fn scale_box(&self, local: bool) -> Option<Mat4> {
@@ -236,7 +236,7 @@ impl Targets {
     }
 
     /// What a Scale drag with `Ctrl` held scales about: a model's pivot, or
-    /// the middle of the box — a lone part's, whose `PivotOffset` Studio's
+    /// the middle of the box, a lone part's, whose `PivotOffset` Studio's
     /// `ScaleDragger` leaves out of it, or several things', on whose middle
     /// it stands their shared basis.
     pub(crate) fn scale_centre(&self, local: bool) -> Option<Vec3> {
@@ -246,7 +246,7 @@ impl Targets {
         }
     }
 
-    /// Whether Scale resizes the anchor's own `Size` — a lone part — rather
+    /// Whether Scale resizes the anchor's own `Size`, a lone part, rather
     /// than scaling the whole selection by one factor, the way Studio's
     /// `ScaleDragger` takes a model even of one part (`Model:ScaleTo`).
     pub(crate) fn lone_part(&self) -> bool {
@@ -254,14 +254,14 @@ impl Targets {
     }
 
     /// The same box squared to the pivot, as the renderer draws Edit
-    /// Pivot's hotspots on it — see `rbx_viewer::gizmo::box_along`.
+    /// Pivot's hotspots on it, see `rbx_viewer::gizmo::box_along`.
     pub(crate) fn pivot_box(&self) -> Option<Mat4> {
         let axes = Mat3::from_mat4(self.1?);
         gizmo::box_along(self.0.iter().map(|target| target.model), axes)
     }
 
     /// Every part scaled by the same `factor` about `pivot`, from where it
-    /// stood in `held` — the selection as it was when the handle was grabbed,
+    /// stood in `held`: the selection as it was when the handle was grabbed,
     /// so a whole gesture is one absolute factor rather than a running
     /// product that drifts. A group has no one `Size` to write, so it scales
     /// the way `Model:ScaleTo` does: each part's size by the factor, each
@@ -299,7 +299,7 @@ impl Targets {
     }
 
     /// The largest and smallest factor [`Targets::scale_about`] may take
-    /// before some part's size leaves `min..=max` on some axis — the whole
+    /// before some part's size leaves `min..=max` on some axis, the whole
     /// group stops growing when its biggest part hits the ceiling, exactly as
     /// a lone part stops at its own.
     pub(crate) fn factor_within(&self, factor: f32, min: f32, max: f32) -> f32 {
@@ -346,7 +346,7 @@ impl Targets {
     }
 
     /// Moves every target by the same offset, which is what keeps a group
-    /// drag from rearranging the selection relative to itself — every part
+    /// drag from rearranging the selection relative to itself, every part
     /// travels exactly as far as the anchor's own gizmo drag did, no more and
     /// no less. Returns each referent's new absolute position (what `Shell`
     /// writes into the DOM) and updates this value in place so the next call
@@ -382,14 +382,14 @@ impl Targets {
         )
     }
 
-    /// Replaces the anchor's own placement — what a Scale or Rotate drag
+    /// Replaces the anchor's own placement, what a Scale or Rotate drag
     /// updates as it goes, since only the anchor ever carries their gizmo
     /// (a multi-part selection's Size and Orientation have no group meaning
     /// the way a Move's position offset does).
     pub(crate) fn set_anchor(&mut self, target: Target) {
         if let Some(anchor) = self.0.first_mut() {
             // A lone part's pivot is an offset in its own frame, so it rides
-            // along with whatever the resize did to the part's placement —
+            // along with whatever the resize did to the part's placement,
             // and, as Studio's `ScaleDragger` fixes a resized part's
             // `PivotOffset` up, its position stretches with the part's size,
             // axis by axis, so the pivot moves as a point of the part would.

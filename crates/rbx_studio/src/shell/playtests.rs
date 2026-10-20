@@ -14,7 +14,7 @@
 //!
 //! `RBX_STUDIO_PLAYTESTS=<presence|deaths|stuck|on>` opens the dock at
 //! startup and, at its first render, shows every recording at 60% of the longest one with that
-//! heat map (`on`: none) — a screenshot aid.
+//! heat map (`on`: none), a screenshot aid.
 
 mod dock;
 mod playback;

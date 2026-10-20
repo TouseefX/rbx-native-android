@@ -330,7 +330,7 @@ pub struct Metrics {
     pub send_kbps: Option<f64>,
     #[serde(default)]
     pub receive_kbps: Option<f64>,
-    /// Server: `Stats.HeartbeatTime`; client: `Stats.FrameTime` — in
+    /// Server: `Stats.HeartbeatTime`; client: `Stats.FrameTime`: in
     /// milliseconds (Roblox reports seconds).
     #[serde(default)]
     pub frame_ms: Option<f64>,

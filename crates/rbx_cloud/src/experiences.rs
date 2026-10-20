@@ -1,9 +1,9 @@
 //! Combines the ways to discover experiences an API key can act on:
 //! restricted scopes from [`Client::introspect`] (the only way to see
-//! private universes), the public game listing of the key's owner, and —
-//! when the key holds `legacy-group:manage` — the groups the owner can
+//! private universes), the public game listing of the key's owner, and,
+//! when the key holds `legacy-group:manage`: the groups the owner can
 //! manage (their games one group at a time, [`Client::group_experiences`]),
-//! and — with `user.inventory-item:read` — every
+//! and, with `user.inventory-item:read`, every
 //! place the owner created, private ones included. Without that scope a
 //! private experience on an unrestricted key stays invisible: Open Cloud has
 //! no "list my universes" endpoint.
@@ -26,7 +26,7 @@ pub struct Experience {
     pub root_place_id: u64,
     pub name: String,
     pub visibility: Visibility,
-    /// Personal or group-owned — what the Home screen groups by.
+    /// Personal or group-owned, what the Home screen groups by.
     pub owner: Owner,
 }
 

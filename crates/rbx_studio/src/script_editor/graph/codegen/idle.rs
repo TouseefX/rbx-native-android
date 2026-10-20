@@ -7,7 +7,7 @@ use super::super::catalog::{self, Code, Kind};
 use super::super::{Graph, NodeId};
 
 /// Statements no event's run reaches. They compile to nothing, which is
-/// right — Luau would never run them either — but worth saying.
+/// right, Luau would never run them either, but worth saying.
 pub(crate) fn idle(graph: &Graph) -> Vec<NodeId> {
     let mut reached = BTreeSet::new();
     let mut stack: Vec<NodeId> = graph

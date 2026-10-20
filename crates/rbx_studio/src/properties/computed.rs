@@ -1,5 +1,5 @@
 //! The read-only values Studio's panel lists for a part that no file stores,
-//! because a running engine works them out — here, only where Roblox's docs
+//! because a running engine works them out, here, only where Roblox's docs
 //! say exactly how:
 //!
 //! - `Mass` is volume times density (`BasePart.Mass`). Volume is exact for a
@@ -16,7 +16,7 @@
 //! - `ResizeIncrement` and `ResizeableFaces` for the classes their docs
 //!   name: 1 and every face for a `Part`, every face for a `WedgePart`.
 //! - The assembly's mass, centre and root: see `assembly`.
-//! - `Origin`, the instance's pivot (`edit::pivot`) — the one of these a
+//! - `Origin`, the instance's pivot (`edit::pivot`), the one of these a
 //!   user can type into, which moves the instance.
 //!
 //! Left out, for want of anything true to show: the assembly's velocities
@@ -203,7 +203,7 @@ impl Properties {
 
     /// The `CustomPhysicalProperties` of the `MaterialVariant` called `name`
     /// for `material`: `Some(None)` when it has none of its own, `None` when
-    /// there is no such variant to read — which leaves the part's physics
+    /// there is no such variant to read, which leaves the part's physics
     /// unknown rather than guessed.
     fn variant_physics(
         &self,

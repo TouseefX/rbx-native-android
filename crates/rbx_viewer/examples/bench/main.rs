@@ -16,7 +16,7 @@
 //! - The number that matters is *two* numbers from one iteration: when the call
 //!   returned, and when the first frame it queued was actually readable. A
 //!   criterion closure reports one duration, so expressing the pair means two
-//!   benchmarks that each redo the work — and then they cannot be subtracted,
+//!   benchmarks that each redo the work, and then they cannot be subtracted,
 //!   because they did not measure the same iteration.
 //! - GPU work makes criterion's statistical machinery unreliable rather than
 //!   more precise: the outlier classification assumes independent samples, and
@@ -32,7 +32,7 @@
 //! `Headless::reload`/`apply_changes` return once the GPU work is *queued*, and
 //! `render_frame` queues a frame and hands back the one before it. So every
 //! phase reports the call's own wall clock and, from the same instant, the time
-//! until `take_frame` hands back the pixels of the frame queued after the edit —
+//! until `take_frame` hands back the pixels of the frame queued after the edit,
 //! which is where the driver actually waits for the upload and the draw. The two
 //! are labelled separately and never added together.
 //!
@@ -40,7 +40,7 @@
 //! budget for texture uploads and spreads a freshly built scene's remainder over
 //! the frames after the first, and the call that finishes that early
 //! (`Offscreen::finish_loading`) is crate-private, with no route to it through
-//! `Headless`. So "first frame readable" is exactly that — the first frame — and
+//! `Headless`. So "first frame readable" is exactly that, the first frame, and
 //! not a fully textured one. The phases that are not about the first frame drain
 //! the backlog first (see `measure::drain_upload_budget`), which is also what
 //! measures it: on the 16k-instance fixture it is worth roughly a dozen frames
@@ -51,8 +51,8 @@
 //! `Headless::load` returns with the scene drawable and its assets still
 //! arriving, so "cold load" and "the place finished loading" are two different
 //! numbers and are reported as two phases. Every phase that means to measure a
-//! *finished* place — the reload, the patch, the frame costs, and both edit
-//! phases — drives the swap-ins to completion first (`measure::settle`), or it
+//! *finished* place, the reload, the patch, the frame costs, and both edit
+//! phases, drives the swap-ins to completion first (`measure::settle`), or it
 //! would be timing the stream rather than the thing it names.
 
 mod args;
@@ -86,7 +86,7 @@ fn main() -> ExitCode {
     };
 
     // A debug number is not a slow version of the release number, it is a
-    // different number entirely — and one that would be committed to
+    // different number entirely, and one that would be committed to
     // BENCHMARKS.md as though it meant something.
     if cfg!(debug_assertions) {
         eprintln!("error: this is a debug build; a timing from it is worthless");
@@ -120,7 +120,7 @@ fn run(args: &Args) -> Result<(), String> {
         eprintln!("-- {}", path.display());
         // A fixture that fails takes itself out of the run and nothing else
         // with it. Propagating here would throw away every fixture already
-        // measured — minutes of GPU work — before the table or the JSON file
+        // measured, minutes of GPU work, before the table or the JSON file
         // was ever written, over a place file that happened to be corrupt.
         let outcome = match measure::fixture(path, args) {
             Ok(measured) => Outcome::Measured(Box::new(measured)),

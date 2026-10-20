@@ -9,15 +9,15 @@
 //!   one in each plane of its parent's axes.
 //! - `SpotLight`: "a cone with a spherical base" (the class docs) from the
 //!   light's position along `Face`: the axis out to `Range`, the rim circle
-//!   where the cone meets that sphere — `Range·cos(Angle/2)` along the axis,
-//!   `Range·sin(Angle/2)` across — and four slant lines out to the rim. On a
+//!   where the cone meets that sphere, `Range·cos(Angle/2)` along the axis,
+//!   `Range·sin(Angle/2)` across, and four slant lines out to the rim. On a
 //!   part the apex is the part's centre, not the face: Studio's slant lines,
 //!   carried back, meet there.
 //! - `SurfaceLight`: the same reach stretched over the whole face ("light
 //!   emits from the entire surface"): a line from each corner of the face to
 //!   a far rectangle `Range·cos(Angle/2)` out and `Range·sin(Angle/2)` wider
 //!   on every side, that rectangle's edges, and the centre line out to
-//!   `Range` — which is why the centre line overshoots the far rectangle in
+//!   `Range`: which is why the centre line overshoots the far rectangle in
 //!   Studio too. On an `Attachment`, which has no face, it is the spot's
 //!   cone: the class docs call it "equivalent to a SpotLight" there.
 //!
@@ -40,12 +40,12 @@ use crate::renderer::Segment;
 use crate::scene::{is_drawable, WORKSPACE_CLASS};
 use crate::textures::NormalId;
 
-/// Straight pieces per guide circle — Studio's read as a polygon of about
+/// Straight pieces per guide circle, Studio's read as a polygon of about
 /// this many sides.
 const CIRCLE_SEGMENTS: usize = 32;
 /// How a guide is shaded from its light's linear `Color`: Studio draws a
 /// white light's guide as the grey 213 of 255 (0.665 linear) at 0.71
-/// opacity, both solved from its own screenshots — the same line over three
+/// opacity, both solved from its own screenshots, the same line over three
 /// sky shades fits that one colour and opacity blended in encoded space,
 /// which is how `renderer::lines` blends.
 const SHADE: f32 = 0.665;
@@ -57,7 +57,7 @@ const WIDTH: f32 = 1.0;
 const MIN_RIM: f32 = 1e-4;
 
 /// The guides of every light in `selected`, in world space. Anything else in
-/// the selection — a part, even one with lights of its own — adds nothing.
+/// the selection, a part, even one with lights of its own, adds nothing.
 pub fn light_guides(
     dom: &WeakDom,
     database: &ReflectionDatabase,
@@ -123,7 +123,7 @@ fn guide(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> Option<
 }
 
 /// Where a light on `parent` stands, and the extent of the part it lights
-/// from — `None` on an `Attachment`, which has none. The same two parents
+/// from, `None` on an `Attachment`, which has none. The same two parents
 /// `super::local_lights` reads a light off, on the same condition: a
 /// drawable part under `Workspace`, so no guide floats where no part is
 /// drawn.

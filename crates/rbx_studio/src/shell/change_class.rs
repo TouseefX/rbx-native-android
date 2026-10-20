@@ -32,7 +32,7 @@ impl Shell {
         ))
     }
 
-    /// The picker's footer for `class` — see `change_class::summary`.
+    /// The picker's footer for `class`: see `change_class::summary`.
     pub(super) fn change_class_summary(&self, targets: &[Ref], class: &str) -> String {
         let (convert, _) = change_class::partition(&self.dom, &self.database, targets, class);
         let plans: Vec<Plan> = convert
@@ -43,7 +43,7 @@ impl Shell {
     }
 
     /// Changes each of `targets` that can be changed to `class`, all in one
-    /// undo step. A refused one — a service — is named in the Output panel:
+    /// undo step. A refused one, a service, is named in the Output panel:
     /// the rest of the selection did change, and one row keeping its icon
     /// among several that swapped theirs is easy to miss.
     pub(super) fn change_class(&mut self, targets: &[Ref], class: &str, cx: &mut Context<Self>) {

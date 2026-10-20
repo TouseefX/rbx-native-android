@@ -1,4 +1,4 @@
-//! The Explorer's keyboard contract — WAI-ARIA's Tree View pattern, in
+//! The Explorer's keyboard contract, WAI-ARIA's Tree View pattern, in
 //! full.
 //!
 //! "In full" is the point. The APG says outright that a *partial*
@@ -11,10 +11,10 @@
 //! its answers are the wrong ones for a tree:
 //!
 //! - **Up and Down wrap.** Down at the last row jumps to the first. That is
-//!   a menu's behaviour, not a tree's — a tree is a *list of a place*, and
+//!   a menu's behaviour, not a tree's, a tree is a *list of a place*, and
 //!   teleporting to the other end of the Workspace loses the reader.
 //! - **Left on a collapsed node does nothing**, where the pattern says to
-//!   move to its parent — which is the whole reason Left is usable as an
+//!   move to its parent, which is the whole reason Left is usable as an
 //!   "out" key.
 //! - **Right on an expanded node does nothing**, where the pattern says to
 //!   move to its first child.
@@ -30,8 +30,8 @@
 //! the APG is the reference here. The cursor is the toolkit tree's
 //! `focused_index`; the selection is `Shell::selection`.
 //!
-//! So this module intercepts the tree's navigation at the *action* layer —
-//! `capture_action` on `SelectUp`/`Down`/`Left`/`Right` — and hands back
+//! So this module intercepts the tree's navigation at the *action* layer,
+//! `capture_action` on `SelectUp`/`Down`/`Left`/`Right`: and hands back
 //! only the two cases where the toolkit is already right (expanding a
 //! collapsed node, collapsing an expanded one), because those are the two
 //! that need `TreeState`'s private `toggle_expand`.
@@ -68,11 +68,11 @@ pub(super) enum Nav {
     Into,
     /// Left on anything that isn't an expanded folder: out to its parent.
     OutToParent,
-    /// Left on an expanded folder, or Right on a collapsed one — the two
+    /// Left on an expanded folder, or Right on a collapsed one, the two
     /// the toolkit already handles, which this module deliberately lets
     /// through rather than reimplementing against a private API.
     LetToolkitExpandOrCollapse,
-    /// The key is the tree's, and its answer is "nothing" — Right on a leaf
+    /// The key is the tree's, and its answer is "nothing", Right on a leaf
     /// and Left at a root. Consumed rather than ignored, so it cannot reach
     /// the toolkit's wrapping bindings underneath.
     Nowhere,
@@ -137,14 +137,14 @@ pub(super) fn focus_key_for(keystroke: &Keystroke) -> Option<FocusKey> {
 
 /// The four arrows, classified against the focused row's own state. Split
 /// from [`nav_for`] because the arrows arrive as actions and Home/End as
-/// plain keystrokes — the same contract, two delivery paths.
+/// plain keystrokes, the same contract, two delivery paths.
 pub(super) fn arrow(key: &str, is_folder: bool, expanded: bool) -> Option<Nav> {
     match key {
         "up" => Some(Nav::Previous),
         "down" => Some(Nav::Next),
         "right" if is_folder && !expanded => Some(Nav::LetToolkitExpandOrCollapse),
         "right" if is_folder && expanded => Some(Nav::Into),
-        // Right on a leaf does nothing at all — but it is still consumed,
+        // Right on a leaf does nothing at all, but it is still consumed,
         // because letting it fall through hands it to the toolkit, which
         // would wrap the selection somewhere unrelated.
         "right" => Some(Nav::Nowhere),

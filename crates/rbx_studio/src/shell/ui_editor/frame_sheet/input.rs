@@ -12,7 +12,7 @@ use super::{Popover, Shell, Tool};
 use crate::viewport_frame as frame;
 use crate::workspace_view::input::{camera_key, chorded, wheel_notches, Layout};
 
-/// Degrees the Orbit tool turns per pixel dragged — the free camera's own
+/// Degrees the Orbit tool turns per pixel dragged, the free camera's own
 /// mouse-look rate, so the two feel alike.
 const ORBIT_DEGREES_PER_PIXEL: f32 = 0.3;
 
@@ -141,7 +141,7 @@ impl Shell {
     }
 
     /// The sheet's keys: the camera's movement keys, its shortcuts, and
-    /// Escape — which closes a popover first, then the sheet.
+    /// Escape, which closes a popover first, then the sheet.
     pub(super) fn frame_key(
         &mut self,
         keystroke: &Keystroke,
@@ -152,8 +152,8 @@ impl Shell {
         let Some(sheet) = &mut self.ui.sheet else {
             return false;
         };
-        // A field being typed in — the search, a lighting field, the field
-        // of view — keeps its keys, all but the one that backs out of it.
+        // A field being typed in, the search, a lighting field, the field
+        // of view, keeps its keys, all but the one that backs out of it.
         let typing = !sheet.focus.is_focused(window);
         if typing && keystroke.key != "escape" {
             return false;

@@ -3,8 +3,8 @@
 // pixel across keeps the colour it was given instead of being multisampled,
 // bloomed and tone mapped into a grey smear.
 //
-// There is no depth attachment here — the scene's is multisampled wherever
-// the frame is, and this target is not — so the depth-tested entry points
+// There is no depth attachment here, the scene's is multisampled wherever
+// the frame is, and this target is not, so the depth-tested entry points
 // read the scene's depth buffer themselves and drop what stands behind it.
 
 struct Frame {
@@ -14,7 +14,7 @@ struct Frame {
 @group(0) @binding(0)
 var<uniform> frame: Frame;
 
-// Retyped, with `scene_farthest` below, above one sample — see
+// Retyped, with `scene_farthest` below, above one sample, see
 // `renderer::lines`.
 @group(1) @binding(0)
 var scene_depth: texture_depth_2d;
@@ -56,7 +56,7 @@ fn scene_beside(pixel: vec2<i32>, offset: vec2<i32>) -> f32 {
 }
 
 // Whether the scene stands in front of this fragment. A line or a dot has one
-// depth all the way across it — its centre's — while the surface it lies on
+// depth all the way across it, its centre's, while the surface it lies on
 // keeps sloping away under it; so the further a fragment is from that centre
 // (`off_centre`, in pixels), the more of the surface's own slope it is
 // allowed, plus half a pixel for where in the pixel the samples sit. Without
@@ -69,7 +69,7 @@ fn behind_scene(position: vec4<f32>, off_centre: f32) -> bool {
 }
 
 // The target is attached through its non-sRGB view, so blending happens on
-// the encoded values — how Roblox composites its overlays — and the colour
+// the encoded values, how Roblox composites its overlays, and the colour
 // is encoded here instead of by the hardware.
 fn encoded(color: vec4<f32>, coverage: f32) -> vec4<f32> {
     let c = color.rgb;
@@ -163,7 +163,7 @@ fn fs_line_on_top(input: LineOutput) -> @location(0) vec4<f32> {
     return encoded(input.color, coverage);
 }
 
-// A filled quad lying in the world — a heat map's cell — hidden by whatever
+// A filled quad lying in the world, a heat map's cell, hidden by whatever
 // stands in front of it.
 struct FillInput {
     @location(0) position: vec3<f32>,
@@ -192,7 +192,7 @@ fn fs_fill(input: FillOutput) -> @location(0) vec4<f32> {
 }
 
 // A dot: a disc a fixed number of pixels across round a world-space point,
-// whatever its distance — the size Studio's draggers hold their
+// whatever its distance, the size Studio's draggers hold their
 // `SphereHandleAdornment` markers at. It arrives as a square pushed out to
 // size here and is trimmed to a circle with a pixel of soft edge.
 struct DotInput {

@@ -44,7 +44,7 @@ fn home_and_end_reach_the_ends_of_any_strip() {
 }
 
 /// A ribbon page with a single control, or none at all, must not index off
-/// the end — `Avatar` and `Plugins` are exactly this shape today.
+/// the end, `Avatar` and `Plugins` are exactly this shape today.
 #[test]
 fn a_one_item_or_empty_group_has_nowhere_to_move_and_does_not_panic() {
     for movement in [Move::Previous, Move::Next, Move::First, Move::Last] {
@@ -76,7 +76,7 @@ fn a_modified_arrow_is_not_a_navigation_key() {
     assert_eq!(Move::of(&plain, false), Some(Move::Previous));
 }
 
-/// A horizontal strip must not answer Up/Down — those belong to whatever
+/// A horizontal strip must not answer Up/Down, those belong to whatever
 /// list is underneath it.
 #[test]
 fn a_horizontal_group_ignores_the_vertical_arrows() {
@@ -130,8 +130,8 @@ fn a_group_that_empties_leaves_the_focused_index_at_zero() {
 }
 
 /// The group's keys are its own only while one of its items holds focus.
-/// Its listener sits on a container that holds other controls too — the
-/// Viewport dock's quality select beside its settings — and a Home pressed
+/// Its listener sits on a container that holds other controls too, the
+/// Viewport dock's quality select beside its settings, and a Home pressed
 /// in that open dropdown must stay there rather than jump into the list.
 #[gpui_kit::test]
 fn keys_pass_through_while_focus_is_outside_the_group(cx: &mut gpui_kit::TestAppContext) {

@@ -22,7 +22,7 @@ impl Shell {
     }
 
     /// Sends the viewport the guides of whatever lights are selected, as the
-    /// DOM stands now — or none, with the setting off.
+    /// DOM stands now, or none, with the setting off.
     ///
     /// Called on every selection change and every edit (see
     /// `Shell::reflect_changes`), since a `Range`, `Angle`, `Face` or

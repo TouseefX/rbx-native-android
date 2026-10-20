@@ -12,8 +12,8 @@
 //! friends), so changing a surface re-tints every label sitting on it.
 //!
 //! Three pieces of *runtime* state live here rather than in a settings
-//! struct, because the things that read them — a `.focus()` closure, a
-//! `text_size()` call inside an element builder — are styling callbacks
+//! struct, because the things that read them, a `.focus()` closure, a
+//! `text_size()` call inside an element builder, are styling callbacks
 //! with no access to an `App`. They are plain atomics with a setter each;
 //! `Shell` calls the setters and then `cx.notify()`, which is what makes a
 //! change visible.
@@ -41,13 +41,13 @@ pub(crate) fn black() -> Rgba {
     theme::color("black")
 }
 
-/// A dock's body, the ribbon's own body, and a ribbon button — every
+/// A dock's body, the ribbon's own body, and a ribbon button, every
 /// structural surface in the shell, measured off the reference at a flat
 /// `#121213` with no separate "raised" step for a tile or an active dock
 /// tab. Three tones total in this design, not a ramp: [`black`] for the
 /// ground and the strips that sit directly on it (the tab rows, the menu
 /// strip), this for everything built on top of it, and [`field_select`]
-/// for the one thing that isn't structural — a field somebody types into
+/// for the one thing that isn't structural, a field somebody types into
 /// or picks from. A tile or a dock reads as itself through its icon, its
 /// label and its border, never through a fill lighter than its neighbours.
 pub(crate) fn dock() -> Rgba {
@@ -62,7 +62,7 @@ pub(crate) fn chrome() -> Rgba {
     theme::color("chrome")
 }
 
-/// A dropdown, a text field, a chip, the Command Bar's own input — every
+/// A dropdown, a text field, a chip, the Command Bar's own input, every
 /// control someone types into or picks from, one flat tone lighter than
 /// [`dock`]. The reference draws no further distinction between a select
 /// and a plain field: both are "a place data goes in", and both wear this.
@@ -70,13 +70,13 @@ pub(crate) fn field_select() -> Rgba {
     theme::color("field_select")
 }
 
-/// A ribbon button. An alias for [`dock`] — see its own doc comment for
+/// A ribbon button. An alias for [`dock`], see its own doc comment for
 /// why a tile carries no fill of its own.
 pub(crate) fn tile() -> Rgba {
     theme::color("tile")
 }
 
-/// The File/Edit/View menu strip, between the title bar and the tabs — the
+/// The File/Edit/View menu strip, between the title bar and the tabs, the
 /// ground's own tone, like the document tabs and the ribbon's category
 /// tabs above the ribbon it belongs to.
 pub(crate) fn menu_bar() -> Rgba {
@@ -121,11 +121,11 @@ pub(crate) fn track() -> Rgba {
 }
 
 /// A selected Explorer row: the accent, weighted to clear 3:1 against the
-/// dock it sits on — a selection is a state, and WCAG 1.4.11 does not
-/// exempt it — while still leaving its own label at 4.5:1 on top.
+/// dock it sits on, a selection is a state, and WCAG 1.4.11 does not
+/// exempt it, while still leaving its own label at 4.5:1 on top.
 ///
 /// The brief that asked for this palette wants a much softer (~12%) wash
-/// for "active/selected" — see [`accent_soft`] — but at 12% an accent this
+/// for "active/selected", see [`accent_soft`], but at 12% an accent this
 /// dark barely lifts off a surface this dark: it fails the 3:1 floor a
 /// state indicator has to clear on its own, no separate border to help it.
 /// So the Explorer's selection keeps the stronger wash the old palette
@@ -302,13 +302,13 @@ pub(crate) fn knob() -> Rgba {
     theme::color("knob")
 }
 
-/// A close-window button's hover background — the one place this UI's
+/// A close-window button's hover background, the one place this UI's
 /// neutral hover isn't the right answer, since closing needs its own cue.
 pub(crate) fn danger_hover() -> Rgba {
     theme::color("danger_hover")
 }
 
-/// An unticked toggle's own knob, and its track's border — off the
+/// An unticked toggle's own knob, and its track's border, off the
 /// reference exactly (`#8a8a8a`), and asserted at 3:1 against
 /// [`field_select`], the only thing distinguishing "off" from "nothing
 /// here".
@@ -317,7 +317,7 @@ pub(crate) fn check_off_border() -> Rgba {
 }
 
 /// Aliases onto the three-tone text ramp above, kept so call sites written
-/// against the old six-step alpha ramp don't all need editing at once —
+/// against the old six-step alpha ramp don't all need editing at once,
 /// see [`text`], [`text2`] and [`text3`] for what each tier actually is.
 pub(crate) fn text_full() -> Rgba {
     theme::color("text_full")
@@ -341,7 +341,7 @@ pub(crate) fn text_disabled() -> Rgba {
 // ----------------------------------------------------------- tool accents
 
 /// One pastel per transform tool, used **only** on that tool's own ribbon
-/// button while it is the active tool — never in panel chrome, text or
+/// button while it is the active tool, never in panel chrome, text or
 /// general borders.
 ///
 /// Colour is never the only cue (WCAG 1.4.1): each tool already has its own
@@ -365,7 +365,7 @@ pub(crate) fn tool_rotate() -> Rgba {
     theme::color("tool_rotate")
 }
 
-/// Transform's own, distinct from every other tool's hue — it is Move,
+/// Transform's own, distinct from every other tool's hue, it is Move,
 /// Scale and Rotate's handles all drawn at once, so its button needs a
 /// colour none of theirs already carries.
 pub(crate) fn tool_transform() -> Rgba {
@@ -389,7 +389,7 @@ pub(crate) fn tool_sun() -> Rgba {
 }
 
 /// Edit Pivot's own, on its tile and its Snap row. Lime, a hue no other
-/// tool spends — the magenta Studio draws its hotspots in is already
+/// tool spends, the magenta Studio draws its hotspots in is already
 /// Transform's pink's neighbour.
 pub(crate) fn tool_pivot() -> Rgba {
     theme::color("tool_pivot")
@@ -592,7 +592,7 @@ pub(crate) const TOOL_ACCENTS: [Named; 9] = [
 
 // ----------------------------------------------------------------- shapes
 
-/// The border an active transform tool wears, on top of its wash — the
+/// The border an active transform tool wears, on top of its wash, the
 /// non-colour half of WCAG 1.4.1's "never colour alone".
 ///
 /// Scaled, unlike the radii below, precisely *because* it is the
@@ -604,7 +604,7 @@ pub(crate) fn tool_border() -> Pixels {
 }
 
 /// Inputs, dropdowns, pills, small buttons, a document tab's `+`, and
-/// (top corners only) an Output tab — the default radius most controls in
+/// (top corners only) an Output tab, the default radius most controls in
 /// this design wear.
 pub(crate) fn radius() -> Pixels {
     px(theme::size("radius"))
@@ -643,7 +643,7 @@ pub(crate) fn radius_segment() -> Pixels {
 // exists only on top of it, for the two surfaces with no rows to clip: the
 // Script Editor and the 3D view (see "Viewport text" below).
 //
-// This is how this app meets WCAG 1.4.4 (Resize Text, 200%) — a native app
+// This is how this app meets WCAG 1.4.4 (Resize Text, 200%), a native app
 // has no browser zoom, so the settings-based scale *is* the mechanism.
 
 /// The range the scale may be set to, matching Blender's Resolution Scale.
@@ -663,15 +663,15 @@ pub(crate) fn set_font_scale(scale: f32) -> bool {
 }
 
 /// A design value in the scale the frames are drawn at, as the pixels to
-/// actually paint. **Every** size in this module goes through here — a
+/// actually paint. **Every** size in this module goes through here, a
 /// literal `px()` outside it is a size the accessibility scale can't reach.
 pub(crate) fn scaled(base: f32) -> Pixels {
     px(base * font_scale())
 }
 
 /// A width in the frames' own scale, as pixels to paint. Public because a
-/// few widths live where they are used rather than here — a dropdown sized
-/// to its own longest label, say — and they still have to follow the scale.
+/// few widths live where they are used rather than here, a dropdown sized
+/// to its own longest label, say, and they still have to follow the scale.
 pub(crate) fn scaled_width(base: f32) -> Pixels {
     scaled(base)
 }
@@ -682,7 +682,7 @@ pub(crate) fn scaled_width(base: f32) -> Pixels {
 // 3D view: the text the editor draws over the scene (readouts, guide
 // labels, the measurement box, the orientation indicator's letters) has its
 // own size, and the UI scale multiplies it like everything else. Place
-// content — a BillboardGui's or SurfaceGui's text — is not on this dial:
+// content, a BillboardGui's or SurfaceGui's text, is not on this dial:
 // it is what the place looks like, and Studio never rescales it either.
 
 static VIEWPORT_FONT_SIZE: AtomicU32 =
@@ -744,7 +744,7 @@ fn target_floor() -> f32 {
 /// with the scale but may never shrink below [`TARGET_FLOOR`].
 ///
 /// Scaling *down* is where this matters. At 0.5x a plain `scaled()` row is
-/// 14px and a checkbox 13px — comfortably under the floor, in the exact
+/// 14px and a checkbox 13px, comfortably under the floor, in the exact
 /// configuration a low-vision user is least likely to be using and a
 /// motor-impaired one most. The previous version of this module scaled them
 /// freely and asserted the floor only at 1.0x, which is a test that cannot
@@ -761,7 +761,7 @@ fn scaled_target(base: f32) -> Pixels {
 // to a legible base size. The reference this module now matches gives
 // exact sizes of its own (10–13px, close to the frame's original 9px
 // hierarchy rather than to that override), and "pixel perfect" is this
-// project's explicit, repeated instruction — so the ramp below is those
+// project's explicit, repeated instruction, so the ramp below is those
 // exact sizes again, still routed through `scaled()`: the UI-scale slider
 // (§ WCAG 1.4.4) is still there to reach for, just recentred on a smaller
 // default rather than starting from an inflated one.
@@ -889,8 +889,8 @@ pub(crate) fn set_fonts(ui: SharedString, mono: SharedString) {
     *fonts = (ui, mono);
 }
 
-/// The size to hand a toolkit widget — an `Input`, a `Select`, a
-/// `ColorPicker` — so its text comes out at [`text_md`].
+/// The size to hand a toolkit widget, an `Input`, a `Select`, a
+/// `ColorPicker`: so its text comes out at [`text_md`].
 ///
 /// The toolkit sizes text in fixed steps and scales `Size::Size` by 0.875,
 /// so this is [`text_md`] said backwards. Without it the Properties panel
@@ -941,14 +941,14 @@ pub(crate) fn dock_tab_add_width() -> Pixels {
 }
 
 /// Each side dock. Wider than the frame's 228 because the label column is
-/// wider, because the label is 14px instead of 9px — and 14px wider again
+/// wider, because the label is 14px instead of 9px, and 14px wider again
 /// so a property control can take the reference's full 130 without
 /// costing a name column pixel (see [`value_width`]).
 pub(crate) fn dock_width() -> f32 {
     theme::size("dock_width") * font_scale()
 }
 
-/// The bottom dock: its tab strip and five rows under it — Output's log, or
+/// The bottom dock: its tab strip and five rows under it, Output's log, or
 /// the Viewport dock's settings.
 ///
 /// Counted in rows rather than scaled from one number, because a row has
@@ -1015,13 +1015,13 @@ pub(crate) fn section_height() -> Pixels {
     scaled(theme::size("section_height"))
 }
 
-/// One Explorer row — clickable, so likewise floored.
+/// One Explorer row, clickable, so likewise floored.
 pub(crate) fn tree_row_height() -> Pixels {
     scaled_target(theme::size("tree_row_height"))
 }
 
 /// A text field, a select trigger, a stepper, the search box at the top of
-/// a dock — all one height, straight off the `InputsStyle` frame, and
+/// a dock, all one height, straight off the `InputsStyle` frame, and
 /// comfortably over WCAG 2.5.8's 24x24 target floor.
 pub(crate) fn input_height() -> Pixels {
     scaled_target(theme::size("input_height"))
@@ -1041,7 +1041,7 @@ pub(crate) fn field_min_width() -> Pixels {
 /// its own fixed step height and **top-aligns** it inside whatever height
 /// it is given, so a select dropped into a 31px field box rides 2-4px high
 /// depending on its padding. Its text also sits ~1.5px above its own row's
-/// centre. Together that is `select_inset` in `theme.json` — a compensation
+/// centre. Together that is `select_inset` in `theme.json`: a compensation
 /// for somebody else's layout, which is why it is one named value here
 /// rather than a bare `px()` at the call site, and why it scales with
 /// everything else. Last measured at 1x: 5.5 puts the label's ink centre on
@@ -1058,7 +1058,7 @@ pub(crate) fn input_padding() -> Pixels {
     scaled(theme::size("input_padding"))
 }
 
-/// The switch someone actually sees: a pill, 15px tall — taken down twice on
+/// The switch someone actually sees: a pill, 15px tall, taken down twice on
 /// review from the frame's 26px square checkbox, because at anything larger
 /// it was the loudest thing in a property row and pulled the eye off the
 /// values it sits beside. Kept at the same visual weight now that it is a
@@ -1071,7 +1071,7 @@ pub(crate) fn toggle_height() -> Pixels {
     scaled(theme::size("toggle_height"))
 }
 
-/// The pill's own width — a fixed ratio of its height, not a separate
+/// The pill's own width, a fixed ratio of its height, not a separate
 /// design value: a toggle narrower than this reads as a lozenge rather than
 /// a track with somewhere to slide to, and one wider looks like a badge.
 pub(crate) fn toggle_width() -> Pixels {
@@ -1084,13 +1084,13 @@ pub(crate) fn toggle_thumb() -> Pixels {
     scaled(theme::size("toggle_thumb"))
 }
 
-/// The square a click has to land in to flip that toggle — never under
+/// The square a click has to land in to flip that toggle, never under
 /// WCAG 2.5.8's floor, whatever the control inside it is doing.
 pub(crate) fn checkbox_target() -> Pixels {
     scaled_target(theme::size("checkbox_target"))
 }
 
-/// The column a property row's expander chevron — and a section header's —
+/// The column a property row's expander chevron, and a section header's,
 /// sits in, and, because a child field's name lines up under its parent's
 /// rather than under the chevron, the step one level of nesting indents by.
 /// Exactly the [`text_xs`] icon's own box: the glyph already sits well
@@ -1157,7 +1157,7 @@ pub(crate) fn section_gap() -> Pixels {
     scaled(theme::size("section_gap"))
 }
 
-/// Between one category's last row and the next category's header — the
+/// Between one category's last row and the next category's header, the
 /// largest gap in the panel, and deliberately so.
 pub(crate) fn group_gap() -> Pixels {
     scaled(theme::size("group_gap"))
@@ -1181,7 +1181,7 @@ pub(crate) fn label_gap() -> Pixels {
 //
 // Nothing below is measurable in a static frame. A design file has no
 // keyboard focus, no open menu, no hover and no motion preference, so these
-// are this project's own — chosen to sit inside the palette above rather
+// are this project's own, chosen to sit inside the palette above rather
 // than beside it.
 
 /// Keyboard focus, and **only** keyboard focus (WCAG 2.4.7): a solid 2px
@@ -1197,19 +1197,19 @@ pub(crate) fn label_gap() -> Pixels {
 ///   legible against a control that happens to be a similar blue.
 /// - The order is the whole trick: GPUI paints a shadow list front-to-back
 ///   in *array* order, so the surface step lands on top and punches the
-///   middle out of the blue one. Reverse them and an unfilled control — a
-///   ribbon tab, a section header — comes back flooded solid blue.
+///   middle out of the blue one. Reverse them and an unfilled control, a
+///   ribbon tab, a section header, comes back flooded solid blue.
 ///
 /// [`check_on`] clears 3:1 against every surface in this module (asserted
 /// in `tests`), which is WCAG 2.4.13's other half.
 ///
 /// **This paints unconditionally**, and every caller applies it through
-/// GPUI's `focus_visible` — its `:focus-visible` equivalent, which already
+/// GPUI's `focus_visible`: its `:focus-visible` equivalent, which already
 /// tracks input modality and refreshes the window when it flips. That is
 /// what stops a mouse click from lighting up every button the pointer
 /// touches, and it is the reason nothing here tracks modality itself: a
 /// second source of truth for "was that the keyboard" is a second thing to
-/// get wrong. Roving-tabindex children are no exception — each one owns a
+/// get wrong. Roving-tabindex children are no exception, each one owns a
 /// real focus handle (see `shell::roving`), so `focus_visible` covers them
 /// too.
 pub(crate) fn focus_ring(surface: Rgba) -> Vec<BoxShadow> {
@@ -1219,7 +1219,7 @@ pub(crate) fn focus_ring(surface: Rgba) -> Vec<BoxShadow> {
 /// The OS "reduce motion" preference, mirrored from `App::reduce_motion`
 /// so that a styling callback can read it.
 ///
-/// GPUI owns the canonical flag — and `with_animation` already honours it —
+/// GPUI owns the canonical flag, and `with_animation` already honours it,
 /// but it never learns the platform's setting on its own (nothing in any of
 /// its backends ever calls `set_reduce_motion`), and a `group_hover` style
 /// is evaluated with no `App` in reach. So `main` probes the desktop for
@@ -1236,7 +1236,7 @@ pub(crate) fn set_reduced_motion(reduced: bool) -> bool {
 }
 
 /// Every hover state the chrome draws starts from this, so an effect a theme
-/// adds beyond the hover fill — a glow, today — reaches all of them. With no
+/// adds beyond the hover fill, a glow, today, reaches all of them. With no
 /// such effect it hands `style` back untouched.
 pub(crate) fn hover_fx(style: StyleRefinement) -> StyleRefinement {
     match theme::hover_glow() {
@@ -1247,7 +1247,7 @@ pub(crate) fn hover_fx(style: StyleRefinement) -> StyleRefinement {
 
 /// A surface that floats over the shell: a menu, a popover, a tooltip.
 /// The frame contains none, and on a UI this dark a drop shadow alone is
-/// invisible — so the separation is carried by the hairline, with the
+/// invisible, so the separation is carried by the hairline, with the
 /// shadow only deepening the ground beneath it.
 pub(crate) fn elevation() -> Vec<BoxShadow> {
     vec![ring(border2(), 1.), floating_shadow()]
@@ -1267,12 +1267,12 @@ pub(crate) fn floating_shadow() -> BoxShadow {
 }
 
 /// [`focus_ring`] for a control that sits flush against its container's
-/// edge — a document tab, a ribbon category tab.
+/// edge, a document tab, a ribbon category tab.
 ///
 /// An outset ring on those is clipped to two sides of four, which measures
 /// about half the area WCAG 2.4.13 requires (`4w + 4h` for a 2px
 /// perimeter). The criterion's own escape is to go *inside* instead, at
-/// 3px rather than 2 — so that is what this does, and nothing can clip it.
+/// 3px rather than 2, so that is what this does, and nothing can clip it.
 pub(crate) fn focus_ring_inset() -> Vec<BoxShadow> {
     focus_ring_inset_in(check_on())
 }
@@ -1348,7 +1348,7 @@ pub(crate) const DURATION_MENU: Duration = Duration::from_millis(160);
 /// pointer sweeping across a list leaves a short trail rather than a smear.
 pub(crate) const DURATION_HOVER: Duration = Duration::from_millis(120);
 
-/// Fast out, slow in — the curve everything in this shell animates on.
+/// Fast out, slow in, the curve everything in this shell animates on.
 pub(crate) fn easing_soft(delta: f32) -> f32 {
     let t = delta.clamp(0., 1.);
     1. - (1. - t).powi(3)

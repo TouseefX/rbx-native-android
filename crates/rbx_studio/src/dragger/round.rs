@@ -5,7 +5,7 @@
 //! pole or along a cylinder's side (`Grid3D`) and the ring round a cylinder
 //! where the drag lands (`TargetGridView`).
 //!
-//! All of it is drawn in the part's own frame, at its true radius — half its
+//! All of it is drawn in the part's own frame, at its true radius, half its
 //! smallest size for a ball, half the smaller of Y and Z for a cylinder.
 
 use glam::{Mat3, Vec2, Vec3};
@@ -40,7 +40,7 @@ impl Part {
 }
 
 /// Studio's circle: the 28 points round the square `[-3, 3]²`, seven a
-/// side, pushed out onto the unit circle — 24 distinct, spaced 18.4° at the
+/// side, pushed out onto the unit circle, 24 distinct, spaced 18.4° at the
 /// axes and 11.3° at the diagonals.
 fn circle() -> Vec<Vec2> {
     let side = || -3..=3;

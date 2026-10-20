@@ -326,7 +326,7 @@ fn rect_round_trips_through_edit_text_and_parse() {
 }
 
 /// `Default` carries no numbers of its own, so the fields under the unticked
-/// box have to be seeded from somewhere — and an empty editor that commits
+/// box have to be seeded from somewhere, and an empty editor that commits
 /// zeroes the moment it is ticked would be worse than useless.
 #[test]
 fn default_physical_properties_seed_their_fields_from_the_plastic_defaults() {
@@ -584,7 +584,7 @@ fn face(family: &str, weight: u16, style: FontStyle) -> Font {
     }
 }
 
-/// One `TextLabel` — the class the reflection dump resolves `Font` on.
+/// One `TextLabel`: the class the reflection dump resolves `Font` on.
 fn label_with(values: &[(&str, Variant)]) -> WeakDom {
     let mut dom = WeakDom::new();
     let mut label = Instance::new(part_ref(), "TextLabel", "Label");
@@ -721,7 +721,7 @@ fn committing_font_on_an_instance_without_a_font_face_writes_only_font() {
 }
 
 /// A bit set round-trips through its own labels' order, and a wrong count
-/// is refused rather than silently padded — a `Faces` short one flag would
+/// is refused rather than silently padded, a `Faces` short one flag would
 /// otherwise clear a side nobody touched.
 #[test]
 fn faces_and_axes_round_trip_as_named_flags() {
@@ -779,7 +779,7 @@ fn ray_and_vector3int16_round_trip() {
 }
 
 /// A drag hands these fields fractional values, and `Vector3int16` is 16
-/// bits wide — so the conversion has to round and clamp rather than cast.
+/// bits wide, so the conversion has to round and clamp rather than cast.
 /// A raw `as i16` truncates toward zero and wraps silently past the range.
 #[test]
 fn vector3int16_rounds_and_clamps_instead_of_truncating() {
@@ -824,7 +824,7 @@ fn checking_an_absent_optional_cframe_gives_it_the_origin() {
 }
 
 // Clearing and restoring in one session should not quietly move the value to
-// the origin — the checkbox only says whether there is one.
+// the origin, the checkbox only says whether there is one.
 #[test]
 fn checking_an_optional_cframe_that_still_holds_one_keeps_it() {
     let frame = cframe([4.0, 5.0, 6.0], IDENTITY_ROTATION);

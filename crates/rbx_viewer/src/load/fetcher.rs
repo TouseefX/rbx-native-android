@@ -2,7 +2,7 @@
 //!
 //! Resolving one reference is a download, a disk read and a decode in that
 //! order: hundreds of milliseconds cold, and still several for an image the
-//! cache already holds — the Tier 1 profile put decoding alone at about two
+//! cache already holds, the Tier 1 profile put decoding alone at about two
 //! thirds of a `marked.rbxl` reload. None of that may happen between two
 //! frames, so it happens here instead. A fixed set of worker threads takes
 //! requests off one queue, resolves them through [`Source`], and hands the
@@ -12,7 +12,7 @@
 //! Requests carry no ordering and no cancellation: a result for a reference
 //! nobody wants any more is filed and ignored by the caller, which costs a
 //! decode already paid for and nothing else. Coalescing is the caller's job
-//! too — see `load::Resident`, which is what knows whether a reference is
+//! too, see `load::Resident`, which is what knows whether a reference is
 //! already resident or already in flight.
 
 #[cfg(target_arch = "wasm32")]
@@ -49,7 +49,7 @@ pub(crate) enum Want {
     Bytes,
 }
 
-/// One finished request: the decoded value, or why it could not be — the
+/// One finished request: the decoded value, or why it could not be, the
 /// same [`Failure`] the blocking path already puts against a reference, so
 /// the Output dock reads the same either way and a transient one is retried
 /// by the next load just the same.
@@ -104,7 +104,7 @@ impl Fetcher {
     /// A thread that will not start is reported and skipped rather than
     /// failing the load: one worker resolves the same assets as six, slower.
     /// With none at all the queue simply never drains, and every asset stays
-    /// on its fallback — which is exactly what a machine with no asset
+    /// on its fallback, which is exactly what a machine with no asset
     /// resolver already draws.
     pub(crate) fn new(source: Arc<dyn Source>, workers: usize) -> Self {
         let queue = Arc::new(Queue {
@@ -147,7 +147,7 @@ impl Fetcher {
         self.landed.try_iter().collect()
     }
 
-    /// The next result, waiting up to `timeout` for it — for a caller that has
+    /// The next result, waiting up to `timeout` for it, for a caller that has
     /// nothing to draw meanwhile (the tests, and nothing on the render path).
     #[cfg(test)]
     pub(crate) fn wait(&self, timeout: Duration) -> Option<Landed> {
@@ -162,8 +162,8 @@ impl Drop for Fetcher {
     /// Deliberately not joined, unlike the render thread `rbxstudio` owns: a
     /// worker part-way through a download would hold the join for as long as
     /// the network takes, and what is being torn down is a viewport somebody
-    /// has just closed. Nothing a worker still holds touches a GPU — it has a
-    /// `Source` and a `Sender` whose receiver is about to go — so its last
+    /// has just closed. Nothing a worker still holds touches a GPU, it has a
+    /// `Source` and a `Sender` whose receiver is about to go, so its last
     /// `send` fails and it exits on its own.
     fn drop(&mut self) {
         *self.queue.waiting.lock().unwrap_or_else(|e| e.into_inner()) = None;
@@ -207,7 +207,7 @@ pub(crate) mod tests {
     use super::*;
 
     /// A source that decodes `Id(n)` into an `n`-pixel-wide image and fails
-    /// every odd id — the asset's own fault, so no load retries it — counting
+    /// every odd id, the asset's own fault, so no load retries it, counting
     /// what it was actually asked to resolve. No cache directory, no network,
     /// no fixture on disk.
     #[derive(Default)]

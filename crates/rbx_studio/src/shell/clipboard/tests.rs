@@ -161,7 +161,7 @@ fn a_non_archivable_descendant_and_its_own_subtree_are_excluded() {
 #[test]
 fn a_non_archivable_root_is_still_copied() {
     // Real Studio's Copy/Duplicate ignore the copied instance's *own*
-    // Archivable — unlike `Instance:Clone()`, which would refuse it —
+    // Archivable, unlike `Instance:Clone()`, which would refuse it,
     // so this only applies to descendants, never to the thing that was
     // actually selected and copied.
     let mut dom = WeakDom::new();
@@ -187,7 +187,7 @@ fn the_copy_is_always_archivable_even_if_the_original_was_not() {
     let copied = dom.get(copy).unwrap().properties();
     assert_eq!(copied.get(ARCHIVABLE), None);
     assert!(archivable(copied));
-    // The original is untouched — only the copy was forced.
+    // The original is untouched, only the copy was forced.
     assert_eq!(
         dom.get(part).unwrap().properties().get(ARCHIVABLE),
         Some(&Variant::Bool(false))
@@ -213,7 +213,7 @@ fn materializing_a_model_recreates_its_whole_subtree_under_new_referents() {
 #[test]
 fn duplicating_a_script_carries_its_source_along() {
     // `Source` is just another property in `properties()` (see
-    // `script_editor::source`) — no script-specific handling exists
+    // `script_editor::source`), no script-specific handling exists
     // anywhere in this module, so this is really a check that the
     // generic property copy above doesn't quietly drop it.
     let mut dom = WeakDom::new();
@@ -342,7 +342,7 @@ fn duplicating_two_instances_is_one_batch_of_changes() {
     materialize(&mut dom, &clipped_a, Some(workspace));
     materialize(&mut dom, &clipped_b, Some(workspace));
     // One drain, mirroring `Shell::duplicate_selected`'s single
-    // `push_history`/`take_changes` pair — this is what makes
+    // `push_history`/`take_changes` pair, this is what makes
     // duplicating a multi-instance selection one undo step rather than
     // one per instance.
     let changes = dom.take_changes();

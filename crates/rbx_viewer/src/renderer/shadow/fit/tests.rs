@@ -38,7 +38,7 @@ fn the_ortho_encloses_every_frustum_corner() {
 }
 
 // A caster anywhere in the scene has to be inside the depth range, including one
-// standing between the sun and the visible region — those are off-screen and
+// standing between the sun and the visible region, those are off-screen and
 // still cast into it.
 #[test]
 fn the_depth_range_covers_the_whole_scene() {

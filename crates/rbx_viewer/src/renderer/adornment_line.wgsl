@@ -2,7 +2,7 @@
 // documented in pixels, and the circle a `SelectionSphere` outlines itself
 // with. Each edge arrives as a screen-space quad and is pushed out to its
 // own width in the vertex shader, the same way `renderer::outline`'s box
-// edges are — with the width and the colour carried per vertex here,
+// edges are, with the width and the colour carried per vertex here,
 // because every adornment picks both for itself.
 
 struct VertexInput {

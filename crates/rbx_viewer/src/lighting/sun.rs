@@ -1,5 +1,5 @@
 //! Where the sun stands in the sky for a given `Lighting`, and the other way
-//! round: what `Lighting` has to say for the sun — or the moon — to stand
+//! round: what `Lighting` has to say for the sun, or the moon, to stand
 //! somewhere chosen.
 //!
 //! Both directions live here so the sky has one model. The renderer lights
@@ -23,7 +23,7 @@ const HOURS_PER_DAY: f32 = 24.0;
 const MAX_LATITUDE_DEGREES: f32 = 90.0;
 
 /// Direction of the sun in Roblox's own axes, as the only known-good community
-/// reproduction of `Lighting:GetSunDirection()` computes it — Roblox publishes
+/// reproduction of `Lighting:GetSunDirection()` computes it, Roblox publishes
 /// no formula, so this is reverse-engineered rather than authoritative.
 ///
 /// Checks out at the three angles anyone can name from memory: noon at the
@@ -72,7 +72,7 @@ pub struct Placement {
 /// `φ = latitude − 23.5°` and `λ = (clock − 6h)·15°/h`, so `φ = asin z` and
 /// `λ = atan2(y, x)`. `φ` spans ±90°, which puts the latitude anywhere from
 /// −66.5° to 113.5°. Past 90° there is no answer: that is a cone 23.5° wide
-/// about +Z the sun never reaches, and a direction inside it is held at 90° —
+/// about +Z the sun never reaches, and a direction inside it is held at 90°,
 /// the same hour, so the nearest point on the cone's rim.
 ///
 /// The moon is placed by putting the sun directly opposite it, which is the
