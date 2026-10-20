@@ -143,11 +143,11 @@ const CURRENCY: [&str; 9] = [
     "currency",
 ];
 
-/// First-parameter names that say the author expected data, not the Player.
-const DATA_NAMES: [&str; 28] = [
-    "data", "args", "arg", "amount", "value", "val", "item", "itemid", "id", "message", "msg",
-    "text", "input", "request", "payload", "action", "cmd", "command", "price", "count",
-    "quantity", "position", "pos", "cframe", "target", "part", "tool", "key",
+/// What a handler's first parameter is called when its author knows it's
+/// the sending Player; any other name says they expected the client's data.
+const PLAYER_NAMES: [&str; 12] = [
+    "pl", "plr", "client", "sender", "user", "who", "owner", "caller", "requester", "from",
+    "source", "self",
 ];
 
 const DATASTORE_WRITES: [&str; 4] = ["SetAsync", "UpdateAsync", "IncrementAsync", "RemoveAsync"];
@@ -225,11 +225,9 @@ impl Walker<'_> {
                 self.expr(compound.rhs());
                 match compound.lhs() {
                     Var::Expression(var) => self.assigned(var, compound.rhs()),
-                    Var::Name(name) => {
-                        if self.tainted(compound.rhs()) {
-                            if let Some(taint) = &mut self.taint {
-                                taint.tainted.insert(ident(name).to_string());
-                            }
+                    Var::Name(name) if self.tainted(compound.rhs()) => {
+                        if let Some(taint) = &mut self.taint {
+                            taint.tainted.insert(ident(name).to_string());
                         }
                     }
                     _ => {}
@@ -666,7 +664,11 @@ impl Walker<'_> {
         };
         let player = params.first().filter(|p| *p != "...").cloned();
         if let Some(p) = &player {
-            if DATA_NAMES.contains(&p.to_lowercase().as_str()) {
+            let lower = p.to_lowercase();
+            let playerish = p.len() == 1
+                || p.starts_with('_')
+                || PLAYER_NAMES.iter().any(|n| lower.contains(n));
+            if !playerish {
                 self.finding(
                     Check::PlayerArgument,
                     Severity::Medium,

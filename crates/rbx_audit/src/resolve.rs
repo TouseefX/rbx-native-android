@@ -146,6 +146,7 @@ impl Resolver<'_> {
             {
                 Val::LocalPlayer
             }
+            (Val::Service(class), "LocalPlayer") if class == "Players" => Val::LocalPlayer,
             _ => self.child(val, name),
         }
     }
