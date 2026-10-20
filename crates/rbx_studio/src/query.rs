@@ -9,6 +9,7 @@
 //! Evaluation never mutates anything and never fails on an instance that
 //! lacks a property: such a comparison is simply false.
 
+mod check;
 mod eval;
 mod lex;
 mod parse;
