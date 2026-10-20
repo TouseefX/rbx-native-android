@@ -3,10 +3,19 @@ use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Value};
 
 use super::{call, resolve};
-use crate::mcp::Session;
+use crate::mcp::{PlayState, Session, Studio};
 use crate::properties::Properties;
 
-fn place() -> WeakDom {
+pub(super) fn studio() -> Studio {
+    Studio {
+        id: "a1".to_owned(),
+        name: "Arena".to_owned(),
+        place_id: None,
+        play: PlayState::Edit,
+    }
+}
+
+pub(super) fn place() -> WeakDom {
     let mut dom = WeakDom::new();
     let workspace = dom.new_instance("Workspace", "Workspace", None);
     let model = dom.new_instance("Model", "Tower", Some(workspace));
@@ -35,11 +44,13 @@ fn place() -> WeakDom {
 
 fn run(dom: &WeakDom, tool: &str, arguments: Value) -> (bool, String) {
     let properties = Properties::new(ReflectionDatabase::embedded());
-    let session = Session {
-        dom,
-        properties: &properties,
-    };
-    let result = call(&json!({ "name": tool, "arguments": arguments }), &session).unwrap();
+    let studio = studio();
+    let mut session = Session::new(dom, &properties, &studio);
+    let result = call(
+        &json!({ "name": tool, "arguments": arguments }),
+        &mut session,
+    )
+    .unwrap();
     (
         result["isError"].as_bool().unwrap(),
         result["content"][0]["text"].as_str().unwrap().to_owned(),
@@ -236,4 +247,46 @@ fn script_grep_finds_text_literally_ignoring_case_unless_asked() {
     // A Luau pattern's magic characters are only text here.
     let literal = json_of(&dom, "script_grep", json!({ "pattern": "+= 1" }));
     assert_eq!(literal[0]["line"], 3);
+}
+
+#[test]
+fn get_studio_state_names_this_editor_and_what_it_can_reach() {
+    let dom = place();
+    let state = json_of(&dom, "get_studio_state", json!({}));
+    assert_eq!(state["studio_id"], "a1");
+    assert_eq!(state["name"], "Arena");
+    assert!(
+        state.get("place_id").is_none(),
+        "an unlinked place has none"
+    );
+    assert_eq!(state["play_state"], "Edit");
+    assert_eq!(state["datamodel_types"], json!(["Edit"]));
+    assert_eq!(state["editable"], true);
+}
+
+#[test]
+fn list_roblox_studios_on_one_editor_lists_just_it() {
+    let dom = place();
+    assert_eq!(
+        json_of(&dom, "list_roblox_studios", json!({})),
+        json!([{ "studio_id": "a1", "name": "Arena" }])
+    );
+}
+
+#[test]
+fn a_call_for_another_studio_is_refused_by_this_one() {
+    let dom = place();
+    let (failed, text) = run(
+        &dom,
+        "script_read",
+        json!({ "path": "game.ServerScriptService.GameLoop", "studio_id": "b2" }),
+    );
+    assert!(failed);
+    assert!(text.contains("a1") && text.contains("b2"), "{text}");
+    let (failed, _) = run(
+        &dom,
+        "script_read",
+        json!({ "path": "game.ServerScriptService.GameLoop", "studio_id": "a1" }),
+    );
+    assert!(!failed);
 }

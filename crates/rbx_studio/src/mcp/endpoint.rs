@@ -1,5 +1,5 @@
 //! The editor's side of the bridge: a loopback listener, and the file that
-//! tells [`super::bridge`] its port and token.
+//! tells [`super::broker`] its port, token and `studio_id`.
 //!
 //! Each connection gets a thread that reads one line at a time and waits for
 //! the UI thread's answer before reading the next, so requests from one
@@ -17,21 +17,23 @@ use std::sync::Arc;
 
 use serde_json::json;
 
-/// What `mcp.json` holds.
+/// What an editor's `<studio_id>.json` holds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Endpoint {
+    pub(crate) studio_id: String,
     pub(crate) port: u16,
     pub(crate) token: String,
 }
 
 impl Endpoint {
     pub(crate) fn to_json(&self) -> String {
-        json!({ "port": self.port, "token": self.token }).to_string()
+        json!({ "studio_id": self.studio_id, "port": self.port, "token": self.token }).to_string()
     }
 
     pub(crate) fn from_json(text: &str) -> Option<Endpoint> {
         let value: serde_json::Value = serde_json::from_str(text).ok()?;
         Some(Endpoint {
+            studio_id: value.get("studio_id")?.as_str()?.to_owned(),
             port: u16::try_from(value.get("port")?.as_u64()?).ok()?,
             token: value.get("token")?.as_str()?.to_owned(),
         })
@@ -40,6 +42,11 @@ impl Endpoint {
     pub(crate) fn load(path: &Path) -> Option<Endpoint> {
         Endpoint::from_json(&std::fs::read_to_string(path).ok()?)
     }
+}
+
+/// Where the editor `studio_id` names says how to reach it.
+pub(crate) fn file_of(dir: &Path, studio_id: &str) -> PathBuf {
+    dir.join(format!("{studio_id}.json"))
 }
 
 /// One line from a client, waiting for the UI thread's answer.
@@ -61,7 +68,7 @@ impl Request {
 }
 
 /// The listener, for as long as it is kept. Dropping it stops accepting,
-/// ends every connection at its next line and takes `mcp.json` back.
+/// ends every connection at its next line and removes its file.
 pub(crate) struct Server {
     endpoint: Endpoint,
     file: PathBuf,
@@ -70,16 +77,19 @@ pub(crate) struct Server {
 }
 
 impl Server {
-    /// Listens on a port of the system's choosing and writes `file`.
-    pub(crate) fn start(file: PathBuf) -> std::io::Result<Server> {
+    /// Listens on a port of the system's choosing, under a new `studio_id`,
+    /// and writes `<dir>/<studio_id>.json`.
+    pub(crate) fn start(dir: &Path) -> std::io::Result<Server> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
         let endpoint = Endpoint {
+            studio_id: random_hex(1),
             port: listener.local_addr()?.port(),
-            token: token(),
+            token: random_hex(2),
         };
-        if let Some(dir) = file.parent() {
-            std::fs::create_dir_all(dir)?;
-        }
+        std::fs::create_dir_all(dir)?;
+        let file = file_of(dir, &endpoint.studio_id);
+        // Written whole and renamed, so a broker scanning the directory never
+        // reads half a file.
         let tmp = file.with_extension("json.tmp");
         std::fs::write(&tmp, endpoint.to_json())?;
         std::fs::rename(&tmp, &file)?;
@@ -115,10 +125,7 @@ impl Drop for Server {
         // `accept` blocks; a connection of our own is what wakes it to see
         // the flag.
         let _ = TcpStream::connect((Ipv4Addr::LOCALHOST, self.endpoint.port));
-        // A newer editor may have written its own since.
-        if Endpoint::load(&self.file).as_ref() == Some(&self.endpoint) {
-            let _ = std::fs::remove_file(&self.file);
-        }
+        let _ = std::fs::remove_file(&self.file);
     }
 }
 
@@ -173,11 +180,12 @@ fn serve(stream: TcpStream, token: &str, sender: &Sender<Request>) {
     }
 }
 
-/// 128 bits, from the standard library's per-process random hash keys,
-/// so no RNG crate is needed for the one secret this makes.
-fn token() -> String {
+/// `words` times 64 bits as hex, from the standard library's random hash
+/// keys, so no RNG crate is needed for the token and the id this makes.
+fn random_hex(words: usize) -> String {
     use std::collections::hash_map::RandomState;
     use std::hash::BuildHasher;
-    let half = || RandomState::new().hash_one(std::process::id());
-    format!("{:016x}{:016x}", half(), half())
+    (0..words)
+        .map(|_| format!("{:016x}", RandomState::new().hash_one(std::process::id())))
+        .collect()
 }

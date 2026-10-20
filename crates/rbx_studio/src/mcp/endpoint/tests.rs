@@ -2,13 +2,13 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use super::{Endpoint, Server};
-use crate::mcp::bridge;
+use super::{file_of, Endpoint, Server};
+use crate::mcp::broker;
 
 fn scratch(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("rbx-native-mcp-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    dir.join("mcp.json")
+    dir
 }
 
 /// Answers whatever arrives, the way the shell's timer does, until `done`.
@@ -26,22 +26,36 @@ fn answer_until(server: &Server, done: impl Fn() -> bool) {
 #[test]
 fn the_endpoint_file_round_trips_and_rejects_what_it_cannot_read() {
     let endpoint = Endpoint {
+        studio_id: "a1".to_owned(),
         port: 51234,
         token: "abc".to_owned(),
     };
     assert_eq!(Endpoint::from_json(&endpoint.to_json()), Some(endpoint));
-    assert_eq!(Endpoint::from_json(r#"{"port":70000,"token":"x"}"#), None);
+    assert_eq!(
+        Endpoint::from_json(r#"{"studio_id":"a","port":70000,"token":"x"}"#),
+        None
+    );
+    assert_eq!(
+        Endpoint::from_json(r#"{"port":1,"token":"x"}"#),
+        None,
+        "a file without an id cannot be routed to"
+    );
     assert_eq!(Endpoint::from_json("nonsense"), None);
 }
 
 #[test]
 fn a_client_with_the_token_is_answered_line_by_line() {
-    let file = scratch("answered");
-    let server = Server::start(file.clone()).unwrap();
-    assert_eq!(Endpoint::load(&file).as_ref(), Some(server.endpoint()));
-    assert_eq!(server.endpoint().token.len(), 32);
+    let dir = scratch("answered");
+    let server = Server::start(&dir).unwrap();
+    let endpoint = server.endpoint().clone();
+    assert_eq!(
+        Endpoint::load(&file_of(&dir, &endpoint.studio_id)),
+        Some(endpoint.clone())
+    );
+    assert_eq!(endpoint.token.len(), 32);
+    assert_eq!(endpoint.studio_id.len(), 16);
 
-    let stream = bridge::connect(&file).unwrap();
+    let stream = broker::connect(&endpoint).unwrap();
     let client = std::thread::spawn(move || {
         let mut writer = stream.try_clone().unwrap();
         writeln!(writer, "first\n\nsecond").unwrap();
@@ -57,9 +71,9 @@ fn a_client_with_the_token_is_answered_line_by_line() {
 
 #[test]
 fn a_notification_sends_nothing_back() {
-    let file = scratch("silent");
-    let server = Server::start(file.clone()).unwrap();
-    let stream = bridge::connect(&file).unwrap();
+    let dir = scratch("silent");
+    let server = Server::start(&dir).unwrap();
+    let stream = broker::connect(server.endpoint()).unwrap();
     let client = std::thread::spawn(move || {
         let mut writer = stream.try_clone().unwrap();
         writeln!(writer, "quiet\nloud").unwrap();
@@ -78,8 +92,8 @@ fn a_notification_sends_nothing_back() {
 
 #[test]
 fn a_client_without_the_token_is_hung_up_on_unheard() {
-    let file = scratch("refused");
-    let server = Server::start(file).unwrap();
+    let dir = scratch("refused");
+    let server = Server::start(&dir).unwrap();
     let mut stream = std::net::TcpStream::connect(("127.0.0.1", server.endpoint().port)).unwrap();
     stream
         .set_read_timeout(Some(Duration::from_secs(10)))
@@ -92,16 +106,21 @@ fn a_client_without_the_token_is_hung_up_on_unheard() {
 }
 
 #[test]
-fn dropping_the_server_takes_its_file_back_but_not_a_newer_editors() {
-    let file = scratch("dropped");
-    let server = Server::start(file.clone()).unwrap();
-    drop(server);
-    assert!(!file.exists());
-
-    let older = Server::start(file.clone()).unwrap();
-    let newer = Server::start(file.clone()).unwrap();
-    drop(older);
-    assert_eq!(Endpoint::load(&file).as_ref(), Some(newer.endpoint()));
-    drop(newer);
-    assert!(!file.exists());
+fn every_editor_has_its_own_file_and_takes_only_its_own_back() {
+    let dir = scratch("dropped");
+    let first = Server::start(&dir).unwrap();
+    let second = Server::start(&dir).unwrap();
+    let (first_id, second_id) = (
+        first.endpoint().studio_id.clone(),
+        second.endpoint().studio_id.clone(),
+    );
+    assert_ne!(first_id, second_id);
+    drop(first);
+    assert!(!file_of(&dir, &first_id).exists());
+    assert_eq!(
+        Endpoint::load(&file_of(&dir, &second_id)).as_ref(),
+        Some(second.endpoint())
+    );
+    drop(second);
+    assert!(!file_of(&dir, &second_id).exists());
 }

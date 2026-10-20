@@ -1,73 +1,40 @@
-//! `rbxstudio --mcp`: the process an MCP client launches. It forwards stdin
-//! to the running editor and the editor's answers to stdout, and holds no
-//! state of its own, so the client's session is the editor's.
+//! `rbxstudio --mcp`: the process an MCP client launches. It reads one
+//! message per line from stdin and writes each answer to stdout, through a
+//! [`Broker`] that reaches every running editor, and holds no place state of
+//! its own, so the client's session is the editors'.
+//!
+//! It starts whether or not an editor is open: a client launches it once,
+//! and a tool call made before any editor is reports that in its result.
 
-use std::io::{Read, Write};
-use std::net::{Ipv4Addr, Shutdown, TcpStream};
-use std::path::Path;
+use std::io::{BufRead, Write};
 
-use super::endpoint::Endpoint;
+use super::broker::Broker;
 
-const NOT_RUNNING: &str = "rbxstudio --mcp: no editor is serving MCP. Open a place in rbxstudio \
-with Settings › Beta features › MCP server switched on, then start this again.";
-
-/// Runs the bridge until either side hangs up; the process's exit code.
+/// Runs the bridge until the client closes stdin; the process's exit code.
 pub(crate) fn run() -> i32 {
-    let Some(file) = super::endpoint_file() else {
+    let Some(dir) = super::endpoint_dir() else {
         eprintln!("rbxstudio --mcp: no configuration directory to find the editor through");
         return 1;
     };
-    let stream = match connect(&file) {
-        Ok(stream) => stream,
-        Err(err) => {
-            eprintln!("{NOT_RUNNING} ({err})");
-            return 1;
+    let mut broker = Broker::new(dir);
+    let mut stdout = std::io::stdout().lock();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else {
+            break;
+        };
+        if line.trim().is_empty() {
+            continue;
         }
-    };
-    let Ok(upstream) = stream.try_clone() else {
-        eprintln!("rbxstudio --mcp: the connection to the editor could not be shared");
-        return 1;
-    };
-    std::thread::spawn(move || {
-        pump(std::io::stdin().lock(), &upstream);
-        // The client closed stdin: let the editor see the end too, which
-        // ends the copy below once it has answered.
-        let _ = upstream.shutdown(Shutdown::Write);
-    });
-    pump(&stream, std::io::stdout().lock());
-    0
-}
-
-/// Connects to the editor `file` names and introduces itself with the token.
-pub(crate) fn connect(file: &Path) -> std::io::Result<TcpStream> {
-    let endpoint = Endpoint::load(file).ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("{} is missing or unreadable", file.display()),
-        )
-    })?;
-    let mut stream = TcpStream::connect((Ipv4Addr::LOCALHOST, endpoint.port))?;
-    writeln!(stream, "{}", endpoint.token)?;
-    stream.flush()?;
-    Ok(stream)
-}
-
-/// Copies until the end of `from`, flushing each read, since a reply that
-/// sat in a buffer would leave the client waiting.
-fn pump(mut from: impl Read, mut to: impl Write) {
-    let mut buffer = [0u8; 16 * 1024];
-    loop {
-        match from.read(&mut buffer) {
-            Ok(0) | Err(_) => return,
-            Ok(read) => {
-                if to
-                    .write_all(&buffer[..read])
-                    .and_then(|()| to.flush())
-                    .is_err()
-                {
-                    return;
-                }
-            }
+        let Some(reply) = broker.handle(&line) else {
+            continue;
+        };
+        // A reply that sat in a buffer would leave the client waiting.
+        if writeln!(stdout, "{reply}")
+            .and_then(|()| stdout.flush())
+            .is_err()
+        {
+            break;
         }
     }
+    0
 }
