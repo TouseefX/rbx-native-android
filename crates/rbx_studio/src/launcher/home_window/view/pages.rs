@@ -315,7 +315,10 @@ impl HomeWindow {
                         .child(sub),
                 )
         };
+        // Five tiles outgrow a narrow window: the row wraps rather than
+        // pushing "Open a file…" off the edge.
         h_flex()
+            .flex_wrap()
             .gap(px(GAP))
             .children(
                 crate::home::Template::ALL
