@@ -192,6 +192,9 @@ impl Shell {
             );
         }
         self.command_bar.set_feedback(feedback);
+        if saved {
+            self.rerun_tests_on_save(cx);
+        }
         cx.notify();
         saved
     }
