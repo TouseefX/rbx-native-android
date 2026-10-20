@@ -171,3 +171,55 @@ fn print_changes_lists_an_added_entry() {
         "expected an Added entry in:\n{stdout}"
     );
 }
+
+/// A place holding one passing and one failing spec, written as XML.
+fn spec_place(dir: &Path) -> PathBuf {
+    let mut dom = WeakDom::new();
+    let storage = dom.new_instance("ReplicatedStorage", "ReplicatedStorage", None);
+    for (name, body) in [
+        ("good.spec", "it('adds', function() expect(1 + 1).to.equal(2) end)"),
+        ("bad.spec", "it('subtracts', function()\n expect(1 - 1).to.equal(1)\nend)"),
+    ] {
+        let module = dom.new_instance("ModuleScript", name, Some(storage));
+        dom.set_property(
+            module,
+            "Source",
+            rbx_dom::Variant::String(format!("return function() {body} end")),
+        )
+        .unwrap();
+    }
+    let path = dir.join("specs.rbxlx");
+    std::fs::write(&path, rbx_xml::serialize(&dom).unwrap()).unwrap();
+    path
+}
+
+fn rbxlua(args: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_rbxlua"))
+        .args(args)
+        .output()
+        .expect("run rbxlua")
+}
+
+#[test]
+fn test_reports_failures_with_exit_code_one_and_junit() {
+    let dir = tempfile::tempdir().unwrap();
+    let place = spec_place(dir.path());
+    let junit = dir.path().join("out.xml");
+    let output = rbxlua(&["test", place.to_str().unwrap(), "--junit", junit.to_str().unwrap()]);
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("1 passed, 1 failed, 0 skipped"), "{stdout}");
+    assert!(stdout.contains("at ReplicatedStorage.bad.spec:2"), "{stdout}");
+    let xml = std::fs::read_to_string(junit).unwrap();
+    assert!(xml.contains("<failure message=\"Expected 1 (number), got 0 (number)\">"));
+}
+
+#[test]
+fn test_filter_runs_only_matching_tests_and_json_parses() {
+    let dir = tempfile::tempdir().unwrap();
+    let place = spec_place(dir.path());
+    let output = rbxlua(&["test", place.to_str().unwrap(), "--filter", "adds", "--format", "json"]);
+    assert_eq!(output.status.code(), Some(0));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!((value["passed"].as_u64(), value["failed"].as_u64()), (Some(1), Some(0)));
+}
