@@ -96,7 +96,12 @@ fn build_place() -> WeakDom {
     let sss = dom.new_instance("ServerScriptService", "ServerScriptService", None);
     dom.new_instance("ServerStorage", "ServerStorage", None);
     let starter = dom.new_instance("StarterPlayer", "StarterPlayer", None);
-    let player_scripts = child(&mut dom, starter, "StarterPlayerScripts", "StarterPlayerScripts");
+    let player_scripts = child(
+        &mut dom,
+        starter,
+        "StarterPlayerScripts",
+        "StarterPlayerScripts",
+    );
 
     let remotes = child(&mut dom, replicated, "Folder", "Remotes");
     for name in REMOTE_EVENTS {

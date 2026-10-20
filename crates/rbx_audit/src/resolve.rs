@@ -49,7 +49,9 @@ impl Resolver<'_> {
             Expression::Parentheses { expression, .. }
             | Expression::TypeAssertion { expression, .. } => self.expr(expression),
             // `x:FindFirstChild("A") or error(...)`
-            Expression::BinaryOperator { lhs, binop, .. } if binop.token().to_string().trim() == "or" => {
+            Expression::BinaryOperator { lhs, binop, .. }
+                if binop.token().to_string().trim() == "or" =>
+            {
                 self.expr(lhs)
             }
             Expression::Var(Var::Name(name)) => self.name(ident(name)),
@@ -157,7 +159,11 @@ impl Resolver<'_> {
                 .dom
                 .root_refs()
                 .iter()
-                .find(|r| self.dom.get(**r).is_some_and(|i| i.name() == name || i.class() == name))
+                .find(|r| {
+                    self.dom
+                        .get(**r)
+                        .is_some_and(|i| i.name() == name || i.class() == name)
+                })
                 .map_or_else(|| Val::Service(name.to_string()), |r| Val::Inst(*r)),
             Val::Inst(r) => {
                 let Some(instance) = self.dom.get(r) else {
@@ -259,4 +265,3 @@ pub(crate) fn dotted(prefix: &Prefix, suffixes: &[&Suffix]) -> Option<String> {
     }
     Some(name)
 }
-

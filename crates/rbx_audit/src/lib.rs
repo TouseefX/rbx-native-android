@@ -217,13 +217,8 @@ pub fn audit(dom: &WeakDom) -> Vec<Finding> {
     }
 
     findings.sort_by(|a, b| {
-        (a.severity, &a.path, a.line, a.check, &a.message).cmp(&(
-            b.severity,
-            &b.path,
-            b.line,
-            b.check,
-            &b.message,
-        ))
+        (a.severity, &a.path, a.line, a.check, &a.message)
+            .cmp(&(b.severity, &b.path, b.line, b.check, &b.message))
     });
     // A named handler is walked once where it's declared and again, with
     // its parameters tainted, where it's connected.
@@ -246,9 +241,9 @@ fn side(dom: &WeakDom, r: Ref) -> Option<Side> {
             while let Some(a) = at {
                 match dom.get(a).map(|i| i.class()) {
                     Some("ServerScriptService" | "ServerStorage") => return Some(Side::Server),
-                    Some(
-                        "StarterPlayer" | "StarterGui" | "StarterPack" | "ReplicatedFirst",
-                    ) => return Some(Side::Client),
+                    Some("StarterPlayer" | "StarterGui" | "StarterPack" | "ReplicatedFirst") => {
+                        return Some(Side::Client)
+                    }
                     _ => at = dom.parent(a),
                 }
             }

@@ -23,7 +23,9 @@ pub(crate) fn runtime_names(ast: &Ast) -> HashSet<String> {
         fn visit_assignment(&mut self, node: &full_moon::ast::Assignment) {
             for (var, expr) in node.variables().iter().zip(node.expressions().iter()) {
                 if let (Var::Expression(var), Some(name)) = (var, string(expr)) {
-                    if let Some(Suffix::Index(Index::Dot { name: field, .. })) = var.suffixes().last() {
+                    if let Some(Suffix::Index(Index::Dot { name: field, .. })) =
+                        var.suffixes().last()
+                    {
                         if ident(field) == "Name" {
                             self.0.insert(name.to_string());
                         }
@@ -43,7 +45,8 @@ fn functions(ast: &Ast) -> HashMap<String, FunctionBody> {
     struct Functions(HashMap<String, FunctionBody>);
     impl Visitor for Functions {
         fn visit_local_function(&mut self, node: &full_moon::ast::LocalFunction) {
-            self.0.insert(ident(node.name()).to_string(), node.body().clone());
+            self.0
+                .insert(ident(node.name()).to_string(), node.body().clone());
         }
         fn visit_function_declaration(&mut self, node: &full_moon::ast::FunctionDeclaration) {
             let name = node.name();
@@ -146,8 +149,18 @@ const CURRENCY: [&str; 9] = [
 /// What a handler's first parameter is called when its author knows it's
 /// the sending Player; any other name says they expected the client's data.
 const PLAYER_NAMES: [&str; 12] = [
-    "pl", "plr", "client", "sender", "user", "who", "owner", "caller", "requester", "from",
-    "source", "self",
+    "pl",
+    "plr",
+    "client",
+    "sender",
+    "user",
+    "who",
+    "owner",
+    "caller",
+    "requester",
+    "from",
+    "source",
+    "self",
 ];
 
 const DATASTORE_WRITES: [&str; 4] = ["SetAsync", "UpdateAsync", "IncrementAsync", "RemoveAsync"];
@@ -335,7 +348,12 @@ impl Walker<'_> {
         let params = params(body);
         let saved: Vec<_> = params
             .iter()
-            .map(|p| (p.clone(), self.resolver.bindings.insert(p.clone(), Val::Unknown)))
+            .map(|p| {
+                (
+                    p.clone(),
+                    self.resolver.bindings.insert(p.clone(), Val::Unknown),
+                )
+            })
             .collect();
         match handler {
             Some(taint) => self.taint = Some(taint),
@@ -478,7 +496,10 @@ impl Walker<'_> {
                     }
                     _ => {}
                 }
-                if arguments.first().is_some_and(|a| self.resolver.expr(a) == Val::LocalPlayer) {
+                if arguments
+                    .first()
+                    .is_some_and(|a| self.resolver.expr(a) == Val::LocalPlayer)
+                {
                     self.finding(
                         Check::PlayerArgument,
                         Severity::Medium,
@@ -525,16 +546,18 @@ impl Walker<'_> {
         let receiver = self.chain_tainted(prefix, before);
         let tainted_arg = arguments.iter().any(|a| self.tainted(a));
         let sink = match name {
-            "Destroy" | "Remove" | "ClearAllChildren" if receiver => {
-                Some(format!("calls :{name}() on an instance the client passed in"))
-            }
+            "Destroy" | "Remove" | "ClearAllChildren" if receiver => Some(format!(
+                "calls :{name}() on an instance the client passed in"
+            )),
             n if DATASTORE_WRITES.contains(&n) && tainted_arg => {
                 Some(format!("writes client-supplied data with :{name}()"))
             }
             "PivotTo" | "SetPrimaryPartCFrame" | "MoveTo" | "TranslateBy"
                 if tainted_arg || receiver =>
             {
-                Some(format!("moves an instance with :{name}() to a client-supplied place"))
+                Some(format!(
+                    "moves an instance with :{name}() to a client-supplied place"
+                ))
             }
             "TakeDamage" if tainted_arg || receiver => {
                 Some("deals client-supplied damage with :TakeDamage()".into())
@@ -586,10 +609,13 @@ impl Walker<'_> {
         }
         let sink = match callee {
             Some("require") => Some((Severity::High, "requires a client-chosen module")),
-            Some("loadstring") => Some((Severity::High, "runs client-supplied code with loadstring")),
-            Some("Instance.new") => {
-                Some((Severity::Medium, "creates an instance of a client-chosen class or parent"))
+            Some("loadstring") => {
+                Some((Severity::High, "runs client-supplied code with loadstring"))
             }
+            Some("Instance.new") => Some((
+                Severity::Medium,
+                "creates an instance of a client-chosen class or parent",
+            )),
             _ => None,
         };
         if let Some((severity, sink)) = sink {
@@ -750,16 +776,20 @@ impl Walker<'_> {
         };
         let op = op.trim();
         let literal = |e: &Expression| matches!(e, Expression::Number(_) | Expression::String(_));
-        let typeof_player = |e: &Expression| match e {
+        let typeof_player = |e: &Expression| {
+            match e {
             Expression::FunctionCall(call) => {
                 matches!(call.prefix(), Prefix::Name(n) if matches!(ident(n), "typeof" | "type"))
                     && call.suffixes().any(|s| matches!(s, Suffix::Call(Call::AnonymousCall(a)) if args(a).first().is_some_and(|a| is_name(a, &player))))
             }
             _ => false,
+        }
         };
         let confused = match op {
             "tonumber" => is_name(lhs, &player),
-            "+" | "-" | "*" | "/" | "//" | "%" | "^" => is_name(lhs, &player) || is_name(rhs, &player),
+            "+" | "-" | "*" | "/" | "//" | "%" | "^" => {
+                is_name(lhs, &player) || is_name(rhs, &player)
+            }
             "==" | "~=" | "<" | ">" | "<=" | ">=" => {
                 (is_name(lhs, &player) && literal(rhs))
                     || (is_name(rhs, &player) && literal(lhs))
@@ -812,9 +842,7 @@ impl Walker<'_> {
             }
             Expression::IfExpression(_)
             | Expression::InterpolatedString(_)
-            | Expression::TableConstructor(_) => {
-                names(expr).iter().any(|n| self.name_tainted(n))
-            }
+            | Expression::TableConstructor(_) => names(expr).iter().any(|n| self.name_tainted(n)),
             _ => false,
         }
     }
@@ -850,7 +878,9 @@ impl Walker<'_> {
         let mut hits = Vec::new();
         for token in ast.nodes().tokens() {
             if let TokenType::Identifier { identifier } = token.token_type() {
-                if previous_dot && matches!(identifier.as_str(), "ServerStorage" | "ServerScriptService") {
+                if previous_dot
+                    && matches!(identifier.as_str(), "ServerStorage" | "ServerScriptService")
+                {
                     hits.push((line(token), identifier.to_string()));
                 }
             }
@@ -930,9 +960,9 @@ fn exits(block: &Block) -> bool {
     match block.stmts().last() {
         Some(Stmt::FunctionCall(call)) => {
             matches!(call.prefix(), Prefix::Name(n) if ident(n) == "error")
-                || call.suffixes().any(|s| {
-                    matches!(s, Suffix::Call(Call::MethodCall(m)) if ident(m.name()) == "Kick")
-                })
+                || call.suffixes().any(
+                    |s| matches!(s, Suffix::Call(Call::MethodCall(m)) if ident(m.name()) == "Kick"),
+                )
         }
         _ => false,
     }

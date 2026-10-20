@@ -9,11 +9,36 @@ use rbx_audit::{audit, Check, Severity};
 use rbx_dom::{CFrameData, Ref, Variant, Vector3Data, WeakDom};
 
 const SCRIPTS: [(&str, &str, &str, &str); 6] = [
-    ("ServerScriptService", "Script", "Shop", include_str!("fixtures/Shop.server.luau")),
-    ("ServerScriptService", "Script", "Combat", include_str!("fixtures/Combat.server.luau")),
-    ("ServerScriptService", "Script", "Admin", include_str!("fixtures/Admin.server.luau")),
-    ("ServerScriptService", "Script", "Data", include_str!("fixtures/Data.server.luau")),
-    ("ServerScriptService", "Script", "Confused", include_str!("fixtures/Confused.server.luau")),
+    (
+        "ServerScriptService",
+        "Script",
+        "Shop",
+        include_str!("fixtures/Shop.server.luau"),
+    ),
+    (
+        "ServerScriptService",
+        "Script",
+        "Combat",
+        include_str!("fixtures/Combat.server.luau"),
+    ),
+    (
+        "ServerScriptService",
+        "Script",
+        "Admin",
+        include_str!("fixtures/Admin.server.luau"),
+    ),
+    (
+        "ServerScriptService",
+        "Script",
+        "Data",
+        include_str!("fixtures/Data.server.luau"),
+    ),
+    (
+        "ServerScriptService",
+        "Script",
+        "Confused",
+        include_str!("fixtures/Confused.server.luau"),
+    ),
     (
         "StarterPlayer.StarterPlayerScripts",
         "LocalScript",
@@ -23,19 +48,61 @@ const SCRIPTS: [(&str, &str, &str, &str); 6] = [
 ];
 
 const REMOTE_EVENTS: [&str; 30] = [
-    "AddCoins", "BuyItem", "Donate", "SetTitle", "SetBio", "Prompt", "PromptSafe", "Notify",
-    "Damage", "Hit", "Teleport", "TeleportSafe", "Drop", "DropSafe", "Equip", "AdminCommand",
-    "LoadModule", "Spawn", "RunCommand", "SpawnSafe", "SaveData", "SaveSettings", "SaveLevel",
-    "Gift", "Vote", "Score", "Ping", "Feedback", "Orphan", "Trade",
+    "AddCoins",
+    "BuyItem",
+    "Donate",
+    "SetTitle",
+    "SetBio",
+    "Prompt",
+    "PromptSafe",
+    "Notify",
+    "Damage",
+    "Hit",
+    "Teleport",
+    "TeleportSafe",
+    "Drop",
+    "DropSafe",
+    "Equip",
+    "AdminCommand",
+    "LoadModule",
+    "Spawn",
+    "RunCommand",
+    "SpawnSafe",
+    "SaveData",
+    "SaveSettings",
+    "SaveLevel",
+    "Gift",
+    "Vote",
+    "Score",
+    "Ping",
+    "Feedback",
+    "Orphan",
+    "Trade",
 ];
 const REMOTE_FUNCTIONS: [&str; 3] = ["GetPrice", "GetSettings", "ClientOnly"];
 
 /// Findings about a remote rather than a line.
 const PLACE_EXPECTED: [(&str, Check, Severity); 4] = [
-    ("ReplicatedStorage.Remotes.ClientOnly", Check::NoServerListener, Severity::High),
-    ("ReplicatedStorage.Remotes.Feedback", Check::NoServerListener, Severity::Medium),
-    ("ReplicatedStorage.Remotes.Orphan", Check::NoServerListener, Severity::Low),
-    ("ReplicatedStorage.Remotes.Trade", Check::NoServerListener, Severity::Low),
+    (
+        "ReplicatedStorage.Remotes.ClientOnly",
+        Check::NoServerListener,
+        Severity::High,
+    ),
+    (
+        "ReplicatedStorage.Remotes.Feedback",
+        Check::NoServerListener,
+        Severity::Medium,
+    ),
+    (
+        "ReplicatedStorage.Remotes.Orphan",
+        Check::NoServerListener,
+        Severity::Low,
+    ),
+    (
+        "ReplicatedStorage.Remotes.Trade",
+        Check::NoServerListener,
+        Severity::Low,
+    ),
 ];
 
 fn add(dom: &mut WeakDom, class: &str, name: &str, parent: Option<Ref>) -> Ref {
@@ -67,7 +134,12 @@ fn path(dom: &mut WeakDom, path: &str) -> Ref {
 
 pub fn fixture() -> WeakDom {
     let mut dom = WeakDom::new();
-    for service in ["Workspace", "Players", "ServerScriptService", "ServerStorage"] {
+    for service in [
+        "Workspace",
+        "Players",
+        "ServerScriptService",
+        "ServerStorage",
+    ] {
         add(&mut dom, service, service, None);
     }
     let storage = add(&mut dom, "ReplicatedStorage", "ReplicatedStorage", None);
@@ -88,7 +160,12 @@ pub fn fixture() -> WeakDom {
     let lib = path(&mut dom, "ServerStorage");
     add(&mut dom, "Folder", "Lib", Some(lib));
     let player = path(&mut dom, "StarterPlayer");
-    add(&mut dom, "StarterPlayerScripts", "StarterPlayerScripts", Some(player));
+    add(
+        &mut dom,
+        "StarterPlayerScripts",
+        "StarterPlayerScripts",
+        Some(player),
+    );
 
     for (parent, class, name, source) in SCRIPTS {
         let parent = path(&mut dom, parent);
@@ -104,7 +181,11 @@ fn the_fixture_place_is_flagged_exactly_where_marked() {
     for (parent, _, name, source) in SCRIPTS {
         for (index, line) in source.lines().enumerate() {
             if let Some((_, id)) = line.split_once("-- expect: ") {
-                expected.insert((format!("{parent}.{name}"), Some(index + 1), id.trim().to_string()));
+                expected.insert((
+                    format!("{parent}.{name}"),
+                    Some(index + 1),
+                    id.trim().to_string(),
+                ));
             }
         }
     }
@@ -142,10 +223,16 @@ fn the_fixture_place_is_flagged_exactly_where_marked() {
         Check::InvokeClient,
     ] {
         let hits = found.iter().filter(|f| f.2 == check.id()).count();
-        let right = found.intersection(&expected).filter(|f| f.2 == check.id()).count();
+        let right = found
+            .intersection(&expected)
+            .filter(|f| f.2 == check.id())
+            .count();
         println!("  {:<22} {right}/{hits} correct", check.id());
     }
-    assert!(false_positives.is_empty(), "false positives: {false_positives:#?}");
+    assert!(
+        false_positives.is_empty(),
+        "false positives: {false_positives:#?}"
+    );
     assert!(false_negatives.is_empty(), "missed: {false_negatives:#?}");
     // Each finding is reported once, even for a named handler walked twice.
     assert_eq!(findings.len(), found.len());
