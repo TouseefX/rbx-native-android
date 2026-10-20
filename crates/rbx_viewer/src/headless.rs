@@ -235,9 +235,11 @@ impl Headless {
         // The scene is new and knows nothing of an isolation; the roots are
         // `self.view`'s, and the DOM is right here to place every part
         // against them before anything is uploaded.
-        if let Some(roots) = &self.view.isolation {
+        if self.view.filters_scene() {
             let warnings = loaded.isolate(
-                Some(roots.as_slice()),
+                self.view.scene_roots(),
+                &self.view.layer_hidden,
+                self.view.isolated(),
                 |at| dom.parent(at),
                 &mut self.resident,
             );
@@ -378,7 +380,34 @@ impl Headless {
         self.view.set_isolation(roots);
         let roles = &self.roles;
         let warnings = self.loaded.isolate(
-            self.view.isolation.as_deref(),
+            self.view.scene_roots(),
+            &self.view.layer_hidden,
+            self.view.isolated(),
+            |at| roles.get(at).and_then(|known| known.parent),
+            &mut self.resident,
+        );
+        self.warnings.extend(warnings);
+        self.offscreen.reload(self.loaded.world(), &self.view);
+        self.meshes_changed = true;
+    }
+
+    /// Draws only `only` (and what hangs under it) when set, and never
+    /// `hidden` or anything beneath it — the editor's layer visibility.
+    /// Unlike [`Headless::set_isolation`] it keeps the place's own sky,
+    /// lighting and backdrop; an animation isolation's roots win over `only`
+    /// while both are set. Setting what is already set costs nothing;
+    /// otherwise the host forces a frame and re-takes
+    /// [`Headless::pick_meshes`], as after `set_isolation`.
+    pub fn set_layer_filter(&mut self, only: Option<Vec<Ref>>, hidden: Vec<Ref>) {
+        if only == self.view.layer_only && hidden == self.view.layer_hidden {
+            return;
+        }
+        self.view.set_layer_filter(only, hidden);
+        let roles = &self.roles;
+        let warnings = self.loaded.isolate(
+            self.view.scene_roots(),
+            &self.view.layer_hidden,
+            self.view.isolated(),
             |at| roles.get(at).and_then(|known| known.parent),
             &mut self.resident,
         );

@@ -296,10 +296,12 @@ impl Loaded {
     pub(crate) fn isolate(
         &mut self,
         roots: Option<&[Ref]>,
+        hidden: &[Ref],
+        stage: bool,
         parent_of: impl Fn(Ref) -> Option<Ref>,
         resident: &mut Resident,
     ) -> Vec<String> {
-        self.scene.isolate(roots, parent_of);
+        self.scene.isolate(roots, hidden, stage, parent_of);
         self.resolve_decor(resident)
     }
 

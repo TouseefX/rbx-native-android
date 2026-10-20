@@ -29,7 +29,16 @@ pub const STAGE_REACH: f32 = 20.0;
 /// found under one of them.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Isolation {
-    roots: HashSet<Ref>,
+    /// What draws is limited to these and what hangs under them; `None`
+    /// leaves every instance eligible (an editor layer filter that only
+    /// hides things).
+    roots: Option<HashSet<Ref>>,
+    /// These and everything beneath them never draw, whatever the roots say.
+    hidden: HashSet<Ref>,
+    /// Whether this is the Animation Editor's isolation, which owns the stage
+    /// floor under the rig, rather than an editor layer filter, which must
+    /// leave the sun's shadow fitted to the whole place.
+    stage: bool,
     /// Kept rather than re-derived from the roots on every sweep: an asset
     /// landing re-resolves the file meshes (see [`Scene::resolve_file_meshes`])
     /// with no DOM in hand to walk, and the sweep after it still has to know
@@ -41,8 +50,21 @@ pub(crate) struct Isolation {
 }
 
 impl Isolation {
-    pub(crate) fn roots(&self) -> &HashSet<Ref> {
-        &self.roots
+    pub(crate) fn roots(&self) -> Option<&HashSet<Ref>> {
+        self.roots.as_ref()
+    }
+
+    pub(crate) fn hidden(&self) -> &HashSet<Ref> {
+        &self.hidden
+    }
+
+    /// Whether `referent` draws: under a root (when there are roots) and
+    /// under no hidden instance.
+    fn shows(&self, referent: Ref, parent_of: &impl Fn(Ref) -> Option<Ref>) -> bool {
+        self.roots
+            .as_ref()
+            .is_none_or(|roots| within(roots, referent, parent_of))
+            && !within(&self.hidden, referent, parent_of)
     }
 }
 
@@ -66,7 +88,10 @@ pub(crate) fn within(
 
 impl Scene {
     /// Draws only the parts and meshes under `roots` (and the roots
-    /// themselves) from now on, or everything again with `None`.
+    /// themselves) from now on, or everything again with `None`, leaving out
+    /// whatever is `hidden` or beneath a hidden instance. With neither roots
+    /// nor hidden the whole place draws. `stage` marks the Animation
+    /// Editor's isolation, the only one that fits the shadow to a stage.
     ///
     /// `parent_of` answers the tree as it stands: a caller with the DOM
     /// passes `WeakDom::parent`, and `Headless`, which keeps no DOM, its
@@ -76,11 +101,19 @@ impl Scene {
     pub(crate) fn isolate(
         &mut self,
         roots: Option<&[Ref]>,
+        hidden: &[Ref],
+        stage: bool,
         parent_of: impl Fn(Ref) -> Option<Ref>,
     ) {
-        self.isolation = roots.map(|roots| {
-            let roots: HashSet<Ref> = roots.iter().copied().collect();
-            let inside = self
+        self.isolation = (roots.is_some() || !hidden.is_empty()).then(|| {
+            let mut isolation = Isolation {
+                roots: roots.map(|roots| roots.iter().copied().collect()),
+                hidden: hidden.iter().copied().collect(),
+                stage,
+                inside: HashSet::new(),
+                effects: HashSet::new(),
+            };
+            isolation.inside = self
                 .parts
                 .iter()
                 .map(Part::referent)
@@ -90,13 +123,9 @@ impl Scene {
                         .iter()
                         .map(|instance| instance.referent),
                 )
-                .filter(|&referent| within(&roots, referent, &parent_of))
+                .filter(|&referent| isolation.shows(referent, &parent_of))
                 .collect();
-            Isolation {
-                roots,
-                inside,
-                effects: HashSet::new(),
-            }
+            isolation
         });
         self.flag_isolated();
         self.sweep_effects(&parent_of);
@@ -116,8 +145,15 @@ impl Scene {
         let Some(isolation) = &mut self.isolation else {
             return;
         };
-        let roots = &isolation.roots;
-        let belongs = |refs: &[Ref]| refs.iter().any(|&at| within(roots, at, parent_of));
+        let (roots, hidden) = (&isolation.roots, &isolation.hidden);
+        // `refs[0]` is always the effect's own referent: it alone decides
+        // hiding, while any of `refs` may qualify it under a root.
+        let belongs = |refs: &[Ref]| {
+            !within(hidden, refs[0], parent_of)
+                && roots
+                    .as_ref()
+                    .is_none_or(|roots| refs.iter().any(|&at| within(roots, at, parent_of)))
+        };
         isolation.effects = self
             .emitters
             .iter()
@@ -158,7 +194,9 @@ impl Scene {
     /// only the rig is drawn, and a rig in a large place gets a handful of
     /// texels for its whole shadow.
     pub(crate) fn stage_bounds(&self) -> Option<Bounds> {
-        self.isolation.as_ref()?;
+        if !self.isolation.as_ref()?.stage {
+            return None;
+        }
         let rig = bounds::of(
             self.parts
                 .iter()
@@ -233,7 +271,7 @@ impl Scene {
         let Some(isolation) = &mut self.isolation else {
             return false;
         };
-        let inside = within(&isolation.roots, referent, |at| dom.parent(at));
+        let inside = isolation.shows(referent, &|at| dom.parent(at));
         match inside {
             true => isolation.inside.insert(referent),
             false => isolation.inside.remove(&referent),
