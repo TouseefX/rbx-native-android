@@ -38,8 +38,8 @@ options:
         Narrate startup on stdout: the file read, what --select resolved to,
         what --run reported back.
   --mcp
-        Run as an MCP client's stdio server, forwarding to the editor that
-        is already open with Settings › Beta features › MCP server on.
+        Run as an MCP client's stdio server, forwarding to the editors
+        already open with Settings › Beta features › MCP server on.
         Takes no other option.
   --help
         Print this and exit.";

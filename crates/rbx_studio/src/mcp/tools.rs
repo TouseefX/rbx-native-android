@@ -1,7 +1,9 @@
 //! The tools a client can call, named and shaped after Studio's own MCP
-//! server's read-only ones, and the dotted paths they name instances by.
+//! server's, and the dotted paths they name instances by.
 
+mod edit;
 mod scripts;
+mod studio;
 mod tree;
 
 #[cfg(test)]
@@ -13,6 +15,9 @@ use serde_json::{json, Value};
 use super::protocol::{Failure, INVALID_PARAMS};
 use super::Session;
 
+pub(crate) use edit::{apply as apply_edit, ScriptEdit};
+pub(crate) use studio::{describe, LIST_STUDIOS, STUDIO_STATE};
+
 /// What every path starts with, as `Instance:GetFullName()` would print it
 /// from a script: the services are the DataModel's children.
 const ROOT: &str = "game";
@@ -22,9 +27,10 @@ const ROOT: &str = "game";
 /// try again.
 type Outcome = Result<Value, String>;
 
-/// `tools/list`'s answer.
+/// `tools/list`'s answer. Every tool but `list_roblox_studios` also takes
+/// a `studio_id`, as Studio's do.
 pub(super) fn list() -> Value {
-    json!([
+    let mut tools = json!([
         tool(
             "search_game_tree",
             "Lists the instance hierarchy as a flat JSON array of {path, class, children}. \
@@ -72,22 +78,66 @@ pub(super) fn list() -> Value {
             }),
             &["pattern"],
         ),
-    ])
+        tool(
+            "multi_edit",
+            "Applies several edits to one script's Source in order, all or none, as one              undo step. Each old_string must appear exactly once unless replace_all is set.              If nothing is at the path yet, a new script is created under its parent and the              edits apply to its empty Source, so the first one's old_string is empty.",
+            json!({
+                "path": string("The script, such as game.ServerScriptService.Main."),
+                "edits": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "old_string": string("The exact text to replace."),
+                            "new_string": string("What replaces it."),
+                            "replace_all": json!({ "type": "boolean", "description": "Replace every occurrence. Defaults to false." }),
+                        },
+                        "required": ["old_string", "new_string"],
+                    },
+                },
+                "datamodel_type": json!({ "type": "string", "enum": ["Edit"], "description": "Only the Edit data model can be edited." }),
+                "class_name": json!({ "type": "string", "enum": edit::SCRIPT_CLASSES, "description": "The class of a script this creates. Defaults to Script." }),
+            }),
+            &["path", "edits"],
+        ),
+        tool(
+            STUDIO_STATE,
+            "Returns this editor's studio_id, place name and place ID, its play state and              the data model types tools can reach.",
+            json!({}),
+            &[],
+        ),
+    ]);
+    if let Value::Array(tools) = &mut tools {
+        for tool in tools.iter_mut() {
+            tool["inputSchema"]["properties"]["studio_id"] = string(
+                "The editor to act on, from list_roblox_studios. May be left out when only one                  editor is open.",
+            );
+        }
+        tools.push(tool(
+            LIST_STUDIOS,
+            "Lists every running editor serving MCP: its studio_id, its place's name and, for              a place linked to Roblox, its place ID.",
+            json!({}),
+            &[],
+        ));
+    }
+    tools
 }
 
 /// `tools/call`'s answer.
-pub(super) fn call(params: &Value, session: &Session) -> Result<Value, Failure> {
+pub(super) fn call(params: &Value, session: &mut Session) -> Result<Value, Failure> {
     let Some(name) = params.get("name").and_then(Value::as_str) else {
         return Err((INVALID_PARAMS, "tools/call needs a tool name".to_owned()));
     };
     let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
-    let outcome = match name {
-        "search_game_tree" => tree::search(&arguments, session),
-        "inspect_instance" => tree::inspect(&arguments, session),
-        "script_read" => scripts::read(&arguments, session),
-        "script_search" => scripts::search(&arguments, session),
-        "script_grep" => scripts::grep(&arguments, session),
-        _ => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
+    let outcome = match text_argument(&arguments, "studio_id") {
+        // Only a client that connected to this editor by hand gets here with
+        // another editor's id: the broker routes by it.
+        Some(id) if name != LIST_STUDIOS && id != session.studio.id => Err(format!(
+            "this editor is studio {}, not {id}; call {LIST_STUDIOS} for the others",
+            session.studio.id
+        )),
+        _ => run(name, &arguments, session)?,
     };
     Ok(match outcome {
         Ok(value) => result(&value, false),
@@ -95,7 +145,23 @@ pub(super) fn call(params: &Value, session: &Session) -> Result<Value, Failure> 
     })
 }
 
-fn result(value: &Value, is_error: bool) -> Value {
+fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, Failure> {
+    Ok(match name {
+        "search_game_tree" => tree::search(arguments, session),
+        "inspect_instance" => tree::inspect(arguments, session),
+        "script_read" => scripts::read(arguments, session),
+        "script_search" => scripts::search(arguments, session),
+        "script_grep" => scripts::grep(arguments, session),
+        "multi_edit" => edit::multi_edit(arguments, session),
+        STUDIO_STATE => Ok(studio::state(session.studio)),
+        LIST_STUDIOS => Ok(json!([describe(session.studio)])),
+        _ => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
+    })
+}
+
+/// A tool's result: its value as text, pretty JSON for anything but a
+/// string. `pub(super)`: the broker answers `list_roblox_studios` with it.
+pub(super) fn result(value: &Value, is_error: bool) -> Value {
     let text = match value {
         Value::String(text) => text.clone(),
         other => serde_json::to_string_pretty(other).unwrap_or_default(),

@@ -12,6 +12,17 @@
   matches what the Explorer shows. Read-only for now: editing, running
   Luau and Play are the roadmap's next step for it. — @Vikmanou
 
+- **The MCP server edits scripts and reaches every open editor.**
+  `multi_edit` applies several exact-text replacements to one script all or
+  none, as a single undo step through the same write a script tab makes,
+  and creates the script when nothing is at the path yet, as Studio's does.
+  Each editor now has its own `studio_id` and endpoint file, so
+  `rbxstudio --mcp` serves all of them at once: `list_roblox_studios` lists
+  them, `get_studio_state` reports the play state, and every other tool
+  takes a `studio_id`, as Studio's tools do, which can be left out with only
+  one editor open. The bridge now starts with no editor open and says so
+  in a tool's result instead of exiting. — @Vikmanou
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its

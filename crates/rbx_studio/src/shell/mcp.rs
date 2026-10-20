@@ -1,14 +1,16 @@
 //! Beta Features › MCP server: the shell's end of `crate::mcp`. A timer
 //! drains what clients sent and answers it against the shell's own DOM, on
-//! the UI thread, so a tool always sees the place as the Explorer does.
+//! the UI thread, so a tool always sees the place as the Explorer does, and
+//! applies a `multi_edit` as one undo step.
 
 use std::time::Duration;
 
 use gpui_kit::Context;
 
 use crate::command_bar::Feedback;
-use crate::mcp::{self, endpoint::Server, Session};
+use crate::mcp::{self, endpoint::Server, PlayState, ScriptEdit, Session, Studio};
 
+use super::play::Phase;
 use super::Shell;
 
 pub(crate) const BETA_ID: &str = "mcp-server";
@@ -23,17 +25,18 @@ impl Shell {
         if !crate::beta::enabled(BETA_ID) {
             return;
         }
-        let Some(file) = mcp::endpoint_file() else {
+        let Some(dir) = mcp::endpoint_dir() else {
             self.output
-                .push_warning("MCP server: no configuration directory to write mcp.json in");
+                .push_warning("MCP server: no configuration directory to write its endpoint in");
             return;
         };
-        match Server::start(file) {
+        match Server::start(&dir) {
             Ok(server) => {
                 self.output.push(
                     "MCP server",
                     Feedback::Info(format!(
-                        "listening on 127.0.0.1:{}; connect a client with `rbxstudio --mcp`",
+                        "studio {} listening on 127.0.0.1:{}; connect a client with `rbxstudio --mcp`",
+                        server.endpoint().studio_id,
                         server.endpoint().port
                     )),
                 );
@@ -47,7 +50,7 @@ impl Shell {
         }
         cx.spawn(async move |shell, cx| loop {
             cx.background_executor().timer(POLL_INTERVAL).await;
-            let alive = shell.update(cx, |shell, _| shell.mcp_answer()).is_ok();
+            let alive = shell.update(cx, |shell, cx| shell.mcp_answer(cx)).is_ok();
             if !alive {
                 break;
             }
@@ -55,17 +58,74 @@ impl Shell {
         .detach();
     }
 
-    fn mcp_answer(&mut self) {
+    fn mcp_answer(&mut self, cx: &mut Context<Self>) {
         let Some(server) = &self.mcp else {
             return;
         };
-        let session = Session {
-            dom: &self.dom,
-            properties: &self.properties,
-        };
-        for request in server.drain() {
-            let reply = mcp::protocol::handle(request.line(), &session);
+        let requests = server.drain();
+        if requests.is_empty() {
+            return;
+        }
+        // Typing still waiting on its debounce is part of the script as the
+        // user sees it, so a tool reads it and an edit lands on top of it.
+        if !self.live_shown() {
+            self.flush_script_edits(cx);
+        }
+        let studio = self.mcp_studio();
+        for request in requests {
+            let mut session = Session::new(self.edit_dom(), &self.properties, &studio);
+            let reply = mcp::protocol::handle(request.line(), &mut session);
+            let planned = session.planned.take();
+            if let Some(edit) = planned {
+                self.mcp_apply(&edit, cx);
+            }
             request.answer(reply);
         }
+    }
+
+    fn mcp_studio(&self) -> Studio {
+        let play = if self.live_shown() {
+            PlayState::ShowingLive
+        } else {
+            match self.play.phase {
+                Phase::Idle => PlayState::Edit,
+                Phase::Starting(_) => PlayState::Starting,
+                Phase::Running => PlayState::Playing,
+            }
+        };
+        Studio {
+            id: self
+                .mcp
+                .as_ref()
+                .map(|server| server.endpoint().studio_id.clone())
+                .unwrap_or_default(),
+            name: self
+                .path
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            place_id: crate::home::link_of(&self.path).map(|link| link.place_id),
+            play,
+        }
+    }
+
+    /// Writes a planned edit the way `shell::scripts` writes a tab's text,
+    /// and an insert the way `shell::keys` does: snapshot, write, log.
+    fn mcp_apply(&mut self, edit: &ScriptEdit, cx: &mut Context<Self>) {
+        self.dom.take_changes();
+        let before = self.dom.clone();
+        if mcp::apply_edit(&mut self.dom, edit).is_none() {
+            return;
+        }
+        self.push_history_snapshot(before);
+        let changes = self.dom.take_changes();
+        if edit.creates() {
+            self.rebuild_explorer(cx);
+        }
+        // An open tab on the script re-seeds from the DOM on its next render
+        // (`resync_scripts`).
+        self.reflect_changes(&changes, cx);
+        self.record_history_change(changes);
+        cx.notify();
     }
 }

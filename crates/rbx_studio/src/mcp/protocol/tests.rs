@@ -3,17 +3,20 @@ use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Value};
 
 use super::handle;
-use crate::mcp::Session;
+use crate::mcp::{PlayState, Session, Studio};
 use crate::properties::Properties;
 
 fn reply(line: &str) -> Option<Value> {
     let dom = WeakDom::new();
     let properties = Properties::new(ReflectionDatabase::embedded());
-    let session = Session {
-        dom: &dom,
-        properties: &properties,
+    let studio = Studio {
+        id: "a1".to_owned(),
+        name: "Arena".to_owned(),
+        place_id: Some(42),
+        play: PlayState::Edit,
     };
-    handle(line, &session).map(|text| serde_json::from_str(&text).unwrap())
+    let mut session = Session::new(&dom, &properties, &studio);
+    handle(line, &mut session).map(|text| serde_json::from_str(&text).unwrap())
 }
 
 #[test]
@@ -51,7 +54,7 @@ fn ping_is_an_empty_result() {
 }
 
 #[test]
-fn tools_list_names_every_read_only_tool_with_a_schema() {
+fn tools_list_names_every_tool_with_a_schema() {
     let answer = reply(r#"{"jsonrpc":"2.0","id":3,"method":"tools/list"}"#).unwrap();
     let tools = answer["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
@@ -62,11 +65,22 @@ fn tools_list_names_every_read_only_tool_with_a_schema() {
             "inspect_instance",
             "script_read",
             "script_search",
-            "script_grep"
+            "script_grep",
+            "multi_edit",
+            "get_studio_state",
+            "list_roblox_studios"
         ]
     );
     for tool in tools {
         assert_eq!(tool["inputSchema"]["type"], "object", "{}", tool["name"]);
+        // Every call names its editor, as Studio's do; listing them is how
+        // a client learns the names.
+        assert_eq!(
+            tool["inputSchema"]["properties"].get("studio_id").is_some(),
+            tool["name"] != "list_roblox_studios",
+            "{}",
+            tool["name"]
+        );
         for required in tool["inputSchema"]["required"].as_array().unwrap() {
             let name = required.as_str().unwrap();
             assert!(

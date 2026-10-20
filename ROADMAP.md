@@ -2679,20 +2679,30 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   real client, an ignored live round trip (`tests/datastores_live.rs`), and
   the window driven against a real sandbox universe; screenshots in
   `docs/screenshots/datastore-browser/`.
-- [x] **An MCP server over the live editor session, read-only so far**
-  (Settings › Beta features › MCP server), shaped after Roblox's built-in
-  Studio MCP server (`studio/mcp.md`) and its tool names. An MCP client
-  launches `rbxstudio --mcp`, a stdio bridge that forwards to the open
-  editor over a loopback port; the editor writes the port and a random
-  token to `<config>/mcp.json` and closes any connection that does not open
-  with that token. Every request is answered on the UI thread against the
-  DOM as the Explorer shows it: `search_game_tree` (start path, class
-  filter matching subclasses, name keywords, depth limit), `inspect_instance`
-  (properties formatted as the Properties panel shows them, attributes,
-  tags, children, descendant count), `script_read` (numbered lines, a range),
+- [x] **An MCP server over the live editor session: reading, script
+  editing and several editors at once** (Settings › Beta features › MCP
+  server), shaped after Roblox's built-in Studio MCP server (`studio/mcp.md`)
+  and its tool names. An MCP client launches `rbxstudio --mcp`, a stdio
+  bridge that reaches every open editor over loopback; each editor writes
+  its `studio_id`, port and a random token to `<config>/mcp/<studio_id>.json`
+  and closes any connection that does not open with that token. Every
+  request is answered on the UI thread against the DOM as the Explorer
+  shows it: `search_game_tree` (start path, class filter matching
+  subclasses, name keywords, depth limit), `inspect_instance` (properties
+  formatted as the Properties panel shows them, attributes, tags, children,
+  descendant count), `script_read` (numbered lines, a range),
   `script_search` (fuzzy by name, 10 results) and `script_grep` (literal
-  text, 50 matches). Instances are named `game.Workspace.Model.Part`, names
-  with dots included. One editor is reachable at a time, the last started.
+  text, 50 matches). `multi_edit` applies several exact-text replacements
+  to a script's `Source` all or none, as one undo step through the same
+  write a script tab's own edits take, and creates the script (`Script`,
+  `LocalScript` or `ModuleScript`) under an existing parent when nothing is
+  at the path; it is refused while a live playtest is shown.
+  `list_roblox_studios` lists the open editors (place name, and place ID
+  for a linked place), `get_studio_state` adds the play state, and every
+  other tool takes a `studio_id`, optional when only one editor is open. A
+  file left behind by an editor that was killed is dropped the first time
+  its port refuses. Instances are named `game.Workspace.Model.Part`, names
+  with dots included.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):
@@ -2994,18 +3004,16 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   not a default this project should ship opinionated about.
 
 ### Editor
-- [ ] 📋 **The MCP server's editing, Luau and Play tools**: the
-  read-only server (see "What's been implemented" → Editor) still lacks
-  what lets an AI client change and run the session, matching the
+- [ ] 📋 **The MCP server's Luau, viewport and Play tools**: the
+  server (see "What's been implemented" → Editor) still lacks what lets
+  an AI client run the session, matching the
   shape (not the exact tool surface) of Roblox's own built-in Studio MCP
   server (checked against `studio/mcp.md` rather than assumed — real,
   current, `stdio`-transport, ships in Studio itself, lets an AI client
   read/write scripts, run Luau, inspect the DataModel, and drive
   playtesting). Most of what is left is a thin protocol wrapper around
   capabilities this project already has or already plans:
-  `multi_edit` over the script editor above,
   `execute_luau` over the existing Command Bar's DataModel access,
-  `list_roblox_studios` over more than one open editor,
   `screen_capture` over the viewport, and
   `start_stop_play`/`get_console_output` over Play (see
   [Play / Test workflow](#play--test-workflow)) and the Output dock. Two sub-capabilities are **not** reachable the same

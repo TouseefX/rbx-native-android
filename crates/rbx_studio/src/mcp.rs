@@ -1,25 +1,29 @@
 //! An MCP server over the live editor session, shaped after the one built
-//! into Roblox Studio (`studio/mcp.md`): an AI client reads the open place
-//! through tools named as Studio names them.
+//! into Roblox Studio (`studio/mcp.md`): an AI client reads and edits the
+//! open place through tools named as Studio names them.
 //!
 //! An MCP client speaks to a server it launches, over that process's stdin
 //! and stdout. The editor is not that process: it is already running, with
-//! the place open. So `rbxstudio --mcp` is a small [`bridge`] the client
-//! launches, which forwards each line to the editor over a loopback socket.
-//! The editor's side ([`endpoint`]) listens on a port the system picks and
-//! writes it, with a random token, to `<config>/mcp.json`; a connection that
-//! does not open with that token is closed unread, so another user on the
-//! same machine cannot reach the session through the port alone.
+//! the place open, and there may be several of them. So `rbxstudio --mcp` is
+//! a small [`bridge`] the client launches, which hands each line to a
+//! [`broker`] that knows every running editor. Each editor's side
+//! ([`endpoint`]) listens on a port the system picks and writes it, with a
+//! random token and the editor's `studio_id`, to its own file under
+//! `<config>/mcp/`; a connection that does not open with that token is closed
+//! unread, so another user on the same machine cannot reach the session
+//! through the port alone.
+//!
+//! As in Studio, every tool call names the editor it is for by `studio_id`
+//! (`list_roblox_studios` lists them); with one editor running the id may be
+//! left out.
 //!
 //! Every message is answered on the UI thread ([`protocol::handle`]), with
-//! the DOM exactly as the Explorer shows it at that moment. The tools only
-//! read for now; anything that edits will have to go through the same DOM
-//! mutation and undo path every other edit does.
-//!
-//! One editor at a time is reachable: the last one started owns
-//! `mcp.json`, and removes it on the way out only while it is still its own.
+//! the DOM exactly as the Explorer shows it at that moment. An edit is only
+//! planned there ([`Session::planned`]); the shell applies it through the
+//! same DOM write and undo history a script tab's own edits take.
 
 pub(crate) mod bridge;
+pub(crate) mod broker;
 pub(crate) mod endpoint;
 pub(crate) mod protocol;
 mod tools;
@@ -30,17 +34,67 @@ use rbx_dom::WeakDom;
 
 use crate::properties::Properties;
 
+pub(crate) use tools::{apply_edit, ScriptEdit};
+
 /// The command-line flag that turns `rbxstudio` into the [`bridge`].
 pub(crate) const BRIDGE_FLAG: &str = "--mcp";
 
-/// What a tool reads: the place as it stands, and the Properties panel's
-/// own formatting, so a value reads the same to the client as in the panel.
+/// What a tool works on: the place as it stands, the Properties panel's own
+/// formatting (so a value reads the same to the client as in the panel),
+/// and which editor this is.
 pub(crate) struct Session<'a> {
     pub(crate) dom: &'a WeakDom,
     pub(crate) properties: &'a Properties,
+    pub(crate) studio: &'a Studio,
+    /// The edit a `multi_edit` call asked for, for the shell to apply once
+    /// the call has been answered. Tools never write to `dom` themselves.
+    pub(crate) planned: Option<ScriptEdit>,
 }
 
-/// Where the running editor says how to reach it.
-pub(crate) fn endpoint_file() -> Option<PathBuf> {
-    crate::settings::default_config_dir().map(|dir| dir.join("mcp.json"))
+impl<'a> Session<'a> {
+    pub(crate) fn new(dom: &'a WeakDom, properties: &'a Properties, studio: &'a Studio) -> Self {
+        Session {
+            dom,
+            properties,
+            studio,
+            planned: None,
+        }
+    }
+}
+
+/// One running editor, as `list_roblox_studios` and `get_studio_state`
+/// describe it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Studio {
+    pub(crate) id: String,
+    /// The place file's name, as the window title shows it.
+    pub(crate) name: String,
+    /// Only a place linked to Roblox has one.
+    pub(crate) place_id: Option<u64>,
+    pub(crate) play: PlayState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PlayState {
+    Edit,
+    Starting,
+    Playing,
+    /// A running playtest's own tree is shown in the editor. Tools still read
+    /// the edited place, but nothing may write to it until the view returns.
+    ShowingLive,
+}
+
+impl PlayState {
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            PlayState::Edit => "Edit",
+            PlayState::Starting => "Starting",
+            PlayState::Playing | PlayState::ShowingLive => "Play",
+        }
+    }
+}
+
+/// Where every running editor says how to reach it, one file each.
+pub(crate) fn endpoint_dir() -> Option<PathBuf> {
+    crate::settings::default_config_dir().map(|dir| dir.join("mcp"))
 }
