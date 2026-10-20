@@ -93,7 +93,7 @@ fn a_models_pivot_moves_by_its_world_pivot_and_no_part_moves() {
 }
 
 /// With a `PrimaryPart`, the model's pivot is that part's, so moving it
-/// moves that part's offset — and the model reads the new place back.
+/// moves that part's offset, and the model reads the new place back.
 #[test]
 fn a_model_with_a_primary_part_moves_that_parts_pivot() {
     let db = ReflectionDatabase::embedded();
@@ -134,8 +134,8 @@ fn reset_puts_a_models_pivot_on_its_bounding_boxs_centre_facing_the_same_way() {
     reset(&mut dom, &db, model).unwrap().unwrap();
     assert_eq!(pivot(&dom, &db, model), Some(at(5.0, 0.0, 0.0)));
 
-    // Turned, the box is squared to the pivot's axes — the same box here,
-    // the cubes being square too — and the pivot keeps its turn.
+    // Turned, the box is squared to the pivot's axes, the same box here,
+    // the cubes being square too, and the pivot keeps its turn.
     set_pivot(&mut dom, &db, model, &turned(0.0, 9.0, 0.0))
         .unwrap()
         .unwrap();

@@ -16,8 +16,8 @@
 //! The scrub writes through the field's own `InputState` rather than
 //! straight to the DOM. That is deliberate: the input already has a
 //! change subscription that parses, validates and commits (see
-//! `shell::edit`), so a drag takes exactly the path typing does — including
-//! the rounding and clamping a type needs — instead of a second, parallel
+//! `shell::edit`), so a drag takes exactly the path typing does, including
+//! the rounding and clamping a type needs, instead of a second, parallel
 //! one that could disagree with it.
 
 use gpui_kit::{Modifiers, Pixels};
@@ -56,7 +56,7 @@ impl Scrub {
     }
 }
 
-/// Shift coarsens, Alt refines — the convention every tool with this gesture
+/// Shift coarsens, Alt refines, the convention every tool with this gesture
 /// shares, so it needs no discovering.
 pub(super) fn precision(modifiers: Modifiers) -> f32 {
     match (modifiers.shift, modifiers.alt) {
@@ -69,7 +69,7 @@ pub(super) fn precision(modifiers: Modifiers) -> f32 {
 /// A value as the field should read it back.
 ///
 /// An integer never shows a decimal point, and a decimal never shows
-/// trailing zeros — a field that reads `4.000` after a drag looks like it
+/// trailing zeros, a field that reads `4.000` after a drag looks like it
 /// has more precision than it does.
 pub(super) fn format(value: f32, kind: FieldKind) -> String {
     match kind {

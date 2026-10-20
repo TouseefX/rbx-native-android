@@ -45,7 +45,7 @@ pub(super) fn printed(
 }
 
 /// One table: its header, and when open its entries and closing brace.
-/// `path` names it within the entry — the `print` line, the argument, then
+/// `path` names it within the entry, the `print` line, the argument, then
 /// each entry index on the way down.
 fn node(
     id: u64,

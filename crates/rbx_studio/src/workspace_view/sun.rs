@@ -1,6 +1,6 @@
 //! The view's half of the Sun tool (see `crate::sun`): each step of the
 //! gesture goes to `Shell` as the ray under the cursor, and `Shell`'s answer
-//! comes back as the readout and the guide the renderer draws — through the
+//! comes back as the readout and the guide the renderer draws, through the
 //! same preview pass the Align tool's ghost boxes use.
 
 use gpui_kit::{Context, Pixels, Point, SharedString};
@@ -66,7 +66,7 @@ impl WorkspaceView {
     /// Lets go of whatever drag is held, and returns it, taking the Sun
     /// tool's guide off screen with it: nothing else would, once its
     /// gesture is over. Summoned handles stay where the drag left them only
-    /// while `Tab` is still down — however the drag ended, a release, a
+    /// while `Tab` is still down, however the drag ended, a release, a
     /// tool switch or a press that never saw one.
     pub(super) fn drop_drag(&mut self) -> Option<Drag> {
         let summoned = self.summoned();

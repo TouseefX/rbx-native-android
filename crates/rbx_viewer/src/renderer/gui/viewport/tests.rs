@@ -1,6 +1,6 @@
 //! One red part in front of a camera, baked into a small texture and read
 //! back: the middle pixel is the part, the corner is the transparent clear
-//! the frame's own background shows through — and, one level up, the
+//! the frame's own background shows through, and, one level up, the
 //! element now carries that texture as its image, so the quad build emits a
 //! textured run for it.
 

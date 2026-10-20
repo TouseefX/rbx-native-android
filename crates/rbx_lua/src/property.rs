@@ -89,7 +89,7 @@ pub(crate) fn set(ctx: &Ctx, referent: Ref, name: &str, value: &Value) -> Result
             return Ok(false);
         };
         // Under the name the file stored it as, or else the one Roblox saves
-        // it under — `size`, `Color3uint8` — which is what the renderer and
+        // it under, `size`, `Color3uint8`, which is what the renderer and
         // the save path read. The default, when there is one, says which
         // representation that name holds.
         let database = ctx.database();

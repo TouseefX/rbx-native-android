@@ -1,9 +1,9 @@
 // A `Trail`'s ribbon (see `crate::scene::trail` and `renderer::trail::ribbon`).
 //
 // Every vertex here already sits at its final world position: `FaceCamera`
-// (implicit for every trail — see `scene::trail::Trail`'s doc), width scaling
+// (implicit for every trail, see `scene::trail::Trail`'s doc), width scaling
 // and colour/transparency sampling are all resolved on the CPU each frame, so
-// this shader only projects and shades. Identical to `beam.wgsl` — see that
+// this shader only projects and shades. Identical to `beam.wgsl`, see that
 // shader's doc for why one blend state covers both straight alpha and
 // additive `LightEmission`.
 

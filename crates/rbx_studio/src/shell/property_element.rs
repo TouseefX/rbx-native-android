@@ -1,6 +1,6 @@
 //! One Properties row as its live widget: what `Shell::properties` builds
 //! for every row it lists, and what the UI editor's sidebar builds for the
-//! rows it picks out — one builder, so the two can never edit a property
+//! rows it picks out, one builder, so the two can never edit a property
 //! differently.
 
 use gpui_kit::assets::IconName;
@@ -109,8 +109,8 @@ impl Shell {
                 });
 
                 // A numeric value keeps the ordinary name/value row
-                // — the whole value in the field, the way it reads
-                // in a script — and hangs its components off an
+                // the whole value in the field, the way it reads
+                // in a script, and hangs its components off an
                 // expander. Collapsed, those component rows are
                 // never built: a `BasePart` alone carries five of
                 // them, and their fields are the bulk of what this
@@ -245,7 +245,7 @@ impl Shell {
     /// A row with nothing to edit itself, only rows beneath it (see
     /// `PropertyRow::children`): an expander and, once it is open, each child
     /// as the ordinary row its own `EditKind` calls for. Collapsed, the
-    /// children are never built — `MaterialColors` alone has 21 swatches.
+    /// children are never built, `MaterialColors` alone has 21 swatches.
     fn parent_element(
         &mut self,
         row: &PropertyRow,

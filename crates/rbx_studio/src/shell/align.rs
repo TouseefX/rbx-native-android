@@ -16,12 +16,11 @@ use super::drag::{vector, CFRAME_PROPERTY};
 use super::Shell;
 
 /// `RBX_STUDIO_ALIGN='x,y,center,world,bounds'`: sets the toolbar's toggles
-/// — axis letters (`x`/`y`/`z`, replacing the default set entirely rather
-/// than adding to it), a `Mode`, a `Space` and a `RelativeTo`, in any order —
-/// and runs the alignment once, right after startup — a debugging aid for a
+/// axis letters (`x`/`y`/`z`, replacing the default set entirely rather
+/// than adding to it), a `Mode`, a `Space` and a `RelativeTo`, in any order,
+/// and runs the alignment once, right after startup, a debugging aid for a
 /// screenshot of parts actually lining up, since nothing else can click the
-/// popover's own buttons on the editor's behalf (see `AGENTS.md`'s safety
-/// rules).
+/// popover's own buttons on the editor's behalf.
 ///
 /// A `preview` among those words shows the live preview instead of
 /// committing: what opening the popover with those toggles set would draw,
@@ -66,8 +65,8 @@ impl Shell {
     }
 
     /// Sends the viewport the boxes the current toggles would move the
-    /// selection into — `studio/align-tool.md`'s "dynamically previewing
-    /// the point of alignment before confirming" — or clears them when the
+    /// selection into, `studio/align-tool.md`'s "dynamically previewing
+    /// the point of alignment before confirming", or clears them when the
     /// popover is closed.
     ///
     /// Called from every toggle, from opening and closing the popover, and
@@ -86,7 +85,7 @@ impl Shell {
     }
 
     /// Runs the current toolbar toggles against the current selection and
-    /// writes every part [`align::plan`] moved, in one undo step — see this
+    /// writes every part [`align::plan`] moved, in one undo step, see this
     /// module's doc comment. A no-op (nothing pushed to history, nothing to
     /// undo) whenever the plan has nothing to move: fewer than two top-level
     /// selected instances, or every toggled axis already lined up.
@@ -160,7 +159,7 @@ impl Shell {
 
     /// The toolbar's own trigger: a compact popover (see this crate's
     /// `Popover`, also reachable from the Style Editor's colour fields) over
-    /// a full dock panel — Align's controls are a handful of toggle buttons,
+    /// a full dock panel, Align's controls are a handful of toggle buttons,
     /// the same shape `shell::toolbar`'s Move/Scale/Rotate strip already
     /// renders, not a dialog's worth of chrome.
     pub(super) fn align_popover(
@@ -185,7 +184,7 @@ impl Shell {
 }
 
 /// The popover's body: one row per toggle group, then the Align button
-/// itself. A free function, not a `Shell` method — `Popover::content` runs
+/// itself. A free function, not a `Shell` method, `Popover::content` runs
 /// with a `Context<PopoverState>`, not `Context<Shell>`, so every button
 /// below reaches `Shell` through the captured `handle` the same way
 /// `shell::panels`' own checkbox rows do (`Entity::update`), rather than
@@ -243,7 +242,7 @@ fn align_popover(handle: Entity<Shell>, options: align::Options) -> impl IntoEle
         )
 }
 
-/// One row of buttons, one per `items` entry — every toggle group in the
+/// One row of buttons, one per `items` entry, every toggle group in the
 /// popover (axes, mode, space, relative-to) is exactly this shape, so it is
 /// built once and parameterized rather than written out four times.
 fn toggle_group<T, const N: usize>(

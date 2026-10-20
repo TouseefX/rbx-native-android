@@ -1,4 +1,4 @@
-//! Debugger control for plugins — an rbx-native addition shaped after
+//! Debugger control for plugins, an rbx-native addition shaped after
 //! Roblox's own `DebuggerManager`/`ScriptDebugger`, which real Studio only
 //! exposes to the command bar.
 

@@ -1,4 +1,4 @@
-//! The Output panel's "level of detail" toggles beyond Show Timestamp — the
+//! The Output panel's "level of detail" toggles beyond Show Timestamp, the
 //! rest of the list `studio/output.md` gives under its overflow menu.
 
 /// Each field is one checkbox in the Output panel's overflow menu.

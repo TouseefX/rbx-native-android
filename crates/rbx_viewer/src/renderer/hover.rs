@@ -1,5 +1,5 @@
 //! The "about to click" cue: an outline around whatever `BasePart` is under
-//! the cursor, distinct from — and drawn in addition to — the Explorer's own
+//! the cursor, distinct from, and drawn in addition to, the Explorer's own
 //! selection outline (see [`super::selection::Selection`]).
 //!
 //! Mirrors `Selection` almost exactly, down to reusing its box-edge math (see
@@ -22,7 +22,7 @@ use super::pipeline::{Surface, Target};
 
 const SHADER: &str = include_str!("hover.wgsl");
 
-/// The hover outline's GPU state: a `LineList` pipeline of its own — same
+/// The hover outline's GPU state: a `LineList` pipeline of its own, same
 /// depth test as the selection outline, but alpha-blended in a distinct
 /// colour (see `hover.wgsl`) so the two never look like the same effect.
 pub(super) struct Hover {
@@ -33,12 +33,12 @@ pub(super) struct Hover {
     target: Target,
     frame_layout: wgpu::BindGroupLayout,
     /// Every drawable part's placement, read once from the scene at
-    /// construction and kept in step by [`Hover::place`] afterwards — a
+    /// construction and kept in step by [`Hover::place`] afterwards, a
     /// second copy of what [`super::selection::Selection`] already tracks,
     /// traded for keeping the two outlines' GPU state independent rather than
     /// threading a shared placements map through both.
     placements: HashMap<Ref, Placement>,
-    /// What [`Hover::set`] last outlined — the instance(s) the hover covers,
+    /// What [`Hover::set`] last outlined, the instance(s) the hover covers,
     /// each drawn as one box (a model's aggregate bounds, a part's own), so a
     /// placement that moves under the cursor (see [`Hover::place`]) can redraw
     /// it.
@@ -123,8 +123,8 @@ impl Hover {
         });
     }
 
-    /// Records where one part is drawn now — a Properties-panel edit moved,
-    /// resized or reshaped it — and redraws the outline if that part is the
+    /// Records where one part is drawn now, a Properties-panel edit moved,
+    /// resized or reshaped it, and redraws the outline if that part is the
     /// one currently hovered.
     pub(super) fn place(&mut self, device: &wgpu::Device, referent: Ref, placement: Placement) {
         self.placements.insert(referent, placement);
@@ -133,7 +133,7 @@ impl Hover {
         }
     }
 
-    /// Whether one part is inside anything the hover currently outlines — a
+    /// Whether one part is inside anything the hover currently outlines, a
     /// hovered part itself, or one beneath a hovered model.
     fn covers(&self, referent: Ref) -> bool {
         self.selected
@@ -141,8 +141,8 @@ impl Hover {
             .any(|entry| entry.parts().contains(&referent))
     }
 
-    /// Forgets where one part was drawn — it stopped drawing as a box (a mesh
-    /// took over) or is gone — and clears the hover outline if it was the one
+    /// Forgets where one part was drawn, it stopped drawing as a box (a mesh
+    /// took over) or is gone, and clears the hover outline if it was the one
     /// hovered: a box drawn around a part that no longer exists would
     /// otherwise linger until the cursor moves onto something else.
     pub(super) fn remove(&mut self, device: &wgpu::Device, referent: Ref) {
@@ -186,7 +186,7 @@ mod tests {
 
     /// The rest of the geometry (how a box's edges follow its model matrix,
     /// how a referent with no placement draws nothing) is already covered by
-    /// `renderer::outline`'s own tests — this only checks which side of the
+    /// `renderer::outline`'s own tests, this only checks which side of the
     /// split a hover lands on: a part is cued by its own silhouette (see
     /// `renderer::cue`) and draws no box, a container still draws one.
     #[test]

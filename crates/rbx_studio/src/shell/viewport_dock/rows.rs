@@ -1,5 +1,5 @@
 //! The dock's sections and rows: a 10px uppercase header over 28px rows,
-//! each a label at the left and its control flush right — a switch, the
+//! each a label at the left and its control flush right, a switch, the
 //! quality dropdown, the screen-size field with its swap button and
 //! preset menu, or the frame-rate readout.
 
@@ -190,7 +190,7 @@ impl Shell {
         row("Graphics quality", control).into_any_element()
     }
 
-    /// "Screen size": a 26×26 swap button, 6px, then the 150×26 field —
+    /// "Screen size": a 26×26 swap button, 6px, then the 150×26 field,
     /// width × height in mono, and a 26px preset button at its right that
     /// opens "Viewport size" and the device presets. The same setting as
     /// the UI Editor's resolution, so a GUI laid out on the canvas is laid

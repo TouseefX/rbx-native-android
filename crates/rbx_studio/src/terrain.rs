@@ -94,7 +94,7 @@ impl TerrainTool {
         }
     }
 
-    /// What the tool is for, for its tooltip — `terrain-editor.md`'s own
+    /// What the tool is for, for its tooltip, `terrain-editor.md`'s own
     /// one-line summaries.
     pub(crate) fn hint(self) -> &'static str {
         match self {

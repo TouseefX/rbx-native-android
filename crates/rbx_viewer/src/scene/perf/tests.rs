@@ -304,7 +304,7 @@ fn patching_a_reparent_into_the_workspace_adds_the_part() {
 /// What measuring costs on a real place: `marked.rbxl` from the fixtures
 /// repository `RBX_FIXTURES` names, read against the real asset cache, then
 /// the same place with its parts copied `PERF_COPIES` times over (default
-/// 100) — and what a frame costs with the heat tint on and off.
+/// 100), and what a frame costs with the heat tint on and off.
 /// `RBX_FIXTURES=… cargo test --release -p rbx_viewer --lib perf::tests::measures -- --ignored --nocapture`
 #[test]
 #[ignore = "needs RBX_FIXTURES, a filled asset cache and a GPU"]

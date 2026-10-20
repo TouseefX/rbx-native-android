@@ -1,17 +1,17 @@
 //! What the Explorer's `+` picker offers under a given parent, and what a
 //! freshly inserted instance is called.
 //!
-//! Roblox publishes no per-class table of legal parents — the API dump
+//! Roblox publishes no per-class table of legal parents, the API dump
 //! carries class tags and nothing about ancestry, and a class page in
 //! creator-docs describes where an instance *works* ("if no ancestral
 //! `PVInstance` exists…") rather than where the engine refuses to put it. So
 //! the picker greys exactly the two refusals the dump does state, and no
 //! more:
 //!
-//! - **`NotCreatable`** — `Instance.new` refuses the class outright. Listed
+//! - **`NotCreatable`**: `Instance.new` refuses the class outright. Listed
 //!   anyway, greyed, because "`Terrain` is not something you insert" is
 //!   worth learning from the picker rather than from its absence.
-//! - **`Service`** — a service is a singleton the `DataModel` owns and
+//! - **`Service`**: a service is a singleton the `DataModel` owns and
 //!   `GetService` hands out, which is why `explorer::reparent` already
 //!   refuses to *drag* one anywhere. The rule takes the parent's class
 //!   rather than hardcoding "never", so a `DataModel` row (which this
@@ -24,8 +24,8 @@
 use rbx_dom::{Ref, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
-/// The one class that owns the services. Never a row in this Explorer — its
-/// roots *are* the services — but the parent-legality rule is written in
+/// The one class that owns the services. Never a row in this Explorer, its
+/// roots *are* the services, but the parent-legality rule is written in
 /// terms of it rather than around it.
 const DATA_MODEL: &str = "DataModel";
 
@@ -67,7 +67,7 @@ pub(crate) fn choices(
     choices
 }
 
-/// Whether inserting `class` under a parent of `parent_class` would work —
+/// Whether inserting `class` under a parent of `parent_class` would work,
 /// see this module's own comment for where each half of the rule comes from.
 /// `None` is the file's root, which `.rbxm` places have and `.rbxl` places
 /// reach only through a service.
@@ -90,7 +90,7 @@ pub(crate) fn legal(
 /// from 1 up that is.
 ///
 /// This is what real Studio's **increment names for new instances** option
-/// does — `studio/explorer.md`: "inserted/pasted/duplicated instances of the
+/// does, `studio/explorer.md`: "inserted/pasted/duplicated instances of the
 /// same type will have numbered names for differentiation". With the option
 /// off nothing calls this at all, and a second `Part` is simply called
 /// `Part` again.
@@ -120,8 +120,8 @@ pub(crate) fn incremented_name(dom: &WeakDom, parent: Option<Ref>, base: &str) -
 
 /// The writes that make a freshly inserted `GuiObject` something to see
 /// and grab: `Instance.new`'s own values (see `reflection-defaults.json`)
-/// leave it 0×0, grey, with a border. These are this editor's seed — a
-/// white box, no border, text that says what it is — patterned on what
+/// leave it 0×0, grey, with a border. These are this editor's seed, a
+/// white box, no border, text that says what it is, patterned on what
 /// Studio's own UI insert shows; no docs page publishes that table. Each is
 /// `properties::edit::commit` text, so an insert goes through the same
 /// parser a typed value does. Empty for anything that is not a `GuiObject`.

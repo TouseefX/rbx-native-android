@@ -8,9 +8,8 @@
 //! shell's run loop applies (`stream`, `undo`).
 //!
 //! `RBX_STUDIO_RUN=<source>` runs one chunk exactly as pressing Enter would,
-//! once, right after the window opens — a debugging aid for a screenshot that
-//! proves the bar works without sending it synthetic input (see `AGENTS.md`'s
-//! safety rules), e.g.
+//! once, right after the window opens, a debugging aid for a screenshot that
+//! proves the bar works without sending it synthetic input, e.g.
 //! `RBX_STUDIO_RUN='workspace.Baseplate.Transparency = 0.5' rbxstudio place.rbxl`.
 
 mod feedback;
@@ -80,10 +79,10 @@ impl CommandBar {
     }
 
     /// The bar as it sits at the bottom of the window. The design frame has
-    /// no command bar, so this borrows a dock's own furniture — the 5px
-    /// inset and the `chrome` field — rather than inventing a third look
+    /// no command bar, so this borrows a dock's own furniture, the 5px
+    /// inset and the `chrome` field, rather than inventing a third look
     /// for the one row at the bottom of the window. The last run's outcome
-    /// sits above the input only while `output_collapsed` — otherwise the
+    /// sits above the input only while `output_collapsed`: otherwise the
     /// Output dock already shows it (see [`Feedback::shown_inline`]).
     pub(crate) fn render(
         &self,

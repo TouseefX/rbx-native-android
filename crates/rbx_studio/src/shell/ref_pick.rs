@@ -6,7 +6,7 @@
 //! arrows and type-ahead included, which move without picking) disarms it;
 //! Delete or Backspace on the row, or its `×`, clears it to `nil`.
 //!
-//! A click in the 3D view picks too — creator-docs once spelled it out for
+//! A click in the 3D view picks too, creator-docs once spelled it out for
 //! `ObjectValue.Value`: "click the object you wish to set it to within the
 //! game view or Explorer window". It lands on what a viewport click would
 //! select (see [`candidate`]), and the view's hover outline previews it.
@@ -31,7 +31,7 @@ use super::selection;
 use super::Shell;
 
 /// Which `Ref` row is waiting for an Explorer click, and the last pick that
-/// was refused, by row — a `Ref` row has no field of its own to hold an error
+/// was refused, by row, a `Ref` row has no field of its own to hold an error
 /// the way a typed row's editor does.
 #[derive(Default)]
 pub(super) struct RefPick {
@@ -254,7 +254,7 @@ fn field_label(
 }
 
 /// The `×` that clears a row: a small glyph in a square the pointer can
-/// actually hit — WCAG 2.5.8's 24px floor, or Large Click Targets' 44, at
+/// actually hit, WCAG 2.5.8's 24px floor, or Large Click Targets' 44, at
 /// every UI scale (`tokens::hit_target`).
 fn clear_glyph(row: &str) -> Stateful<Div> {
     div()
@@ -272,7 +272,7 @@ fn clear_glyph(row: &str) -> Stateful<Div> {
 
 /// What a click selects (`selection::from_click`: the outermost `Model`
 /// plain, the part itself with `Alt`), unless the property cannot hold that
-/// and can hold the part actually clicked — a `Weld.Part0` or a
+/// and can hold the part actually clicked, a `Weld.Part0` or a
 /// `PrimaryPart` clicked on a part inside a model. Studio's own widget hands
 /// its instance picker the property's class (`pickInstanceAsync({className})`
 /// in `InstanceRefPropertyView`), so its pick only ever lands on an instance

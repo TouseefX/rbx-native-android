@@ -3,8 +3,8 @@
 //! `FreeformDragger:_renderSnap`).
 //!
 //! Studio moves a free drag by one point on the selection, the *dragged
-//! point*, grabbed at the press. Every frame the point's foot — the point
-//! dropped square onto the face under the cursor — goes to where the cursor
+//! point*, grabbed at the press. Every frame the point's foot, the point
+//! dropped square onto the face under the cursor, goes to where the cursor
 //! meets that face, corrected onto the face's grid and, with Snap to Parts,
 //! onto the face's edges and centre lines. The selection itself rests on the
 //! face, its box's underside flush with it.
@@ -25,16 +25,16 @@ const DOT_RADIUS: f32 = 0.15;
 const BAR_WIDTH: f32 = 0.05;
 /// How far an alignment line runs on past each end, in handle scales.
 const LINE_OVERRUN: f32 = 1.5;
-/// An alignment line with no length — every one on a face with no size, a
-/// ball's pole — is a mark this wide instead. Studio draws a cube
+/// An alignment line with no length, every one on a face with no size, a
+/// ball's pole, is a mark this wide instead. Studio draws a cube
 /// (`BoxHandleAdornment`) there; the line layer draws the same-sized dot.
 const POINT_SIZE: f32 = 0.3;
 
 /// The grab at a press, snapped the way Studio snaps it
 /// (`dispatchWorldClick`): the point clicked on `model`, rounded onto the
 /// grid of the frame the hover under the click stood on (`hovered`, or the
-/// clicked box face's own when there was none) across the face — its height
-/// off the face kept — or, on a ball, onto the grid of the ball's own frame
+/// clicked box face's own when there was none) across the face, its height
+/// off the face kept, or, on a ball, onto the grid of the ball's own frame
 /// on every axis. Snapped whenever the toolbar's snapping is on; `Shift`
 /// does not change it.
 pub(crate) fn grab(
@@ -75,7 +75,7 @@ pub(crate) fn grab(
 
 /// Studio's selection box (`getLocalBoundingBox`): the tight box round the
 /// parts' own boxes `models`, in the frame of the selection's basis
-/// (`orientation` at `origin`) — its centre in that frame, and its size.
+/// (`orientation` at `origin`), its centre in that frame, and its size.
 pub(crate) fn selection_box(
     orientation: Mat3,
     origin: Vec3,
@@ -95,7 +95,7 @@ pub(crate) fn selection_box(
 
 /// The selection box (`centre` and `size` in the basis frame) turned by
 /// `turn` into a target frame's axes and measured from the dragged point
-/// (`dragged`, in the basis frame): its low and high corners there — the
+/// (`dragged`, in the basis frame): its low and high corners there, the
 /// box Studio lands (`getSizeInSpace`, round `(rot·tilt)(offset − point)`).
 pub(crate) fn bounds(turn: Mat3, (centre, size): (Vec3, Vec3), dragged: Vec3) -> (Vec3, Vec3) {
     let middle = turn * (centre - dragged);
@@ -222,7 +222,7 @@ fn align(centre: f32, half: f32, inside: f32, size: f32) -> (f32, f32) {
 
 /// What Studio draws for a free drag landing on `frame`'s face: the face
 /// alignments it snapped to, if any, or else the ruler to the landing point
-/// — on a ball or a cylinder, their own guides in its place (see
+/// on a ball or a cylinder, their own guides in its place (see
 /// [`round::landed`]); and, with the grid snapping, the dragged point's dot
 /// and its bar down to the face.
 ///

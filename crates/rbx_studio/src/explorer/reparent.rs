@@ -4,7 +4,7 @@
 //! creator-docs' own Explorer page puts it as "to change the parent of one or
 //! more children (reparent), simply drag and drop them onto the new parent".
 //! There is no before/after insertion position to aim at because a place has
-//! no user-orderable sibling order in the first place — the Explorer sorts
+//! no user-orderable sibling order in the first place, the Explorer sorts
 //! what it shows (see this module's parent). So a drop target is one
 //! instance, and everything here is about which `(dragged set, target)` pairs
 //! are legal.
@@ -19,7 +19,7 @@ use rbx_dom::{Ref, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
 /// The instances a drop onto `target` would actually move, in the order they
-/// were dragged. Empty means the drop is refused — nothing to move is the same
+/// were dragged. Empty means the drop is refused, nothing to move is the same
 /// answer as nothing allowed to.
 ///
 /// Returning the set rather than a bare `bool` keeps one rule behind the
@@ -42,7 +42,7 @@ pub(crate) fn movable(
         .collect()
 }
 
-/// Whether dropping `dragged` onto `target` would move anything at all — the
+/// Whether dropping `dragged` onto `target` would move anything at all, the
 /// predicate the hovered row's highlight and GPUI's `can_drop` ask.
 ///
 /// Short-circuits instead of calling [`movable`], which would allocate: this
@@ -71,14 +71,14 @@ fn moves(
     // Dropped together with something it already sits inside: moving that
     // ancestor carries this one along, and pulling it out of it on the way is
     // a second rearrangement nobody asked for. Only an ancestor that is
-    // *itself* going somewhere counts, though — dragging `Workspace` and one
+    // *itself* going somewhere counts, though, dragging `Workspace` and one
     // of its parts together must still move the part, since the service half
     // of that selection is refused and carries nothing anywhere.
     //
     // Asking whether the ancestor is [`standalone`] answers that without
     // recursing into `moves` for it: if any dragged ancestor of `reference` is
     // standalone then the outermost such one has no standalone ancestor of its
-    // own left to be absorbed by, so it does move — and if none is standalone,
+    // own left to be absorbed by, so it does move, and if none is standalone,
     // none of them moves at all. The two questions have the same answer, and
     // this one cannot blow up on a selection that is one long nested chain.
     standalone(dom, database, reference, target)
@@ -89,7 +89,7 @@ fn moves(
         })
 }
 
-/// Whether `reference` could move to `target` on its own — every rule that
+/// Whether `reference` could move to `target` on its own, every rule that
 /// looks only at the instance and where it is going, none that depends on what
 /// else is being dragged alongside it.
 fn standalone(dom: &WeakDom, database: &ReflectionDatabase, reference: Ref, target: Ref) -> bool {
@@ -121,7 +121,7 @@ fn standalone(dom: &WeakDom, database: &ReflectionDatabase, reference: Ref, targ
 /// frame of a drag, and a service's subtree is the whole place.
 ///
 /// The visited list bounds the walk. A tree this editor built cannot contain a
-/// cycle — these rules are what stop one — but a malformed file is not this
+/// cycle, these rules are what stop one, but a malformed file is not this
 /// function's problem to diagnose, and hanging over one is worse than
 /// answering "no".
 fn is_ancestor(dom: &WeakDom, ancestor: Ref, reference: Ref) -> bool {

@@ -1,16 +1,16 @@
 # UX & Visual Design Guidelines
 
-Rules for anyone — human or agent — touching how `rbx_studio` looks.
+Rules for anyone, human or agent, touching how `rbx_studio` looks.
 Companion to [GUIDELINES.md](GUIDELINES.md) (Rust style) and
 [SPECS.md](SPECS.md) (architecture): this one is about what the editor
-should look and feel like. `agents/AGENTS.md`'s "Verifying a change" section
-still governs *how* a visual change is checked (build the binary, look at a
+should look and feel like. [CONTRIBUTING.md](CONTRIBUTING.md)
+still covers *how* a visual change is checked (build the binary, look at a
 real screenshot); this file is about what that screenshot should show.
 
 **The one rule everything else follows:** every colour, radius, spacing
 step, elevation, duration and text style comes from
 [`crates/rbx_studio/src/tokens.rs`](crates/rbx_studio/src/tokens.rs). A
-literal `rgb(0x…)` or `px(13.)` in chrome is a bug — it drifts the moment
+literal `rgb(0x…)` or `px(13.)` in chrome is a bug, it drifts the moment
 the design moves, and a literal size also escapes the UI scale, which is
 how this app meets WCAG 1.4.4. If no token fits, add one there, named for
 what the design calls it.
@@ -19,14 +19,14 @@ what the design calls it.
 
 Two sources, and they answer different questions.
 
-**Geometry comes from the project's own Figma file** — frame
+**Geometry comes from the project's own Figma file**: frame
 `RbxNative - Studio App`
 ([`pezVJOZ5zSmIfZ3r0fWzOP`](https://www.figma.com/design/pezVJOZ5zSmIfZ3r0fWzOP/RBX-NATIVE),
 node `1:2`). Every number in `tokens.rs` was measured off that frame, not
 chosen here.
 
 That has a consequence worth stating plainly: **the frame wins arguments.**
-If the editor and the frame disagree, the editor is wrong — unless the
+If the editor and the frame disagree, the editor is wrong, unless the
 disagreement is recorded in §10 as something GPUI cannot express. When the
 frame is silent (it has no focus states, no hover, no open menu, no
 scrollbars), this file decides, and says so.
@@ -34,7 +34,7 @@ scrollbars), this file decides, and says so.
 plus its `InputsStyle` frame (node `6:2`), which is where every field,
 select, stepper and checkbox gets its height, padding, radius and fill.
 
-The frame is deliberately incomplete in places — it names six ribbon
+The frame is deliberately incomplete in places, it names six ribbon
 categories and fills one, and its right dock is empty. Filling those gaps
 means extending the frame's own vocabulary (its surfaces, its 5px radius),
 never inventing a second one.
@@ -64,20 +64,20 @@ them out specifically:
   "2.4.11". This project takes the AAA number anyway, because it is cheap to
   hit and "visible" without one is an opinion.
 - **These are CSS reference pixels, not device pixels.** They map to GPUI's
-  logical pixels — which is exactly why every size in `tokens.rs` is a
+  logical pixels, which is exactly why every size in `tokens.rs` is a
   function of the UI scale rather than a constant.
 
 ### How a native app is held to a web standard
 
 WCAG is written for web content. Applying it to desktop software is accepted
 practice and required of software by EN 301 549, but two criteria have no
-literal native equivalent, so this is the interpretation — stated here
+literal native equivalent, so this is the interpretation, stated here
 because the reference asks for it to be documented rather than assumed:
 
 - **1.4.4 Resize Text (200%)** has no browser zoom to lean on. The
   settings-based UI scale *is* the mechanism: 0.5×–2.0×, persisted, over
   fonts and the boxes they sit in together. Blender's Resolution Scale model
-  and range, for Blender's reason — text that grows while its row does not
+  and range, for Blender's reason, text that grows while its row does not
   is a clipped UI, not a larger one.
 - **1.4.10 Reflow (320px)** is not met literally and is not meant to be. The
   criterion explicitly exempts "interfaces where it is necessary to keep
@@ -90,30 +90,30 @@ because the reference asks for it to be documented rather than assumed:
 
 The reference's Stage 1 is the non-negotiable AA baseline; Stage 2 is the
 native-app accommodations; Stage 3 is polish. This is where the editor
-actually stands — including where it does not.
+actually stands, including where it does not.
 
-**Stage 1 — all six met.** Text contrast, non-text contrast, the focus
+**Stage 1, all six met.** Text contrast, non-text contrast, the focus
 indicator, target sizes, never-colour-alone, and the keyboard model. The
 first four are asserted in `tokens::tests` rather than eyeballed, and the
 target-size test runs at **every** scale, not just at 1.0× where none of
 those tokens can fail.
 
-**Stage 2 — met.** The UI scale (item 7) is there, and VS Code's split
+**Stage 2, met.** The UI scale (item 7) is there, and VS Code's split
 on top of it: Studio Settings › Appearance has a Script font size and a
 Viewport font size, each multiplied by the UI scale. The viewport's covers
-every piece of text the editor draws over the 3D view — the drag and speed
+every piece of text the editor draws over the 3D view, the drag and speed
 readouts, the guide labels, the measurement box, the orientation
-indicator — through `tokens::viewport_text`, and never the place's own
+indicator, through `tokens::viewport_text`, and never the place's own
 BillboardGui/SurfaceGui text, which is content Studio does not rescale
 either. Large Click Targets and a Reduce Motion toggle (item 8) live in the
 View menu, the latter overriding a desktop preference read at startup.
-The whole dock arrangement persists — which edge, dock and tab each panel
-sits in, every size, what is floating and what is closed — with a Reset
+The whole dock arrangement persists, which edge, dock and tab each panel
+sits in, every size, what is floating and what is closed, with a Reset
 Layout command beside it (item 9); named layouts do not exist.
 
-**Stage 3 — met.** The built-in High Contrast themes cover item 10. The
+**Stage 3, met.** The built-in High Contrast themes cover item 10. The
 command palette (item 12) is Studio's Quick Open: Ctrl+P finds an instance
-by name or path, Ctrl+Alt+P or a leading `>` finds any command — every live
+by name or path, Ctrl+Alt+P or a leading `>` finds any command, every live
 menu item and ribbon command, each with its shortcut, plus a "Focus"
 command per dock and document that puts the caret inside it
 (`shell::palette`). It is an APG combobox whose highlighted option is the
@@ -122,7 +122,7 @@ destructive controls (see below); Large Click Targets still raises the
 rest.
 
 **No Level A gap left.** `Select`, `ColorPicker` and `NumberInput` are in
-the Tab order — every `Color3`, every enum and the snap increments
+the Tab order, every `Color3`, every enum and the snap increments
 included. None of them needed the focusable wrapper this section used to
 promise: each one's state entity (`SelectState`, `ColorPickerState`,
 `InputState`) already implements `Focusable` and hands out the same handle
@@ -139,14 +139,14 @@ Enter/Space/Down open one, and Escape backs out to wherever focus came from
 |---|---|---|
 | Surfaces | `black` `#000000` · `dock` `#0D0D0D` · `chrome` `#171717` · `field_select` `#232323` · `tile` `#2F2F2F` · `menu_bar` `#1B1B1B` | ground → a dock's body → raised panel and every text field → a **dropdown** → a ribbon button. **Neutral** grey, deliberately: a cool cast on a tool whose job is showing somebody else's colours biases every material judged against it. Each step is **asserted** as a luminance delta, not a contrast ratio: this near black, a ratio is dominated by WCAG's `+0.05` term and scores two surfaces 20 levels apart about the same as two 4 apart |
 | States | `tab_active` (black 30%) · `ribbon_tab_active` (white 10%) · `hover` (white 5%) · `selection` (accent 68%) | the open document is *recessed*; everything else lights up |
-| Borders | `tab_border` / `divider` — white 11% (`#FFFFFF1C`) | between document tabs; between ribbon groups, along a dock's edge, and before its trailing cell |
-| Text | `text_full` → `text_disabled`, six steps of white alpha, plus `text_error` | alphas, not greys: changing a surface re-tints every label on it. There is no step below `text_disabled` — the one there used to be rendered read-only *values* at 1.7:1 |
+| Borders | `tab_border` / `divider`: white 11% (`#FFFFFF1C`) | between document tabs; between ribbon groups, along a dock's edge, and before its trailing cell |
+| Text | `text_full` → `text_disabled`, six steps of white alpha, plus `text_error` | alphas, not greys: changing a surface re-tints every label on it. There is no step below `text_disabled`, the one there used to be rendered read-only *values* at 1.7:1 |
 | Colour | `check_on` `#6C7FDB` (the accent) + `check_off` + `check_off_border`, plus `accent_soft`/`accent_line` washes for active/selected chrome | the **only** saturated hue in the design. It is the checkbox and the accent. Focus and selection borrow it; nothing else may |
 | Radius | `RADIUS` 5 · `RADIUS_TINY` 1 | that is the whole scale. A third radius is a bug |
 | Controls | `check_on` `#6C7FDB` · `check_off` + `check_off_border` · `tab_active_bar` · `select_inset` | the accent, the outline the frame's borderless checkbox needed, and the one compensation this file admits to (see §11) |
 | Dimensions | `topbar_height()` 34 · `menu_bar_height()` 30 · `tabs_height()` 42 · `ribbon_tabs_height()` 28 · `ribbon_height()` 80 · `dock_tabs_height()` 38 · `dock_width()` 300 · `dock_height()` 178 (the strip and five rows) · `row_height()` 28 · `row_label_width()` 120 · `input_height()` 31 · `checkbox_size()` 15 in a `checkbox_target()` of 26 · … | **functions**, all scaled. Larger than the frame's own numbers because the type is (see below) |
-| Type | `text_md()` 14 · `text_sm()` 13 · `text_xs()` 11, with `line_md()`/`line_sm()`/`line_xs()` | 14 is the default; 13 is section headers and tooltips; 11 is a ribbon tile's label. The frame's own 9/8 is overruled — see §11 |
-| Toolkit | `FIELD_SIZE` | hand this to any `Input`/`Select`/`ColorPicker` so its text comes out at `TEXT_SM` — the toolkit's own smallest step is 12px |
+| Type | `text_md()` 14 · `text_sm()` 13 · `text_xs()` 11, with `line_md()`/`line_sm()`/`line_xs()` | 14 is the default; 13 is section headers and tooltips; 11 is a ribbon tile's label. The frame's own 9/8 is overruled, see §11 |
+| Toolkit | `FIELD_SIZE` | hand this to any `Input`/`Select`/`ColorPicker` so its text comes out at `TEXT_SM`, the toolkit's own smallest step is 12px |
 | Tool accents | `tool_select` `tool_move` `tool_scale` `tool_rotate` `tool_align` `tool_local`, + `tool_wash` and `TOOL_BORDER` | the **only** place a second hue is spent, and only on the active tool's own button. See §4 |
 | Scale | `font_scale` · `set_font_scale` · `FONT_SCALE_RANGE` | every size token multiplies by this. See §3 |
 | Behaviour | `focus_ring(surface)` · `elevation()` · `reduced_motion` · `DURATION_MENU` · `easing_soft` | the things a static frame cannot contain. See §6, §8, §9 |
@@ -154,17 +154,17 @@ Enter/Space/Down open one, and Escape backs out to wherever focus came from
 Chrome spacing has no scale and no tokens: the frame uses 4, 5, 6, 7, 10
 and 16px in different places for different reasons, and rounding those to a
 base-4 ladder would be inventing a design the file doesn't have. Write the
-literal the frame measures. The Properties panel is the exception — its
+literal the frame measures. The Properties panel is the exception, its
 four gaps (`label_gap` < `row_gap` < `section_gap` < `group_gap`) are a
 *ratio*, not four independent numbers, and §6 explains why. `header_gap`
 sits outside that ladder on purpose: a collapsed category header carries
 its own fill, so consecutive headers are tiles in a stack and are spaced
-like tiles, not like groups — the grouping is read off the surface there,
+like tiles, not like groups, the grouping is read off the surface there,
 not off the void.
 
 **Every size is a function, not a constant**, and multiplies by
 `font_scale()`. Anything a pointer has to hit goes through `scaled_target`
-instead, which is the same thing with WCAG 2.5.8's 24px floor under it —
+instead, which is the same thing with WCAG 2.5.8's 24px floor under it,
 `checkbox_target`, `input_height`, `row_height`, `tree_row_height`,
 `hit_target`. `tool_border()` scales too, because it is an accessibility
 cue and a fixed 1.5px would get relatively thinner exactly when someone has
@@ -173,7 +173,7 @@ sit in, because text that grows while its row doesn't is not a larger UI,
 it is a clipped one. The range is Blender's too (0.5×–2.0×), reachable with
 Ctrl+= / Ctrl+− / Ctrl+0 and persisted in `Settings`. `hit_target()` is the
 one exception: it is a WCAG floor rather than a design value, so it never
-shrinks below 24 even at 0.5× — and **View → Large Click Targets** raises
+shrinks below 24 even at 0.5×, and **View → Large Click Targets** raises
 that floor to 2.5.5's 44px for pen, touch and motor-impaired use, which is
 Blender's "editor-area padding" idea under a clearer name.
 
@@ -189,13 +189,13 @@ row, Settings' Delete layout, Uninstall theme, Reset layout and Reset all,
 and the sequence editor's Delete stop and Reset. All of them floor at
 `tokens::primary_target()` (44, growing with the UI scale, never shrinking),
 and each is measured through gpui layout in a headless test. The visual
-grows with the hit area — gpui has no hit slop. Studio puts Save and
+grows with the hit area, gpui has no hit slop. Studio puts Save and
 Publish in its File menu and Play and Stop in the mezzanine rather than
 as ribbon tiles, so there are no Save, Publish or Delete tiles here.
 The one exception is the per-row "reset to default" glyph, which loses
 nothing.
 
-`tokens::tests` asserts the palette rather than trusting it — see §4.
+`tokens::tests` asserts the palette rather than trusting it, see §4.
 
 ## 3. Structure
 
@@ -218,7 +218,7 @@ Shell (v_flex)
 
 **The title bar is ours.** `main::window_options` asks for
 `WindowDecorations::Client`, so there is no window-manager title bar above
-`Topbar` — that row *is* it. Dragging its middle stretch moves the window;
+`Topbar`: that row *is* it. Dragging its middle stretch moves the window;
 double-clicking maximizes; the three buttons on the right are the only
 minimize/maximize/close there are. The window title still goes through
 `TitlebarOptions` so a taskbar, an alt-tab switcher and a screenshot tool
@@ -233,7 +233,7 @@ to get lost. Keep it that way: if a panel ever becomes conditional on a tab,
 that rule is broken and the bug it causes (a reset scroll, a lost selection)
 will look like a mystery rather than a layout change.
 
-The one deliberate exception is `Shell::hidden_panels` — a *display* filter
+The one deliberate exception is `Shell::hidden_panels`: a *display* filter
 over Row D, not an unmount. Every hidden panel stays mounted with its state
 intact; only whether its tab draws is conditional, exactly like a dock tab
 set aside behind another. It covers two cases: the UI Editor's canvas sets
@@ -241,18 +241,18 @@ Properties, Output and Viewport aside for the room its own sidebar and
 tools want, and the Script Editor keeps Viewport off its dock (the 3D view
 isn't on screen either way) while bringing up two docks of its own, Argon
 and Wally (`shell::scripting_tools`), that mean nothing anywhere else. A
-panel is never unmounted by this — a hidden dock's contents are exactly
+panel is never unmounted by this, a hidden dock's contents are exactly
 where they were when it comes back.
 
 **Row D is hand-rolled, not a `DockArea`.** Fixed columns with their own
 min/max and 4px handles can't be expressed through the toolkit's dock, so
-that dependency went away — and with it, dragging panels to rearrange them.
+that dependency went away, and with it, dragging panels to rearrange them.
 Re-adding that is a real feature to spec, not a refactor to sneak in; the
-design is in [`agents/dock-rearrangement.md`](agents/dock-rearrangement.md).
+design is in [`docs/design/dock-rearrangement.md`](docs/design/dock-rearrangement.md).
 
 **Dock sizes persist, and there is a way back.** Column widths, the Output
 dock's height and whether it is collapsed all land in `Settings` on release
-— not on every frame of a drag, which would write the file sixty times a
+not on every frame of a drag, which would write the file sixty times a
 second to record states nobody chose. **View → Reset Layout** is the
 companion every persisted layout needs: a column dragged to four pixels
 wide is saved that way, and without a reset the only way out is to find and
@@ -260,11 +260,11 @@ delete the settings file.
 
 **A dock is a tab strip over an inset body.** `chrome::dock_tabs` draws the
 strip: one `chrome` pill hugging its own title on the dock's black ground,
-then — only when there is something to put there — a cell divided off by a
+then, only when there is something to put there, a cell divided off by a
 `divider` hairline. The frame puts a "+" in that cell. This editor's docks
 hold one panel each and always will, so the cell carries the panel's
 overflow menu instead: same geometry, a button with somewhere to go. Same
-reasoning kills the tab's close "×" — the frame draws one, and here it
+reasoning kills the tab's close "×", the frame draws one, and here it
 would be a control that lies.
 
 ## 4. Contrast: what is asserted, and what is exempt
@@ -276,17 +276,17 @@ surface it can land on and fails below WCAG AA 4.5:1.
 
 | Pair | Bar |
 |---|---|
-| `text_full`/`strong`/`label`/`muted`/`placeholder` on `black`, `chrome`, `tile`, `menu_bar` | AA text (4.5) ✓ — asserted |
-| `text_disabled` on `chrome` | between 2.0 and 4.5 — asserted from *both* sides: dim enough to read as unavailable, not so dim it looks like a rendering fault. WCAG exempts disabled controls |
-| `check_on` vs `check_off` | ≥ 3:1 non-text — asserted |
+| `text_full`/`strong`/`label`/`muted`/`placeholder` on `black`, `chrome`, `tile`, `menu_bar` | AA text (4.5) ✓, asserted |
+| `text_disabled` on `chrome` | between 2.0 and 4.5, asserted from *both* sides: dim enough to read as unavailable, not so dim it looks like a rendering fault. WCAG exempts disabled controls |
+| `check_on` vs `check_off` | ≥ 3:1 non-text, asserted |
 | `tab_active` composited vs `chrome` | asserted *darker*: the open document is recessed. If this ever inverts the whole tab strip reads upside down |
-| `check_on` (the focus ring) vs every surface | ≥ 3:1 — asserted. A 2px ring that nobody can see is WCAG 2.4.13's actual failure mode, not a missing ring |
-| every tool accent vs `tile` | ≥ 3:1 — asserted, all six |
-| `check_off_border` vs `black` *and* `chrome` | ≥ 3:1 on both — asserted |
-| the smallest targets (icon button, checkbox, input, rows) | ≥ 24×24 — asserted |
+| `check_on` (the focus ring) vs every surface | ≥ 3:1, asserted. A 2px ring that nobody can see is WCAG 2.4.13's actual failure mode, not a missing ring |
+| every tool accent vs `tile` | ≥ 3:1, asserted, all six |
+| `check_off_border` vs `black` *and* `chrome` | ≥ 3:1 on both, asserted |
+| the smallest targets (icon button, checkbox, input, rows) | ≥ 24×24, asserted |
 
-`assets/themes/default/widgets.json` paints everything the toolkit owns — the menu
-bar, inputs, buttons, scrollbars — and is a second copy of this palette,
+`assets/themes/default/widgets.json` paints everything the toolkit owns, the menu
+bar, inputs, buttons, scrollbars, and is a second copy of this palette,
 which is exactly the arrangement that drifts. So it is asserted key by key
 against the tokens too. **Change a colour in one place and the test tells
 you about the other.**
@@ -298,22 +298,22 @@ the one place the design is deliberately overruled: the ramp is the frame's
 
 ## 5. Icons: two kits, no overlap
 
-- **Lucide** — *affordances*: tools, commands, menu entries, chevrons,
+- **Lucide**: *affordances*: tools, commands, menu entries, chevrons,
   window buttons. `gpui_kit::assets::IconName` is the full catalog, already
   registered through `AllAssets`, and it is what the design itself is drawn
   with. Use the enum, never a path string: a typo is then a compile error
   rather than an icon that silently renders as nothing.
 - **[`class_icons`](crates/rbx_studio/src/class_icons.rs)**
-  (`assets/icons/default/`) — *identity*: what a `Part`, `Folder` or
+  (`assets/icons/default/`), *identity*: what a `Part`, `Folder` or
   `Script` is. Flat, multi-colour, never re-tinted, because the colour *is*
   the identity. **Explorer rows only**, by explicit design decision.
-- **[`assets/icons/brand/`](assets/icons/brand)** — the logo, exported from
+- **[`assets/icons/brand/`](assets/icons/brand)**: the logo, exported from
   the same Figma file. GPUI paints an SVG as a mask, so it renders as a
   white silhouette; that is what the frame shows anyway.
 
 A ribbon tile that inserts a `Part` uses **Lucide**: the tile is an
 affordance that happens to insert a Part, and it has to go grey when
-disabled — which a class icon can't do.
+disabled, which a class icon can't do.
 
 Icon sizes are the frame's and they are small: 20px on a ribbon tile, 12px
 in a document tab and a menu row, 10px on a stack row and a checkbox tick,
@@ -321,7 +321,7 @@ in a document tab and a menu row, 10px on a stack row and a checkbox tick,
 
 ## 6. Interaction state matrices
 
-The frame has no states — it is one static picture — so this is the part
+The frame has no states, it is one static picture, so this is the part
 this file decides. Every interactive element implements the same vocabulary.
 Reuse the existing builders (`chrome::icon_button`, `chrome::dock_tabs`,
 `ribbon::tile`, `ribbon::stack_row`, `rows::checkbox`, `menu::item`) rather
@@ -334,12 +334,12 @@ than writing a sixth variant.
 | Pressed | `ribbon_tab_active` (white 10%) |
 | Active/committed | `ribbon_tab_active` for a ribbon tab or tool; `tab_active` for the open document; `selection` for a selected row |
 | Disabled | `text_disabled`, `cursor_not_allowed`, no hover/press, not clickable, tooltip saying why |
-| Focus | `focus_ring(surface)` through GPUI's `focus_visible` — a 2px blue ring, one pixel clear of the control's own edge |
+| Focus | `focus_ring(surface)` through GPUI's `focus_visible`: a 2px blue ring, one pixel clear of the control's own edge |
 
 Three rules worth stating outright:
 
 - **Focused is not selected.** A selected ribbon tab, active tool or
-  highlighted tree row is a *background* — a wash, a pill, a tint. Focus is
+  highlighted tree row is a *background*, a wash, a pill, a tint. Focus is
   an *outline*, and only ever an outline. Rendering either as the other is
   what made every mouse click in the previous pass leave a hard blue
   rectangle behind, and it is why an active tool and a focused one are
@@ -351,11 +351,11 @@ Three rules worth stating outright:
   same question.
 - **The order of a shadow list is load-bearing.** GPUI paints shadows
   front-to-back in array order, so `focus_ring` puts the blue step *first*
-  and the surface step second. Reverse them and an unfilled control — a
-  ribbon tab, a section header — comes back flooded solid blue instead of
+  and the surface step second. Reverse them and an unfilled control, a
+  ribbon tab, a section header, comes back flooded solid blue instead of
   outlined. There is a comment on the token saying so; keep it.
 - **Disabled beats absent.** A command Studio has that this editor doesn't
-  yet stays visible and greyed, with a tooltip saying so — the same rule
+  yet stays visible and greyed, with a tooltip saying so, the same rule
   `menu_bar`'s Cut/Copy/Paste already follow. Seeing the shape of what
   belongs somewhere is worth more than a shorter ribbon, and the frame's own
   row of "Placeholder" tiles says the designer agrees.
@@ -366,8 +366,8 @@ Read [`shell/ribbon.rs`](crates/rbx_studio/src/shell/ribbon.rs)'s module doc
 before changing a button. In short:
 
 - **Two shapes, both the frame's.** A **tile** is 42px wide, icon over
-  label, full ribbon height — for commands worth aiming at. A **stack** is
-  78px wide and holds three rows of icon-beside-label — for commands that
+  label, full ribbon height, for commands worth aiming at. A **stack** is
+  78px wide and holds three rows of icon-beside-label, for commands that
   belong to the tile beside them (Copy's paste/cut/duplicate) or that are
   really a readout (the snap increments).
 - **Seven pages**, six of them the frame's names plus `Test`, which the
@@ -375,7 +375,7 @@ before changing a button. In short:
   because all the groups at once don't fit the centre column at an ordinary
   width; a real ribbon pages, it doesn't shrink until nothing is legible.
   **If a page needs a scrollbar to be fully seen, it's carrying too many
-  groups — split it.**
+  groups, split it.**
 - **Groups are separated by a hairline, never by a caption.** One `divider`
   between groups, none at either end.
 - **A readout is a control.** The snap stack shows what a drag will round to
@@ -384,7 +384,7 @@ before changing a button. In short:
   number nobody trusts.
 - **This project's own additions don't go in the ribbon.** The graphics
   quality dropdown, the viewport's settings and its live frame rate live in
-  the **Viewport dock** — a tab beside Output by default — rather than under
+  the **Viewport dock**, a tab beside Output by default, rather than under
   a Studio-named group. They used to float over the viewport's corner, and
   nothing persistent sits over the scene being edited any more: only the
   transient readouts a gesture produces (the flight speed, a drag's studs).
@@ -397,8 +397,8 @@ Read [`shell/roving.rs`](crates/rbx_studio/src/shell/roving.rs) and
 [`shell/tree_keys.rs`](crates/rbx_studio/src/shell/tree_keys.rs) before
 touching any of this. The short version:
 
-**Tab moves between regions; arrows move within one.** A composite widget —
-the ribbon, a tab strip — is *one* Tab stop. Without that, reaching the
+**Tab moves between regions; arrows move within one.** A composite widget,
+the ribbon, a tab strip, is *one* Tab stop. Without that, reaching the
 Explorer from the menu bar means Tab-ing past every ribbon button on the
 current page, and people stop using the keyboard.
 
@@ -417,7 +417,7 @@ So: never reuse an index, never use `tab_group`, and take every index from
 `TabOrder::next()`.
 
 **Roving groups own a focus handle per item.** The current item carries the
-group's index and `tab_stop(true)`; every other item is `tab_stop(false)` —
+group's index and `tab_stop(true)`; every other item is `tab_stop(false)`,
 GPUI has no `tabindex="-1"`, and a negative index merely sorts earlier.
 Both go on the **`FocusHandle`**, not the element: `InteractiveElement`'s
 own `tab_index`/`tab_stop` are silently ignored once `track_focus` is in
@@ -427,34 +427,34 @@ play, which costs an afternoon to discover.
 Space on a focused element into a real `on_click`, so a keyboard activation
 is the same code path as a mouse click. Never write a second one.
 
-**The Explorer implements the APG Tree View contract in full** — Right
+**The Explorer implements the APG Tree View contract in full**, Right
 expands then descends, Left collapses then climbs, Home/End, type-ahead,
 and no wrapping at the ends. The toolkit's own bindings get three of those
 wrong, so `tree_keys` intercepts in the *capture* phase and hands back only
 the two cases the toolkit is right about (expanding a closed node,
 collapsing an open one), which are also the two that need its private
 `toggle_expand`. Partial tree keyboard support is itself an accessibility
-failure — the APG says so outright — so if you add a key here, add all of
+failure, the APG says so outright, so if you add a key here, add all of
 its branches.
 
 **No keyboard traps** (WCAG 2.1.2). Escape closes any open menu from
 anywhere. Tab and Shift+Tab are handled at the window root in the capture
-phase, because a focused text input consumes Tab first — focus starts in
+phase, because a focused text input consumes Tab first, focus starts in
 the Command Bar, and without this it could never leave.
 
 **Buttons are `chrome::button`, never the toolkit's.** A filled surface,
-the one radius, no border — the same language the fields speak. The
+the one radius, no border, the same language the fields speak. The
 toolkit's own `Button` draws a 1px-outlined pill, which next to a row of
 borderless filled fields looks like it came from a different application.
 
 **A property category's header is bold and the brightest step in the ramp.**
 On a neutral palette, weight and brightness are the only two axes left to
-separate a heading from the properties under it — the one saturated colour
+separate a heading from the properties under it, the one saturated colour
 in the design is spent on the accent and stays there.
 
 **A numeric field's label is a drag handle.** Horizontal drag scrubs the
 value; Shift coarsens, Alt refines. It lives on the label, not the field,
-so a click on the field still means "type here" — and it writes through the
+so a click on the field still means "type here", and it writes through the
 field's own input rather than to the DOM, so a drag and a typed value take
 one path, not two that can disagree.
 
@@ -468,10 +468,10 @@ fraction.
 
 [`shell/menu.rs`](crates/rbx_studio/src/shell/menu.rs) owns the dropdown:
 `chrome` surface, `RADIUS`, 4px padding, 24px rows, 9px labels, and
-`elevation()` — which on a UI this dark is carried by its hairline, not by
+`elevation()`: which on a UI this dark is carried by its hairline, not by
 its blur.
 
-Menus are **controlled** — which one is open lives on `Shell::open_menu`,
+Menus are **controlled**: which one is open lives on `Shell::open_menu`,
 not inside the popover. That's what lets an item close its own menu, and
 guarantees two can't be open at once. The toolkit's `Popover` is still doing
 the hard parts underneath: anchoring, outside-click dismissal, layering.
@@ -480,7 +480,7 @@ the hard parts underneath: anchoring, outside-click dismissal, layering.
 
 GPUI has **no property transitions** and **no element transform** (only
 `svg()` can be transformed, not a `Div`). Hover and press states therefore
-change instantly, and there is no `scale()` press feedback anywhere — the
+change instantly, and there is no `scale()` press feedback anywhere, the
 pressed background does that job. A ribbon icon's hover lift is an instant
 size change on its own fixed box, so the label beneath it doesn't move.
 What *is* available is one-shot `with_animation`: menus fade in over
@@ -488,7 +488,7 @@ What *is* available is one-shot `with_animation`: menus fade in over
 
 **Reduce motion is honoured** (WCAG 2.3.3), from two places. GPUI owns the
 flag and `with_animation` already respects it, but no backend ever sets it
-— so `scale::install` asks the desktop once at startup (GSettings'
+so `scale::install` asks the desktop once at startup (GSettings'
 `enable-animations`, overridable with `RBX_STUDIO_REDUCE_MOTION`) and sets
 both GPUI's copy and `tokens`' mirror, which is what a styling callback can
 reach. **View → Reduce Motion** then overrides that and persists, because a
@@ -504,7 +504,7 @@ bug waiting to happen next to a viewport rendering at 75fps.
 ## 11. Known deviations from the frame
 
 Every one of these is a GPUI or toolkit limit, or a control that would have
-to lie — not a shortcut:
+to lie, not a shortcut:
 
 | Frame | What shipped | Why |
 |---|---|---|
@@ -515,16 +515,16 @@ to lie — not a shortcut:
 | Right-aligned property labels | left-aligned | tried first, for the tighter label-to-field binding the reference prefers in dense inspectors; the ragged left edge made a long property list harder to scan, which is what this panel is mostly used for |
 | A disc behind each Explorer chevron | removed | it existed so a guide line could pass behind rather than through; a filled circle on every folder row was too much noise for one hairline |
 | A flat cube-face orientation indicator | a translucent sphere with the three axes' orbital rings through it | the frame's own newer artwork, and the flat version read as a smudge |
-| A dropdown and a text field on the same surface | dropdowns get `field_select`, one step up | they do different things — one opens, one takes typing — and were told apart only by noticing the chevron |
+| A dropdown and a text field on the same surface | dropdowns get `field_select`, one step up | they do different things, one opens, one takes typing, and were told apart only by noticing the chevron |
 | A select sitting level in its field box | `select_inset`, a measured 4.5px top pad | the toolkit's select trigger top-aligns its row inside whatever height it is given, and its text sits ~1.5px above that row's own centre. Measured against a plain text field in the same panel; re-measure if the toolkit is upgraded |
-| A borderless unticked checkbox | outlined at `check_off_border` | **overruled.** `#111` on a black dock is 1.11:1 — a WCAG 1.4.11 failure for a control whose only job is to show a state |
+| A borderless unticked checkbox | outlined at `check_off_border` | **overruled.** `#111` on a black dock is 1.11:1, a WCAG 1.4.11 failure for a control whose only job is to show a state |
 | 10px checkbox, 20px icon buttons | 26px and 24px | WCAG 2.5.8's 24×24 target floor. 26 is the `InputsStyle` frame's own number |
 | 36px inputs, 8px radius, 1px border (the v5 fallback spec) | 31px, 5px radius, no border | the `InputsStyle` frame gives real numbers, and §7.1 says the frame wins over the fallback |
 | Select chevron 12×12 at 12px inset | the toolkit's own, 15×15 at 8px | the frame's numbers, drawn by `Select` itself; `appearance(false)` removes its box but keeps its chevron |
 | 120ms 1.06× icon hover animation | instant size change | GPUI has no property transitions and cannot transform a `Div` |
-| One dock per edge, fixed | an edge holds a stack of docks, each with tabs, all of it draggable by the tab | the frame draws one arrangement and says nothing about changing it, so §1's rule applies and this file decides. A drop offers both readings — a dock's strip joins it, a dock's half splits the edge — because a single whole-dock target cannot ask which one you meant |
+| One dock per edge, fixed | an edge holds a stack of docks, each with tabs, all of it draggable by the tab | the frame draws one arrangement and says nothing about changing it, so §1's rule applies and this file decides. A drop offers both readings, a dock's strip joins it, a dock's half splits the edge, because a single whole-dock target cannot ask which one you meant |
 | No drop affordance at all | the target *is* the element that takes the drop, and an empty edge grows a ghost dock at the size the dock will be | a rectangle computed from pointer coordinates is a second piece of geometry that can disagree with where the panel actually lands. Making the highlight the landing site removes the disagreement rather than testing for it |
-| A torn-out panel | its own floating window, rendering the same `Shell` | the panel is not copied — see `shell::panel_window`. On X11 a window manager may ignore `WindowKind::Floating`, so the editor raises its own children on its rising edge |
+| A torn-out panel | its own floating window, rendering the same `Shell` | the panel is not copied, see `shell::panel_window`. On X11 a window manager may ignore `WindowKind::Floating`, so the editor raises its own children on its rising edge |
 | Focus ring on menu rows | not present | a menu row has no focus handle |
 | Menu bar: File · Edit · View · Plugins · Test · Window · Help | File · Edit · Model · View | the other three have no commands behind them; an empty menu is worse than an absent one, and the menu bar's own greyed items already carry "not yet" |
 | Close "×" on document and dock tabs | absent on both | a document here is a view of the one open place, not a file that closes independently, and a dock's panel can't close at all. A mark that does nothing is a control that lies |
@@ -539,25 +539,25 @@ to lie — not a shortcut:
 | `:focus-visible` (keyboard only) | focus ring on any focus | GPUI's focus doesn't distinguish input source |
 | Tooltip pointer and delay | toolkit tooltip | hover timing, flipping and layering are already solved there |
 | Letter-spacing | none | GPUI has no letter-spacing |
-| Inter | used **if installed**; else the platform UI font | the theme takes one family name, not a CSS stack, so `install_fonts` checks what the text system actually has. Inter is not installed on the dev machine — it renders in Noto Sans |
+| Inter | used **if installed**; else the platform UI font | the theme takes one family name, not a CSS stack, so `install_fonts` checks what the text system actually has. Inter is not installed on the dev machine, it renders in Noto Sans |
 | An unsaved-document dot | not implemented | the editor has no dirty-state tracking to bind it to |
 | Hierarchy guides as one absolute overlay | drawn per row | the tree is virtualised; rows are the only thing that exists to hang a line on |
-| Keyboard focus visually distinct from selection in the Explorer | a cursor row apart from the selected rows, ringed with `focus_ring_inset` over the selection fill | the vendored `TreeState` carries a `focused_ix` beside `selected_ix`; `Ctrl`+Up/Down move it alone and `Ctrl`+Space toggles its row (the APG tree pattern's multi-select model — Studio documents no keyboard focus apart from selection). Inset because the list clips at a row's edges; the ring clears 3:1 on the selection wash too (asserted), and over a tagged Folder's own fill it turns white or black wherever the accent would not (`tokens::ring_over`, swept over the RGB cube in a test). Every row of the multi-selection reports `aria_selected`, not just the anchor |
-| Every control in the Tab order | every control but the menu bar, which F10 or a bare Alt tap reaches instead | the desktop convention: a region everyone has to Tab through on the way to the ribbon is not what it asks for. `Select`, `ColorPicker` and `NumberInput` are in the order — their state entities are `Focusable`, so `shell::roving::TabOrder` records each handle directly, no wrapper needed. No Level A gap remains (2.1.1 Keyboard) |
+| Keyboard focus visually distinct from selection in the Explorer | a cursor row apart from the selected rows, ringed with `focus_ring_inset` over the selection fill | the vendored `TreeState` carries a `focused_ix` beside `selected_ix`; `Ctrl`+Up/Down move it alone and `Ctrl`+Space toggles its row (the APG tree pattern's multi-select model, Studio documents no keyboard focus apart from selection). Inset because the list clips at a row's edges; the ring clears 3:1 on the selection wash too (asserted), and over a tagged Folder's own fill it turns white or black wherever the accent would not (`tokens::ring_over`, swept over the RGB cube in a test). Every row of the multi-selection reports `aria_selected`, not just the anchor |
+| Every control in the Tab order | every control but the menu bar, which F10 or a bare Alt tap reaches instead | the desktop convention: a region everyone has to Tab through on the way to the ribbon is not what it asks for. `Select`, `ColorPicker` and `NumberInput` are in the order, their state entities are `Focusable`, so `shell::roving::TabOrder` records each handle directly, no wrapper needed. No Level A gap remains (2.1.1 Keyboard) |
 | No slider anywhere in the frame | a rail beside the number field, on the bounded properties only | the frame is silent, so §1's rule applies and this file decides. Built from `gpui_base`'s unstyled slider parts rather than the toolkit's finished `Slider`, whose rail, thumb and target are all sized in `rem` and would ignore the UI scale. Skinned as a field box: `chrome` fill, no border, `check_on` for what is set |
 | A slider in the Tab order | mouse and assistive-technology only | `SliderState` is not `Focusable`, so `shell::roving::TabOrder` has no handle to record. Not a Level A gap: the rail is a decoration on a row whose number field *is* a Tab stop and takes the same value typed, and `gpui_base` gives the rail `Role::Slider` with working increment/decrement actions |
 | Named dock layouts | one layout, plus Reset | the arrangement persists and can be reset; saving several under names is a feature, not a floor |
 
 ## 12. Verifying a visual change
 
-`agents/AGENTS.md`'s rule stands: build `rbxstudio`, look at a screenshot.
+Same rule as everywhere: build `rbxstudio`, look at a screenshot.
 Specifics for this kind of change:
 
 - **Screenshot every state in the matrix you touched**, not just the resting
-  one — hover, pressed, active and disabled are where the work is.
+  one, hover, pressed, active and disabled are where the work is.
 - **Drive the app for real.** Menus, popovers, ribbon pages, resize handles
   and the Output collapse can't be checked from a resting screenshot;
-  synthesise the clicks (X11 `XTest` works — see the project's own
+  synthesise the clicks (X11 `XTest` works, see the project's own
   screenshot recipe).
 - **Compare against the frame, not against the last screenshot.** Pull the
   frame render (`get_screenshot` on node `1:2`) and put the two side by
@@ -567,9 +567,9 @@ Specifics for this kind of change:
   asserted, not eyeballed.
 - **Walk the keyboard, don't read it.** Tab from a cold start to the last
   region and back, arrow through every roving group, and exercise the
-  tree's full arrow contract. Three of this pass's real bugs — Tab trapped
+  tree's full arrow contract. Three of this pass's real bugs, Tab trapped
   in the Command Bar, Tab trapped in the window buttons, and roving indices
-  silently ignored — were all invisible in the code and obvious the moment
+  silently ignored, were all invisible in the code and obvious the moment
   the window was actually driven.
 - **Check at 0.5× and 2.0× UI scale**, not just 1.0×. A hardcoded `px()`
   looks fine at 1.0× and breaks the layout at either end, which is exactly

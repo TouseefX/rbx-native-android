@@ -39,7 +39,7 @@ pub(super) struct PerfView {
     pub(super) metric: Metric,
     /// The latest figures, `None` until the first report lands.
     pub(super) report: Option<Arc<Report>>,
-    /// Dropping it ends the thread, at its next look at the queue — not
+    /// Dropping it ends the thread, at its next look at the queue, not
     /// joined, so turning the view off mid-measure never waits on it.
     jobs: Sender<Job>,
     reports: Receiver<Report>,

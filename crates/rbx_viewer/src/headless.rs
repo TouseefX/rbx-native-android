@@ -32,8 +32,8 @@ pub struct GuiCanvas {
     /// What was drawn: the size asked for, or a `BillboardGui`/`SurfaceGui`'s
     /// own canvas size, which is not the caller's to choose.
     pub size: (u32, u32),
-    /// The screen's own frame — what its top-level children resolve
-    /// against, below any top-bar inset — then every element as laid out,
+    /// The screen's own frame, what its top-level children resolve
+    /// against, below any top-bar inset, then every element as laid out,
     /// in paint order: what the canvas is hit-tested against.
     pub boxes: Vec<GuiBox>,
 }
@@ -53,7 +53,7 @@ pub struct Headless {
     /// What the embedder asked the renderer to show that the place itself does
     /// not say: the projection mode, the outlined selection and the transform
     /// gizmo. Kept here, not only inside the renderer, as the one copy every
-    /// rebuild is put back into — see [`View`].
+    /// rebuild is put back into, see [`View`].
     view: View,
     bounds: Bounds,
     controller: Controller,
@@ -81,12 +81,12 @@ pub struct Headless {
     /// [`Headless::set_skins_on_gpu`].
     skinning_wanted: bool,
     /// What every instance of the DOM the scene was built from is to the
-    /// picture, so a `Change::Removed` — a bare referent, its instance
-    /// already gone — can still be taken out of the right pass; see
+    /// picture, so a `Change::Removed`: a bare referent, its instance
+    /// already gone, can still be taken out of the right pass; see
     /// [`Roles`].
     roles: Roles,
     /// Every asset the place's loads decoded so far, and the background pool
-    /// that decodes the ones it has not seen — see [`Resident`]. Nothing on
+    /// that decodes the ones it has not seen, see [`Resident`]. Nothing on
     /// this struct ever waits on it: an asset that is not here yet is drawn as
     /// its fallback and swapped in when it lands (see [`Headless::tick`]).
     resident: Resident,
@@ -96,7 +96,7 @@ pub struct Headless {
     /// bounded number of rebuilds rather than one per tick they trickle in on.
     swapped: Instant,
     /// Whether a swap-in has changed the resolved meshes since the host last
-    /// took them — see [`Headless::pick_meshes_changed`].
+    /// took them, see [`Headless::pick_meshes_changed`].
     meshes_changed: bool,
     /// How many material layers the renderer's texture arrays actually hold.
     ///
@@ -108,7 +108,7 @@ pub struct Headless {
     uploaded_material_layers: usize,
     /// Asset-fetch/decode warnings from every [`Headless::load`]/
     /// [`Headless::reload`] so far, not yet claimed by
-    /// [`Headless::drain_warnings`] — an embedder (`rbxstudio`'s render
+    /// [`Headless::drain_warnings`], an embedder (`rbxstudio`'s render
     /// thread) polls this instead of scraping stderr to surface them in its
     /// own UI.
     warnings: Vec<String>,
@@ -122,7 +122,7 @@ impl Headless {
     /// swapped in by [`Headless::tick`] as it lands, so the first frame is a
     /// scene of plain boxes under a default sky rather than a wait. That is
     /// what Roblox's own engine does, and it is the only shape that also
-    /// answers the harder case — a keystroke naming an asset nobody has
+    /// answers the harder case, a keystroke naming an asset nobody has
     /// fetched, where there is no "before the window exists" left to hide a
     /// download in. `textures` off skips those requests entirely.
     ///
@@ -133,7 +133,7 @@ impl Headless {
         Headless::from_dom(&dom, textures).map_err(|err| format!("{err} in {path:?}"))
     }
 
-    /// [`Headless::load`] for a tree already in memory — e.g. one plugin
+    /// [`Headless::load`] for a tree already in memory, e.g. one plugin
     /// widget's GUI, drawn on its own with [`Headless::render_gui`].
     pub fn from_dom(dom: &WeakDom, textures: bool) -> Result<Self, String> {
         let toggles = Toggles {
@@ -207,15 +207,15 @@ impl Headless {
     }
 
     /// Poses skinned meshes on the CPU even where the GPU could (`false`),
-    /// or hands them back to the GPU (`true`, the default) — for comparing
+    /// or hands them back to the GPU (`true`, the default), for comparing
     /// the two paths. Lasts across reloads.
     pub fn set_skins_on_gpu(&mut self, on: bool) {
         self.skinning_wanted = on;
         self.sync_skinning();
     }
 
-    /// Rebuilds every render input from a DOM already in memory — a file on
-    /// disk plays no part — keeping the current camera pose and quality
+    /// Rebuilds every render input from a DOM already in memory, a file on
+    /// disk plays no part, keeping the current camera pose and quality
     /// level exactly as they were. What [`Headless::apply_changes`] falls
     /// back to for the few edits it names in [`crate::Rebuild`], and what a
     /// host with no change log to offer calls.
@@ -225,8 +225,8 @@ impl Headless {
     /// assets nor the GPU are started over for it. Every asset the place
     /// already decoded is answered from memory (see [`Resident`]), and the
     /// device, its pipelines and every upload the new scene names the same
-    /// asset for — material packs, sky, decal images, file meshes, effect
-    /// textures — stay where they are (see `renderer::rebuild`). An asset the
+    /// asset for, material packs, sky, decal images, file meshes, effect
+    /// textures, stay where they are (see `renderer::rebuild`). An asset the
     /// place never showed before is asked for rather than waited for, exactly
     /// as at load: a reload never blocks on the network either.
     pub fn reload(&mut self, dom: &WeakDom) -> Result<(), String> {
@@ -269,7 +269,7 @@ impl Headless {
     }
 
     /// Opens the view standing at `eye` and looking toward `look_at`, both in
-    /// studs, at `fov_degrees`, and flies on from there — what a host opening a
+    /// studs, at `fov_degrees`, and flies on from there, what a host opening a
     /// place at its own `Camera` uses. Nothing orbits afterwards.
     pub fn open_at(&mut self, eye: [f32; 3], look_at: [f32; 3], fov_degrees: f32) {
         let mut pose = camera::look_at_pose(Vec3::from(eye), Vec3::from(look_at));
@@ -285,7 +285,7 @@ impl Headless {
     ///
     /// Cheap enough to do between two frames: the images, meshes and instance
     /// buffers a place uploaded are level-independent, so only the bind groups
-    /// that view them, the shadow map and — where the sample count changes — the
+    /// that view them, the shadow map and, where the sample count changes, the
     /// surface pipelines are rebuilt. Setting the level it is already at costs
     /// nothing.
     pub fn set_quality(&mut self, level: QualityLevel) {
@@ -323,7 +323,7 @@ impl Headless {
 
     /// Swaps the viewport's main camera between perspective and orthographic
     /// (parallel) projection, leaving its position/yaw/pitch and the
-    /// WASD/mouse-look controller untouched — see `Camera::with_orthographic`.
+    /// WASD/mouse-look controller untouched, see `Camera::with_orthographic`.
     /// Resyncs the free camera's orthographic zoom to a reasonable starting
     /// guess the moment orthographic switches on (see
     /// `Controller::sync_ortho_scale`); the mouse wheel takes over from there.
@@ -344,7 +344,7 @@ impl Headless {
     }
 
     /// Draws only the instances under `roots` (and the roots themselves) on a
-    /// plain backdrop, or everything again with `None` — the Animation
+    /// plain backdrop, or everything again with `None`: the Animation
     /// Editor's view of one rig, the way Blender's animation workspace shows
     /// a lone armature rather than the whole scene.
     ///
@@ -360,8 +360,8 @@ impl Headless {
     ///
     /// Every instance keeps its `Ref`: selection, hover, the gizmo and
     /// [`Headless::apply_changes`] work on the real place exactly as before,
-    /// and an edit under a root — a pose moving the rig's parts sixty times
-    /// a second, a part added or removed — is patched in place like any
+    /// and an edit under a root, a pose moving the rig's parts sixty times
+    /// a second, a part added or removed, is patched in place like any
     /// other. The isolation survives [`Headless::reload`] and every asset
     /// landing; `None` restores exactly the picture a never-isolated view
     /// would draw.
@@ -396,7 +396,7 @@ impl Headless {
         self.input.apply(event);
     }
 
-    /// Outlines what `selected` covers in the viewport — a slice so a
+    /// Outlines what `selected` covers in the viewport, a slice so a
     /// multi-select has somewhere to grow into. Each entry names an instance
     /// and the parts it stands for, resolved by the host against its own DOM
     /// (`crate::pick::Selected`): a `Model` or a `Folder` has no placement to
@@ -413,7 +413,7 @@ impl Headless {
 
     /// Whether scene geometry standing in front of the selection hides its
     /// outline. `false` by default: the box is a control the user is acting
-    /// on rather than scenery, so it shows through whatever it is behind —
+    /// on rather than scenery, so it shows through whatever it is behind,
     /// see `renderer::selection`. Same idle-skipping caveat as
     /// [`Headless::set_selection`]: nothing moved, but the picture changed.
     pub fn set_selection_occluded(&mut self, occluded: bool) {
@@ -432,7 +432,7 @@ impl Headless {
     }
 
     /// Outlines whatever `BasePart` the cursor is over, distinctly from the
-    /// selection outline above — Studio's "about to click" cue. `None` clears
+    /// selection outline above, Studio's "about to click" cue. `None` clears
     /// it. Unlike `set_selection`, the caller is expected to have already
     /// resolved this down to a `BasePart` referent (or nothing) rather than
     /// walking up to an enclosing `Model`: there is no click here to apply
@@ -445,8 +445,8 @@ impl Headless {
         self.offscreen.set_hover(selected, self.loaded.scene());
     }
 
-    /// Tints every part in `bins` its bin's colour — the Performance view's
-    /// heatmap (see [`crate::perf`]) — or clears the tint with an empty list.
+    /// Tints every part in `bins` its bin's colour, the Performance view's
+    /// heatmap (see [`crate::perf`]), or clears the tint with an empty list.
     /// Nothing about the place changes; same idle-skipping caveat as
     /// [`Headless::set_hover`].
     pub fn set_heat(&mut self, bins: Vec<crate::perf::HeatBin>) {
@@ -457,8 +457,8 @@ impl Headless {
         self.view.heat = bins;
     }
 
-    /// Recolours the editor cues — the selection and hover silhouettes and
-    /// boxes, and the preview's ghost boxes — from linear RGB plus alpha. A
+    /// Recolours the editor cues, the selection and hover silhouettes and
+    /// boxes, and the preview's ghost boxes, from linear RGB plus alpha. A
     /// no-op when `colors` equals what is already set; otherwise only the
     /// pipelines that draw those cues are rebuilt.
     ///
@@ -473,7 +473,7 @@ impl Headless {
             .set_overlay_colors(colors, self.loaded.scene());
     }
 
-    /// Draws ghost boxes where a tool being configured would put things —
+    /// Draws ghost boxes where a tool being configured would put things,
     /// the Align tool's live preview (`studio/align-tool.md`: "dynamically
     /// previewing the point of alignment before confirming"). An empty
     /// list clears them, which is what closing the tool sends.
@@ -487,7 +487,7 @@ impl Headless {
 
     /// An editor's terrain edit still in progress, shown at once: the chunks
     /// it changed, as whole chunks (`None` for emptied), put straight into
-    /// the scene's grid and re-meshed — no `SmoothGrid` encode, snapshot or
+    /// the scene's grid and re-meshed, no `SmoothGrid` encode, snapshot or
     /// decode per step of a brush stroke. The finished write still arrives
     /// through [`Headless::apply_changes`], and finds these already in
     /// place. A material the place never drew shows as plastic until then,
@@ -506,7 +506,7 @@ impl Headless {
         });
     }
 
-    /// Draws world-space line segments over the scene — Studio's light
+    /// Draws world-space line segments over the scene, Studio's light
     /// guides (see [`crate::light_guides`]), an editor's dragger guides.
     /// Replaces every segment sent before on `layer` alone: each source of
     /// lines has a layer of its own, so one that changes every mouse move
@@ -518,7 +518,7 @@ impl Headless {
     }
 
     /// Draws the transform tool's axis draggers over the selected part, or
-    /// hides them again with `None` — Studio's Select tool, where there is
+    /// hides them again with `None`: Studio's Select tool, where there is
     /// nothing to drag.
     ///
     /// Where the handles land is worked out per frame from the selection and
@@ -557,8 +557,8 @@ impl Headless {
         self.offscreen.set_gizmo(gizmo);
     }
 
-    /// The `ScreenGui` `ScrollingFrame` the mouse wheel over `point` — in
-    /// pixels of the last frame drawn — would scroll along `axis` (0 across,
+    /// The `ScreenGui` `ScrollingFrame` the mouse wheel over `point`: in
+    /// pixels of the last frame drawn, would scroll along `axis` (0 across,
     /// 1 down), with how far its `CanvasPosition` can go. The innermost
     /// frame under the point whose canvas overflows its window on that axis;
     /// `None` over anything else, which is what leaves the wheel to the
@@ -572,7 +572,7 @@ impl Headless {
         self.offscreen.renderer().gui_scroll_target(point, axis)
     }
 
-    /// Draws one `ScreenGui` on its own — enabled or not — laid out against a
+    /// Draws one `ScreenGui` on its own, enabled or not, laid out against a
     /// `width`×`height` screen (a `BillboardGui`/`SurfaceGui` at its own
     /// canvas size instead), over a flat `backdrop` (encoded sRGB) with no
     /// scene behind it: an editor's 2D canvas, through the very layout and
@@ -589,10 +589,10 @@ impl Headless {
     }
 
     /// Draws one `ViewportFrame`'s content on its own at `width`×`height`
-    /// — the same bake the GUI paints it from, through its `CurrentCamera`
+    /// the same bake the GUI paints it from, through its `CurrentCamera`
     /// (or saved pose), laid over the frame's background (unless
     /// `background` is off) and `backdrop` (encoded sRGB) with its
-    /// `ImageColor3`/`ImageTransparency` — for an
+    /// `ImageColor3`/`ImageTransparency`: for an
     /// editor that shows the frame larger than it sits on its screen. Tightly
     /// packed RGBA8 (sRGB) rows. An error when no laid-out tree holds
     /// `frame`. Synchronous, like [`Headless::render_gui`].
@@ -613,7 +613,7 @@ impl Headless {
     /// returns `false` every tick, so an untouched view costs no render and no
     /// readback at all.
     ///
-    /// This is also the one place a background fetch is ever collected — see
+    /// This is also the one place a background fetch is ever collected, see
     /// `Headless::take_landed_assets`. A host that stops ticking stops
     /// streaming, which is the right way round: a viewport nobody is looking
     /// at has nothing to swap anything into.
@@ -655,7 +655,7 @@ impl Headless {
 
     /// The current free-flight pose, for a host that mirrors it somewhere the
     /// renderer itself never writes to (`rbxstudio`'s DOM sync). `None` while
-    /// the view is still auto-orbiting with no pose of its own — see
+    /// the view is still auto-orbiting with no pose of its own, see
     /// [`Headless::load`]'s doc comment for when that ends.
     pub fn pose(&self) -> Option<Pose> {
         match self.from {
@@ -665,7 +665,7 @@ impl Headless {
     }
 
     /// Returns and clears every asset-fetch/decode warning collected by
-    /// [`Headless::load`]/[`Headless::reload`] since the last call — an
+    /// [`Headless::load`]/[`Headless::reload`] since the last call, an
     /// embedder with nowhere better to look than the return value polls this
     /// instead of scraping stderr. Empty most of the time (nothing failed, or
     /// nothing failed since the last poll), which costs nothing beyond an
@@ -675,12 +675,12 @@ impl Headless {
     }
 
     /// Every file mesh the current scene resolved, for a hit test against
-    /// the triangles actually drawn — see [`crate::pick::parts_along`]. A
+    /// the triangles actually drawn, see [`crate::pick::parts_along`]. A
     /// handle onto the renderer's own copies rather than a duplicate of them,
     /// so an embedder can pass it to another thread for the cost of a few
     /// reference counts. Changes when the scene is rebuilt
     /// ([`Headless::load`]/[`Headless::reload`]) and when an asset lands and
-    /// is swapped in — see [`Headless::pick_meshes_changed`], which is how a
+    /// is swapped in, see [`Headless::pick_meshes_changed`], which is how a
     /// host notices the second of those without a command having been applied.
     pub fn pick_meshes(&self) -> crate::pick::Meshes {
         crate::pick::Meshes::of(self.loaded.scene())
@@ -695,7 +695,7 @@ impl Headless {
         std::mem::take(&mut self.meshes_changed)
     }
 
-    /// How many recovered fallback pieces the picture draws `referent` as —
+    /// How many recovered fallback pieces the picture draws `referent` as,
     /// zero for everything but a legacy `UnionOperation`/`NegateOperation`
     /// whose boolean could not be computed, which is drawn as the additive
     /// parts recovered from its operation tree instead (see `scene::union`).
@@ -713,7 +713,7 @@ impl Headless {
     /// Draws the current view and returns the frame the *previous* call asked
     /// for: the GPU is left drawing this one while the host uploads that one.
     ///
-    /// `None` when there is no earlier frame to hand back — the first call, and
+    /// `None` when there is no earlier frame to hand back, the first call, and
     /// every change of size. A host that stops calling this collects the frame
     /// still in flight with [`Headless::take_frame`], or it never reaches the
     /// screen.

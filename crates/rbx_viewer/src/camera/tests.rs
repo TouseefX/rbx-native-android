@@ -64,7 +64,7 @@ fn the_rotation_only_view_ignores_where_the_camera_stands() {
     // Only x and y are compared: the skybox shader throws the depth away and
     // pins every corner to the far plane. (The projection no longer depends on
     // scene scale at all since reversed-Z gave it a fixed near and an infinite
-    // far, so the two cameras' matrices are now identical outright — this test
+    // far, so the two cameras' matrices are now identical outright, this test
     // still earns its keep by locking down that x/y only depends on rotation.)
     let screen = |clip: glam::Vec4| clip.truncate().truncate() / clip.w;
     let direction = Vec3::new(0.3, -0.2, 0.9).normalize();
@@ -82,7 +82,7 @@ fn the_rotation_only_view_ignores_where_the_camera_stands() {
 // perspective divide to spread it across the screen regardless of its actual
 // size. `view_rotation_projection` staying perspective even when the main
 // camera has gone orthographic (see its own doc comment) is what keeps that
-// working — an earlier version branched on `self.orthographic` here too and
+// working, an earlier version branched on `self.orthographic` here too and
 // collapsed every unit-magnitude vertex to a single point at screen centre,
 // leaving the sky a solid black void.
 #[test]
@@ -92,7 +92,7 @@ fn orthographic_rotation_only_view_still_spreads_unit_geometry_across_the_screen
     let aspect = 16.0 / 9.0;
     let view_projection = camera.view_rotation_projection(orbit(0.0), aspect);
 
-    // A corner of the unit "sky cube" (see `textures::sky::quad`) — the point
+    // A corner of the unit "sky cube" (see `textures::sky::quad`), the point
     // being tested is that this reaches *somewhere* well off centre, not that
     // any one particular direction does.
     let corner = Vec3::new(1.0, 1.0, 1.0);
@@ -106,7 +106,7 @@ fn orthographic_rotation_only_view_still_spreads_unit_geometry_across_the_screen
 }
 
 // `view_rotation_projection` must ignore the main camera's orthographic flag
-// entirely — it always matches what an ordinary perspective camera at this
+// entirely, it always matches what an ordinary perspective camera at this
 // yaw/pitch would produce, main camera notwithstanding.
 #[test]
 fn orthographic_rotation_only_view_matches_the_ordinary_perspective_one() {
@@ -251,7 +251,7 @@ fn a_free_viewpoint_puts_the_eye_at_its_own_position() {
 
 // A free pose's own field of view must reach the projection matrix, and a pose
 // carrying the crate's default must render exactly like the pre-existing constant
-// did — no behavioral change for the orbit path or any caller that doesn't set one.
+// did, no behavioral change for the orbit path or any caller that doesn't set one.
 #[test]
 fn a_free_pose_field_of_view_changes_the_projection_but_the_default_does_not() {
     let camera = Camera::framing(&bounds_from(Vec3::ZERO, Vec3::splat(20.0)));
@@ -318,7 +318,7 @@ fn spawn_elevation_scales_with_radius_for_a_big_scene() {
 
 // The depth-of-field term in `post.wgsl` reconstructs a distance from the depth
 // buffer with nothing but the near plane, so the inverse has to hold against the
-// very matrix the frame was drawn with — not against an algebraic rearrangement
+// very matrix the frame was drawn with, not against an algebraic rearrangement
 // of it, which is exactly where a sign or a flipped near/far would hide.
 #[test]
 fn a_depth_buffer_value_reconstructs_the_distance_it_was_written_from() {
@@ -369,7 +369,7 @@ fn with_orthographic_only_flips_the_projection_flag() {
     let toggled = camera.with_orthographic(true);
     assert!(toggled.orthographic);
     // The framing itself (what the orbit/free controllers actually fly
-    // around) must survive the toggle untouched — the whole point of reusing
+    // around) must survive the toggle untouched, the whole point of reusing
     // it rather than inventing a second, ortho-specific notion of zoom.
     assert_eq!(toggled.target, camera.target);
     assert_eq!(toggled.distance, camera.distance);
@@ -391,7 +391,7 @@ fn orthographic_range_is_none_until_orthographic_is_on() {
 }
 
 // The eye's position has no optical meaning under a parallel projection, so
-// the view volume runs as far behind its plane as in front — see
+// the view volume runs as far behind its plane as in front, see
 // `orthographic_range`'s doc comment for the reported bug otherwise.
 #[test]
 fn the_orthographic_range_is_symmetric_about_the_eye_plane() {
@@ -418,8 +418,8 @@ fn the_orthographic_range_scales_with_zoom_but_is_clamped_both_ways() {
     assert!(orthographic_range(100.0).far > mid);
 }
 
-// The reported bug in miniature: a point the free camera has flown past —
-// behind its plane, but well within the range — must still land inside the
+// The reported bug in miniature: a point the free camera has flown past,
+// behind its plane, but well within the range, must still land inside the
 // clip volume (depth within [0, 1]) instead of being clipped away, and must
 // sort *nearer* than a point ahead of the eye, since the observer of a
 // parallel projection is effectively at infinity on the near side.
@@ -442,7 +442,7 @@ fn geometry_behind_the_orthographic_eye_plane_is_drawn_not_clipped() {
     assert!(behind > ahead, "{behind} vs {ahead}");
 }
 
-// The orbit camera has no zoom control of its own — its apparent scale must
+// The orbit camera has no zoom control of its own, its apparent scale must
 // match perspective's own framing at the same distance/FOV exactly, the same
 // promise a free pose's own `ortho_scale` makes below.
 #[test]
@@ -453,7 +453,7 @@ fn orthographic_half_height_for_orbit_matches_its_own_framing_distance_and_fov()
     assert!((camera.orthographic_half_height(orbit(0.5)) - expected).abs() < 1e-3);
 }
 
-// A free pose's zoom is exactly whatever it's carrying — `orthographic_half_height`
+// A free pose's zoom is exactly whatever it's carrying, `orthographic_half_height`
 // must read `Pose::ortho_scale` back verbatim, not derive a second, possibly
 // different number from anything else about the pose.
 #[test]
@@ -476,7 +476,7 @@ fn orthographic_half_height_for_a_free_pose_is_exactly_its_own_ortho_scale() {
 // version derived it instead from "distance from the pose to the scene's
 // framing centre", which broke down completely on a level with several
 // spread-out clusters of geometry (a real report: floating islands scattered
-// across a big map) — depending on where in the level the free camera was,
+// across a big map), depending on where in the level the free camera was,
 // the view could stay too zoomed out or clip straight through nearby
 // geometry, with no way for the user to correct it (see `Pose::ortho_scale`'s
 // own doc comment for the full story).
@@ -503,8 +503,8 @@ fn moving_a_free_pose_does_not_change_its_orthographic_zoom() {
 }
 
 // The flip side of the test above: `ortho_scale` itself is what actually
-// controls apparent size — the mouse wheel's own effect while orthographic is
-// on (see `controller::free_update`) — verified here at the pure
+// controls apparent size, the mouse wheel's own effect while orthographic is
+// on (see `controller::free_update`), verified here at the pure
 // projection-matrix level.
 #[test]
 fn a_smaller_ortho_scale_makes_a_fixed_point_cover_more_of_the_frame() {
@@ -537,8 +537,8 @@ fn a_smaller_ortho_scale_makes_a_fixed_point_cover_more_of_the_frame() {
     );
 }
 
-// `initial_ortho_scale`'s own floor — the same one `Camera::framing` applies
-// to orbit distance — so a pose created (or resynced, see
+// `initial_ortho_scale`'s own floor, the same one `Camera::framing` applies
+// to orbit distance, so a pose created (or resynced, see
 // `Controller::sync_ortho_scale`) right on top of whatever it's measuring
 // from doesn't collapse the view volume to zero size.
 #[test]
@@ -599,7 +599,7 @@ fn the_orthographic_near_plane_is_depth_one_and_the_far_plane_is_depth_zero() {
 // The orthographic mirror of `a_depth_buffer_value_reconstructs_the_distance_it_was_written_from`,
 // on both sides of the eye plane. The tolerance is proportional to the range:
 // a linear depth map spreads float32 precision evenly across the whole span,
-// so a reconstruction can only ever be as fine as `span / 2^24` or so — the
+// so a reconstruction can only ever be as fine as `span / 2^24` or so, the
 // very reason `orthographic_range` scales that span with zoom instead of
 // pinning it to something huge.
 #[test]
@@ -660,7 +660,7 @@ fn every_corner_stays_inside_the_orthographic_frustum() {
 }
 
 // `frustum_corners` must pick the projection-matching depth formula for its far
-// corners (see its own doc comment) — an orthographic main camera's shadow
+// corners (see its own doc comment), an orthographic main camera's shadow
 // fitting would otherwise unproject them to the wrong world position. Checked
 // against the actual requested distance down the view axis, not just against
 // the matrix's own self-consistency: plugging the wrong (perspective) depth
@@ -679,7 +679,7 @@ fn frustum_corners_places_the_far_corners_at_the_requested_distance_when_orthogr
 
     let corners = camera.frustum_corners(orbit(yaw), aspect, shadow_distance);
 
-    // Indices 4..8 are the far corners (bit 2 set — see `frustum_corners`'s
+    // Indices 4..8 are the far corners (bit 2 set, see `frustum_corners`'s
     // own `index & 0b100` check); 0..4 the near ones, which orthographic puts
     // the same distance *behind* the eye plane rather than at the near
     // plane, so the shadow fit covers what the symmetric view volume draws
@@ -733,7 +733,7 @@ fn basis_stays_orthonormal_and_right_handed_at_an_arbitrary_pose() {
     assert!(forward.dot(up).abs() < 1e-5);
     assert!(right.dot(up).abs() < 1e-5);
     // Right-handed frame: right × up points back at the camera, the
-    // opposite of forward (which points into the scene) — the same relation
+    // opposite of forward (which points into the scene), the same relation
     // `up = right.cross(forward)` establishes algebraically.
     assert!(right.cross(up).abs_diff_eq(-forward, 1e-5));
 }
@@ -741,7 +741,7 @@ fn basis_stays_orthonormal_and_right_handed_at_an_arbitrary_pose() {
 #[test]
 fn basis_never_degenerates_looking_straight_up_or_down() {
     // `f32::consts::FRAC_PI_2` itself already rounds a hair past true π/2, so
-    // `pitch.cos()` lands on a tiny nonzero value rather than exactly 0 —
+    // `pitch.cos()` lands on a tiny nonzero value rather than exactly 0,
     // this exercises the same near-zero cross product `Pose::basis`'s
     // fallback guards against, whichever of the two paths (its own fallback,
     // or a tiny-but-nonzero vector normalizing on its own) actually runs for

@@ -40,8 +40,8 @@ impl Pipelines {
     }
 }
 
-/// Builds one set. `layouts` is the whole bind group table — frame, the
-/// textured pass's image, materials, then the appearance set — from which each
+/// Builds one set. `layouts` is the whole bind group table, frame, the
+/// textured pass's image, materials, then the appearance set, from which each
 /// variant keeps the groups it actually binds.
 pub(super) fn build(
     device: &wgpu::Device,
@@ -52,7 +52,7 @@ pub(super) fn build(
     // Each variant's own image is the *last* group, above the frame and
     // materials every surface shader shares: the plain layout is then a prefix
     // of the other two, so a batch drawn right after one of a different skin
-    // never has a stale, incompatible set sitting under a group it reads —
+    // never has a stale, incompatible set sitting under a group it reads,
     // see `pipeline::shape_pipelines`.
     let plain_layouts = [Some(layouts.frame), Some(layouts.materials)];
     let textured_layouts = [

@@ -1,6 +1,6 @@
 //! What a batch of changes owes at its end, once every instance in it has
 //! been seen: the lists that are cheaper to re-plan whole than to patch one
-//! member of — each once per batch, however many members changed — and the
+//! member of, each once per batch, however many members changed, and the
 //! extent, the lighting and the local lights the same way.
 
 use rbx_assets::AssetRef;
@@ -19,16 +19,16 @@ pub(super) struct Pending {
     pub(super) parts: bool,
     pub(super) lighting: bool,
     pub(super) lights: bool,
-    /// By `EffectKind` — see [`Pending::effect`].
+    /// By `EffectKind`: see [`Pending::effect`].
     pub(super) effects: [bool; 5],
     /// The GUI trees (every `ScreenGui`, and every `BillboardGui`/
     /// `SurfaceGui` as an editor's canvas), and the canvases placed in the
-    /// scene — two lists, re-planned apart, since a part that moved can
+    /// scene, two lists, re-planned apart, since a part that moved can
     /// only have carried a canvas.
     pub(super) screens: Screens,
     pub(super) spaces: bool,
-    /// An `Attachment` moved, came or went. What hangs off one — a `Beam`
-    /// or `Trail` end, a `Light` — is re-planned only if the scene has any
+    /// An `Attachment` moved, came or went. What hangs off one, a `Beam`
+    /// or `Trail` end, a `Light`: is re-planned only if the scene has any
     /// of that kind at all (see [`Pending::attachment_due`]): attachments
     /// are everywhere in a real place (every weld, every constraint), and
     /// re-walking the whole DOM for a beam plan that is empty before and
@@ -42,7 +42,7 @@ pub(super) struct Pending {
 
 /// Which GUI trees a batch re-plans.
 ///
-/// A property written inside one tree — every step of an editor's drag —
+/// A property written inside one tree, every step of an editor's drag,
 /// re-plans that tree alone: the whole list costs a walk of the entire DOM
 /// (twice: once for style links, once for roots) and a plan of every tree
 /// in the place, which is what made a drag cost the place rather than the
@@ -100,7 +100,7 @@ impl Pending {
 
 impl Patcher<'_> {
     /// Which GUI list a changed instance belongs to, from the container it
-    /// sits in — `start` being the instance itself, or the parent it left
+    /// sits in, `start` being the instance itself, or the parent it left
     /// once it is gone. A `ScreenGui` is an overlay, a `BillboardGui`/
     /// `SurfaceGui` a canvas, and a `Frame` whichever holds it; with no
     /// container to be found (the parent went too), both lists are owed.
@@ -149,7 +149,7 @@ impl Patcher<'_> {
         let mut moved = None;
         // A rig's model gained, lost or renamed a part in this batch: every
         // skinned mesh part there that the batch did not itself re-patch
-        // binds again. A few rounds at most — a re-patch can only start
+        // binds again. A few rounds at most, a re-patch can only start
         // watching a model, which never owes a part already planned there
         // more than one more pass.
         for _ in 0..4 {
@@ -190,7 +190,7 @@ impl Patcher<'_> {
             .pending
             .attachment_due(self.pending.lights, !self.loaded.lights().is_empty())
         {
-            // The same list a full build collects, off the same centre —
+            // The same list a full build collects, off the same centre,
             // which only matters past `MAX_LOCAL_LIGHTS`, where it decides
             // which lights are kept.
             let lights = if self.toggles.lights {
@@ -232,7 +232,7 @@ impl Patcher<'_> {
             let (scene, images) = (world.scene, world.images);
             // Always serves the edit now: a texture this renderer has no
             // upload for draws that effect's own fallback until it lands
-            // (see `Renderer::patch_effect`) — never a rebuild.
+            // (see `Renderer::patch_effect`), never a rebuild.
             self.offscreen.with_renderer(|renderer, device, queue| {
                 renderer.patch_effect(device, queue, kind, scene, images)
             });
@@ -243,7 +243,7 @@ impl Patcher<'_> {
             Screens::None => {}
             Screens::All => self.loaded.scene_mut().replan_gui_screens(dom, database),
             Screens::Roots(roots) => {
-                // A root the list does not hold yet — one this batch made —
+                // A root the list does not hold yet, one this batch made,
                 // has no place in it to go to but the one a whole re-plan
                 // finds for it.
                 if !self
@@ -283,7 +283,7 @@ impl Patcher<'_> {
 
     /// Asks the background loader for the textures `kind`'s freshly
     /// re-planned list names, whichever of them this session does not have
-    /// — the whole list rather than just the touched instance, since
+    /// the whole list rather than just the touched instance, since
     /// `replan_effect` rebuilds it whole.
     fn request_effect_textures(&mut self, kind: EffectKind) {
         let images: Vec<AssetRef> = {

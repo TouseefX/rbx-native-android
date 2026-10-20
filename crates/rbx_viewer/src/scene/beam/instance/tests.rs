@@ -17,7 +17,7 @@ fn cframe(position: Vec3) -> Variant {
 }
 
 /// A DOM with two parts, each holding one `Attachment`, and a `Beam` linking
-/// them — the minimal shape [`plan`] walks.
+/// them, the minimal shape [`plan`] walks.
 fn fixture(properties: Vec<(&str, Variant)>) -> (WeakDom, Ref) {
     let mut dom = WeakDom::new();
 
@@ -91,7 +91,7 @@ fn a_beam_with_no_properties_falls_back_to_documented_defaults() {
         "no Texture set means flat colour"
     );
     assert!(!beam.face_camera);
-    // LightInfluence defaults to 1 — a beam is affected by light unless a
+    // LightInfluence defaults to 1, a beam is affected by light unless a
     // place opts out (see `beam.wgsl`).
     assert_eq!(beam.light_influence, 1.0);
     assert!((beam.curve.position(0.0) - Vec3::ZERO).length() < 1e-5);
