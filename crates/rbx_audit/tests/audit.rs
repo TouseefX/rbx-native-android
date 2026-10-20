@@ -6,7 +6,7 @@
 use std::collections::BTreeSet;
 
 use rbx_audit::{audit, Check, Severity};
-use rbx_dom::{Ref, Variant, WeakDom};
+use rbx_dom::{CFrameData, Ref, Variant, Vector3Data, WeakDom};
 
 const SCRIPTS: [(&str, &str, &str, &str); 6] = [
     ("ServerScriptService", "Script", "Shop", include_str!("fixtures/Shop.server.luau")),
@@ -191,5 +191,16 @@ fn an_unresolved_listener_lowers_no_listener_findings() {
 #[ignore]
 fn write_fixture_place() {
     let out = std::env::var("RBX_AUDIT_FIXTURE_OUT").expect("RBX_AUDIT_FIXTURE_OUT");
-    std::fs::write(out, rbx_xml::serialize(&fixture()).unwrap()).unwrap();
+    let mut dom = fixture();
+    // Something for the viewport to draw, or the editor won't open it.
+    let workspace = path(&mut dom, "Workspace");
+    let baseplate = add(&mut dom, "Part", "Baseplate", Some(workspace));
+    let v = |x, y, z| Vector3Data { x, y, z };
+    let _ = dom.set_property(baseplate, "size", Variant::Vector3(v(64., 1., 64.)));
+    let cframe = CFrameData {
+        position: v(0., -0.5, 0.),
+        rotation: [1., 0., 0., 0., 1., 0., 0., 0., 1.],
+    };
+    let _ = dom.set_property(baseplate, "CFrame", Variant::CFrame(cframe));
+    std::fs::write(out, rbx_xml::serialize(&dom).unwrap()).unwrap();
 }
