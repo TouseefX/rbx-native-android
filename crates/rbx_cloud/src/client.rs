@@ -8,6 +8,9 @@ use crate::api_key::ApiKey;
 use crate::error::CloudError;
 use crate::retry;
 
+/// Exactly this, no parameters: see [`Client::send_json`].
+const JSON: &str = "application/json";
+
 const USER_AGENT: &str = concat!("rbx-native/", env!("CARGO_PKG_VERSION"));
 
 /// Blocking client for the Roblox Cloud + legacy public APIs. Cheap to clone:
@@ -20,6 +23,16 @@ pub struct Client {
     /// server.
     #[cfg(test)]
     pub(crate) asset_roots: Option<(String, String)>,
+    apis_root: String,
+}
+
+/// Verbs `send_json` supports; GETs go through `get_with`, which retries them.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Method {
+    Post,
+    Patch,
+    Delete,
 }
 
 /// A response reduced to what every endpoint needs to make its own success/
@@ -46,7 +59,58 @@ impl Client {
             api_key,
             #[cfg(test)]
             asset_roots: None,
+            apis_root: "https://apis.roblox.com".to_string(),
         }
+    }
+
+    /// Points the `apis.roblox.com` calls at another server (a local mock).
+    pub fn with_apis_root(mut self, root: impl Into<String>) -> Self {
+        self.apis_root = root.into();
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn apis_url(&self, path: &str) -> String {
+        format!("{}{}", self.apis_root, path)
+    }
+
+    /// A keyed write. Only a 429 is re-sent: a throttled write was not
+    /// applied, whereas any other failure may have been.
+    ///
+    /// The body goes out as bare `application/json`: ureq's `send_json` adds
+    /// `; charset=utf-8`, which the memory store queue endpoint refuses with
+    /// "Content type must be JSON for this request." (HTTP 400).
+    pub(crate) fn send_json(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<RawResponse, CloudError> {
+        let what = url.split('?').next().unwrap_or(url);
+        let bytes = body.map(serde_json::to_vec).transpose()?;
+        retry::rate_limited(what, || {
+            let key = self.require_api_key()?.as_str();
+            let result = match (method, &bytes) {
+                (Method::Delete, _) => self.agent.delete(url).header("x-api-key", key).call(),
+                (Method::Post, Some(b)) => self
+                    .agent
+                    .post(url)
+                    .header("x-api-key", key)
+                    .content_type(JSON)
+                    .send(&b[..]),
+                (Method::Post, None) => self.agent.post(url).header("x-api-key", key).send_empty(),
+                (Method::Patch, Some(b)) => self
+                    .agent
+                    .patch(url)
+                    .header("x-api-key", key)
+                    .content_type(JSON)
+                    .send(&b[..]),
+                (Method::Patch, None) => {
+                    self.agent.patch(url).header("x-api-key", key).send_empty()
+                }
+            };
+            run(result)
+        })
     }
 
     pub(crate) fn require_api_key(&self) -> Result<&ApiKey, CloudError> {
@@ -192,5 +256,50 @@ mod tests {
     fn user_agent_includes_crate_name_and_version() {
         assert!(USER_AGENT.starts_with("rbx-native/"));
         assert!(USER_AGENT.len() > "rbx-native/".len());
+    }
+    #[test]
+    fn a_json_write_names_bare_application_json() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let root = format!("http://{}", listener.local_addr().unwrap());
+        let seen = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            // Read the whole request (head and body) before replying: closing a
+            // socket with unread bytes makes Windows reset the connection.
+            let mut request = Vec::new();
+            let mut buf = [0u8; 4096];
+            loop {
+                let n = stream.read(&mut buf).unwrap();
+                request.extend_from_slice(&buf[..n]);
+                let text = String::from_utf8_lossy(&request).to_lowercase();
+                if let Some(end) = text.find("\r\n\r\n") {
+                    let length = text[..end]
+                        .lines()
+                        .find_map(|line| line.strip_prefix("content-length:"))
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
+                    if request.len() >= end + 4 + length {
+                        break;
+                    }
+                }
+                if n == 0 {
+                    break;
+                }
+            }
+            let _ = stream
+                .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 2\r\nconnection: close\r\n\r\n{}");
+            String::from_utf8_lossy(&request).to_lowercase()
+        });
+        let client = Client::new(Some(ApiKey::new("k"))).with_apis_root(root.clone());
+        let body = serde_json::json!({"data": 1});
+        let response = client
+            .send_json(Method::Post, &format!("{root}/q"), Some(&body))
+            .unwrap();
+        assert_eq!(response.status, 200);
+        let head = seen.join().unwrap();
+        assert!(
+            head.contains("content-type: application/json\r\n"),
+            "{head}"
+        );
     }
 }
