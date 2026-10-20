@@ -7,7 +7,7 @@
 //! the CDN cannot serve (offline, or missing from its packages) is often
 //! sitting in a directory next to Studio.
 //! [`crate::native::NativeContent`] tries this only after its own CDN attempt
-//! has already failed — `setup.rbxcdn.com` stays the primary source — and,
+//! has already failed, `setup.rbxcdn.com` stays the primary source, and,
 //! like the Sober fallback, never writes to or installs anything: it only
 //! reads files the user's own install already put there.
 
@@ -70,8 +70,8 @@ impl LocalInstall {
 
     /// Reads `relative_path` (e.g. `"textures/face.png"`, the same string a
     /// `rbxasset://` reference strips to) from the newest installed version
-    /// that holds it. `None` on any failure — no install, an invalid path,
-    /// the file absent from every version — because this only ever backs a
+    /// that holds it. `None` on any failure, no install, an invalid path,
+    /// the file absent from every version, because this only ever backs a
     /// best-effort fallback whose caller keeps the CDN's own error.
     pub(crate) fn read(&self, relative_path: &str) -> Option<Vec<u8>> {
         let relative = safe_relative_path(relative_path)?;
@@ -87,7 +87,7 @@ impl LocalInstall {
         })
     }
 
-    /// Every `version-*` directory, newest first. Listed once — see
+    /// Every `version-*` directory, newest first. Listed once, see
     /// [`LocalInstall::versions`].
     fn version_dirs(&self) -> &[PathBuf] {
         self.versions
@@ -146,8 +146,8 @@ fn newest_first(mut versions: Vec<(PathBuf, Option<SystemTime>)>) -> Vec<PathBuf
 /// an arbitrary file the user never meant to expose.
 ///
 /// A Windows device name is refused too. Rust's `std` does not normalize it
-/// away — on Windows 11, `fs::read` of `<dir>\NUL`, `nul`, `NUL ` and `NUL.`
-/// all open the null device, in any directory — and reading `CON` would block
+/// away, on Windows 11, `fs::read` of `<dir>\NUL`, `nul`, `NUL ` and `NUL.`
+/// all open the null device, in any directory, and reading `CON` would block
 /// on the console. Which names still count as devices varies by Windows
 /// version, so the whole documented set is refused on every platform rather
 /// than the subset this one happens to honour. Trailing dots and spaces on an
@@ -173,7 +173,7 @@ fn safe_relative_path(path: &str) -> Option<PathBuf> {
 /// Whether Windows may resolve `segment` to a device rather than a file.
 ///
 /// The device name is what precedes the first dot, ignoring case and any
-/// trailing spaces — `nul.png` and `NUL .txt` count.
+/// trailing spaces, `nul.png` and `NUL .txt` count.
 fn is_reserved_device_name(segment: &str) -> bool {
     let stem = segment
         .split('.')
@@ -457,7 +457,7 @@ mod tests {
         }
     }
 
-    // The refusal is for a whole name, not any name containing one — a texture
+    // The refusal is for a whole name, not any name containing one, a texture
     // called `console_icon.png` or `nullable.dds` is an ordinary file.
     #[test]
     fn names_that_only_resemble_a_device_are_accepted() {

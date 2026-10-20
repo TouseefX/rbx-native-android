@@ -14,7 +14,7 @@ pub(super) struct Sources<'a> {
     pub(super) layout: &'a wgpu::BindGroupLayout,
     pub(super) sampler: &'a wgpu::Sampler,
     /// Whichever of [`super::Post`]'s two depth layouts matches the sample count
-    /// these targets are being built at — the depth buffer below is multisampled
+    /// these targets are being built at, the depth buffer below is multisampled
     /// with the scene, and WGSL types the two shapes differently.
     /// Whichever of [`super::Post`]'s two blur layouts matches the sample count
     /// these targets are being built at: it carries the scene's depth buffer
@@ -38,12 +38,12 @@ pub(in crate::renderer) struct Targets {
     /// is either what the scene pass draws into or what it resolves into.
     scene: wgpu::TextureView,
     /// The texture [`Targets::scene`] views, kept so the frame can be copied
-    /// out of it — see [`Targets::capture_refraction`].
+    /// out of it, see [`Targets::capture_refraction`].
     scene_texture: wgpu::Texture,
     /// A copy of the frame as it stood after the opaque pass, which a
     /// refracting surface reads the scene behind itself out of. Allocated
     /// only once a place actually holds one (see
-    /// [`Targets::want_refraction`]) — it is another full-size HDR target,
+    /// [`Targets::want_refraction`]), it is another full-size HDR target,
     /// and most places have no glass in them at all.
     refraction: Option<(wgpu::Texture, wgpu::TextureView)>,
     /// Present only above one sample: the target the scene pass actually draws
@@ -61,13 +61,13 @@ pub(in crate::renderer) struct Targets {
     /// share one group because a WebGPU device is only guaranteed four of them.
     pub(super) blur_depth: wgpu::BindGroup,
     /// `depth` again, for the blended surfaces to read while the translucent
-    /// pass holds it read-only — see `renderer::scene_depth`.
+    /// pass holds it read-only, see `renderer::scene_depth`.
     scene_depth: wgpu::BindGroup,
     pub(super) chain: Vec<Level>,
     /// The full-frame blur's own chain, sized independently of `chain` since a
     /// `BlurEffect.Size` and a `BloomEffect.Size` need not agree. Empty where the
     /// place has neither an enabled `BlurEffect` nor an enabled
-    /// `DepthOfFieldEffect` — the two share this one blurred copy of the frame.
+    /// `DepthOfFieldEffect`: the two share this one blurred copy of the frame.
     pub(super) blur_chain: Vec<Level>,
 }
 
@@ -112,7 +112,7 @@ impl Targets {
     }
 
     /// Allocates (or drops) the refraction copy, answering whether that
-    /// changed anything — the caller's cue to rebind every group holding the
+    /// changed anything, the caller's cue to rebind every group holding the
     /// old view (see `renderer::switch::Renderer::rebind_frames`).
     pub(in crate::renderer) fn want_refraction(
         &mut self,

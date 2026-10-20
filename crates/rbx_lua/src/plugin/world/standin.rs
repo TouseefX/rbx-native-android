@@ -1,7 +1,7 @@
 //! Services a place file does not carry but Roblox makes on first
 //! `GetService` (`ContentProvider`, `ScriptEditorService`,
 //! `KeyframeSequenceProvider`, `Geometry`, …). The plugin gets a parked
-//! instance of the class — never part of the place — and the members it
+//! instance of the class, never part of the place, and the members it
 //! is most likely to call.
 
 use mlua::{IntoLua, Lua, MultiValue, Result, Value};

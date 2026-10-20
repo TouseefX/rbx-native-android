@@ -92,7 +92,7 @@ impl InputHighlighter for LuauHighlighter {
 }
 
 /// Splits `range` into the ordered, non-overlapping runs that cover it
-/// exactly — the contract [`InputHighlighter::styles`] states. A run carries
+/// exactly, the contract [`InputHighlighter::styles`] states. A run carries
 /// the highlight name of the token covering it, or `None` for the stretches
 /// between tokens and for tokens with no colour of their own.
 ///

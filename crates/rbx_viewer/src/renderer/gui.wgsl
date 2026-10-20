@@ -2,7 +2,7 @@
 // finished frame.
 //
 // Every vertex arrives in viewport pixels with the origin at the top-left
-// corner — the frame `UDim2` is written in — so the only transform here is the
+// corner, the frame `UDim2` is written in, so the only transform here is the
 // orthographic flip into clip space. There is no camera and no depth: the pass
 // is a painter's-algorithm overlay, ordered entirely on the CPU.
 //
@@ -144,7 +144,7 @@ fn ramp_position(p: vec2<f32>, g: vec4<f32>, turn: vec2<f32>, kind: u32) -> f32 
 // re-encodes what is written: the fixed-function blend runs on whatever this
 // returns. Encoding here is therefore what makes a `BackgroundTransparency`
 // of 0.5 halve the *encoded* pixel behind it, which is how Roblox composites
-// its 2D layer — blending in linear light leaves every translucent frame
+// its 2D layer, blending in linear light leaves every translucent frame
 // visibly lighter than Studio's.
 fn linear_to_srgb(c: vec3<f32>) -> vec3<f32> {
     let low = c * 12.92;
@@ -207,7 +207,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // The tint, the ramp and the image sample all meet in linear light
     // (vertex colours are linearized by `scene::gui::plan`, and both textures
     // are `*Srgb` formats the sampler decodes); only the result is encoded,
-    // once, for the blend. Alpha is untouched — coverage and transparency are
+    // once, for the blend. Alpha is untouched, coverage and transparency are
     // already the linear quantities the blend wants.
     return vec4<f32>(linear_to_srgb(sampled.rgb * color), sampled.a * alpha);
 }

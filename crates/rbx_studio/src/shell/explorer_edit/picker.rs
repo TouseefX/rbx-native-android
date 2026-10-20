@@ -1,4 +1,4 @@
-//! The `+` on an Explorer row, and the class list it opens — which is also
+//! The `+` on an Explorer row, and the class list it opens, which is also
 //! the list the row menu's Change Class… opens.
 //!
 //! Real Studio's own shape, from `studio/explorer.md`: "you can select from
@@ -7,7 +7,7 @@
 //! behind a `⋯` beside the search field.
 //!
 //! What this adds over Studio is that a class the hovered parent cannot take
-//! is **greyed rather than missing** — see `explorer::insert` for the two
+//! is **greyed rather than missing**: see `explorer::insert` for the two
 //! refusals that rule is built from, and why it is only those two.
 //!
 //! Every row carries the class's own identity icon, resolved through the
@@ -60,9 +60,9 @@ pub(super) struct Picker {
     /// What had focus before the search field took it, given back however
     /// the picker closes.
     previous: Option<FocusHandle>,
-    /// Where it opened — see `RowMenu`'s own `anchor`.
+    /// Where it opened, see `RowMenu`'s own `anchor`.
     anchor: Point<Pixels>,
-    /// Kept alive only to stay subscribed — the list has to repaint as the
+    /// Kept alive only to stay subscribed, the list has to repaint as the
     /// query is typed, and Enter arrives as the field's own event.
     _subscription: Subscription,
 }
@@ -109,7 +109,7 @@ impl Shell {
         }
     }
 
-    /// Ctrl+I: the same picker, on the selected row — the keyboard half of
+    /// Ctrl+I: the same picker, on the selected row, the keyboard half of
     /// an affordance that is otherwise only reachable by hovering a row.
     pub(in crate::shell) fn open_insert_picker_on_selection(
         &mut self,
@@ -244,7 +244,7 @@ impl Shell {
             painted.push(class_row(choice, icon, index == highlight, refusal, cx));
         }
 
-        // The pointer's row, else the highlighted one — whichever is being
+        // The pointer's row, else the highlighted one, whichever is being
         // looked at is the one worth pricing.
         let footer = match &picker.purpose {
             Purpose::ChangeClass(targets) => picker
@@ -393,7 +393,7 @@ impl Shell {
     }
 
     /// Commits one row of the picker: closes it, then runs the one path its
-    /// purpose already has — an insert goes exactly where the Insert menu
+    /// purpose already has, an insert goes exactly where the Insert menu
     /// and the quick-insert keys go, so a picked class costs one undo step
     /// and reaches the viewport the same way every other insert does.
     fn commit_picked(&mut self, class: String, window: &mut Window, cx: &mut Context<Self>) {

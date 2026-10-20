@@ -58,8 +58,8 @@ fn trail() -> Trail {
     }
 }
 
-/// Replays a scripted attachment motion — both attachments moving together
-/// along +X — through the exact same `Recorder`/`trail_segments` code the
+/// Replays a scripted attachment motion, both attachments moving together
+/// along +X, through the exact same `Recorder`/`trail_segments` code the
 /// live renderer calls every frame, the "synthetic test/debug path" this
 /// viewer needs since nothing here ever moves an `Attachment` for real (see
 /// `scene::trail`'s module doc).
@@ -128,7 +128,7 @@ fn append_bridges_two_trails_with_degenerate_triangles() {
     let mut combined = one.clone();
     append(&mut combined, &one);
     // Original vertices from both trails, plus two degenerate bridge
-    // vertices repeating the seam — identical bookkeeping to
+    // vertices repeating the seam, identical bookkeeping to
     // `renderer::beam::ribbon::append`.
     assert_eq!(combined.len(), one.len() * 2 + 2);
 }

@@ -12,7 +12,7 @@ const FONT_FACE_PROPERTY: &str = "FontFace";
 /// `Enum.FontWeight`'s members, from Roblox's rich text guide ("`Thin`,
 /// `ExtraLight`, `Light`, `Regular`, `Medium`, `SemiBold`, `Bold`,
 /// `ExtraBold`, or `Heavy`; ... a number in factors of 100 between `100` and
-/// `900`") — so a weight edits by name where it has one.
+/// `900`"), so a weight edits by name where it has one.
 const FONT_WEIGHTS: [(&str, u16); 9] = [
     ("Thin", 100),
     ("ExtraLight", 200),

@@ -174,7 +174,7 @@ impl Limb {
 ///
 /// The template is folded around the body with its top cap above the front
 /// and its bottom cap below it, so the caps are turned a half turn from the
-/// default decal orientation — the front edge of a cap is the one that meets
+/// default decal orientation, the front edge of a cap is the one that meets
 /// the front of the limb. The sides are the decal orientation as it is.
 pub(crate) fn axes(face: NormalId) -> (Vec3, Vec3, Vec3) {
     let (normal, u, v) = face.axes();

@@ -10,7 +10,7 @@ use crate::properties::{material_colors, value_edit_kind, EditKind};
 const BRICK_COLOR: &str = "BrickColor";
 const COLOR: &str = "Color";
 
-/// The name `name`'s value is stored under on `instance`, and that value —
+/// The name `name`'s value is stored under on `instance`, and that value,
 /// or, for a value the file never stored, the name Roblox saves it under and
 /// the class default (see `ReflectionDatabase::stored_or_default`), or a
 /// `nil` reference for an instance-typed one that has neither (see
@@ -59,7 +59,7 @@ fn through_color<'a>(
 /// [`commit`] for every instance in `selection`, as one edit: every value is
 /// parsed before any is written, so a value one instance rejects changes
 /// none of them, and an instance already holding the result is not written
-/// at all — a focus leaving an untouched field adds nothing to a file.
+/// at all, a focus leaving an untouched field adds nothing to a file.
 ///
 /// Where the instances' values differ, the panel showed the row empty (see
 /// `properties::common`), and what was left empty keeps each instance's own

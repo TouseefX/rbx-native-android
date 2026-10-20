@@ -21,7 +21,7 @@ use rbx_reflection::ReflectionDatabase;
 
 use crate::argon_client::{self, ArgonRef, Changes, Snapshot, UpdatedSnapshot};
 
-/// The class every script inherits from — what the plugin's
+/// The class every script inherits from, what the plugin's
 /// `isScriptRelated` and `shouldSyncProperties` test with `IsA`.
 const SOURCE_CONTAINER: &str = "LuaSourceContainer";
 
@@ -121,7 +121,7 @@ pub(super) fn diff(
         );
     }
     // Instances at the root that no snapshot node claimed: services, so
-    // never creatable, so never removed — the same outcome the plugin
+    // never creatable, so never removed, the same outcome the plugin
     // reaches through `Dom.isCreatable` at `:214`.
     if rules.priority == Priority::Server && !rules.override_packages {
         changes.additions.retain(|addition| {

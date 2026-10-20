@@ -3,7 +3,7 @@
 //! total. Pinned by `plugins/team-presence/fixtures/catchup.json`.
 //!
 //! The journal is recovered differently per transport (neither carries edit
-//! *values*, and neither records instance add/remove — see the crate README):
+//! *values*, and neither records instance add/remove, see the crate README):
 //! - [`from_worker`] asks the relay's bounded Durable-Object journal
 //!   (`GET /journal`) for the entries it kept.
 //! - [`from_ntfy`] re-reads the topic's retained messages and lifts the

@@ -1,4 +1,4 @@
-//! Joining a place to the assets that have decoded so far — once when it is
+//! Joining a place to the assets that have decoded so far, once when it is
 //! read, and again every time the background pool lands more of them.
 //!
 //! The steps run in the order they do for the same reasons a single build
@@ -10,7 +10,7 @@
 //!
 //! What is new is that every step has to survive being run again over a
 //! superset of the same assets and leave the place exactly as one run with all
-//! of them would have. Each of the three is idempotent for its own reason —
+//! of them would have. Each of the three is idempotent for its own reason,
 //! see `Scene::resolve_file_meshes`, `Scene::resolve_unions` (which ignores a
 //! union it has already merged, since it appends the parts it recovers) and
 //! `scene::material::Catalog::resolve`.
@@ -147,11 +147,11 @@ impl Loaded {
         warnings
     }
 
-    /// Asks for the images the renderer's own passes sample — `Beam`,
+    /// Asks for the images the renderer's own passes sample, `Beam`,
     /// `Trail` and `ParticleEmitter` textures, an `ImageHandleAdornment`'s
     /// own, and every `ImageLabel` in the place's GUIs.
     ///
-    /// A pass here reads an answer instead of resolving one itself — see
+    /// A pass here reads an answer instead of resolving one itself, see
     /// `Answered`, whose "no answer yet" is what keeps an emitter alive until
     /// its texture lands. That is also why the warnings have to be carried
     /// back out from here: by the time a pass sees `Some(None)`, the failure
@@ -193,7 +193,7 @@ impl Loaded {
     }
 
     /// Asks for the images the freshly re-planned GUI trees name, and joins
-    /// whichever of them have already decoded — the GUI half of
+    /// whichever of them have already decoded, the GUI half of
     /// [`Loaded::resolve_effect_images`], on its own because a patched edit
     /// re-plans the GUI without touching the effect lists.
     ///

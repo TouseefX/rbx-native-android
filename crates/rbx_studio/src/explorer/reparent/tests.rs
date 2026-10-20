@@ -4,7 +4,7 @@ use rbx_reflection::ReflectionDatabase;
 use super::{accepts, movable};
 
 /// `Workspace` holding `Model` holding `Part`, plus a sibling `Folder` and a
-/// second service — the smallest tree that can express every rule this module
+/// second service, the smallest tree that can express every rule this module
 /// has: a service, a nesting, a cycle, and somewhere legal to land.
 struct Place {
     dom: WeakDom,
@@ -182,7 +182,7 @@ fn a_child_dragged_with_a_service_still_moves_on_its_own() {
 #[test]
 fn a_child_dragged_with_an_ancestor_that_cannot_take_the_target_still_moves() {
     // Dropping `Model` into a folder inside itself is the cycle rule's job to
-    // refuse — but `Part` moving into that same folder is perfectly legal, and
+    // refuse, but `Part` moving into that same folder is perfectly legal, and
     // being selected next to `Model` must not veto it.
     let mut place = place();
     let inner = place.dom.new_instance("Folder", "Inner", Some(place.model));

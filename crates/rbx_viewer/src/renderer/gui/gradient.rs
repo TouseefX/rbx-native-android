@@ -2,7 +2,7 @@
 //! texture the fragment shader reads its ramp from (bind group 2).
 //!
 //! A row is the ramp sampled at [`WIDTH`] evenly spaced points, colour in
-//! sRGB — the space Roblox interpolates a `ColorSequence` in — and
+//! sRGB, the space Roblox interpolates a `ColorSequence` in, and
 //! `1 - Transparency` in alpha; the texture is an `*Srgb` format so the GPU
 //! linearizes the colour on the way in, matching the linear vertex colour it
 //! is multiplied into. Two elements with the same ramp share a row, since the
@@ -104,7 +104,7 @@ impl Table {
     }
 }
 
-/// `rows` as a `WIDTH` × rows texture — one blank row where there are none,
+/// `rows` as a `WIDTH` × rows texture, one blank row where there are none,
 /// since a bind group cannot hold an empty texture and a vertex without a
 /// gradient never samples it anyway.
 fn bind(
@@ -220,7 +220,7 @@ mod tests {
     }
 
     // Roblox lerps a `ColorSequence` in its own sRGB values, so the middle
-    // of red → blue is (0.5, 0, 0.5) *in sRGB* — 128, not the 188 that a
+    // of red → blue is (0.5, 0, 0.5) *in sRGB*, 128, not the 188 that a
     // lerp in linear light re-encoded would give.
     #[test]
     fn keypoints_are_interpolated_in_srgb() {

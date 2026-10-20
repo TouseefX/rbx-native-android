@@ -9,7 +9,7 @@ use crate::scene::{GuiGradient, GuiGradientKind, GuiJoin, GuiRect, GuiStroke, Gu
 
 // The pipeline has to accept the vertex layout the quads emit, and a
 // rounded, stroked, shaded element has to make it through a whole
-// prepare-and-draw — which is the one thing a CPU-side test cannot say.
+// prepare-and-draw, which is the one thing a CPU-side test cannot say.
 #[test]
 fn a_rounded_stroked_shaded_element_draws_through_the_pipeline() {
     let Some((device, queue)) = crate::gpu::for_tests() else {

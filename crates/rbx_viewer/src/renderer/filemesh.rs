@@ -4,7 +4,7 @@
 //!
 //! Untextured meshes reuse the shape pass's own shader (`shader.wgsl`) and
 //! vertex/instance layout, just built as a separate pipeline rather than
-//! literally the same `wgpu::RenderPipeline` — downloaded community meshes
+//! literally the same `wgpu::RenderPipeline`: downloaded community meshes
 //! don't all agree on winding, so these pipelines disable back-face culling
 //! rather than risk drawing them inside-out. A mesh's own `TextureID` gets a UV
 //! pipeline, mirroring `textured.rs` but instanced instead of pre-baked into
@@ -12,7 +12,7 @@
 //! attribute and its own PBR map set (see [`appearance`]).
 //!
 //! A `MeshPart` carrying a `Transparency` goes to the blended pipelines instead,
-//! which need a camera-dependent draw order — see [`FileMeshes::prepare`].
+//! which need a camera-dependent draw order, see [`FileMeshes::prepare`].
 
 mod appearance;
 mod blended;
@@ -45,7 +45,7 @@ use vertex::{AppearanceVertex, TexturedVertex};
 pub(crate) use vertex::tangents as mesh_tangents;
 
 /// One batch's mesh, converted for the vertex format its skin reads, and
-/// the skin itself — the payload of one opaque group, or one [`Blended`].
+/// the skin itself, the payload of one opaque group, or one [`Blended`].
 struct Geometry {
     vertices: wgpu::Buffer,
     indices: wgpu::Buffer,
@@ -137,7 +137,7 @@ impl FileMeshes {
     /// pipelines and every upload the new scene asks for again: a mesh
     /// texture (see [`Images`]), a `SurfaceAppearance` map set (see
     /// [`appearance::Sets::rebuild`]) and a batch's converted vertex buffers
-    /// — the same mesh under the same skin is the same bytes, so a batch
+    /// the same mesh under the same skin is the same bytes, so a batch
     /// keyed the same way as one the previous scene drew takes its geometry
     /// over instead of converting and uploading the mesh again.
     pub(super) fn rebuild(
@@ -260,8 +260,8 @@ impl FileMeshes {
     /// Re-sorts what has to blend for this frame's camera, furthest first: the
     /// instances inside each batch, then the batches against each other.
     ///
-    /// Ordering whole batches by their furthest instance is coarse — two
-    /// interleaved translucent meshes can still blend in the wrong order — but
+    /// Ordering whole batches by their furthest instance is coarse, two
+    /// interleaved translucent meshes can still blend in the wrong order, but
     /// each batch is one mesh with one vertex buffer, and splitting those apart
     /// would cost a draw call per instance.
     pub(super) fn prepare(&mut self, queue: &wgpu::Queue, eye: Vec3) {

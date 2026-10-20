@@ -1,7 +1,7 @@
 //! Keeping the user's script templates current while the editor runs: the
 //! Model menu and the ribbon's Script menu list them, and both must follow
-//! a template added, renamed or deleted — from the templates window or by
-//! hand — without a restart.
+//! a template added, renamed or deleted, from the templates window or by
+//! hand, without a restart.
 
 use gpui_kit::*;
 
@@ -10,7 +10,7 @@ use crate::script_templates::ScriptTemplates;
 
 impl Shell {
     /// Polls the templates folder's fingerprint for as long as the window
-    /// lives — the same approach, and the same interval, as the theme
+    /// lives, the same approach, and the same interval, as the theme
     /// watcher (see `theme::watch` for why it polls).
     pub(super) fn watch_script_templates(&mut self, cx: &mut Context<Self>) {
         self.templates_stamp = templates_stamp(&self.script_templates);

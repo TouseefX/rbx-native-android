@@ -36,7 +36,7 @@ fn a_child_resolves_against_its_parents_pixel_rect_not_the_viewport() {
         udim2(0.0, 100, 0.0, 50),
         udim2(0.0, 200, 0.0, 400),
     );
-    // Half of the parent, offset a quarter of the way in — none of which lines
+    // Half of the parent, offset a quarter of the way in, none of which lines
     // up with any fraction of the viewport.
     frame(
         &mut dom,

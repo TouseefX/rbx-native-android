@@ -17,12 +17,12 @@ use crate::textures::{Body, Celestial, QUAD_INDICES};
 
 /// How far outside the visible frame the sun's projection may still fall
 /// before `SunRaysEffect` gives up on the frame rather than blur toward a
-/// point nowhere near the image — a whole extra frame-width of slack on every
+/// point nowhere near the image, a whole extra frame-width of slack on every
 /// side, well past where the effect's own taps could ever reach.
 const OFF_SCREEN_MARGIN: f32 = 1.0;
 
 /// Projects a world direction through a translation-free view-projection
-/// matrix, exactly like `vs_main` in sun.wgsl projects the sun disc itself —
+/// matrix, exactly like `vs_main` in sun.wgsl projects the sun disc itself,
 /// reused here (rather than re-derived) so `renderer::post`'s god-rays can
 /// never point anywhere but where the disc is actually drawn.
 ///
@@ -47,7 +47,7 @@ pub(super) fn project_direction(view_rotation_projection: &Mat4, direction: Vec3
 /// `SunRaysEffect` must not draw at all this frame.
 ///
 /// Three independent reasons collapse to the same `None`: the moon is lit
-/// instead of the sun (Roblox's own effect never rays from the moon — no
+/// instead of the sun (Roblox's own effect never rays from the moon, no
 /// fixture contradicts this, so it is this renderer's own reasonable
 /// assumption, made the same way `renderer.rs`'s `sun_shadow` already picks
 /// which lamp is "above the horizon" from the sign of `sun_direction.y`), the
@@ -169,14 +169,14 @@ impl Bodies {
         })
     }
 
-    /// Whether the uploaded discs are exactly `bodies` — see [`bodies_key`].
+    /// Whether the uploaded discs are exactly `bodies`: see [`bodies_key`].
     pub(super) fn holds(&self, bodies: &[Celestial]) -> bool {
         self.bodies == bodies_key(bodies)
     }
 
     /// Swaps in other discs, keeping the pipeline and the camera bind group:
     /// what a scene rebuild does for a `Sky` edit that changed a texture or an
-    /// angular size. `bodies` must not be empty — a place with none drops the
+    /// angular size. `bodies` must not be empty, a place with none drops the
     /// pass instead (see [`Bodies::new`]).
     pub(super) fn replace(
         &mut self,
@@ -289,7 +289,7 @@ fn upload(
 /// winds: top-left, top-right, bottom-right, bottom-left.
 ///
 /// `angular_size` is the disc's angular *diameter* in degrees, so the quad
-/// reaches `tan` of half of it either side of the direction — which is exactly
+/// reaches `tan` of half of it either side of the direction, which is exactly
 /// right on a unit direction vector, whatever the far plane is.
 fn quad(body: &Celestial) -> [Vertex; 4] {
     let extent = [

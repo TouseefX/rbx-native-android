@@ -4,7 +4,7 @@
 # (`--help` lists them); the fixture pair below is only the default.
 #
 # Deliberately NOT called from check.sh: this needs a GPU, takes minutes, and
-# reports a number rather than a pass or a fail — none of which belongs in a
+# reports a number rather than a pass or a fail, none of which belongs in a
 # gate. BENCHMARKS.md at the repo root holds the recorded baseline.
 #
 # Fixtures live outside the repo in $RBX_FIXTURES (default:
@@ -16,7 +16,7 @@ OUT="target/bench"
 FIX="${RBX_FIXTURES:-../rbx-native-fixtures/places}"
 mkdir -p "$OUT"
 # `ionice` is Linux-only; fall back to plain `nice` rather than failing outright
-# anywhere else (macOS, in particular) — see check.sh's own copy of this same
+# anywhere else (macOS, in particular), see check.sh's own copy of this same
 # fallback, and bench.ps1 for the native Windows equivalent.
 run() {
   if command -v ionice >/dev/null 2>&1; then

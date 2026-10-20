@@ -25,7 +25,7 @@ impl ReflectionDatabase {
 
     /// The API dump baked into this crate at compile time, with the class
     /// defaults beside it (see [`Self::with_defaults`]), parsed once per
-    /// process — for a caller with no database of its own to hand, such as
+    /// process, for a caller with no database of its own to hand, such as
     /// a place file being read.
     ///
     /// Panics only if an embedded asset is malformed, which is a build-time

@@ -1,6 +1,6 @@
 //! A `CFrame`'s rotation, as the three angles people actually type.
 //!
-//! The DOM stores a rotation as nine floats — a 3×3 matrix, row-major, `R[i]
+//! The DOM stores a rotation as nine floats, a 3×3 matrix, row-major, `R[i]
 //! [j]` at `rotation[i * 3 + j]`. Nobody edits a matrix. Roblox itself
 //! presents the same thing as an `Orientation` of three degrees, and that is
 //! what this converts to and from.
@@ -14,12 +14,12 @@
 //!
 //! Nine numbers do not fit in three. Every rotation *matrix* has an Euler
 //! triple, but the trip back is only exact if the matrix was orthonormal to
-//! begin with — and a file written by another tool need not be. Worse, at
+//! begin with, and a file written by another tool need not be. Worse, at
 //! `x = ±90°` (gimbal lock) the `Y` and `Z` angles stop being separable and
 //! an infinity of pairs describe the same rotation, so the round trip picks
 //! one arbitrarily.
 //!
-//! So the panel never round-trips a rotation it was not asked to change —
+//! So the panel never round-trips a rotation it was not asked to change,
 //! see `edit::parse_cframe`, which keeps the stored matrix byte-identical
 //! when only the position fields were edited. This module is pure maths and
 //! has no opinion about that; it just has to be exact enough that the rule
@@ -51,7 +51,7 @@ pub(super) fn to_degrees(rotation: &[f32; 9]) -> [f32; 3] {
     // which is the convention Roblox's own `ToOrientation` follows.
     let (y, z) = if cos_x.abs() < 1e-6 {
         // With `cos(x) = 0` the top-left 2×2 collapses to `cos(y ∓ z)` and
-        // `±sin(y ∓ z)`, the sign following `sin(x)` — so folding `Z` into
+        // `±sin(y ∓ z)`, the sign following `sin(x)`: so folding `Z` into
         // `Y` means flipping that argument, not negating the result.
         ((at(0, 1) * x.signum()).atan2(at(0, 0)), 0.)
     } else {

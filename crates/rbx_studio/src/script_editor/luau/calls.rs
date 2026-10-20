@@ -3,8 +3,8 @@
 //! Two rules, both positional and neither needing a parse: an identifier
 //! immediately before a call's arguments is being called, and the name after
 //! a `function` keyword is being defined. They overlap for the common
-//! `function f(x)` — the definition puts its name right before the parameter
-//! list — and the second exists for the case where they do not.
+//! `function f(x)`: the definition puts its name right before the parameter
+//! list, and the second exists for the case where they do not.
 
 use super::{Token, TokenKind};
 
@@ -14,7 +14,7 @@ use super::{Token, TokenKind};
 /// usually puts its name immediately before the parameter list. A generic one
 /// does not: `function f<T>(x)` puts `<T>` in between, and `f` would stay an
 /// ordinary identifier. Walking forward from the keyword instead needs no rule
-/// for the generics at all — the name is the last identifier of the `a.b:c`
+/// for the generics at all, the name is the last identifier of the `a.b:c`
 /// path following `function`, whatever comes after it.
 pub(super) fn mark_definitions(tokens: &mut [Token], source: &str) {
     for index in 0..tokens.len() {

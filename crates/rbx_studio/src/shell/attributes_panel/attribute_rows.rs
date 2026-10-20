@@ -23,7 +23,7 @@ use super::{Renaming, ATTRIBUTES_CATEGORY};
 impl Shell {
     /// A row becomes whichever widget its `EditKind` calls for (see
     /// `shell::panels::properties`, which forces every section open so a
-    /// filter match is never hidden behind a collapsed one — this section
+    /// filter match is never hidden behind a collapsed one, this section
     /// follows the same rule, filtering by attribute name through the same
     /// [`crate::properties::matches`] the ordinary property rows use).
     /// The "add attribute" row is never filtered out: it names nothing yet.
@@ -104,7 +104,7 @@ impl Shell {
 
     /// One attribute: a name (a label, or an `Input` while a rename is in
     /// progress) plus rename/remove buttons on one line, its value's own
-    /// per-type editor on the next — the same stacked shape a composite
+    /// per-type editor on the next, the same stacked shape a composite
     /// property row already uses (see `shell::rows::property_stack`), kept
     /// uniform here across every type rather than switching layouts, since
     /// this section is visually its own rather than one more property row.
@@ -218,7 +218,7 @@ impl Shell {
     }
 
     /// The section's own "add attribute" row: a name field, a type picker
-    /// (`properties::attributes::ATTRIBUTE_TYPES`) and a confirm button —
+    /// (`properties::attributes::ATTRIBUTE_TYPES`) and a confirm button,
     /// Roblox's own popup asks for the same two things (`studio/properties.md`:
     /// "enter the attribute Name, select its Type, and click Save").
     fn add_attribute_row(
@@ -275,7 +275,7 @@ impl Shell {
             )
             .child(
                 // No `.tab_index` here: the toolkit's `Select` exposes none
-                // to set (see `UX_GUIDELINES.md` §1's Level A keyboard gap) —
+                // to set (see `UX_GUIDELINES.md` §1's Level A keyboard gap),
                 // the same reason `shell::rows::render_editor`'s own
                 // `RowEditor::Enum` arm never sets one either.
                 select_field(&type_select.read(cx).focus_handle(cx), window, cx)
@@ -408,7 +408,7 @@ impl Shell {
                 // Dropped rather than cleared in place: the next render's
                 // `add_attribute_row` sees `None` and builds a fresh, empty
                 // pair exactly the way it already does the first time this
-                // row ever renders — no second code path, and no `Window`
+                // row ever renders, no second code path, and no `Window`
                 // needed here to call `InputState::set_value` (this method
                 // only ever runs from a `PressEnter` subscription or a plain
                 // click handler, neither of which hands one over).

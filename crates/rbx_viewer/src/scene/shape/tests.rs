@@ -237,7 +237,7 @@ fn a_corner_wedge_mesh_type_maps_to_the_corner_wedge_shape() {
 }
 
 /// A Cylinder part's cross-section is a circle as wide as the smaller of Y
-/// and Z — the extent Studio's own bake gives a union holding one.
+/// and Z, the extent Studio's own bake gives a union holding one.
 #[test]
 fn part_shape_cylinder_keeps_a_circular_cross_section() {
     let mut dom = WeakDom::new();

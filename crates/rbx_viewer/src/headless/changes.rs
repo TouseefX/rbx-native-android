@@ -1,6 +1,6 @@
 //! `Headless::apply_changes`: a change log applied to the picture one
 //! instance at a time, the way Roblox's own engine applies a property write
-//! — no rebuild, no re-walk of the place, a cost that scales with the edit.
+//! no rebuild, no re-walk of the place, a cost that scales with the edit.
 //!
 //! Each instance the log names is looked up in the DOM as it stands *now*
 //! and classified by [`Role`]; that decides which of the renderer's passes
@@ -27,7 +27,7 @@ use pending::Pending;
 
 impl Headless {
     /// Brings the picture in line with `dom` for every instance `changes`
-    /// names — and only those — patching each in place. A `Change` is read
+    /// names, and only those, patching each in place. A `Change` is read
     /// as a hint about *which* instance may differ, never as a record of a
     /// value: whether the referent is now a part to draw, a part to drop,
     /// or a decal to re-project is decided by looking it up in `dom`, so an
@@ -38,8 +38,8 @@ impl Headless {
     /// attachments along).
     ///
     /// [`Applied::Rebuilt`] means one of the changes was one of the few
-    /// that only a full [`Headless::reload`] can draw — see [`Rebuild`] for
-    /// the complete list — and that reload has already been done; nothing
+    /// that only a full [`Headless::reload`] can draw, see [`Rebuild`] for
+    /// the complete list, and that reload has already been done; nothing
     /// is left for the caller to do either way. A patch that got part-way
     /// before hitting such a change is simply overtaken by the rebuild.
     pub fn apply_changes(&mut self, dom: &WeakDom, changes: &[Change]) -> Result<Applied, String> {
@@ -110,8 +110,8 @@ impl Patcher<'_> {
         let dom = self.dom;
         let referent = touched.referent;
         // A `ViewportFrame` draws what sits under it out of its GUI tree's
-        // plan, so a change anywhere inside one — its `Camera`, a part, a
-        // model dropped in or taken out — is a change to that tree,
+        // plan, so a change anywhere inside one, its `Camera`, a part, a
+        // model dropped in or taken out, is a change to that tree,
         // whatever the instance's own role says.
         let parents = [
             dom.get(referent).and_then(|_| dom.parent(referent)),
@@ -146,12 +146,12 @@ impl Patcher<'_> {
     }
 
     /// The part a `SpecialMesh` or `SurfaceAppearance` was just taken away
-    /// from draws differently without it — as its own box again, or bare —
+    /// from draws differently without it, as its own box again, or bare,
     /// and nothing in the DOM as it stands still leads from the child to it.
     /// The same goes for the container a GUI element left: a GUI tree is
     /// planned from its `ScreenGui`/`BillboardGui`/`SurfaceGui` down, so the
     /// container the element now sits in is not the only one whose plan is
-    /// stale — left alone, the old one keeps drawing the element too, and
+    /// stale, left alone, the old one keeps drawing the element too, and
     /// a `Frame` dragged from an overlay onto a part shows up in both.
     fn left(&mut self, old_parent: Ref, moved: Ref) -> Result<(), Rebuild> {
         let dom = self.dom;
@@ -174,7 +174,7 @@ impl Patcher<'_> {
             }
             // A `Folder` (or any other plain container) draws nothing itself,
             // yet a GUI tree may hang off one, and the whole subtree moves
-            // with it — so the container it left is stale for the same
+            // with it, so the container it left is stale for the same
             // reason a `Frame`'s would be.
             Some(_) if holds_gui(dom, self.database, moved) => {
                 self.gui_changed(Some(old_parent), false);
@@ -185,7 +185,7 @@ impl Patcher<'_> {
     }
 
     /// An instance the DOM has: (re)built into whichever pass its role says.
-    /// `with_children` re-reads what hangs off a part — a property write on
+    /// `with_children` re-reads what hangs off a part, a property write on
     /// the part alone moved them; a structural walk visits them itself.
     fn present(&mut self, referent: Ref, with_children: bool) -> Result<(), Rebuild> {
         let dom = self.dom;
@@ -348,15 +348,15 @@ impl Patcher<'_> {
         if !self.render_part(referent, &sync) {
             return Err(Rebuild::Asset);
         }
-        // Whatever this referent now needs — whether it patched onto a
+        // Whatever this referent now needs, whether it patched onto a
         // resolved mesh/union or fell back to its box because one is not
-        // resident yet — is asked for here: a `resync_part` box-fallback
+        // resident yet, is asked for here: a `resync_part` box-fallback
         // draws right away, but only this keeps it from staying a box
         // forever.
         self.request_assets_of(referent);
         // Keeps the decor plan's idea of where this part's own `Decal`s
         // project in step with where it actually stands now, the way
-        // `render_part` just kept the GPU in step — without it, a decal
+        // `render_part` just kept the GPU in step, without it, a decal
         // image landing later would re-assemble at the placement this
         // part had when the file was read.
         self.loaded.replan_faces(self.dom, self.database, referent);
@@ -368,7 +368,7 @@ impl Patcher<'_> {
         }
         // A 3D adornment is placed against the part it adorns in the same
         // way, and its geometry is worked out once at plan time rather than
-        // instanced per part — so a part that moves under one re-plans them.
+        // instanced per part, so a part that moves under one re-plans them.
         if self.loaded.scene().adornments_cover(referent) {
             self.pending.effect(crate::scene::EffectKind::Adornments);
         }
@@ -444,7 +444,7 @@ impl Patcher<'_> {
     }
 
     /// Asks the background loader for whatever `referent` now needs that
-    /// this session does not have — see `Scene::wanted_assets_of`. Cheap to
+    /// this session does not have, see `Scene::wanted_assets_of`. Cheap to
     /// call whether or not anything is actually missing: `Resident`/
     /// `Loaded` skip a reference already resident or already asked for.
     fn request_assets_of(&mut self, referent: Ref) {
@@ -478,7 +478,7 @@ impl Patcher<'_> {
     /// through a mesh, is not one the decal could be pinned to, or textures
     /// are off for this load. An image that was asked for and failed, or
     /// has not been asked for at all yet, is left unpainted, exactly as a
-    /// full build leaves an image it does not have — never a rebuild — and
+    /// full build leaves an image it does not have, never a rebuild, and
     /// an image nobody has asked for is asked for now, the same as
     /// `sync_part`'s own fallback does for a mesh.
     fn sync_face(&mut self, referent: Ref) -> Result<(), Rebuild> {
@@ -491,7 +491,7 @@ impl Patcher<'_> {
         // Before the projection below and whatever it finds: the plan is
         // what a later asset landing re-assembles every decal from, so it
         // has to be re-read from the DOM even when this face itself ends up
-        // unpainted — see `Loaded::replan_faces`.
+        // unpainted, see `Loaded::replan_faces`.
         if let Some(parent) = painted {
             self.loaded.replan_faces(dom, self.database, parent);
         }

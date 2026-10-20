@@ -16,9 +16,9 @@
 //! into a buffer from `rbxn_alloc`, and returns `(ptr << 32) | len`.
 //!
 //! Methods (permission in brackets):
-//! - `log {text}` / `warn {text}` — Output lines (none);
-//! - `notify {text}` — a toast (none);
-//! - `command.register {id, text, tooltip?}` — a Plugins-tab button (none);
+//! - `log {text}` / `warn {text}`: Output lines (none);
+//! - `notify {text}`: a toast (none);
+//! - `command.register {id, text, tooltip?}`: a Plugins-tab button (none);
 //! - `selection.get` → `[ref…]`, `selection.set {refs}` [`selection`];
 //! - `instance.roots` → `[ref…]`, `instance.get {ref}` →
 //!   `{ref, name, class, parent, children}`, `instance.find {path}`

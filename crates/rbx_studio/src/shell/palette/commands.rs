@@ -1,6 +1,6 @@
 //! What the palette lists and in what order: every enabled menu-bar item,
 //! the transform tools, the ribbon's live commands, and a "focus" command
-//! per dock and per document — read from the definitions those already
+//! per dock and per document, read from the definitions those already
 //! live in, never a second list of names. Quick Open's instance rows are
 //! built by `instances`.
 
@@ -31,7 +31,7 @@ pub(in crate::shell) enum Run {
 }
 
 pub(in crate::shell) struct Command {
-    /// `Category: Name`, VS Code's shape — the category is what tells the
+    /// `Category: Name`, VS Code's shape, the category is what tells the
     /// View menu's Explorer toggle apart from focusing the Explorer. For an
     /// instance, its full path. Also the key recency is remembered by.
     pub(in crate::shell) label: SharedString,

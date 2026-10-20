@@ -62,7 +62,7 @@ fn place() -> (WeakDom, Ref, Ref, [Ref; 2], Ref) {
     (dom, workspace, model, [first, second], loose)
 }
 
-/// The covered parts are a set, not a sequence — see `Highlight::parts` —
+/// The covered parts are a set, not a sequence, see `Highlight::parts`,
 /// so every assertion about them compares them as one.
 fn sorted(parts: &[Ref]) -> Vec<Ref> {
     let mut sorted = parts.to_vec();
