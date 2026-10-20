@@ -23,8 +23,9 @@ and read the [docs](https://fabideveloper.github.io/Loren-Framework/).
 | Path | Upstream path | Notes |
 | :--- | :--- | :--- |
 | `LICENSE` | `LICENSE` (same text as `cli/LICENSE`) | verbatim |
-| `project/` | `cli/project/` | the runtime (`loren/`), the bundled Promise (`loren_packages/Promise`, with **its own** `LICENSE`, evaera, MIT), the premades and the project template the CLI writes |
+| `project/` | `cli/project/` | the runtime (`loren/`), the bundled Promise (`loren_packages/Promise`, with **its own** `LICENSE`: roblox-lua-promise by Eryn L. K., MIT), the premades and the project template the CLI writes |
 | `test/runner/` | `test-project/runner/` | Loren's spec runner (`LorenTest.luau`) |
+| `crates/rbx_loren/tests/fixtures/` | `cli/test/fixtures/` | the CLI test suite's fixture projects, for the ported tests |
 | `test/specs/` | `test-project/specs/{unit,runner,frozen}` | Loren's own unit specs and the frozen wire reference, run by `crates/rbx_loren`'s tests |
 
 The Node CLI itself (`cli/index.js`, `cli/lib/`) is not vendored: it is
@@ -34,5 +35,8 @@ suite ported alongside.
 ## Local changes
 
 None to the files above, except the performance patches listed in
-`patches/README.md`. Each is a self-contained diff against the pinned
-commit, kept so it can be offered upstream.
+`patches/README.md` (today one, to `loren/shared/Codec.luau`). Each is a
+self-contained diff against the pinned commit, kept so it can be offered
+upstream. `Version.luau` still says `2.0.0-beta.2`: the patches change no
+behaviour, only speed, so a project `rbxstudio loren update` brought to
+this runtime is wire-compatible with fabi's.

@@ -304,11 +304,14 @@ local cases: { Case } = {
 		name = "event_send",
 		prepare = function()
 			connect()
-			return clientRoute("Ev")
+			-- The closure a ClientEvent proxy's Fire is (Proxy.luau), the path game code takes.
+			local ev = {}
+			return { ev = ev, fire = ClientNet.eventFire(clientRoute("Ev"), ev, "S.Ev") }
 		end,
-		run = function(r: any)
+		run = function(e: any)
+			local ev, fire = e.ev, e.fire
 			for i = 1, MESSAGES do
-				ClientNet.fire(r, 1, i)
+				fire(ev, i)
 			end
 			flushClient()
 		end,
@@ -320,9 +323,10 @@ local cases: { Case } = {
 		name = "event_receive",
 		prepare = function()
 			local p = connect()
-			local r = clientRoute("Ev")
+			local ev = {}
+			local fire = ClientNet.eventFire(clientRoute("Ev"), ev, "S.Ev")
 			for i = 1, MESSAGES do
-				ClientNet.fire(r, 1, i)
+				fire(ev, i)
 			end
 			flushClient()
 			local list = c2s
