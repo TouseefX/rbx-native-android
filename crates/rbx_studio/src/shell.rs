@@ -37,6 +37,7 @@ mod keys;
 mod layout;
 mod light_guides;
 mod luau_lsp;
+mod mcp;
 mod menu;
 mod open_place;
 mod output;
@@ -64,6 +65,7 @@ pub(crate) use chrome::panel_topbar;
 pub(crate) use coedit::BETA_ID as COEDIT_BETA_ID;
 pub(crate) use export::Export;
 pub(crate) use layout::{edge_from_key, edge_key, Edge, Panel, SavedEdge, SavedGroup, SavedLayout};
+pub(crate) use mcp::BETA_ID as MCP_BETA_ID;
 pub(crate) use play::copy_name::DEFAULT as PLAY_COPY_NAME_DEFAULT;
 pub(crate) use roving::install as install_key_bindings;
 mod tree_keys;
@@ -479,6 +481,8 @@ pub(crate) struct Shell {
     /// marked Active when several names hold the docks' arrangement.
     last_named_layout: Option<String>,
     output_collapsed: bool,
+    /// Beta Features › MCP server's listener; see `shell::mcp`.
+    mcp: Option<crate::mcp::endpoint::Server>,
     discord: Option<crate::discord_presence::Presence>,
     discord_hide_names: bool,
     /// The Unix timestamp presence was started — keeps Discord's elapsed
@@ -871,6 +875,7 @@ impl Shell {
             panel_windows: HashMap::new(),
             window_was_active: true,
             output_collapsed,
+            mcp: None,
             discord: None,
             discord_hide_names,
             discord_started: 0,
@@ -935,6 +940,8 @@ impl Shell {
         shell.init_team_presence(cx);
         // Loads and starts the installed plugins (see `shell::plugins`).
         shell.plugins_start(cx);
+        // Beta Features › MCP server (see `shell::mcp`).
+        shell.mcp_start(cx);
 
         // `RBX_STUDIO_TOOL` (see `shell::toolbar`). Before the Command Bar
         // block below rather than after it: a script's reload rebuilds the

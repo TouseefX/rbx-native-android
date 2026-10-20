@@ -2,6 +2,16 @@
 
 ## 2026-10-20
 
+- **An MCP server for the open place (beta).** With Settings › Beta
+  features › MCP server on, an AI client pointed at `rbxstudio --mcp` can
+  read the place the editor has open, through the tools Roblox's own
+  Studio MCP server names: `search_game_tree`, `inspect_instance`,
+  `script_read`, `script_search` and `script_grep`. The bridge forwards
+  stdio to the running editor over a loopback port guarded by a random
+  token in `mcp.json`, and every answer is read on the UI thread, so it
+  matches what the Explorer shows. Read-only for now: editing, running
+  Luau and Play are the roadmap's next step for it. — @Vikmanou
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its

@@ -2679,6 +2679,20 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   real client, an ignored live round trip (`tests/datastores_live.rs`), and
   the window driven against a real sandbox universe; screenshots in
   `docs/screenshots/datastore-browser/`.
+- [x] **An MCP server over the live editor session, read-only so far**
+  (Settings › Beta features › MCP server), shaped after Roblox's built-in
+  Studio MCP server (`studio/mcp.md`) and its tool names. An MCP client
+  launches `rbxstudio --mcp`, a stdio bridge that forwards to the open
+  editor over a loopback port; the editor writes the port and a random
+  token to `<config>/mcp.json` and closes any connection that does not open
+  with that token. Every request is answered on the UI thread against the
+  DOM as the Explorer shows it: `search_game_tree` (start path, class
+  filter matching subclasses, name keywords, depth limit), `inspect_instance`
+  (properties formatted as the Properties panel shows them, attributes,
+  tags, children, descendant count), `script_read` (numbered lines, a range),
+  `script_search` (fuzzy by name, 10 results) and `script_grep` (literal
+  text, 50 matches). Instances are named `game.Workspace.Model.Part`, names
+  with dots included. One editor is reachable at a time, the last started.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):
@@ -2980,17 +2994,19 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   not a default this project should ship opinionated about.
 
 ### Editor
-- [ ] 📋 **An MCP server exposing the live editor session**, matching the
+- [ ] 📋 **The MCP server's editing, Luau and Play tools**: the
+  read-only server (see "What's been implemented" → Editor) still lacks
+  what lets an AI client change and run the session, matching the
   shape (not the exact tool surface) of Roblox's own built-in Studio MCP
   server (checked against `studio/mcp.md` rather than assumed — real,
   current, `stdio`-transport, ships in Studio itself, lets an AI client
   read/write scripts, run Luau, inspect the DataModel, and drive
-  playtesting). Most of what it exposes is a thin protocol wrapper around
-  capabilities this project already has or already plans: `script_read`/
-  `multi_edit`/`script_grep` over the script editor above,
+  playtesting). Most of what is left is a thin protocol wrapper around
+  capabilities this project already has or already plans:
+  `multi_edit` over the script editor above,
   `execute_luau` over the existing Command Bar's DataModel access,
-  `inspect_instance`/`search_game_tree` over the Explorer/Properties
-  panel's existing DOM access, `screen_capture` over the viewport, and
+  `list_roblox_studios` over more than one open editor,
+  `screen_capture` over the viewport, and
   `start_stop_play`/`get_console_output` over Play (see
   [Play / Test workflow](#play--test-workflow)) and the Output dock. Two sub-capabilities are **not** reachable the same
   way: `search_asset`/`insert_asset` depend on Roblox's Creator Store/
