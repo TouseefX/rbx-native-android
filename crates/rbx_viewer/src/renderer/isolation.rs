@@ -1,7 +1,7 @@
 //! The renderer's half of an isolated view (see `Headless::set_isolation`):
 //! which of the place's surroundings a frame leaves out, what it is lit with
 //! instead, and the backdrop it is drawn on. Which *parts* draw is the
-//! scene's half — see `scene::isolation`.
+//! scene's half, see `scene::isolation`.
 //!
 //! Pure decisions, kept apart from [`super::Renderer::draw`] so they can be
 //! tested without a device.
@@ -19,7 +19,7 @@ use crate::scene::srgb_to_linear;
 pub const ISOLATION_BACKDROP: [u8; 3] = [0x3A, 0x3A, 0x3A];
 
 /// The sky irradiance an isolated view's ambient is rebuilt from, linear, at
-/// every one of the six cardinal normals alike — a flat grey dome standing in
+/// every one of the six cardinal normals alike, a flat grey dome standing in
 /// for the place's own sky, so a blue noon or a red sunset cannot tint the
 /// rig. About what a clear Studio sky gives a grey part's shaded side,
 /// without the blue.
@@ -28,8 +28,8 @@ const NEUTRAL_SKY: f32 = 0.22;
 /// Which of the place's own surroundings a frame draws besides its parts.
 ///
 /// Every field is a pass [`super::Renderer::draw`] keeps in step with the
-/// place either way — an edit to the sky, the terrain or an emitter lands
-/// while it is skipped — so turning one back on draws exactly what a frame
+/// place either way, an edit to the sky, the terrain or an emitter lands
+/// while it is skipped, so turning one back on draws exactly what a frame
 /// that never skipped it would.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Surroundings {
@@ -85,7 +85,7 @@ pub(super) fn clear_color(isolated: bool, place: wgpu::Color) -> wgpu::Color {
 /// The lighting, probe and quality profile a frame is lit with: the place's
 /// own for a normal frame, and for an isolated one [`Lighting::neutral`], a
 /// probe whose irradiance is [`NEUTRAL_SKY`] all round, and reflections that
-/// read that flat grey rather than the place's sky cube — the one input of
+/// read that flat grey rather than the place's sky cube, the one input of
 /// the probe the lighting uniform cannot replace, since the cube itself is
 /// bound, not copied.
 pub(super) fn lit(

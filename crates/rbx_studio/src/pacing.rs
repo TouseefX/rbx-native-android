@@ -4,11 +4,11 @@
 //! can show them cost a render and a 5 MB readback for nothing. GPUI exposes no
 //! refresh rate at all, so it is read off the hardware instead (see
 //! [`crate::display`]), with 60 Hz when that fails and `RBX_STUDIO_FPS` as the
-//! override — the way to pin the rate while measuring, or to work around a
+//! override, the way to pin the rate while measuring, or to work around a
 //! display the query reads wrong.
 //!
 //! Losing OS focus lowers the target further, to one of two user-chosen
-//! presets ([`UnfocusedFps`]) — nobody is watching a backgrounded editor
+//! presets ([`UnfocusedFps`]), nobody is watching a backgrounded editor
 //! render at the display's full rate, and Studio itself doesn't either.
 //! [`FocusPacing`] holds that state and the transitions in and out of it;
 //! `workspace_view` feeds it window activation and input events, then pushes
@@ -40,7 +40,7 @@ pub(crate) fn frame_interval(refresh_hz: Option<f32>) -> Duration {
     interval(overridden.unwrap_or(FALLBACK_HZ))
 }
 
-/// The override, `None` for anything unusable — a typo in the variable must slow
+/// The override, `None` for anything unusable, a typo in the variable must slow
 /// the view down, never stop it.
 fn parse_hz(raw: &str) -> Option<f32> {
     let hz: f32 = raw.trim().parse().ok()?;
@@ -51,7 +51,7 @@ fn interval(hz: f32) -> Duration {
     Duration::from_secs_f32(1.0 / hz.clamp(*HZ.start(), *HZ.end()))
 }
 
-/// The render rate while the window has lost OS focus — a setting, not a
+/// The render rate while the window has lost OS focus, a setting, not a
 /// fixed constant: this is *how much* to throttle by, never *whether* to
 /// (the roadmap item this exists for always throttles once unfocused).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,7 +91,7 @@ fn target_interval(full: Duration, unfocused: UnfocusedFps, focused: bool) -> Du
 /// Tracks whether the render loop should currently use the full-focus budget
 /// or the unfocused cap, and the two ways back out of the cap: the window
 /// regaining OS activation (`set_active`), or input reaching the viewport
-/// before that activation event lands (`mark_input`) — either is "the first
+/// before that activation event lands (`mark_input`), either is "the first
 /// focus/input event" the throttle restores on.
 ///
 /// Starts focused: a window that has just opened has the user's attention by
@@ -111,7 +111,7 @@ impl FocusPacing {
 
     /// The window's own OS activation state changed. Returns whether the
     /// pacing state actually flipped, so a caller only has to push a new
-    /// interval down to the render thread when it did — most activation
+    /// interval down to the render thread when it did, most activation
     /// observers fire on every focus-followed-by-blur pair a click produces,
     /// not just the ones that cross the focused/unfocused line.
     pub(crate) fn set_active(&mut self, active: bool) -> bool {
@@ -123,8 +123,8 @@ impl FocusPacing {
     }
 
     /// Input reached the viewport. A no-op once the window already counts as
-    /// focused — the common case, so an ordinary mouse move need not
-    /// recompute anything — but restores the full rate immediately while
+    /// focused, the common case, so an ordinary mouse move need not
+    /// recompute anything, but restores the full rate immediately while
     /// unfocused, ahead of whatever activation event may still be in flight.
     pub(crate) fn mark_input(&mut self) -> bool {
         if self.focused {
@@ -135,7 +135,7 @@ impl FocusPacing {
     }
 
     /// Switches the unfocused preset itself (the user's setting changed).
-    /// Returns whether the *effective* interval changed as a result — only
+    /// Returns whether the *effective* interval changed as a result, only
     /// while actually unfocused; a change made while focused takes effect
     /// the next time focus is lost.
     pub(crate) fn set_unfocused(&mut self, unfocused: UnfocusedFps) -> bool {
@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn unfocused_never_speeds_up_an_already_slower_full_rate() {
         // RBX_STUDIO_FPS=10 (or a very slow display) already asks for a
-        // budget looser than either preset — losing focus must not claw
+        // budget looser than either preset, losing focus must not claw
         // that back to something faster.
         let full = interval(10.0);
         assert_eq!(target_interval(full, UnfocusedFps::Fps30, false), full);

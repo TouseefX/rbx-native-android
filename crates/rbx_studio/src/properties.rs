@@ -38,14 +38,14 @@ const UNCATEGORIZED: &str = "Other";
 ///
 /// Not decoration: it decides whether a field can be dragged and how far a
 /// drag moves it, and it is why `Vector3int16` can no longer be handed
-/// `3.7`. The DOM's own types are mixed even inside a single row — a `UDim`
-/// is an `f32` scale beside an `i32` offset — so this is per *field*, never
+/// `3.7`. The DOM's own types are mixed even inside a single row, a `UDim`
+/// is an `f32` scale beside an `i32` offset, so this is per *field*, never
 /// per property.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FieldKind {
     Decimal,
     Integer,
-    /// Not a number at all — a `Font`'s family name. Typed, never dragged.
+    /// Not a number at all, a `Font`'s family name. Typed, never dragged.
     Text,
 }
 
@@ -111,7 +111,7 @@ pub(crate) enum EditKind {
     Text(String),
     Bool(bool),
     /// 0-255 sRGB channels, matching how [`color3`] already displays a
-    /// `Color3`/`Color3uint8` — no linear-light conversion, same space the
+    /// `Color3`/`Color3uint8`: no linear-light conversion, same space the
     /// DOM stores these in.
     Color {
         r: u8,
@@ -130,7 +130,7 @@ pub(crate) enum EditKind {
         fields: &'static [Field],
         values: Vec<String>,
     },
-    /// Several captioned groups of numeric fields, each on its own line —
+    /// Several captioned groups of numeric fields, each on its own line,
     /// a `CFrame`'s Position and Orientation, a `Ray`'s Origin and
     /// Direction.
     ///
@@ -141,7 +141,7 @@ pub(crate) enum EditKind {
         groups: &'static [FieldGroup],
         values: Vec<String>,
     },
-    /// Independent named flags — a `Faces`' six sides, an `Axes`' three.
+    /// Independent named flags, a `Faces`' six sides, an `Axes`' three.
     ///
     /// A checkbox each, because that is what a bit set is: six yes/no
     /// answers, not one value with sixty-four spellings. They used to
@@ -152,12 +152,12 @@ pub(crate) enum EditKind {
     },
     /// A value that is only half there: a checkbox, and the editor for the
     /// rest of it below once the box is ticked. Two `Variant`s are shaped
-    /// this way, for different reasons — an `OptionalCFrame` may genuinely
+    /// this way, for different reasons, an `OptionalCFrame` may genuinely
     /// be absent, while a `PhysicalProperties` is always *something* but
-    /// only carries five numbers in its `Custom` form — which is why the
+    /// only carries five numbers in its `Custom` form, which is why the
     /// checkbox carries its own `label` rather than one fixed wording.
     ///
-    /// `inner` is seeded even while `present` is false — the row does not
+    /// `inner` is seeded even while `present` is false, the row does not
     /// draw it then, but that is what the value becomes the moment the
     /// checkbox turns it on (see `edit::IDENTITY_CFRAME` and
     /// `edit::DEFAULT_PHYSICAL`).
@@ -168,16 +168,16 @@ pub(crate) enum EditKind {
     },
     /// A `NumberSequence`'s curve or a `ColorSequence`'s ramp: too many
     /// numbers for a row, and the wrong numbers to type. The row draws the
-    /// sequence itself and opens `crate::sequence_window` — the graph where
-    /// keypoints are dragged — which commits through this same `text`.
+    /// sequence itself and opens `crate::sequence_window`: the graph where
+    /// keypoints are dragged, which commits through this same `text`.
     Sequence {
         /// Which of the two, since the row draws a ramp for one and a curve
         /// for the other and the text alone cannot say.
         color: bool,
         text: String,
     },
-    /// Any `BrickColor`-typed property, by number — a part's `BrickColor`,
-    /// a `SpawnLocation`'s `TeamColor` — picked from the palette Studio's
+    /// Any `BrickColor`-typed property, by number, a part's `BrickColor`,
+    /// a `SpawnLocation`'s `TeamColor`: picked from the palette Studio's
     /// own picker shows. A part's is written as its `Color` (see
     /// `edit::commit_all`), since that is all Roblox saves; any other as
     /// itself.
@@ -212,7 +212,7 @@ pub(crate) struct PropertyRow {
     pub(crate) edit: Option<EditKind>,
     /// The selected instances do not all hold the same value. `value` is
     /// then empty and `edit` seeded empty where it can be; the two widgets
-    /// with no empty form — a checkbox, a colour swatch — read this instead.
+    /// with no empty form, a checkbox, a colour swatch, read this instead.
     pub(crate) mixed: bool,
     /// Rows that open beneath this one, which then has no value of its own
     /// to edit: `Terrain.MaterialColors`' per-material colours (see
@@ -280,7 +280,7 @@ const CATEGORY_ORDER: &[&str] = &[
 
 /// The reflection data that turns enum ordinals into names. The DOM is borrowed
 /// per call rather than owned: the panel reads the one tree `Shell` mutates, so
-/// nothing has to be copied to keep a row current — a copy of a place with tens
+/// nothing has to be copied to keep a row current, a copy of a place with tens
 /// of thousands of instances costs tens of milliseconds, far too much for the
 /// UI thread to spend several times a second on a moving camera.
 pub(crate) struct Properties {
@@ -322,8 +322,8 @@ impl Properties {
 
     /// Something in the DOM changed, as `changes` logs it: a
     /// multi-selection's cached rows and every assembly's values may no
-    /// longer be what the instances hold, and — only where an instance came,
-    /// went or moved, or a joint's own properties were written — nor the
+    /// longer be what the instances hold, and, only where an instance came,
+    /// went or moved, or a joint's own properties were written, nor the
     /// joints what joins parts. A lone instance's rows are never cached:
     /// they cost a tenth of a millisecond, and its folder colour lives
     /// outside the DOM.
@@ -336,7 +336,7 @@ impl Properties {
     }
 
     /// The panel's header: `Part "Baseplate"` for one instance; for several,
-    /// the nearest class they all are and how many — `BasePart (2)` for a
+    /// the nearest class they all are and how many, `BasePart (2)` for a
     /// `Part` and a `MeshPart`, since those are the properties listed.
     /// Studio's own wording for a multi-selection is not documented.
     pub(crate) fn title(&self, dom: &WeakDom, selection: &[Ref]) -> Option<String> {
@@ -446,7 +446,7 @@ impl Properties {
             // The only arm that needs `self`: resolving an enum's member
             // names is a reflection lookup, which `value_edit_kind` (shared
             // with `attributes::edit_kind_for`, an attribute never being an
-            // `Enum` — see that module) has no database to make.
+            // `Enum`: see that module) has no database to make.
             Variant::Enum(raw) => self.enum_kind(class, name, *raw, text),
             // Here rather than in `value_edit_kind`: an attribute can hold a
             // `BrickColor` too, and keeps its plain number field.
@@ -468,7 +468,7 @@ impl Properties {
     }
 
     /// A dropdown when the dump names `raw`'s enum's members, otherwise the
-    /// plain-text ordinal — the same fallback [`Self::enumeration`] uses for
+    /// plain-text ordinal, the same fallback [`Self::enumeration`] uses for
     /// display.
     fn enum_kind(&self, class: &str, name: &str, raw: u32, text: String) -> EditKind {
         let Some(property) = self.db.resolve_property(class, name) else {
@@ -590,11 +590,11 @@ impl Properties {
 
 /// Which widget `value` (already turned into `text` by `edit::edit_text`)
 /// should edit through, for every type that needs no reflection lookup to
-/// decide — i.e. every type but `Enum`, whose member names live in the
+/// decide, i.e. every type but `Enum`, whose member names live in the
 /// `ReflectionDatabase` `Properties::edit_kind` alone holds. Pulled out as a
 /// free function so `properties::attributes` can build the exact same
 /// `EditKind` for an attribute's value, which is never an `Enum` (not one of
-/// the types `Instance:SetAttribute` accepts — see that module), without a
+/// the types `Instance:SetAttribute` accepts, see that module), without a
 /// second copy of this match.
 pub(crate) fn value_edit_kind(value: &Variant, text: String) -> EditKind {
     match value {
@@ -614,14 +614,14 @@ pub(crate) fn value_edit_kind(value: &Variant, text: String) -> EditKind {
         // Integer components, so a drag steps by whole cells and a
         // typed `3.7` rounds rather than truncating toward zero.
         Variant::Vector3int16 { .. } => fields(VECTOR3_INT, &text),
-        // A `UDim` is a float scale beside an *integer* offset — the
+        // A `UDim` is a float scale beside an *integer* offset, the
         // clearest case for why a field's kind is not a property's.
         Variant::UDim(_) => fields(UDIM, &text),
         Variant::UDim2(_) => fields(UDIM2, &text),
         Variant::Rect(_) => fields(RECT, &text),
         Variant::NumberRange(_) => fields(NUMBER_RANGE, &text),
         // Position and orientation, the way Roblox's own panel splits
-        // them — a rotation matrix is not something anyone types. See
+        // them, a rotation matrix is not something anyone types. See
         // `edit::orientation` for the conversion and what it costs.
         Variant::CFrame(_) => groups(CFRAME, &text),
         // The one type the DOM can hold that may be absent rather than
@@ -635,7 +635,7 @@ pub(crate) fn value_edit_kind(value: &Variant, text: String) -> EditKind {
             inner: Box::new(groups(CFRAME, &text)),
         },
         // The same shape for a different reason. `PhysicalProperties` is
-        // never absent — a part always has physics — but its `Default` form
+        // never absent, a part always has physics, but its `Default` form
         // carries no numbers at all: the engine derives them from the
         // material. So the box does not say "has value", it says which of
         // the enum's two forms this is, and the five fields appear only for
@@ -710,7 +710,7 @@ fn channel(value: f32) -> u8 {
 }
 
 /// Splits `edit::edit_text`'s comma-joined text back into one seed value per
-/// label — the two are built from the same match arms in
+/// label, the two are built from the same match arms in
 /// `Properties::edit_kind`/`edit::edit_text`, so the split always has
 /// exactly `labels.len()` pieces.
 const VECTOR2: &[Field] = &[decimal("X"), decimal("Y")];
@@ -731,7 +731,7 @@ const RECT: &[Field] = &[
 ];
 const NUMBER_RANGE: &[Field] = &[decimal("Min"), decimal("Max")];
 /// The five numbers a `PhysicalProperties::Custom` carries, in the order
-/// Roblox's own `PhysicalProperties.new` takes them — so a reader comparing
+/// Roblox's own `PhysicalProperties.new` takes them, so a reader comparing
 /// against the API, or against Studio's panel, finds them where they expect.
 const PHYSICAL_PROPERTIES: &[Field] = &[
     decimal("Density"),
@@ -743,7 +743,7 @@ const PHYSICAL_PROPERTIES: &[Field] = &[
 const FONT: &[Field] = &[text("Family"), text("Weight"), text("Style")];
 
 /// A `Faces`' six sides, in the order Roblox's own `Enum.NormalId` lists
-/// them — so a reader comparing against Studio finds them where they expect.
+/// them, so a reader comparing against Studio finds them where they expect.
 const FACES: &[&str] = &["Right", "Top", "Back", "Left", "Bottom", "Front"];
 const AXES: &[&str] = &["X", "Y", "Z"];
 

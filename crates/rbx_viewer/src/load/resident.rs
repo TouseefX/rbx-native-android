@@ -7,14 +7,14 @@
 //! decoding them again free, and on a real place that decode was most of a
 //! reload. So what they decoded to stays here, keyed by the very reference
 //! the scene asks with, for as long as the `Headless` (or the one-shot load)
-//! that owns this lives — and only a reference never seen before touches the
+//! that owns this lives, and only a reference never seen before touches the
 //! disk.
 //!
-//! A failure is remembered too, with its warning. One of the asset's own —
+//! A failure is remembered too, with its warning. One of the asset's own,
 //! a 404, a file the content package does not hold, bytes that will not
-//! decode — is remembered for good: asking again cannot change the answer,
-//! and the ask is the expensive part. One of the machine's — a request that
-//! did not complete, a cache that would not write — is remembered only until
+//! decode, is remembered for good: asking again cannot change the answer,
+//! and the ask is the expensive part. One of the machine's, a request that
+//! did not complete, a cache that would not write, is remembered only until
 //! the next load: the load that hit it asks for the same reference from
 //! several passes (a decal image and a material map can name one asset) and
 //! must not download it that many times, while the next `Headless::reload`
@@ -28,7 +28,7 @@
 //! A [`Resident::streaming`] one never waits for an asset. A reference it has
 //! not seen is handed to the background pool (see [`fetcher`]) and answered
 //! as absent for now; the caller draws the fallback and polls [`Resident::poll`]
-//! once a tick for what has landed since. That is what a viewport uses — a
+//! once a tick for what has landed since. That is what a viewport uses, a
 //! keystroke that names a new `MeshId` must not put a download between two
 //! frames.
 //!
@@ -57,7 +57,7 @@ use crate::scene::UnionEvaluations;
 /// failed for a reason of the moment, before it gives up until the next load.
 ///
 /// Waiting for the next reload is right for the blocking path, which has
-/// nowhere to put a late arrival; a viewport does — [`Resident::poll`] runs
+/// nowhere to put a late arrival; a viewport does, [`Resident::poll`] runs
 /// every tick and its caller rebuilds what settled. An editor left open on a
 /// place whose images tripped the Open Cloud rate limit should fill them in
 /// by itself, not stay half-blank until somebody edits something.
@@ -66,8 +66,8 @@ const RETRIES: u32 = 2;
 /// The asset endpoints ask for five seconds (`retry-after: 5`) and
 /// `rbx_cloud` has already waited out several of those by the time a failure
 /// reaches here, so this is another five on top rather than a guess. It does
-/// not pretend to cover a quota window that has gone badly over — nothing a
-/// viewport can do in one tick would — only to catch the common case, where
+/// not pretend to cover a quota window that has gone badly over, nothing a
+/// viewport can do in one tick would, only to catch the common case, where
 /// the load merely crossed the line at the end.
 const RETRY_DELAY: Duration = Duration::from_secs(5);
 
@@ -81,11 +81,11 @@ pub(crate) struct Resident {
     meshes: Table<Arc<rbx_mesh::SkinnedMesh>>,
     bytes: Table<Vec<u8>>,
     /// The unions' booleans, which are a function of the asset bytes alone
-    /// and the one CPU-heavy step of resolving a scene — see
+    /// and the one CPU-heavy step of resolving a scene, see
     /// `scene::union::Evaluations`.
     pub(crate) unions: UnionEvaluations,
     /// Where a reference this has never seen is fetched and decoded, or `None`
-    /// to resolve it in the calling thread instead — see the module doc.
+    /// to resolve it in the calling thread instead, see the module doc.
     fetcher: Option<Fetcher>,
 }
 
@@ -97,20 +97,20 @@ pub(crate) struct Settled {
     /// anything it draws has to be re-resolved.
     pub(crate) references: Vec<AssetRef>,
     /// The warning of each of those that failed, once per reference for the
-    /// life of this `Resident` — a fetch that cannot succeed is not worth
+    /// life of this `Resident`: a fetch that cannot succeed is not worth
     /// saying so about on every later edit.
     pub(crate) warnings: Vec<String>,
 }
 
 impl Resident {
     /// One that hands every unseen reference to a background pool and never
-    /// blocks — see the module doc.
+    /// blocks, see the module doc.
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn streaming() -> Self {
         Resident::fed_by(assets::source())
     }
 
-    /// [`Resident::streaming`] against a source of the caller's choosing —
+    /// [`Resident::streaming`] against a source of the caller's choosing,
     /// what a test uses to stream assets with no cache directory and no
     /// network anywhere in reach.
     #[cfg(not(target_arch = "wasm32"))]
@@ -132,7 +132,7 @@ impl Resident {
     }
 
     /// Every decoded image among `references`, decoding only what was never
-    /// asked for before, plus — for a blocking `Resident` — the warning of
+    /// asked for before, plus, for a blocking `Resident`, the warning of
     /// every one that failed, whether it failed just now or earlier in the
     /// same load. A streaming one answers only from memory, queues whatever
     /// is missing and reports its warnings through [`Resident::poll`]
@@ -153,7 +153,7 @@ impl Resident {
     }
 
     /// Whether `reference` was asked for as an image and would not download
-    /// or decode — for an edit deciding whether a face it cannot paint is
+    /// or decode, for an edit deciding whether a face it cannot paint is
     /// one a full build would have left unpainted too, or one nobody has
     /// fetched yet.
     pub(crate) fn image_failed(&self, reference: &AssetRef) -> bool {
@@ -192,7 +192,7 @@ impl Resident {
         }
     }
 
-    /// Which of `references` [`Resident::bytes`] has failed for good — not
+    /// Which of `references` [`Resident::bytes`] has failed for good, not
     /// for a reason of the moment, which the next load asks about again:
     /// what a caller tells apart from "still coming".
     pub(crate) fn failed_bytes(&self, references: &[AssetRef]) -> Vec<AssetRef> {
@@ -206,7 +206,7 @@ impl Resident {
     }
 
     /// Which of `references` this has an answer to, `None` where the answer
-    /// was a failure and absent where it is still coming — what a renderer
+    /// was a failure and absent where it is still coming, what a renderer
     /// pass that uploads an image itself needs in order to tell "never" from
     /// "not yet" (see `renderer::particles`, whose emitters are dropped
     /// outright by the first and must survive the second).
@@ -268,7 +268,7 @@ impl Resident {
     }
 
     /// Blocks until nothing is in flight or `timeout` runs out, filing
-    /// everything that lands. Never called from a render thread — it exists
+    /// everything that lands. Never called from a render thread, it exists
     /// for a test and for a caller with no frame to draw meanwhile.
     #[cfg(test)]
     pub(crate) fn settle(&mut self, timeout: Duration) -> Settled {
@@ -294,7 +294,7 @@ impl Resident {
     /// fixture whose assets are all in the on-disk cache, without evicting the
     /// cache itself and measuring a download. The next request for the
     /// reference is skipped too, so the reload that stages the edit rebuilds
-    /// the place without it — see [`Table::forget`].
+    /// the place without it, see [`Table::forget`].
     pub(crate) fn forget(&mut self, reference: &AssetRef) {
         self.images.forget(reference);
         self.meshes.forget(reference);
@@ -319,7 +319,7 @@ impl Resident {
 
     /// Drops every remembered transient failure, so the next ask for it
     /// fetches again. Called once at the start of every load (see
-    /// `Loaded::from_dom`): that is the unit a retry is worth — see the
+    /// `Loaded::from_dom`): that is the unit a retry is worth, see the
     /// module doc.
     pub(crate) fn forget_failures(&mut self) {
         self.images.forget_failures();
@@ -352,7 +352,7 @@ struct Table<T> {
     /// the whole of what the Output dock needs.
     warned: Vec<AssetRef>,
     /// References to answer as absent *without* requesting, exactly once
-    /// more — see [`Table::forget`].
+    /// more, see [`Table::forget`].
     skipped: Vec<AssetRef>,
     /// Transient failures to ask about again, and the moment each is due.
     /// Kept out of `entries` meanwhile, so the reference reads as still
@@ -392,7 +392,7 @@ impl<T> Table<T> {
 
 impl<T: Clone> Table<T> {
     /// Answers `references` from what is already here, asking `load` only
-    /// for the ones that are not — never twice for the same reference, a
+    /// for the ones that are not, never twice for the same reference, a
     /// remembered failure included, until [`Table::forget_failures`] lets a
     /// transient one go. A reference `load` answers nothing for is asked
     /// again next time.
@@ -449,7 +449,7 @@ impl<T: Clone> Table<T> {
                 }
                 // Tried and failed: asking again would fail again.
                 Some(Err(_)) => {}
-                // Already waiting out a retry — see [`Table::land`].
+                // Already waiting out a retry, see [`Table::land`].
                 None if self.retry.iter().any(|(held, ..)| *held == reference) => {}
                 None => match self.skipped.iter().position(|held| *held == reference) {
                     Some(at) => {
@@ -525,7 +525,7 @@ impl<T: Clone> Table<T> {
     /// The skip is what makes the hook usable: a reload right after this
     /// rebuilds the place as it stood before the asset was ever seen, instead
     /// of re-fetching it from the disk cache in the same millisecond. The
-    /// request after that — the edit the harness is actually measuring — goes
+    /// request after that, the edit the harness is actually measuring, goes
     /// through as normal.
     fn forget(&mut self, reference: &AssetRef) {
         self.entries.remove(reference);
@@ -537,7 +537,7 @@ impl<T: Clone> Table<T> {
     }
 }
 
-/// `references` without repeats, in first-seen order — the order the
+/// `references` without repeats, in first-seen order, the order the
 /// progress line and the warnings then come out in.
 fn distinct(references: &[AssetRef]) -> Vec<AssetRef> {
     let mut seen = HashSet::new();

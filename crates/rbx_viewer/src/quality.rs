@@ -1,9 +1,9 @@
 //! Roblox's graphics quality levels, as one table of renderer knobs.
 //!
 //! `Enum.QualityLevel` is `Automatic` plus `Level01` to `Level21`, and Roblox
-//! documents only what rises with it — "rendering distance, shading quality,
+//! documents only what rises with it, "rendering distance, shading quality,
 //! apparent geometry and texture resolution, limits on particles, fidelity of
-//! trail effects, post-effect quality and more" — never which level turns what
+//! trail effects, post-effect quality and more", never which level turns what
 //! on. Entry point: [`QualityLevel::profile`], whose bands live in `table`;
 //! `Automatic` is [`FrameRateManager`], in `auto`.
 
@@ -33,7 +33,7 @@ impl QualityLevel {
     pub const MIN: u8 = 1;
     pub const MAX: u8 = 21;
 
-    /// The level a frame is actually drawn at — what a host showing the level on
+    /// The level a frame is actually drawn at, what a host showing the level on
     /// screen displays.
     ///
     /// `Automatic` answers [`QualityLevel::MAX`]: choosing a level from the
@@ -82,7 +82,7 @@ impl FromStr for QualityLevel {
     type Err = String;
 
     /// `auto`/`automatic`, a bare `1` to `21`, or Roblox's own `Level07`
-    /// spelling — case-insensitively, since the enum item is `Level07` while a
+    /// spelling, case-insensitively, since the enum item is `Level07` while a
     /// command line is habitually lowercase.
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let trimmed = text.trim();
@@ -134,7 +134,7 @@ pub(crate) struct QualityProfile {
     /// are uploaded at all; `usize::MAX` is every one of them.
     pub(crate) local_lights_max: usize,
     /// How many `SpotLight`/`SurfaceLight`s with `Shadows = true` get their own
-    /// depth map, at most — one map per light, so this is also the shadow
+    /// depth map, at most, one map per light, so this is also the shadow
     /// texture array's own layer count. `PointLight`s never cast one (see
     /// `renderer::shadow::local`), whatever this allows.
     pub(crate) local_shadow_lights_max: usize,
@@ -156,7 +156,7 @@ pub(crate) struct QualityProfile {
     pub(crate) decals: bool,
     /// Always true in the table; `--no-particles` is the only thing that turns
     /// it off, by overriding the field after `QualityLevel::profile()` builds
-    /// it (see `lib::run`) — no level in Roblox's own table drops particles.
+    /// it (see `lib::run`), no level in Roblox's own table drops particles.
     pub(crate) particles: bool,
     /// Always true in the table; `--no-beams` is the only thing that turns it
     /// off, the same way `--no-particles` overrides `particles` above.
@@ -172,7 +172,7 @@ pub(crate) struct QualityProfile {
     ///
     /// The one knob baked into the pipelines rather than into a uniform or a bind
     /// group, so crossing the level it changes at is the single expensive switch
-    /// in the table — see `renderer::switch`. Clamped down where the adapter
+    /// in the table, see `renderer::switch`. Clamped down where the adapter
     /// cannot multisample the HDR format (`renderer::post`).
     pub(crate) msaa_samples: u32,
     /// How far from the eye `Terrain.Decoration`'s grass still grows, in
@@ -191,7 +191,7 @@ pub(crate) struct QualityProfile {
     /// `Renderer::animating`).
     pub(crate) water_waves: bool,
     /// Whether terrain water reflects the scene around it (screen-space, see
-    /// `renderer/water.wgsl`) rather than only the sky — which is itself the
+    /// `renderer/water.wgsl`) rather than only the sky, which is itself the
     /// flat sky colour where `env_reflections` is off.
     pub(crate) water_reflections: bool,
 }

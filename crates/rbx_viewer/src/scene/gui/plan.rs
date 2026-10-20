@@ -34,7 +34,7 @@ pub(super) use image::{Fill, ScaleMode};
 pub(crate) use node::Screen;
 pub(in crate::scene::gui) use node::{collect_assets_of, collect_fonts_of, Group, Node, Span};
 // Reaches all the way to `renderer::gui::quads::image`, unlike `Fill`/
-// `ScaleMode` above — see the type's own doc comment.
+// `ScaleMode` above, see the type's own doc comment.
 pub(crate) use image::{placeholder as image_placeholder, PixelRect};
 pub(crate) use layouts::Align;
 pub(super) use layouts::{layout_of, Flex, FlexItem, Grid, Layout, LineAlign, List, Page, Table};
@@ -62,7 +62,7 @@ const BILLBOARD_CLASS: &str = "BillboardGui";
 const SURFACE_CLASS: &str = "SurfaceGui";
 const ELEMENT_CLASS: &str = "GuiObject";
 /// The three text classes share every text property, so one reader serves
-/// all of them — and their `UIStroke` outlines glyphs rather than the box;
+/// all of them, and their `UIStroke` outlines glyphs rather than the box;
 /// only the `TextBox` placeholder rule tells them apart.
 const TEXT_CLASSES: [&str; 3] = ["TextLabel", "TextButton", "TextBox"];
 const TEXT_BOX_CLASS: &str = "TextBox";
@@ -75,7 +75,7 @@ const GROUP_CLASS: &str = "CanvasGroup";
 /// ever seen on a tree built in code: a place file serializes the property.
 const DEFAULT_BORDER: [f32; 3] = [27.0 / 255.0, 42.0 / 255.0, 53.0 / 255.0];
 
-/// Every `ScreenGui` in the DOM, in the order the tree holds them — disabled
+/// Every `ScreenGui` in the DOM, in the order the tree holds them, disabled
 /// ones too, flagged, so an editor can still lay one out on its own (see
 /// `Screen::enabled`); the overlay itself draws only the enabled. Every
 /// `BillboardGui`/`SurfaceGui` comes too, as a tree for an editor's canvas
@@ -100,7 +100,7 @@ pub(crate) fn plan(
     screens
 }
 
-/// The one tree `root` — a `ScreenGui`, `BillboardGui` or `SurfaceGui` —
+/// The one tree `root`, a `ScreenGui`, `BillboardGui` or `SurfaceGui`,
 /// planned exactly as [`plan`] plans it, without walking the rest of the
 /// DOM: `None` once it is not a tree [`plan`] would list at all (gone, no
 /// such root, or under a `StarterGui` hiding its contents).
@@ -212,7 +212,7 @@ pub(super) fn elements(
             continue;
         };
         // The class is asked here rather than left to `element`, which also
-        // answers `None` for a `Visible = false` element — a subtree Roblox
+        // answers `None` for a `Visible = false` element, a subtree Roblox
         // hides whole, and that must not be walked around.
         if database.is_subclass_of(instance.class(), ELEMENT_CLASS) {
             if let Some(node) = element(dom, database, styles, materials, child) {
@@ -319,7 +319,7 @@ fn is_text(database: &ReflectionDatabase, class: &str) -> bool {
         .any(|text| database.is_subclass_of(class, text))
 }
 
-/// The children of `class` (or a subclass) among `children`, in tree order —
+/// The children of `class` (or a subclass) among `children`, in tree order,
 /// the pool every "first `UICorner`/`UIStroke`/`UIGradient`" is drawn from.
 fn modifiers<'a>(
     dom: &'a WeakDom,

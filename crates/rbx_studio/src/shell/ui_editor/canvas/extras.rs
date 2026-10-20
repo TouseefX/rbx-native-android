@@ -1,7 +1,7 @@
 //! The overlays that come and go with what is selected: the corner radius
 //! handles, the auto layout on show (its container, its children's places
-//! in it, its gaps and padding), where a reordered child would land, and —
-//! with a modifier selected — the element it shapes.
+//! in it, its gaps and padding), where a reordered child would land, and,
+//! with a modifier selected, the element it shapes.
 
 use gpui_kit::*;
 use rbx_viewer::GuiBox;

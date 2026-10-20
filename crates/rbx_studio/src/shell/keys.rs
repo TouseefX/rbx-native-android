@@ -4,9 +4,9 @@
 //!
 //! `RBX_STUDIO_DELETE=1` and `RBX_STUDIO_INSERT=Part|Folder|Script|
 //! LocalScript|ModuleScript` apply one of these once, right after startup,
-//! through the exact path a keypress would use — debugging aids for a
+//! through the exact path a keypress would use, debugging aids for a
 //! screenshot, since nothing else can send a keystroke to the Explorer on
-//! the editor's behalf (see `AGENTS.md`'s safety rules).
+//! the editor's behalf.
 
 use gpui_kit::{Context, Keystroke, Window};
 use rbx_dom::{CFrameData, Ref, Variant, Vector3Data, WeakDom};
@@ -45,7 +45,7 @@ const MODULE_CLASS_TEMPLATE: &str = concat!(
 );
 
 /// The starter `Source` `insert_instance` writes for a freshly inserted
-/// `class`, or `None` for anything that isn't a script — `Part`'s own
+/// `class`, or `None` for anything that isn't a script, `Part`'s own
 /// defaults and every other class stay untouched, exactly as before this
 /// existed. `ModuleScript` gets [`MODULE_TEMPLATE`]; every other script class
 /// (`Script`, `LocalScript`, and any future `LuaSourceContainer` subclass)
@@ -70,14 +70,14 @@ pub(crate) const INSERT_VARIABLE: &str = "RBX_STUDIO_INSERT";
 pub(crate) const DELETE_VARIABLE: &str = "RBX_STUDIO_DELETE";
 
 /// What one keystroke does in the Explorer, or `None` if it means something
-/// else there (a filter box or the viewport never dispatch here at all — see
+/// else there (a filter box or the viewport never dispatch here at all, see
 /// `Shell::handle_explorer_key`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Action {
     Delete,
     InsertPart,
     InsertFolder,
-    /// The `+` picker, on the selected row — real Studio's own shortcut for
+    /// The `+` picker, on the selected row, real Studio's own shortcut for
     /// it (`studio/explorer.md`).
     Insert,
     Rename,
@@ -102,7 +102,7 @@ pub(super) fn action_for(keystroke: &Keystroke) -> Option<Action> {
 
 /// Whether an instance can be removed at all. A service cannot: Roblox
 /// creates exactly one of each, and a place whose `Workspace` has been
-/// deleted is not a place this editor — or Roblox — can open again. The same
+/// deleted is not a place this editor, or Roblox, can open again. The same
 /// singleton rule `explorer::reparent` applies to dragging one somewhere
 /// else and `shell::clipboard` to copying one.
 pub(super) fn removable(dom: &WeakDom, database: &ReflectionDatabase, reference: Ref) -> bool {
@@ -119,7 +119,7 @@ pub(super) fn selection_after_removal(selected: Option<Ref>, removed: &[Ref]) ->
 impl Shell {
     /// The Explorer's `on_key_down` handler (see `Shell::instance_tree`). It
     /// only ever runs while some row in the tree holds focus, since that is
-    /// the only place GPUI's dispatch path puts it — a filter box or the
+    /// the only place GPUI's dispatch path puts it, a filter box or the
     /// viewport keeps its own focus and never bubbles a key here.
     pub(super) fn handle_explorer_key(
         &mut self,
@@ -184,7 +184,7 @@ impl Shell {
             .collect();
         self.dom = dom;
         // One `Change::Removed` per instance in each subtree, each taken out
-        // of the viewport in place — and put back the same way when this is
+        // of the viewport in place, and put back the same way when this is
         // undone, since the log is reflected against whichever DOM stands.
         let changes = self.dom.take_changes();
 
@@ -211,7 +211,7 @@ impl Shell {
     /// `Source` if it's a script (see [`default_template`]). Roblox parents
     /// almost anything almost anywhere in practice, so this stays permissive
     /// rather than special-casing classes that cannot sensibly take
-    /// children — the two quick-insert keys only ever pass `"Part"` or
+    /// children, the two quick-insert keys only ever pass `"Part"` or
     /// `"Folder"` here anyway. `pub(crate)`: also `menu_bar`'s Insert
     /// Part/Folder/Script/LocalScript/ModuleScript items' entry point, so a
     /// menu click runs the exact same path the quick-insert keys do (its
@@ -246,7 +246,7 @@ impl Shell {
     /// The user-defined entries of the ribbon's Script menu and the menu
     /// bar's Model menu (see `crate::script_templates`): inserts the `index`th
     /// extra template as its own class with its own source. An index that no
-    /// longer resolves is a no-op rather than a panic — both menus are built
+    /// longer resolves is a no-op rather than a panic, both menus are built
     /// from this same list (the ribbon a frame earlier, the menu bar once at
     /// startup), but nothing ties their lifetimes together.
     pub(crate) fn insert_user_template(&mut self, index: usize, cx: &mut Context<Self>) {
@@ -258,7 +258,7 @@ impl Shell {
 
     /// The ribbon Part menu's Block/Sphere/Cylinder items (see
     /// `shell::ribbon::insert_tiles`): all three insert a bare `Part` and are
-    /// told apart only by `shape` (`Enum.PartType`) — Wedge/CornerWedge
+    /// told apart only by `shape` (`Enum.PartType`), Wedge/CornerWedge
     /// disambiguate through their own class instead and go through
     /// [`insert_instance`](Self::insert_instance) unchanged.
     pub(crate) fn insert_part(&mut self, class: &str, shape: u32, cx: &mut Context<Self>) {
@@ -267,7 +267,7 @@ impl Shell {
 
     /// "Insert ModuleScript (Class)" (see `menu_bar`): the one script insert
     /// that picks a specific template rather than the per-class default
-    /// [`insert_instance`](Self::insert_instance) uses — the OOP starter
+    /// [`insert_instance`](Self::insert_instance) uses, the OOP starter
     /// `ROADMAP.md`'s "New-script templates" entry asks for alongside the
     /// plain-table default `ModuleScript` otherwise gets.
     pub(crate) fn insert_class_module(&mut self, cx: &mut Context<Self>) {
@@ -284,9 +284,9 @@ impl Shell {
     /// [`insert_part`](Self::insert_part) and
     /// [`insert_class_module`](Self::insert_class_module): inserts `class`,
     /// applies `BasePart` defaults (writing `shape` too, for the classes that
-    /// actually declare it — see [`apply_part_defaults`]) and, when `source`
+    /// actually declare it, see [`apply_part_defaults`]) and, when `source`
     /// is `Some`, writes it to the new instance's `Source` through
-    /// `script_editor::source::write` — the same path a script tab's own
+    /// `script_editor::source::write`: the same path a script tab's own
     /// edits commit through, so undo, Ctrl+S and the script editor need to
     /// know nothing about how the instance got here.
     fn insert_instance_with_source(
@@ -342,7 +342,7 @@ impl Shell {
 
     /// `RBX_STUDIO_DELETE=1` / `RBX_STUDIO_INSERT=Part|Folder|Script|...`:
     /// documented in this module's doc comment. An unrecognized class is
-    /// silently ignored, like `RBX_STUDIO_EDIT`'s malformed specs — a
+    /// silently ignored, like `RBX_STUDIO_EDIT`'s malformed specs, a
     /// screenshot aid, not user input, and must never crash a debugging
     /// session.
     pub(super) fn apply_debug_explorer_action(&mut self, cx: &mut Context<Self>) {
@@ -361,7 +361,7 @@ impl Shell {
 }
 
 /// `Enum.PartType`, for the classes the Part insert menu can create through a
-/// bare `Part` — Wedge/CornerWedge disambiguate through their own class
+/// bare `Part`: Wedge/CornerWedge disambiguate through their own class
 /// instead (see `rbx_viewer::scene::shape::resolve` and
 /// `Shell::insert_instance_with_source`).
 pub(super) const PART_TYPE_BALL: u32 = 0;
@@ -389,8 +389,8 @@ fn part_defaults_shape(
 /// What Change Class gives an instance that had no value at all for these:
 /// [`part_defaults`]'s keys for a `BasePart`, with `Part`'s own block `shape`,
 /// each at `class`'s own default where the per-class table records one in the
-/// type the DOM stores it as — a `TrussPart` is 2 × 2 × 2, not a `Part`'s
-/// 4 × 1.2 × 2 — and nothing for any other class.
+/// type the DOM stores it as, a `TrussPart` is 2 × 2 × 2, not a `Part`'s
+/// 4 × 1.2 × 2, and nothing for any other class.
 pub(super) fn class_defaults(
     database: &ReflectionDatabase,
     class: &str,
@@ -424,7 +424,7 @@ fn apply_part_defaults(dom: &mut WeakDom, referent: Ref, shape: Option<u32>) {
 /// behind a `pub(crate)` `apply` function private to `rbx_lua`, and making a
 /// whole module public across crates for one small constant table is not
 /// worth it. Applies to any `BasePart` subclass the insert menus create
-/// (`Part`, `WedgePart`, `CornerWedgePart`) — `shape` is listed only when
+/// (`Part`, `WedgePart`, `CornerWedgePart`), `shape` is listed only when
 /// the caller passes one, since `WedgePart`/`CornerWedgePart` don't actually
 /// declare a `Shape` property in Roblox's own reflection data.
 fn part_defaults(shape: Option<u32>) -> Vec<(&'static str, Variant)> {

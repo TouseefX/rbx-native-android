@@ -46,7 +46,7 @@ pub(crate) use filter::{ContextFilter, OutputFilter};
 
 /// How many runs the log keeps before dropping the oldest. Unlike
 /// `History`'s 50 (whole-DOM snapshots, genuinely expensive to keep many of),
-/// an entry here is two short strings — a much higher cap costs nothing, so
+/// an entry here is two short strings, a much higher cap costs nothing, so
 /// this is an order of magnitude up rather than matched exactly.
 pub(crate) const CAP: usize = 200;
 
@@ -56,17 +56,17 @@ pub(crate) const CAP: usize = 200;
 const SOURCE_MAX_LEN: usize = 80;
 
 /// Past this many characters a row's result is cut. Rows wrap, so this is
-/// far above the Command Bar label's 200 — a path in a warning has to fit —
+/// far above the Command Bar label's 200, a path in a warning has to fit,
 /// but still a cap: a `print` loop's whole output would otherwise wrap into
 /// one row hundreds of lines tall.
 const LABEL_MAX_LEN: usize = 2000;
 
-/// The `source` every [`OutputLog::push_warning`] entry carries — there is no
+/// The `source` every [`OutputLog::push_warning`] entry carries, there is no
 /// command behind a warning the way there is behind a Command Bar run, so
 /// this is what shows in the row's source column instead.
 const WARNING_SOURCE: &str = "warning";
 
-/// The narrowest the Output search box may get as the dock shrinks — it
+/// The narrowest the Output search box may get as the dock shrinks, it
 /// otherwise takes all the width the strip has left.
 const SEARCH_MIN_WIDTH: f32 = 140.0;
 
@@ -78,8 +78,8 @@ pub(crate) struct OutputEntry {
     id: u64,
     source: String,
     feedback: Feedback,
-    /// Captured unconditionally at [`OutputEntry::new`] time — cheap to keep
-    /// on every entry — but only ever painted when the Output panel's own
+    /// Captured unconditionally at [`OutputEntry::new`] time, cheap to keep
+    /// on every entry, but only ever painted when the Output panel's own
     /// "Show Timestamp" toggle (`Shell::output_show_timestamps`) is on; see
     /// [`OutputEntry::timestamp_label`].
     timestamp: SystemTime,
@@ -122,7 +122,7 @@ impl OutputEntry {
         self.feedback.is_error()
     }
 
-    /// Which color/icon family this row paints with — see `row_kind::RowKind`.
+    /// Which color/icon family this row paints with, see `row_kind::RowKind`.
     pub(crate) fn kind(&self) -> RowKind {
         RowKind::of(&self.feedback)
     }
@@ -132,7 +132,7 @@ impl OutputEntry {
     }
 
     /// Whether this entry answers a free-text search, matched against both
-    /// halves of what the row actually shows — the command that was run and
+    /// halves of what the row actually shows, the command that was run and
     /// the result beside it. Case-insensitive, because nobody searching a log
     /// for `attempt to index nil` types it the way the error did.
     ///
@@ -160,7 +160,7 @@ impl OutputEntry {
 }
 
 /// Collapses embedded newlines into one row, then cuts to `max_len`
-/// characters — the same shape as `command_bar::feedback::truncate`, kept
+/// characters, the same shape as `command_bar::feedback::truncate`, kept
 /// separate since the two truncate to different lengths for different
 /// reasons (see that function's own doc comment).
 fn truncate(text: &str, max_len: usize) -> SharedString {
@@ -171,7 +171,7 @@ fn truncate(text: &str, max_len: usize) -> SharedString {
     }
 }
 
-/// A bounded, append-only log of Command Bar runs — oldest first, newest at
+/// A bounded, append-only log of Command Bar runs, oldest first, newest at
 /// the bottom, the order Studio's own Output window scrolls in.
 #[derive(Default)]
 pub(crate) struct OutputLog {
@@ -186,7 +186,7 @@ pub(crate) struct OutputLog {
 
 impl OutputLog {
     /// Appends one run, dropping the oldest entry first if the log is
-    /// already at [`CAP`] — same drop-oldest shape as `History::push`.
+    /// already at [`CAP`], same drop-oldest shape as `History::push`.
     pub(crate) fn push(&mut self, source: &str, feedback: Feedback) {
         if self.entries.len() >= CAP {
             let dropped = self.entries.remove(0).id;
@@ -290,7 +290,7 @@ impl OutputLog {
     }
 
     /// Appends one warning from somewhere other than a Command Bar run (an
-    /// asset-fetch/decode failure, a texture that fell back to a default) —
+    /// asset-fetch/decode failure, a texture that fell back to a default),
     /// same drop-oldest-at-[`CAP`] shape as [`OutputLog::push`], which this
     /// is not: it is neither a run's output nor an error, and
     /// [`OutputFilter::Warnings`] is the bucket that owns it.
@@ -312,7 +312,7 @@ impl OutputLog {
     }
 
     /// The entries the panel draws: the level and context filters, then the
-    /// search box's text narrowing what survives them. `query` is taken already trimmed —
+    /// search box's text narrowing what survives them. `query` is taken already trimmed,
     /// the caller reads it off an `InputState`, where a trailing space is a
     /// keystroke in progress rather than part of what is being looked for.
     pub(crate) fn filtered<'a>(
@@ -329,7 +329,7 @@ impl OutputLog {
 
 impl Shell {
     /// Recalls a past run's source back into the Command Bar's input, focused
-    /// and ready to edit or re-run — the click-to-recall alternative to
+    /// and ready to edit or re-run, the click-to-recall alternative to
     /// Studio's own Up/Down-through-history (see this module's doc comment
     /// for why the Output panel takes that approach instead).
     pub(super) fn recall_command(

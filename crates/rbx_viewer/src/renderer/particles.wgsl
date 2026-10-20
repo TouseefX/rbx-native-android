@@ -2,8 +2,8 @@
 //
 // Unlit: particles read no lighting uniform at all, matching how Roblox itself
 // shades them (`LightInfluence` is a documented TODO). `LightEmission` instead
-// lerps the blend equation itself between straight alpha and additive — see
-// `fs_main` — by scaling the premultiplied output alpha down to zero as it
+// lerps the blend equation itself between straight alpha and additive, see
+// `fs_main`: by scaling the premultiplied output alpha down to zero as it
 // approaches 1.
 
 struct Camera {
@@ -73,7 +73,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Premultiplied output with the pipeline's (One, OneMinusSrcAlpha) blend
     // state: at `light_emission` 0 this is exactly straight alpha blending
     // (`dst *= 1 - alpha`); at 1 the output alpha is zero, so `dst` passes
-    // through untouched and the colour term alone adds on top of it — additive.
+    // through untouched and the colour term alone adds on top of it, additive.
     // Anything between lerps continuously from one equation to the other.
     let color = sampled.rgb * in.color;
     return vec4<f32>(color * alpha, alpha * (1.0 - in.light_emission));

@@ -20,9 +20,9 @@ use super::Shell;
 /// side holds a DOM to walk (see `rbx_viewer::pick::Selected`).
 ///
 /// Paired with `crate::transform::Targets::read`, which flattens the entries
-/// this returns: one derivation of what a selected `Model` covers — dedup
+/// this returns: one derivation of what a selected `Model` covers, dedup
 /// included, so a model selected alongside its own child is outlined by the
-/// one box that spans both rather than by two drawn over each other — and so
+/// one box that spans both rather than by two drawn over each other, and so
 /// the box the user sees and the handles the cursor can reach are built from
 /// the same parts.
 ///
@@ -54,7 +54,7 @@ pub(super) fn outlined(
 /// Together because they are one answer to one question. What a selected
 /// `Model` covers changes whenever the DOM does, so a script that parents
 /// another `Part` under it moves the box and the gizmo as surely as picking a
-/// different model would — and reading back only one of the two leaves the
+/// different model would, and reading back only one of the two leaves the
 /// other describing the membership the selection had before.
 pub(super) fn shown(
     dom: &WeakDom,
@@ -67,8 +67,8 @@ pub(super) fn shown(
     )
 }
 
-/// Whether `nearest` — the part a click actually lands on, `None` for a
-/// click on nothing — is already part of the selection `outlined` describes:
+/// Whether `nearest`: the part a click actually lands on, `None` for a
+/// click on nothing, is already part of the selection `outlined` describes:
 /// a selected part itself, or a part beneath a selected `Model`. What lets a
 /// Move body-drag begin on it rather than re-select it (see
 /// `Shell::pick_in_viewport`).
@@ -80,8 +80,8 @@ impl Shell {
     /// Re-resolves the selection against the current `self.dom` and sends the
     /// viewport both halves of it (see [`shown`]).
     ///
-    /// One method for both of its callers — a selection change, and a reload
-    /// — because a reload is the other way what a selected container covers
+    /// One method for both of its callers, a selection change, and a reload
+    /// because a reload is the other way what a selected container covers
     /// can change, and the user has no way to ask for the box again short of
     /// reselecting.
     pub(super) fn sync_viewport_selection(&mut self, cx: &mut Context<Self>) {
@@ -132,7 +132,7 @@ impl Selection {
         Selection(selected.into_iter().collect())
     }
 
-    /// The anchor — see this type's own doc comment — or `None` with nothing
+    /// The anchor, see this type's own doc comment, or `None` with nothing
     /// selected.
     pub(super) fn get(&self) -> Option<Ref> {
         self.0.first().copied()
@@ -143,7 +143,7 @@ impl Selection {
         &self.0
     }
 
-    /// Replaces the whole selection with at most one instance — a plain
+    /// Replaces the whole selection with at most one instance, a plain
     /// click, in the viewport or the Explorer, always replaces rather than
     /// extends. Reports whether anything changed so a caller redrawing on
     /// every tree update can stay quiet when it did not.
@@ -155,12 +155,12 @@ impl Selection {
     }
 
     /// `Shift`/`Ctrl`/`Cmd`-click: adds `reference` to the selection if it
-    /// was not already in it, or drops it if it was — the standard
+    /// was not already in it, or drops it if it was, the standard
     /// multi-select toggle. `creator-docs` (`studio/ui-overview.md`) only
     /// documents the "adds another object" half; toggling back off on a
     /// second click of the same object is not spelled out there, but is
     /// standard multi-select behaviour and what Studio itself does.
-    /// Replaces the whole selection, reporting whether it changed — what an
+    /// Replaces the whole selection, reporting whether it changed, what an
     /// undo needs, since a multi-selection survives one exactly as far as
     /// its referents still resolve.
     pub(super) fn replace(&mut self, selected: Vec<Ref>) -> bool {
@@ -184,8 +184,8 @@ impl Selection {
     }
 }
 
-/// Where a range starts: the first of `candidates` — the range anchor, then
-/// the selection's own anchor — that still has a visible row, else
+/// Where a range starts: the first of `candidates`: the range anchor, then
+/// the selection's own anchor, that still has a visible row, else
 /// `fallback`. An anchor deleted, collapsed away or filtered out by a search
 /// is skipped rather than shrinking every range to one row.
 pub(super) fn range_anchor(visible: &[Ref], candidates: [Option<Ref>; 2], fallback: Ref) -> Ref {
@@ -198,8 +198,8 @@ pub(super) fn range_anchor(visible: &[Ref], candidates: [Option<Ref>; 2], fallba
 
 /// A `Shift`-click's range: the rows of `visible` from `anchor` to
 /// `clicked`, both included, starting at the anchor so it stays the
-/// selection's own anchor. An anchor with no visible row — collapsed away or
-/// filtered out by a search — leaves just the clicked row.
+/// selection's own anchor. An anchor with no visible row, collapsed away or
+/// filtered out by a search, leaves just the clicked row.
 pub(super) fn range(visible: &[Ref], anchor: Ref, clicked: Ref) -> Vec<Ref> {
     let position = |target: Ref| visible.iter().position(|&row| row == target);
     match (position(anchor), position(clicked)) {
@@ -255,7 +255,7 @@ mod tests {
         let b = Ref::new(2);
         let mut selection = Selection::new([a]);
 
-        // Adds `b` alongside `a` rather than replacing it — this is the
+        // Adds `b` alongside `a` rather than replacing it, this is the
         // `Shift`/`Ctrl`/`Cmd`-click path, not a plain click.
         selection.toggle(b);
         assert_eq!(selection.all(), [a, b]);
@@ -409,7 +409,7 @@ mod tests {
         let database = ReflectionDatabase::embedded();
         let hits = [deep, loose];
 
-        // Nothing under the cursor selected yet — start at the nearest, and
+        // Nothing under the cursor selected yet, start at the nearest, and
         // stay on the raw part rather than reaching for its model.
         assert_eq!(from_click(&dom, &database, &hits, None, true), Some(deep));
         // A model picked by an earlier plain click is not itself a hit, so
@@ -433,7 +433,7 @@ mod tests {
     /// reload after it has to answer for: the box and the handles both cover
     /// the part that appeared, with nothing asked of the user.
     ///
-    /// Reading back only the targets — which is all a reload used to do —
+    /// Reading back only the targets, which is all a reload used to do,
     /// left a drag carrying three parts while the box drawn round them still
     /// spanned two.
     #[test]
@@ -477,7 +477,7 @@ mod tests {
     }
 
     /// `studio/pivot-tools.md`: "When you rotate the pivot of a model, the
-    /// bounding box of the model also rotates" — so the box the viewport
+    /// bounding box of the model also rotates", so the box the viewport
     /// outlines it with is squared to its pivot; a lone part's is its own.
     #[test]
     fn a_model_is_outlined_along_its_pivot_and_a_part_along_itself() {

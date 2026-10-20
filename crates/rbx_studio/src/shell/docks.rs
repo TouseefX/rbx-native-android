@@ -1,12 +1,12 @@
 //! Drawing the docks around the document: an edge, the docks stacked on
-//! it, their tab strips, and — while a drag is in flight — the targets a
+//! it, their tab strips, and, while a drag is in flight, the targets a
 //! drop can land on.
 //!
 //! Every target here is a real element sitting where the panel would
 //! actually go, rather than a rectangle computed from pointer coordinates.
 //! That is what makes the overlay honest: the thing that lights up *is*
 //! the thing that takes the drop, so the promise and the result cannot
-//! drift apart, and "half the dock" needs no arithmetic — it is a child
+//! drift apart, and "half the dock" needs no arithmetic, it is a child
 //! filling half of it.
 //!
 //! An edge holding nothing grows a **ghost dock** while a drag is in
@@ -31,14 +31,14 @@ use super::Shell;
 /// How long a ghost dock takes to open or shut. Short enough not to lag
 /// the pointer, long enough to read as the room being made rather than a
 /// column appearing from nowhere. Honours the editor's Reduce Motion
-/// setting for free — `transition` checks it.
+/// setting for free, `transition` checks it.
 const GHOST: Duration = Duration::from_millis(140);
 
 impl Shell {
     /// One edge: its resize handle and the docks stacked on it.
     ///
     /// Returns nothing at all for an edge nobody put a panel on and no
-    /// drag to offer it to — no column, no handle, no hairline — so
+    /// drag to offer it to, no column, no handle, no hairline, so
     /// emptying an edge gives the room back to the document rather than
     /// leaving a seam where a dock was.
     pub(super) fn dock_edge(
@@ -59,8 +59,8 @@ impl Shell {
 
         // Output collapses to its own strip, and only while it is the tab
         // showing in the edge's only dock: a second dock beside it would
-        // still need the height, and showing another tab — the Viewport
-        // dock it shares a strip with by default — opens the edge again.
+        // still need the height, and showing another tab, the Viewport
+        // dock it shares a strip with by default, opens the edge again.
         let collapsed = self.output_collapsed
             && shown.len() == 1
             && self.dock_showing(edge, shown[0]) == Some(Panel::Output);
@@ -147,7 +147,7 @@ impl Shell {
     }
 
     /// The strip itself, which is also the target that means "as a tab of
-    /// this dock" — aimed at past the last tab rather than at one of them.
+    /// this dock", aimed at past the last tab rather than at one of them.
     fn tab_strip(
         &self,
         edge: Edge,
@@ -233,7 +233,7 @@ impl Shell {
     /// shut when it ends.
     ///
     /// A child of the row rather than an overlay above it, which is what
-    /// keeps the three edges' targets from ever overlapping — they are
+    /// keeps the three edges' targets from ever overlapping, they are
     /// siblings in a flex row, so they cannot share a pixel.
     fn ghost_dock(
         &self,
@@ -286,7 +286,7 @@ impl Shell {
     /// drop to land beside itself, and closes on its own button.
     ///
     /// The tab is the grab handle for the whole dock, which is the gesture
-    /// every editor with movable panels uses — and the reason the panel's
+    /// every editor with movable panels uses, and the reason the panel's
     /// own name had to become data (see `shell::layout`) rather than the
     /// function that drew it.
     #[allow(clippy::too_many_arguments)]
@@ -332,8 +332,8 @@ impl Shell {
         .into_any_element()
     }
 
-    /// The tab a dock shows: its own active one, or — while the document
-    /// has set that one aside (see `Shell::hidden_panels`) — the first of
+    /// The tab a dock shows: its own active one, or, while the document
+    /// has set that one aside (see `Shell::hidden_panels`), the first of
     /// the rest. `None` when every tab it holds is set aside.
     fn dock_showing(&self, edge: Edge, index: usize) -> Option<Panel> {
         let group = self.layout.groups(edge).get(index)?;

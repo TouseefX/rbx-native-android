@@ -63,7 +63,7 @@ impl Shell {
     }
 
     /// Every selected part or model, a part inside a selected model left to
-    /// the model (`pick::selection`'s rule) — the instances with a pivot of
+    /// the model (`pick::selection`'s rule), the instances with a pivot of
     /// their own to edit.
     pub(super) fn pivot_owners(&self) -> Vec<Ref> {
         pick::selection(&self.dom, &self.database, self.selected_all())
@@ -75,7 +75,7 @@ impl Shell {
             .collect()
     }
 
-    /// Edit Pivot's tile, and beside it Snap and Reset — Studio keeps Snap
+    /// Edit Pivot's tile, and beside it Snap and Reset, Studio keeps Snap
     /// in a dropdown under the Pivot button; a row beside it is this
     /// ribbon's own way of showing a setting (see `ribbon`'s snap stack).
     pub(super) fn pivot_tiles(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {

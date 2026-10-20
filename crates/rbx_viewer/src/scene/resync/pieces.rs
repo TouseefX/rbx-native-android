@@ -1,7 +1,7 @@
 //! The union arm of [`Scene::resync_part`]: what a legacy
 //! `UnionOperation`/`NegateOperation` draws as after an edit to it.
 //!
-//! A union is the one instance a place draws as *several* boxes — the
+//! A union is the one instance a place draws as *several* boxes, the
 //! additive pieces recovered from its operation tree, when the boolean over
 //! that tree could not be computed (see `scene::union`). Each piece is its
 //! own instance in every box pass, told apart by its own
@@ -22,7 +22,7 @@ use super::Drawn;
 
 impl Scene {
     /// What `referent`'s re-planned union draws as, with `part` its own
-    /// freshly built box — suppressed here if the union's asset carved to
+    /// freshly built box, suppressed here if the union's asset carved to
     /// anything at all, exactly as `Scene::resolve_unions` suppresses it.
     ///
     /// The pieces are written into the scene as they are derived; the caller
@@ -46,7 +46,7 @@ impl Scene {
             // Nothing carved for the asset yet, whether nobody has fetched
             // it or the boolean over it is still pending: the same "not
             // landed yet" case as a file mesh's asset not resolving, so the
-            // box until it does — never a rebuild for this reason, since the
+            // box until it does, never a rebuild for this reason, since the
             // asset is asked for in the background (see
             // `Headless::apply_changes`) and folded in whenever it lands.
             self.resolved_file_meshes.remove(referent);
@@ -54,7 +54,7 @@ impl Scene {
         };
 
         // Carved either way, so the union's own box hides behind the result
-        // — the pieces stand inside it, and a computed mesh replaces it.
+        // the pieces stand inside it, and a computed mesh replaces it.
         part.suppressed = true;
         if !evaluated.is_carved() {
             let mut pieces = entry.pieces(evaluated, &self.database, &mut self.materials);
@@ -109,8 +109,8 @@ impl Scene {
     }
 
     /// Writes `pieces` into the scene, each over the piece it re-derives
-    /// where the scene already drew one — the whole point of numbering them
-    /// — and appending the rest.
+    /// where the scene already drew one, the whole point of numbering them
+    /// and appending the rest.
     fn place_pieces(&mut self, referent: Ref, pieces: &[Part]) {
         let mut placed = vec![false; pieces.len()];
         for held in self.parts.iter_mut() {

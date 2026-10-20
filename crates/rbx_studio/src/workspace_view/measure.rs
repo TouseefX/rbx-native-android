@@ -3,12 +3,12 @@
 //! distance label a drag showed stays where it was once the button comes up,
 //! and becomes editable. A distance typed into it and entered puts the
 //! selection exactly that far from where the drag started, along the arrow
-//! it held — one undo step per entry. The box stays until the next press in
+//! it held, one undo step per entry. The box stays until the next press in
 //! the view, a selection change or a tool switch.
 //!
 //! Studio's text box leaves Enter alone: it commits a number, reverts
 //! anything else, and releases the keyboard either way. Losing focus any
-//! other way — a click elsewhere, `Escape` — commits nothing and leaves the
+//! other way, a click elsewhere, `Escape`, commits nothing and leaves the
 //! typed text as it is.
 
 use glam::Vec3;
@@ -22,8 +22,8 @@ use crate::dragger::label;
 /// The box, while it is up.
 pub(super) struct Measure {
     input: Entity<InputState>,
-    /// The Move arrow the drag held — its axis, which end (`±1`) and how far
-    /// out the press landed — which the box stands beside.
+    /// The Move arrow the drag held, its axis, which end (`±1`) and how far
+    /// out the press landed, which the box stands beside.
     arrow: (Axis, f32, f32),
     /// The arrow's direction at the press, which a typed distance runs along.
     direction: Vec3,
@@ -33,7 +33,7 @@ pub(super) struct Measure {
 
 impl WorkspaceView {
     /// A Move-arrow drag let go: its label stays, editable, reading how far
-    /// the drag went — `0` for an arrow pressed and let go. Nothing with the
+    /// the drag went, `0` for an arrow pressed and let go. Nothing with the
     /// measurement setting off, as nothing was shown during the drag.
     pub(super) fn open_measure(
         &mut self,
@@ -65,7 +65,7 @@ impl WorkspaceView {
     }
 
     /// How far the selection stands from where the drag started, along
-    /// `direction` (Studio's `_lastDelta`) — measured from where it stands
+    /// `direction` (Studio's `_lastDelta`), measured from where it stands
     /// now, so an undo or an edit made anywhere else since is taken into
     /// account, where Studio's own box keeps the number it last showed.
     pub(super) fn travelled(&self, direction: Vec3) -> f32 {
@@ -118,8 +118,8 @@ impl WorkspaceView {
             .is_some_and(|measure| measure.input.focus_handle(cx).is_focused(window))
     }
 
-    /// The box, beside the arrow where it stands now — it follows the
-    /// handles and the camera — or nothing when that spot is off screen.
+    /// The box, beside the arrow where it stands now, it follows the
+    /// handles and the camera, or nothing when that spot is off screen.
     pub(super) fn measure_element(
         &self,
         window: &Window,

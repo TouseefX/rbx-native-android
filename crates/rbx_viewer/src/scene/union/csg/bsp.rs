@@ -1,6 +1,6 @@
 //! The BSP tree behind [`super::Solid`]'s booleans: planes, convex polygons
 //! and the clip/invert/build walks csg.js composes them from. Every walk is
-//! iterative on purpose — the trees a carved rock builds run deep enough to
+//! iterative on purpose, the trees a carved rock builds run deep enough to
 //! overflow a thread's stack when recursed.
 
 use glam::DVec3;
@@ -8,7 +8,7 @@ use glam::DVec3;
 // Distance under which a point counts as lying on a plane. csg.js uses 1e-5,
 // but Roblox's own part placements carry 2–4e-5 of float noise: faces meant
 // to meet then classify as distinct, and the boolean keeps a sliver that thin
-// between them — a zero-thickness fin once welded. One weld cell
+// between them, a zero-thickness fin once welded. One weld cell
 // (`repair::WELD_EPSILON`) is the finest distinction anything downstream
 // keeps anyway.
 const EPSILON: f64 = 1e-4;
@@ -49,7 +49,7 @@ impl Plane {
     /// corners (matching csg.js's `Polygon` constructor) rather than reused
     /// from the parent: keeping the stale parent plane left a fragment whose
     /// actual vertices no longer satisfied it, and later splits against that
-    /// mismatch is what produced leaks on real (rotated, many-cut) input —
+    /// mismatch is what produced leaks on real (rotated, many-cut) input,
     /// falls back to the parent plane only for a degenerate near-collinear cut.
     fn split(&self, polygon: Polygon, buckets: &mut Buckets) {
         let mut kind = COPLANAR;
@@ -101,18 +101,18 @@ impl Plane {
                         back.push(cut);
                     }
                 }
-                // Clipping a planar polygon can only ever truncate it — the
+                // Clipping a planar polygon can only ever truncate it, the
                 // surviving front/back pieces still lie on `polygon`'s own
                 // plane, so its *normal* never needs re-deriving. Only `w`
                 // is refreshed here, from one of the fragment's own (possibly
                 // lerp-drifted) vertices, so later splits see a plane that
                 // matches this fragment's actual vertex data (the leak this
-                // guarded against — see the doc above). Re-deriving the
+                // guarded against, see the doc above). Re-deriving the
                 // normal too, via a fresh 3-point cross product, was the bug:
                 // for a thin sliver fragment (common after many overlapping
                 // cuts) that cross product is dominated by rounding noise, so
                 // coplanar siblings of the same original face drifted apart
-                // by a fraction of a degree each — invisible to
+                // by a fraction of a degree each, invisible to
                 // `is_watertight`'s position-only check, but glaringly
                 // visible to a shader that shades per (near-)flat facet.
                 if front.len() >= 3 {

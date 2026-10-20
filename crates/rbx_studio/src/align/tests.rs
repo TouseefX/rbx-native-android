@@ -6,7 +6,7 @@ use rbx_dom::Ref;
 use super::*;
 
 /// A box part standing square to the world at `position`, `size` studs a
-/// side — same shape as `transform::tests::part_at`, duplicated here rather
+/// side, same shape as `transform::tests::part_at`, duplicated here rather
 /// than shared: a test fixture two modules deep in `pub(crate)` internals is
 /// not worth a shared helper over.
 fn part_at(referent: u32, position: Vec3, size: Vec3) -> Target {
@@ -19,7 +19,7 @@ fn part_at(referent: u32, position: Vec3, size: Vec3) -> Target {
 }
 
 /// A part turned a quarter turn about world Y, so its own local X sits on
-/// world -Z and its local Z sits on world X — mirrors
+/// world -Z and its local Z sits on world X, mirrors
 /// `transform::tests::block`'s own orientation, which asserts exactly that.
 fn turned_part_at(referent: u32, position: Vec3, size: Vec3) -> Target {
     let orientation = Mat3::from_rotation_y(FRAC_PI_2);
@@ -136,7 +136,7 @@ fn active_object_gives_a_different_answer_than_selection_bounds_and_never_moves_
         vec![part_at(1, Vec3::new(0.0, 0.0, 0.0), Vec3::splat(2.0))],
         vec![part_at(2, Vec3::new(10.0, 0.0, 0.0), Vec3::splat(4.0))],
     ];
-    // Active object is index 1 (part 2), whose own centre-X is 10 — not the
+    // Active object is index 1 (part 2), whose own centre-X is 10, not the
     // 5.5 `centering_aligns_...` found relative to the collective bounds.
     let moves = plan(
         &entries,
@@ -290,7 +290,7 @@ fn every_toggled_axis_moves_independently_of_the_others() {
 /// direction, which `Space::Local` needs and `gizmo::bounds_of` cannot
 /// express, and it measures each entry separately rather than unioning the
 /// lot. On the world axes the two reduce to the same support function, which
-/// is what this pins down — including for a part turned off those axes,
+/// is what this pins down, including for a part turned off those axes,
 /// where a wrong reduction would show up first.
 #[test]
 fn selection_bounds_agree_with_the_box_drawn_around_the_selection() {
@@ -377,7 +377,7 @@ fn the_preview_leaves_the_active_object_alone() {
 }
 
 /// A `Model` has no orientation of its own, so its ghost is the box around
-/// every part beneath it — moved as one, which is what "keeps the model
+/// every part beneath it, moved as one, which is what "keeps the model
 /// intact" means.
 #[test]
 fn a_multi_part_entry_previews_one_box_around_all_of_it() {

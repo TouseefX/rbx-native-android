@@ -1,8 +1,8 @@
-# rbx-native — Roadmap
+# rbx-native: Roadmap
 
 rbx-native is a from-scratch, native Linux/Windows replacement for Roblox
-Studio. This document tracks what's implemented, what's planned, and — since
-Roblox's actual game engine is closed-source — what's outright impossible to
+Studio. This document tracks what's implemented, what's planned, and, since
+Roblox's actual game engine is closed-source, what's outright impossible to
 match versus what can be approximated with a deliberate workaround. It's the
 single source of truth for project direction; if something here looks stale,
 [CHANGELOG.md](CHANGELOG.md) has the day-by-day record of what actually
@@ -15,38 +15,38 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 ## What's been implemented
 
 ### Format & parsing (`rbx_dom`, `rbx_binary`, `rbx_xml`, `rbx_reflection`, `rbx_mesh`)
-- [x] Binary `.rbxm`/`.rbxl` — read **and** write, exact round-trip verified
+- [x] Binary `.rbxm`/`.rbxl`: read **and** write, exact round-trip verified
   against real files (16k+ instance places), including the shared-string
   (`SSTR`) table.
-- [x] XML `.rbxlx`/`.rbxmx` — read **and** write, exact round-trip.
+- [x] XML `.rbxlx`/`.rbxmx`: read **and** write, exact round-trip.
 - [x] Reflection database (682 classes, `Service`/`NotCreatable`/
   `NotBrowsable`/property-category tags) parsed straight from Roblox's own
   public API dump, kept current by a daily CI sync.
 - [x] Mesh format `.mesh` v1.00–v5.00.
 - [x] Mutable in-memory DOM (`set_property`/`remove`/`new_instance`/
-  `take_changes`) — what live editing is built on.
-- [x] `rbxdump --roundtrip` — a continuous-verification tool that found and
+  `take_changes`), what live editing is built on.
+- [x] `rbxdump --roundtrip`: a continuous-verification tool that found and
   got two real serialization bugs fixed.
 - [x] Per-class property defaults (`assets/reflection-defaults.json`, taken
   from rbx-dom's MIT-licensed database, since Roblox's own dump carries
   none for inherited properties). A binary save fills a property one
   instance of a class stored and another left unset with that class's
-  default — infinite ones included — rather than the type's zero, which
+  default, infinite ones included, rather than the type's zero, which
   used to save an Explorer-inserted `Part` with `CanCollide` off and no
   size. A load normalises the several names a property can be saved
   under to one, never to a spelling Studio cannot read back (a package
   link keeps `PackageIdSerialize`).
 - [x] **Voxel terrain storage** (`rbx_terrain`): `Terrain.SmoothGrid`
-  read and written — version 1, 32-voxel chunks in X/Y/Z order, each
+  read and written, version 1, 32-voxel chunks in X/Y/Z order, each
   named by its offset from the last as three big-endian integers with
   their bytes interleaved, then run records (material in six bits, an
   optional occupancy byte, an optional count, and a count of zero carrying
   one more byte, the voxel's share of water). Worked out from a real
   place's 66 KB blob, which decodes cleanly and re-encodes to its original
   bytes, and checked against zeux's 2017 storage post and two independent
-  readers. `PhysicsGrid` is rebuilt from the voxels whenever they change —
+  readers. `PhysicsGrid` is rebuilt from the voxels whenever they change,
   every 8³-voxel region a voxel touches grown by one, which reproduces the
-  same place's stored regions exactly — and `MaterialColors`' 69 bytes are
+  same place's stored regions exactly, and `MaterialColors`' 69 bytes are
   read and written. A version other than 1, or bytes that do not parse,
   are refused and left untouched rather than guessed at.
 
@@ -59,7 +59,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   full 208-colour table the Properties panel uses.
 - [x] CLI runner (`rbxlua place.rbxl script.luau [--out] [--print-changes]`)
   and an in-editor Command Bar.
-- [x] **New-script templates** — the Model menu now has real
+- [x] **New-script templates**: the Model menu now has real
   `Insert Script`/`Insert LocalScript`/`Insert ModuleScript`/
   `Insert ModuleScript (Class)` entries (there was previously no menu item
   or shortcut to insert a script at all), each seeding the new instance's
@@ -95,9 +95,9 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 ### Plugins (`rbx_lua::plugin`, `rbx_wasm`, `shell::plugins`)
 - [x] rbx-native's own plugin API: a folder with a `plugin.toml` (name,
   entry, permissions `dom.read`/`dom.write`/`selection`/`debugger`/
-  `http:<host>`) whose entry is either Luau — run in the same sandboxed
+  `http:<host>`) whose entry is either Luau, run in the same sandboxed
   `mlua` host as Roblox plugins, plus an `rbxnative` global (`command`,
-  `notify`, `hasPermission`) — or a WebAssembly module run under
+  `notify`, `hasPermission`), or a WebAssembly module run under
   `wasmtime` with a fuel budget per call, a 64 MiB memory cap and one JSON
   host call whose methods are gated by the manifest (`docs/plugins.md`
   has the ABI). Distinct from Roblox plugin compatibility, below.
@@ -115,7 +115,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   (script tree, widgets, `CoreGui` adornments) are parked outside the
   place so they never reach the Explorer, the file or the undo history.
   Widgets are drawn by the editor's own GUI renderer in a Plugin Widgets
-  dock — not pixel-faithful Studio chrome (see Explicitly impossible) —
+  dock, not pixel-faithful Studio chrome (see Explicitly impossible),
   with clicks, hover, wheel and `TextBox` input sent back. A Manage
   Plugins dialog switches each plugin on or off.
 - [x] **Making those handles interactive.** A plugin's `Handles`,
@@ -124,19 +124,19 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   own draggers, and fire `MouseButton1Down`/`MouseDrag(face, distance)`/
   `MouseButton1Up` (`MouseDrag(axis, relativeAngle, deltaRadius)` for arcs)
   at the plugin. A new `Handles` shows all six faces, as Roblox's does.
-- [x] **A floating, non-dockable plugin widget surface** —
+- [x] **A floating, non-dockable plugin widget surface**:
   `plugin:CreateFloatingWidget(id, {Size, Position?, LightDismiss?})`, an
   rbx-native extension rather than Studio parity (from the devforum's
   [`allow-floating-non-resizeable-widgets`](https://devforum.roblox.com/t/allow-floating-non-resizeable-widgets/4193893)):
   its GUI is drawn above the editor at the cursor or a given point and
   dismissed by a click outside it when `LightDismiss` is set.
-- [x] **The built-in colour pickers on the plugin API** —
+- [x] **The built-in colour pickers on the plugin API**,
   `plugin:PromptColor3(initial?)` and `plugin:PromptBrickColor(initial?)`
   open the Properties panel's own Color3 picker and BrickColor palette
   and return the choice (or `nil`), from the devforum's
   [`allow-plugins-to-use-color-picker`](https://devforum.roblox.com/t/allow-plugins-to-use-color-picker/63257);
   an rbx-native addition, not Studio parity.
-- [x] **Debugger control on the plugin API** — `plugin:GetDebuggerManager()`
+- [x] **Debugger control on the plugin API**: `plugin:GetDebuggerManager()`
   (and a `DebuggerManager()` global), shaped after Roblox's
   `DebuggerManager`/`ScriptDebugger`: breakpoints with conditions,
   watches, `Run`/`Resume`/`StepIn`/`StepOver`/`StepOut`/`Stop`, the call
@@ -149,16 +149,16 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 - [x] Lighting model reverse-engineered from Roblox's own decompiled
   shaders and calibrated pixel-by-pixel against real Studio captures: two
   lamps + sky ambient, Blinn-Phong specular, sky cubemap reflection,
-  fog/`Atmosphere`, sun/moon, shadow maps for every local light —
+  fog/`Atmosphere`, sun/moon, shadow maps for every local light,
   `SpotLight`/`SurfaceLight` from one perspective down their own cone, a
   `PointLight` from six faces into a depth array of its own
   (`renderer::shadow::point`), the shader picking the face from the major
-  axis of the light-to-fragment direction — bloom/stars/
+  axis of the light-to-fragment direction, bloom/stars/
   `ColorCorrectionEffect`/`ColorGradingEffect`/`BlurEffect`/
   `SunRaysEffect`/`DepthOfFieldEffect`.
 - [x] 43 official Roblox materials (`rbx_materials`) with real texture
   packs, `MaterialVariant`, `SurfaceAppearance`. `Glass` refracts what is
-  behind it — the scene is copied when the opaque pass ends and a pane
+  behind it, the scene is copied when the opaque pass ends and a pane
   reads it back displaced along its own mapped normal, which is the
   surface detail that gives real glass its wobble (Roblox documents the
   refraction itself, and that it is dropped on mobile "due to
@@ -178,19 +178,19 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   The window's width and path, the period, the opacities and the glow's
   width are this renderer's own, since Roblox publishes none of them.
 - [x] Decals/textures projected on real geometry (not just boxes), and
-  patched in place — not just redrawn on a full reload — when the
+  patched in place, not just redrawn on a full reload, when the
   `CFrame`, size or shape of the part they're pinned to is edited live.
 - [x] Sky: 6-face skybox, environment cubemap, stars, night sky, Roblox's
   own default sky (DDS BC1/2/3 decoder), procedural `Clouds`.
 - [x] Shapes: `Part`/`MeshPart`, Ball/Cylinder/Wedge/CornerWedge,
   `TrussPart` (real lattice geometry), `SpecialMesh`.
-- [x] Legacy `UnionOperation`/`NegateOperation` — a real, from-scratch CSG
+- [x] Legacy `UnionOperation`/`NegateOperation`: a real, from-scratch CSG
   boolean (BSP tree, dependency-free) over the operation's original
   constituent parts, not just a bounding-box fallback.
 - [x] Effects: `ParticleEmitter` (CPU simulation + billboards), `Beam`,
-  `Trail`, and the three preconfigured particle classes — `Fire`
+  `Trail`, and the three preconfigured particle classes, `Fire`
   (the two emitters its docs describe, the inner one longer-lived,
-  faster-rising and at `LightEmission` 1), `Smoke` and `Sparkles` — each
+  faster-rising and at `LightEmission` 1), `Smoke` and `Sparkles`: each
   read into the same emitter definition a `ParticleEmitter` produces, so
   the budget, the simulation and a Properties-panel edit all treat them
   identically. Every emitter reads `TimeScale`, and can hang off an
@@ -205,7 +205,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   (the documented "ring/outline in addition to a surface", the ring being
   the sphere's own silhouette faced at the camera), `SurfaceSelection`,
   `Handles` (arrows or spheres, per face) and `ArcHandles` (a ring per
-  axis), and the `*HandleAdornment` shapes — box, sphere, cylinder
+  axis), and the `*HandleAdornment` shapes, box, sphere, cylinder
   (`InnerRadius` and `Angle` included), cone, line (its `Thickness` in
   pixels, as documented, where `SelectionBox.LineThickness` is in studs)
   and image. Depth-tested by default and over everything while
@@ -215,20 +215,20 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   as drawing nothing rather than guessed at.
 - [x] `AdGui`: the ad surfaces a place holds show their own
   `FallbackImage` on the face they adorn, which is what Roblox documents
-  one as showing whenever no ad is available — and no ad ever is here.
-- [x] **`Highlight`** — the real class (checked against
+  one as showing whenever no ad is available, and no ad ever is here.
+- [x] **`Highlight`**: the real class (checked against
   `reference/engine/classes/Highlight` rather than assumed), drawn the way
   the docs describe it: a **silhouette** outline around the adornee and a
   solid interior over it, each with its own `Color3` and transparency.
   `Adornee` (falling back to the parent), `Enabled`, `FillColor`,
   `FillTransparency`, `OutlineColor`, `OutlineTransparency` and both
-  `DepthMode`s — `AlwaysOnTop` shows through whatever stands in front,
-  `Occluded` stops where the nearest surface is not the adornee — plus
+  `DepthMode`s, `AlwaysOnTop` shows through whatever stands in front,
+  `Occluded` stops where the nearest surface is not the adornee, plus
   Roblox's own documented ceiling of 255 at once. Not the box outline the
   Explorer's selection cue draws (`rbx_viewer::renderer::outline`): a
-  position-only mask pass re-draws the covered geometry — unit shapes and
+  position-only mask pass re-draws the covered geometry, unit shapes and
   downloaded `MeshPart`/`SpecialMesh` geometry alike, through the same
-  buffers `renderer::shadow` instances — and a composite pass reads the
+  buffers `renderer::shadow` instances, and a composite pass reads the
   silhouette back out of it, so a ball outlines as a circle and a mesh as
   its own polygon. Two undocumented corners are named in the code rather
   than guessed at: `LineThickness` is tagged `Hidden` in the API dump and
@@ -238,14 +238,14 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   is aliased against the geometry it traces.
 - [x] GUI containers: `ScreenGui`/`Frame`/`ImageLabel`, `BillboardGui`,
   `SurfaceGui`.
-- [x] GUI — full `GuiObject` compatibility (every class below checked
+- [x] GUI: full `GuiObject` compatibility (every class below checked
   against `Roblox/creator-docs`; where the docs are silent the code says so
   in a comment rather than presenting a guess as verified):
   - **Text**: `TextLabel`/`TextButton`/`TextBox` draw their glyphs, shaped
     with `cosmic-text` (already in the tree under GPUI). Roblox's own font
     families are fetched at runtime from the Studio content package the way
-    textures already are — the family JSON, then the closest face by
-    weight/style — never shipped; a system font stands in until they land
+    textures already are, the family JSON, then the closest face by
+    weight/style, never shipped; a system font stands in until they land
     or where a face needs an API key. `FontFace` and the legacy `Font` enum,
     `TextSize`/`TextScaled`/`TextWrapped`, both alignments, `LineHeight`,
     `TextStrokeColor3`/`Transparency`, `RichText` (`<b>`, `<i>`, `<u>`,
@@ -260,20 +260,20 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     `SliceScale`, `Fit`, `Crop`, `Tile`), `ImageRectOffset`/`ImageRectSize`
     and `ResampleMode.Pixelated`. `Tile` combined with an image sub-rect
     tiles the whole image (a wrapping sampler cannot repeat a window into
-    it) — the docs describe no such combination.
+    it), the docs describe no such combination.
   - `GuiObject.Rotation` composed the way `GuiBase2d.AbsoluteRotation`
     implies: a rotated element carries its children around its own centre,
     then each turns about its own. `ClipsDescendants` is still a no-op
     under any rotation, per the docs' default
     `ClipsDescendantsSupportsRotation` mode.
-  - `UIGradient` — `Color`/`Transparency` sequences, `Rotation`, `Offset`,
+  - `UIGradient`: `Color`/`Transparency` sequences, `Rotation`, `Offset`,
     `Scale`, `Type` (`Linear`/`Radial`/`Conical`) and `TileMode`, applied
     to the background, the image and the text alike through a gradient
     ramp texture the GUI shader samples.
   - `UICorner` (per-corner radii, an anti-aliased rounded-box SDF in the
     shader that clips the background, image and text), `UIStroke` (`Border`
-    and `Contextual` — a text object's contextual stroke outlines its
-    glyphs — with `Thickness`, `Transparency`, `LineJoinMode`,
+    and `Contextual`: a text object's contextual stroke outlines its
+    glyphs, with `Thickness`, `Transparency`, `LineJoinMode`,
     `BorderStrokePosition`/`BorderOffset`, `StrokeSizingMode`; one stroke
     per element, a gradient inside a stroke not read), `UIPadding`.
   - Layout: `UIListLayout` with `HorizontalFlex`/`VerticalFlex`, `Wraps`
@@ -284,9 +284,9 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     `AutomaticSize` (children extent, a layout's `AbsoluteContentSize`,
     a text object's own bounds), `SizeConstraint`, `BorderMode`
     (`Middle`/`Inset`), `ScreenGui.ScreenInsets`/`IgnoreGuiInset` (the top
-    bar reserved at 36 px — no Roblox page states the number, it is one
+    bar reserved at 36 px, no Roblox page states the number, it is one
     named constant) and `ZIndexBehavior.Global`.
-  - `StyleSheet`/`StyleRule`/`StyleLink`/`StyleDerive` — the selector
+  - `StyleSheet`/`StyleRule`/`StyleLink`/`StyleDerive`: the selector
     engine (class, `.Tag`, `#Name`, `>` and `>>` combinators, `,` lists,
     nested rules merged into their parent's selector), `Priority` then
     document order, derives flattened in priority order, `$Token`s
@@ -304,7 +304,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     editable there yet.
   - Text metrics match Studio: `TextSize` is the *line box* height (the
     docs: "line height equal to the `TextSize`"), the glyph em a fixed
-    1/1.2 of it — measured against Studio captures of three families
+    1/1.2 of it, measured against Studio captures of three families
     (Source Sans Pro, Gotham SSm, Fredoka One) to the pixel, which no font
     table combination reproduced. A family that lacks the requested
     weight shapes in its closest face rather than falling back to a
@@ -322,8 +322,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     scroll bars from their three images with every inset/position/
     direction property), `CanvasGroup` (`GroupTransparency`/`GroupColor3`
     over the subtree flattened to a texture, one blend for overlapping
-    children), `ViewportFrame` (its parts under `CurrentCamera` — or the
-    saved camera pose — with `Ambient`/`LightColor`/`LightDirection`, a
+    children), `ViewportFrame` (its parts under `CurrentCamera`: or the
+    saved camera pose, with `Ambient`/`LightColor`/`LightDirection`, a
     single-light opaque+blended pass with no shadows or post, `ImageColor3`
     /`ImageTransparency`; meshes, unions and decals inside a frame draw as
     their fallback boxes), `UIPageLayout` (the current page laid out, no
@@ -337,7 +337,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     selection/navigation family, `VideoFrame` playback…).
     `StarterGui.ShowDevelopmentGui` is honoured as the Studio view toggle
     the docs describe: `false` hides every screen and canvas under the
-    service (a `ScreenGui` elsewhere — a copy under `Workspace`, say — is
+    service (a `ScreenGui` elsewhere, a copy under `Workspace`, say, is
     unaffected), toggling it in the editor re-plans live, and
     `rbxview --show-development-gui` overrides it for a player's-eye
     screenshot. The mouse wheel over a `ScrollingFrame` in the editor's
@@ -348,31 +348,31 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     Several `UIStroke`s on one object draw in `ZIndex` order.
 - [x] Free-flight camera (WASD + mouse look + wheel), exponentially-eased
   movement (mouse look itself stays unfiltered).
-- [x] Orthographic camera mode — toggled from the Viewport dock
+- [x] Orthographic camera mode, toggled from the Viewport dock
   (`rbxstudio`) or `rbxview --orthographic`. Flies with the same
   WASD/mouse-look controller; the mouse wheel without the look button held
   zooms the view volume directly (`Pose::ortho_scale`) instead of dollying
   the eye, since dollying does nothing visible under a parallel projection
-  and risked flying through geometry with no size cue — independent of
+  and risked flying through geometry with no size cue, independent of
   camera position, so it works the same on any level regardless of layout.
   The sky/star/sun background stays perspective regardless, by design (their
   near-unit-magnitude geometry relies on the perspective divide to spread
   across the screen at all; a parallel scene with a perspective background
-  is a deliberate decoupling, not an oversight — see `Camera::orthographic_projection`
+  is a deliberate decoupling, not an oversight, see `Camera::orthographic_projection`
   and `Camera::view_rotation_projection`'s doc comments).
 - [x] Automatic render-quality scaling (Quality Level 1–21, frame-rate
   driven), live quality switching without a scene rebuild.
-- [x] Scoped strictly to `Workspace` — a place's other services
+- [x] Scoped strictly to `Workspace`: a place's other services
   (`ReplicatedStorage`, `ServerStorage`, …) never leak into the render even
   if they happen to hold `BasePart`s.
 - [x] **Downloaded assets are cached on disk, keyed by asset id, and never
   re-fetched from Roblox's CDN once they've landed once.** Reported as
-  missing from real use — it isn't; `rbx_assets::AssetCache` writes every
+  missing from real use, it isn't; `rbx_assets::AssetCache` writes every
   resolved `rbxassetid://` and Studio content-package fetch to
   `$XDG_CACHE_HOME/rbx-native/assets/` (`%LOCALAPPDATA%` on Windows),
   atomically (temp file + rename, so a crash mid-write can't corrupt an
   entry), and `AssetResolver::resolve_id`/`resolve_native` check it before
-  ever calling the network fetcher — a second place, or a second reload of
+  ever calling the network fetcher, a second place, or a second reload of
   the same one, hits disk, not the CDN. Persists across process restarts,
   not just within one session. Still open: no size cap or eviction, so the
   directory only grows; low priority in practice, since Roblox's own
@@ -381,8 +381,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   picture as they land**, the way Roblox's own engine streams them: a load
   returns with the scene drawable and its assets still arriving, and an
   edit naming a `MeshId`/`TextureID`/material this session has never
-  decoded draws the fallback it already had for one that never resolved —
-  the `MeshPart`'s box, the untextured mesh, plain plastic — asks for the
+  decoded draws the fallback it already had for one that never resolved,
+  the `MeshPart`'s box, the untextured mesh, plain plastic, asks for the
   asset in the background (`load::fetcher`, a worker pool behind
   `load::Resident`'s in-flight state) and folds it in on a later tick,
   instead of falling back to a full reload with a download in front of it.
@@ -399,14 +399,14 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   CSG-heavy place (this repository ships no real one): resolving 40 legacy
   `UnionOperation`/`NegateOperation` booleans (30 leaves each) took ~6s
   single-threaded versus ~0.1s to generate the equivalent number of texture
-  mip chains, so the CSG boolean was the dominant cost — but that mip-chain
+  mip chains, so the CSG boolean was the dominant cost, but that mip-chain
   number only measured CPU-side mip generation, not the actual GPU upload
   burst, which turned out to matter on its own.
   `crates/rbx_viewer/src/scene/union.rs`'s `resolve` now runs each distinct
   asset's from-scratch BSP boolean across a bounded worker pool
   (`evaluate_all`, sized to available CPU parallelism rather than a fixed
   count, since this work is CPU-bound rather than rate-limited by a remote
-  server) instead of one after another on the caller's own thread — the
+  server) instead of one after another on the caller's own thread, the
   same synthetic place now resolves in ~0.8-1.1s. Separately,
   `renderer/textured.rs`'s `Textured::new` used to upload every
   `Decal`/`Texture` image's full mip chain to the GPU in one uninterrupted
@@ -422,17 +422,17 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   upload immediately (`Renderer::finish_loading`) before capturing rather
   than writing out a PNG with textures still mid-upload.
 - [x] **An orientation/axis indicator in the corner of the viewport**
-  (top-right) — six small coloured, lettered dots (`Right`/`Left`/`Top`/
+  (top-right), six small coloured, lettered dots (`Right`/`Left`/`Top`/
   `Bottom`/`Front`/`Back`, red/green/blue per axis, the same colours the
   Move/Rotate/Scale gizmo already uses), positioned by projecting the free
   camera's current basis (`rbx_viewer::Pose::basis`) rather than a literal
-  3D cube mesh — the same flat 2D approach Blender's own gizmo actually
+  3D cube mesh, the same flat 2D approach Blender's own gizmo actually
   draws with. Toggleable off from the Viewport dock
   (`Orientation Indicator`, next to `Orthographic`), on by default and
   persisted the same way. As flagged when this was picked up: a genuine
   rbx-native addition inspired by Blender/SketchUp/3ds Max conventions, not
   a claim that Studio itself has one. Click-to-snap-camera-to-a-face (real
-  in those other tools) is deliberately not implemented — this is a static,
+  in those other tools) is deliberately not implemented, this is a static,
   informational indicator only.
 - [x] **An FPS/frame-time readout**, matching real Studio's own
   performance-debugging surface rather than inventing a new one: Studio's
@@ -446,13 +446,13 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   scaling rather than a second timing mechanism. `rbxview`'s
   standalone title bar carries the same fps/frame-time reading now too,
   alongside the flight speed it already showed (it never displayed a
-  quality level of its own to begin with, pinned or automatic) — always on
+  quality level of its own to begin with, pinned or automatic), always on
   rather than behind a toggle, since it is a separate binary with no menu
   to put one in. A small `FrameRate` counts redraws over the same rolling
   one-second window `rbxstudio`'s does, and the title is composed
   (`app::title`, `app::fps` in `rbx_viewer`) with the identical fps/ms
   formatting the corner label uses, once the first window closes.
-- [x] **A `Model`'s aggregate bounding box** — a plain click resolves to
+- [x] **A `Model`'s aggregate bounding box**: a plain click resolves to
   the outermost enclosing `Model` (see Editor's Select bullet), which has
   no `CFrame`/`Size` of its own, so it is outlined by one world-axis
   -aligned box around every `BasePart` beneath it at any depth, nested
@@ -478,8 +478,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   boolean cannot carve the one there is, the union's own baked `MeshData`
   is drawn instead (next bullet).
 - [x] **Export and draw unions baked only as `MeshData`.** A union whose
-  only geometry is a baked `MeshData`/CSGMDL blob — no `ChildData` inline
-  or behind its `AssetId` (asset 305197512, 7 instances in marked.rbxl) —
+  only geometry is a baked `MeshData`/CSGMDL blob, no `ChildData` inline
+  or behind its `AssetId` (asset 305197512, 7 instances in marked.rbxl),
   now draws and exports as that mesh instead of its box
   (`scene::union::baked`). All three versions found in real files are
   read: version 2 (2015-era assets such as this one), a fully
@@ -505,31 +505,31 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   same way. Every union in the test places now resolves: in marked.rbxl,
   467 carve, the 7 decode and 13 are empty.
 - [x] **Give each of a failed-CSG union's recovered fallback pieces its
-  own identity.** Every piece now carries a `scene::PartId` of its own —
+  own identity.** Every piece now carries a `scene::PartId` of its own,
   the union's referent plus its position in the operation tree's additive
   order, which the asset's bytes alone decide, so moving or recolouring a
   union cannot renumber them. `Scene::resync_part` re-derives the pieces
   from the boolean `load::Resident` already carved and patches each in the
   slot it had, instead of refusing; `Rebuild::Union` is gone, and so is
   the reload a union edit used to cost (24.6 ms to 2.1 ms first frame
-  readable on `FindTheCode.rbxl` — see `BENCHMARKS.md`). The union stays
+  readable on `FindTheCode.rbxl`: see `BENCHMARKS.md`). The union stays
   one thing to select, outline, click and cast a shadow from: it is
   placed, and its pieces are not.
 - [x] **The `Handles`/`*HandleAdornment`/`Selection*` Instance family**
   (`Handles`, `ArcHandles`, `BoxHandleAdornment`, `SphereHandleAdornment`
-  and siblings, `SelectionBox`, `SelectionSphere`) — real, current,
+  and siblings, `SelectionBox`, `SelectionSphere`), real, current,
   documented classes a script or plugin instantiates to draw 3D handles
   and outlines directly in the viewport, independent of this project's own
   Move/Scale/Rotate gizmo. **Drawn**, from a place file: see "What's been
   implemented" → Renderer. Checked directly against
   `reference/engine/classes/Handles`/`BoxHandleAdornment`/
   `SphereHandleAdornment`/`SelectionBox` rather than assumed, and **not**
-  modelled on how **Building Tools by F3X** draws its own tools — it
+  modelled on how **Building Tools by F3X** draws its own tools, it
   isn't: F3X's actual source
   (`F3XTeam/RBX-Building-Tools`, `Libraries/Handles.lua`) renders plain 2D
   `ImageButton`s inside a `ScreenGui`, hand-projected from 3D to screen
   space, the same ordinary GUI machinery this project already renders
-  (see "What's been implemented" → Renderer's GUI containers) — worth not
+  (see "What's been implemented" → Renderer's GUI containers), worth not
   conflating the two mechanisms just because both are called "handles."
 - [x] **Selection outline thickness**: the outline (see `rbx_viewer::renderer::selection` and
   `renderer::outline`) is no longer a one-pixel `LineList` but a
@@ -540,18 +540,18 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   wedge or mesh outlined as its oriented bounding box rather than as its
   own silhouette. A part now draws through the very mask-and-composite
   pass `Highlight` does (`renderer::cue`), so it outlines as its own
-  shape — a ball as a circle, a `MeshPart` as its own polygon — while a
+  shape, a ball as a circle, a `MeshPart` as its own polygon, while a
   container, which has no shape of its own to trace, keeps the box
   around everything beneath it. The hover cue rides the same path in its
   own amber. Real Studio's own highlight is documented
   (`parts/models.md`) only as a light-blue outline with no
   shape-conformance spec published: this is not a claim of parity with
-  it, and the code says so — it is the same answer this renderer already
+  it, and the code says so, it is the same answer this renderer already
   gives for the one outline effect that *is* specified as a silhouette.
 - [x] **Gizmo papercuts and third-party-tool parity requests**, from
   real use of the Move/Scale/Rotate gizmos above. Checked against
   `Roblox/creator-docs` (`parts.md`'s Transform Parts section), Roblox's
-  own DevForum announcements and, where noted, **Building Tools by F3X** —
+  own DevForum announcements and, where noted, **Building Tools by F3X**,
   a widely-used third-party Studio plugin, not native Studio:
   - **`Tab` summons the gizmo's handles to the cursor**, as Roblox's
     "Pivot Points - Studio Beta Update: Handle Summoning" post describes
@@ -559,7 +559,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     Rotate, and Transform's all three) to the point under the cursor, and
     releasing it sends them home. Rotate turns the selection about the
     summoned point, snapped onto a face's edge or vertex when the cursor is
-    within 16 pixels of one and marked with a magenta dot — the threshold
+    within 16 pixels of one and marked with a magenta dot, the threshold
     and indicator Roblox staff gave in that topic (replies #9 and #14),
     which also describe the snap for Rotate only ("it doesn't matter
     precisely where the handles are summoned to for Move"), so Move and
@@ -574,7 +574,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - **A small free-drag ball at the Move gizmo's own origin** (Move and
     Transform): grabbing it is the same drag-and-settle gesture as
     grabbing a selected part's body, held from the gizmo's origin instead
-    — so a summoned Move gizmo far from the part still carries it freely.
+so a summoned Move gizmo far from the part still carries it freely.
     This editor's own addition; Studio's Move gizmo has none.
   - **Not adopted: F3X's `Shift`+`X`/`Shift`+`C` snap-toggle chord and its
     `H` hotkey-help overlay.** Both are F3X conventions with no
@@ -590,11 +590,11 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   **Edit Pivot**, in its own Model-tab group beside **Snap** and **Reset**:
   its arrows, rings and free-drag ball stand on the selected part's or
   model's pivot, in the pivot's own axes, and move or turn the pivot alone
-  — a part's `PivotOffset`, a model's `PrimaryPart`'s `PivotOffset` or its
+a part's `PivotOffset`, a model's `PrimaryPart`'s `PivotOffset` or its
   `WorldPivot` (`rbx_lua::pivot::set_pivot`), one undo step per drag. With
   Snap on, the selection's corners, edge middles, face middles and centre
-  — and, on a model, each part's own face middles and centre, as the
-  docs' "Hotspots on a model" shot shows (the first 32 parts) — are drawn
+and, on a model, each part's own face middles and centre, as the
+  docs' "Hotspots on a model" shot shows (the first 32 parts), are drawn
   as magenta points and a free drag lands on the nearest one, drawn
   larger while it holds it. A model's selection outline turns with its
   pivot, refreshed on every pivot edit. **Reset** puts the pivot back on the
@@ -602,12 +602,12 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   Move's and Rotate's handles stand on a lone selection's pivot, so a turn
   goes round it, and a viewport drag carries a dragged model's
   `WorldPivot` with its parts. Assigning a `Class.Model.PrimaryPart` moves
-  the pivot to that part's own pivot, and deleting the part — from the
-  Explorer or with Luau's `Destroy` — leaves the pivot where it was rather
+  the pivot to that part's own pivot, and deleting the part, from the
+  Explorer or with Luau's `Destroy`: leaves the pivot where it was rather
   than snapping back (`rbx_lua::pivot::keep_pivots`). Also: the Properties
   panel's `Origin` row reads a part's or model's pivot the way `GetPivot`
   does and moves the instance the way `PivotTo` does (see Editor), and
-  Luau — the Command Bar and scripts — has `PVInstance:GetPivot()` and
+  Luau, the Command Bar and scripts, has `PVInstance:GetPivot()` and
   `PVInstance:PivotTo()` through the same pivot (`rbx_lua::pivot`), with
   `BasePart.PivotOffset` readable and writable like any property. Scale's
   side of it is the next bullet.
@@ -655,7 +655,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   events. Clips read from and write to `KeyframeSequence` /
   `Keyframe` / `Pose` / `KeyframeMarker` trees (structural poses at
   `Weight` 0), round-tripped through real `.rbxm` files. The research
-  behind it, with each fact's source, is `agents/animation-research.md`.
+  behind it, with each fact's source, is `docs/research/animation.md`.
 - [x] **Playing back a published `Animation.AnimationId`**. The feared
   separate format does not exist: Roblox's asset delivery serves a
   published animation as an ordinary binary model holding one
@@ -674,17 +674,17 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 
 ### Editor (`rbx_studio`, binary `rbxstudio`)
 - [x] Explorer: this project's own flat, from-scratch class icon kit
-  (`assets/icons/default/dark`, 329 classes onto 142 of its 152 tiles —
-  Roblox's 147-tile layout plus five of its own — spec'd in
+  (`assets/icons/default/dark`, 329 classes onto 142 of its 152 tiles,
+  Roblox's 147-tile layout plus five of its own, spec'd in
   `assets/icons/README.md`) rasterized and painted per row
   (`class_icons.rs`), with Lucide glyphs as the fallback for anything the
-  kit doesn't cover — Roblox's own sprite sheet is no longer downloaded or
+  kit doesn't cover, Roblox's own sprite sheet is no longer downloaded or
   drawn anywhere in the editor. Default service filter with a "show all"
   toggle, selection with a viewport highlight, instance insert/delete.
 - [x] Properties panel: real per-type widgets (checkbox, colour picker,
   enum dropdown, `BrickColor` palette, numeric fields), grouped into
   collapsible categories named as Roblox's own Properties panel names
-  them, live —
+  them, live,
   reflects DOM mutations from any source (script, undo/redo, the camera
   moving) without a manual refresh.
   - **The class's whole sheet**, built from the reflection database rather
@@ -700,7 +700,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - **Numeric values open like Studio's**: a `Vector3`, a `UDim2`, a
     `CFrame` is one name/value row showing the whole value (`0, 5, 0`,
     still typeable as one) with an expander that drops its components
-    underneath — `Position` and `Orientation` each over their own three for
+    underneath, `Position` and `Orientation` each over their own three for
     a `CFrame`. A collapsed row builds no component fields at all. A
     bounded property (`Transparency`, `ClockTime`, a `GuiObject`'s
     `Rotation`) also gets a slider beside its field; the dump carries no
@@ -712,7 +712,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     a pick back to it, since `Color` is all Roblox saves.
   - **`Content`** (`Decal.Texture`, `MeshPart.MeshId`): an asset URI field,
     read back the way Roblox's own `Content.fromUri`/`fromAssetId` read
-    theirs — an empty field (or asset `0`) clears it to none, and a bare
+    theirs, an empty field (or asset `0`) clears it to none, and a bare
     number becomes `rbxassetid://<id>`. The 14 `Content` properties
     creator-docs says take an object (`Decal.TextureContent`,
     `MeshPart.MeshContent`, `ImageLabel.ImageContent`,
@@ -724,7 +724,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     Studio writes them.
   - **`Origin`**, which Studio lists under Transform: where a part's or
     model's pivot stands in the world, read as `GetPivot` reads it, and
-    moved as `PivotTo` moves it when one is typed — a model's parts and its
+    moved as `PivotTo` moves it when one is typed, a model's parts and its
     pivot together, as one undo step.
   - **Instance references** (`ObjectValue.Value`, `Weld.Part0`) are picked
     the way Studio does it: click the row, then the instance in the
@@ -739,7 +739,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - **Left as they are, by choice**: `Font` edits as three typed fields; a
     family list, which would make it a picker, lives in `rbx_viewer`'s font
     package. `SharedString`, `UniqueId`, `SecurityCapabilities` and
-    `Unknown` stay read-only — identities and opaque payloads, which editing
+    `Unknown` stay read-only, identities and opaque payloads, which editing
     by hand corrupts rather than edits.
   - **Computed, read-only**: `Mass`, `CenterOfMass`,
     `CurrentPhysicalProperties` and the assembly's mass and centre, shown
@@ -756,30 +756,30 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   that fails if one's value ever falls into the plain-text catch-all
   without being one of the types that genuinely is just typed text by
   design (a string, a number, a `Content` URI). Confirms the pass this
-  item asked for is in fact complete — `CFrame`, `BrickColor`, `Ray`,
+  item asked for is in fact complete, `CFrame`, `BrickColor`, `Ray`,
   `Vector3int16`, `Faces`, `Axes`, `NumberRange`, `UDim`, `UDim2`, `Rect`,
   `OptionalCFrame`, `PhysicalProperties` and `Font` all have their own
-  widget already (see the bullets above) — and keeps it that way as new
+  widget already (see the bullets above), and keeps it that way as new
   Roblox types arrive through the daily sync, rather than being a one-time
   read of the dump.
 - [x] A `Variant` that may simply be absent (`OptionalCFrame`, the DOM's
-  only such type — `Model.WorldPivotData`) edits through a present/absent
+  only such type, `Model.WorldPivotData`) edits through a present/absent
   checkbox above the ordinary `CFrame` editor, which is drawn only while
   there is a value to edit. Turning it off clears the value; turning it
   back on restores whatever it held rather than resetting to the origin.
-  Not a Studio parity claim — real Studio never surfaces an optional
+  Not a Studio parity claim, real Studio never surfaces an optional
   `CFrame` at all, so the checkbox's caption says plainly what it means
   rather than borrowing a term from somewhere it isn't used.
 - [x] Properties panel hides properties Studio itself never shows:
   `rbx_reflection`'s `PropertyDescriptor` carries the dump's per-property
   `Tags` and `Serialization` (`CanLoad`/`CanSave`), and the panel leaves
-  out anything tagged `Hidden` or `Deprecated` — a deprecated property is
+  out anything tagged `Hidden` or `Deprecated`: a deprecated property is
   an old spelling kept under a newer name (`className`, `Fire.size`) or
   one superseded or inert (`Sound.Pitch`, `FormFactorPart.FormFactor`),
   so its row would either duplicate the live one or do nothing. A part's
   position and rotation edit through its `CFrame` row's Position and
   Orientation fields and its `Origin` row. A property tagged `ReadOnly`,
-  or one Studio never saves, shows with no edit widget — unless it is
+  or one Studio never saves, shows with no edit widget, unless it is
   saved under another name: the dump reports `BasePart.Size` as
   `CanSave: false` only because a file holds it as `size`, so `Size`
   edits. `Tags` and `AttributesSerialize`, which the dump does not list at
@@ -790,19 +790,19 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 - [x] App-level warnings reach the Output dock without a Play session ever
   running: `OutputLog::push_warning`/`Feedback::Warning`, fed by every
   asset fetch/decode failure a place's initial load or any reload produces
-  — both the plain fetch failure and the silent fall back to a default
-  texture — along `Headless::drain_warnings` → the render thread's
+both the plain fetch failure and the silent fall back to a default
+  texture, along `Headless::drain_warnings` → the render thread's
   `Ready.warnings` → `WorkspaceView`'s `AssetWarnings` event → `Shell`.
   They surface continuously rather than on a flush, so nothing is left
   pending by the time a save happens. A warning is its own row kind
   (orange, alert icon) and its own **Warnings** bucket beside All/Output/
-  Errors, which is what Studio's own window does — it "filters output by
-  type, such as **Error** or **Warning**" (`studio/output.md`) — and each
+  Errors, which is what Studio's own window does, it "filters output by
+  type, such as **Error** or **Warning**" (`studio/output.md`), and each
   bucket holds exactly one kind, so a warning no longer doubles as
   `Output`. That includes the `ParticleEmitter`/`Beam`/`Trail`/`ImageLabel`
   textures the render passes only ever see an *answer* for: their failure
   is reduced to "no image" before a pass sees it, so the warning is carried
-  out of `Loaded::resolve_effect_images` instead — the streaming loader
+  out of `Loaded::resolve_effect_images` instead, the streaming loader
   already reported them through `Resident::poll`; the blocking one (the CLI
   viewer, and every test) was dropping them on the floor.
 - [x] Menu bar (File/Edit/Model/View) wired to real actions where one
@@ -816,16 +816,16 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   and puts focus back exactly where it came from. It is deliberately *not*
   a Tab stop: Tab walks the editor's regions, and a fifth region everyone
   has to pass through on the way to the ribbon is not what the desktop
-  convention asks for. An Alt *tap* is told apart from Alt-the-modifier —
+  convention asks for. An Alt *tap* is told apart from Alt-the-modifier,
   which this editor uses live, for the Ball/Cylinder Scale lock and for
-  selection cycling — by a small state machine where anything at all
+  selection cycling, by a small state machine where anything at all
   arriving while Alt is held cancels the tap (`menu_bar::alt_tap`).
   This meant owning the bar rather than the toolkit's ready-made
   `AppMenuBar`, whose current title is a private field with no way in from
   outside; each dropdown is still the toolkit's own `PopupMenu`, keyboard
   contract and all. Two conveniences beyond what this needed are not
   there: access-key mnemonics (Alt+F for File), and Down preselecting the
-  first item of the menu it opens — `PopupMenu`'s selected index is
+  first item of the menu it opens, `PopupMenu`'s selected index is
   private, so Down opens the menu and a second Down steps into it.
 - [x] Tags editor (`CollectionService`), in the same Properties panel
   section as the attributes above: existing tags as removable chips, and an
@@ -838,46 +838,46 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 - [x] Save (`Ctrl+S`, writes back in the file's original format, atomic
   write).
 - [x] Dockable, rearrangeable panel layout (`shell::layout`, drawn by
-  `shell::docks`) with persistence — layout position/size/docking state
+  `shell::docks`) with persistence, layout position/size/docking state
   saved across restarts, plus persisted settings (quality, service
   visibility).
-- [x] **Drag-to-rearrange docks** — real now, by the tab. A panel's home is
+- [x] **Drag-to-rearrange docks**: real now, by the tab. A panel's home is
   data (`shell::layout`) rather than the order of three `.child()` calls:
   an edge holds a stack of docks, a dock holds tabs, and dragging a tab
-  offers both — land on a strip to join it, land on a dock's half to make
+  offers both, land on a strip to join it, land on a dock's half to make
   a new one beside it, at the size it will be. An edge holding nothing
   grows a ghost dock while a drag is in flight, easing open and shut, so
   an edge you emptied can be filled again. Drag a tab past the window and
   it tears out into a window of its own; a dock can be closed from its tab
   and reopened from the ribbon's Home tab or the View menu. The whole
   arrangement persists. The non-drag half is there too and is not
-  decoration — "Move to Left/Right/Bottom", "Float" and "Close" on each
+  decoration, "Move to Left/Right/Bottom", "Float" and "Close" on each
   dock's own menu, going through the same one transform, because the
   reference guidance treats drag-only rearrangement as a failure rather
   than a gap. Still open: a torn-out panel cannot be dragged back into the
-  main window — GPUI's drag-and-drop is per-window — so it goes back by
+  main window, GPUI's drag-and-drop is per-window, so it goes back by
   closing its window, which returns it to where it started.
 - [x] Live camera pose reflected into `Workspace.CurrentCamera.CFrame` as
   you fly, throttled and explicitly excluded from undo history.
 - [x] Fast-path scene updates: a `Lighting`/`Atmosphere`/post-effect edit or
   a single part's property change patches the GPU state directly instead
-  of rebuilding the whole scene — editing stays interactive on large real
+  of rebuilding the whole scene, editing stays interactive on large real
   places.
 - [x] Every edit reaches the viewport as a patch of the instances it
-  touched, never a rebuild — the Roblox model, where the DataModel is the
+  touched, never a rebuild, the Roblox model, where the DataModel is the
   live scene and a property write is an event applied to that one
   instance. `Headless::apply_changes` takes the `Change` log a mutation
-  produced — a Properties row, a viewport drag, a Command Bar script
+  produced, a Properties row, a viewport drag, a Command Bar script
   touching a hundred parts, the Explorer's insert, delete and drag-drop,
   and undo/redo of any of them (`shell/history.rs` hands over the very log
-  the undone mutation produced, against the restored DOM) — and re-derives
+  the undone mutation produced, against the restored DOM), and re-derives
   only what it names: a part's box or mesh, its shadow caster and outline,
   the decals, lights, emitters and attachments hung off it; a `Model`
   moved reaches its whole subtree; a failed-CSG union drawn as its
   recovered pieces is patched piece by piece, each piece addressed by an
   identity of its own (`scene::PartId`). An edit naming an asset that was
-  never downloaded — a mesh, texture, material pack, `SurfaceAppearance`
-  set or legacy union asset alike — is patched too, onto its fallback,
+  never downloaded, a mesh, texture, material pack, `SurfaceAppearance`
+  set or legacy union asset alike, is patched too, onto its fallback,
   with the asset fetched in the background (see the renderer's
   asset-streaming entry above) instead of forcing a reload the way it once
   did. What still rebuilds the whole scene is the closed list in
@@ -886,18 +886,18 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `MaterialVariant`/`MaterialService` edit (the material catalog is
   defined from the service), and a material needing a texture-array layer
   past the ones uploaded.
-- [x] **Interactive viewport gizmos — Select/Move/Scale/Rotate/Transform,
+- [x] **Interactive viewport gizmos, Select/Move/Scale/Rotate/Transform,
   matching Studio's real toolbar and behaviour**, checked against
   `Roblox/creator-docs` (`parts/index.md#transform-parts`,
   `parts/models.md#select-models`) rather than assumed:
   - **Select**: clicking an outlined object selects it, resolving to the
     outermost enclosing model; `Alt`/`⌥`-click cycles through whatever's
     under the cursor instead of just the nearest hit ("selection
-    cycling") — matching Studio's own mechanism rather than a
+    cycling"), matching Studio's own mechanism rather than a
     `Shift`-click-into-children behaviour it doesn't actually have.
     Cycling is a plain geometric raycast against every part the ray
     crosses (`rbx_viewer::pick::parts_along`), sorted nearest first, not a
-    depth-buffer occlusion test — so it already reaches a part fully
+    depth-buffer occlusion test, so it already reaches a part fully
     nested inside another (an invisible hitbox sitting inside a visible
     part, say) or buried several levels into a `Model`, one `Alt`-click at
     a time, without ever needing to select the enclosing part or model
@@ -906,21 +906,21 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     to a `Model` the way a plain click does.
     `Shift`/`Ctrl`/`Cmd`-click adds another top-level object to the
     selection instead of replacing it.
-  - **Move** (`2`), **Scale** (`3`), **Rotate** (`4`) — colored axis
+  - **Move** (`2`), **Scale** (`3`), **Rotate** (`4`), colored axis
     draggers/handles/rings per axis; `Ctrl`/`Cmd`+`L` toggles world/local
     orientation, with an `L` indicator when local is active. While a Move
     or Scale handle is held only that handle is drawn, as in Studio, over
     the guides rather than under them. Move is also
     draggable by the part's own body ("cursor dragging"), which rests the
-    part on whatever the cursor passes over — real geometry, not a
-    bounding box — falling back to sliding flat across the view only when
+    part on whatever the cursor passes over, real geometry, not a
+    bounding box, falling back to sliding flat across the view only when
     the cursor is over nothing.
-  - **Transform** (`5`) — the ribbon's 5th tool, Move's arrows, Scale's
+  - **Transform** (`5`), the ribbon's 5th tool, Move's arrows, Scale's
     balls and Rotate's rings all drawn and grabbable over the same
     selection at once. Confirmed against the API dump this project syncs
     daily (`assets/API-Dump.json`, `Enums` → `RibbonTool`, value `4`) and
     `creator-docs`' own enum reference (`reference/engine/enums/
-    RibbonTool.yaml`) rather than guessed at — both give
+    RibbonTool.yaml`) rather than guessed at, both give
     `Enum.RibbonTool.Transform` the exact summary "provides combined move,
     scale, and rotate handles in a single gizmo"; `parts/index.md`'s prose
     never names it, only using "transform" as the umbrella term for the
@@ -936,7 +936,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     holding `Shift` suspends snapping for as long as it is held, the way
     Studio's draggers read it. A free drag lands the grabbed point on the
     face under the cursor, rounded onto that face's grid from its nearest
-    corner and — with Snap to Parts — onto its edges and centre lines,
+    corner and, with Snap to Parts, onto its edges and centre lines,
     squaring the selection onto an angled face (`Alt` keeps its
     orientation); a Move/Scale handle drag soft-snaps to nearby parts'
     faces along its axis. While cursor-dragging a part, `T`/`R` tilt/rotate
@@ -946,7 +946,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     and major ticks while dragging, a yellow line across the face when the
     part lines up with one of its edges or its centre, and, on a Move
     handle, the axis line with a dot wherever the selection's leading face,
-    trailing face or pivot would meet a nearby part — which the drag takes
+    trailing face or pivot would meet a nearby part, which the drag takes
     over the grid step when it is the nearer. The handle trails a line back
     to where the drag began. Each guide and dragger setting is a Viewport
     dock toggle named after the Studio setting it mirrors (Show Hover
@@ -960,18 +960,18 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     relative to itself never changes. Scale and Rotate act on the whole
     selection too, centred on its bounding box: Rotate turns every part
     about that centre, and Scale grows the group about the box's opposite
-    face by one factor (the way `Model:ScaleTo` scales — a per-axis stretch
+    face by one factor (the way `Model:ScaleTo` scales, a per-axis stretch
     is nothing a rotated part's own `Size` can express, and Studio gives
     the tools no per-axis model behaviour). A lone part keeps its own
     per-axis Scale.
-  - Clicking (and dragging) resolves against the shape actually drawn —
+  - Clicking (and dragging) resolves against the shape actually drawn,
     sphere, capped cylinder, wedge slope, a downloaded mesh's own
-    triangles — not the part's bounding box.
-  - **Placement**: the ribbon's Tools group — Select/Move/Scale/Rotate/
+    triangles, not the part's bounding box.
+  - **Placement**: the ribbon's Tools group, Select/Move/Scale/Rotate/
     Transform, the local-axis toggle, then the chevron that opens the snap
     increments and the Align popover.
 
-- [x] **Group/ungroup operations** — `Ctrl+G` (or Model ⟩ Group) wraps the
+- [x] **Group/ungroup operations**: `Ctrl+G` (or Model ⟩ Group) wraps the
   current selection in one new `Model`, parented where the selection
   itself was; `Ctrl+Shift+G` (or Model ⟩ Ungroup) unwraps a selected
   `Model` back into its own parent and removes it. A selection spanning
@@ -983,22 +983,22 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `Model` gets no computed
   `PrimaryPart` or pivot, just Roblox's own empty-pivot default.
 
-- [x] **Light guides** — select a `SpotLight`, `PointLight` or
+- [x] **Light guides**: select a `SpotLight`, `PointLight` or
   `SurfaceLight` and the viewport draws how far it reaches, as Studio's
   "Show Light Guides" does: three great circles of `Range` around a point
   light, a spot's cone out to its spherical cap with the axis line running
   past the rim, and a surface light's frustum from its whole face. Drawn
   in the light's own `Color`, following a Range/Angle/Face edit live, and
-  only for a selected, enabled light — never for the part it hangs on.
+  only for a selected, enabled light, never for the part it hangs on.
   Toggled from the Viewport dock. A `SurfaceLight` also lights exactly that
   frustum now, measured from the nearest point on its face rather than as
   a cone from the face's centre.
 
-- [x] **Change Class** — from an Explorer row's context menu, the whole
+- [x] **Change Class**: from an Explorer row's context menu, the whole
   selection changes class in place (a `Part` into a `WedgePart`, a `Frame`
   into a `TextButton`, a `Script` into a `LocalScript`) as one undo step.
-  The instance keeps its referent, so everything that pointed at it — a
-  `Weld.Part0`, a `PrimaryPart`, the selection, an open script tab — still
+  The instance keeps its referent, so everything that pointed at it, a
+  `Weld.Part0`, a `PrimaryPart`, the selection, an open script tab, still
   does, which a plugin that destroys and recreates the instance cannot
   offer. A property the new class has no room for is dropped (the picker
   says which before you pick), one still at the old class's default takes
@@ -1007,19 +1007,19 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   survive. Related classes and this session's recent picks list first; a
   service keeps its class.
 
-- [x] **Sun tool** (Model page) — places the sun, or from its Moon tile the
+- [x] **Sun tool** (Model page), places the sun, or from its Moon tile the
   moon, by pointing at the scene instead of typing a time and a latitude:
   drag it across the **Sky**; press a surface and it shines straight onto
   that **Face**; press an object and drag to where its **Shadow** should
   fall; or press a surface and it moves to where its **Glint** reaches the
   camera. Every step writes `TimeOfDay` and `GeographicLatitude` as a
   patch rather than a rebuild, and the whole drag is one undo. Face and
-  Glint aim off the surface a part is drawn with — a wedge's slope, a
-  ball's curve, a mesh's triangle — not its box. A stretch of sky no
+  Glint aim off the surface a part is drawn with, a wedge's slope, a
+  ball's curve, a mesh's triangle, not its box. A stretch of sky no
   latitude inside ±90° reaches is held at its rim, and the readout says
   so. Not a Studio built-in: an rbx-native addition.
 
-- [x] **A real script editor** — double-clicking a `Script`, `LocalScript`
+- [x] **A real script editor**: double-clicking a `Script`, `LocalScript`
   or `ModuleScript` in the Explorer opens it in the Script Editor dock
   panel, which shares the viewport's tab group the way Studio's own does.
   Several scripts open as several tabs, each closable; re-opening one
@@ -1045,8 +1045,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     table-stakes conveniences (multi-cursor, Find/Replace, Go to
     Declaration, the function filter), `luau-lsp` integration, script
     debugging, and new-script templates. With focus in an editor, Ctrl+Z
-    is the editor's own text undo rather than the place's history — the
-    split Studio makes — and Edit > Undo still reaches the latter.
+    is the editor's own text undo rather than the place's history, the
+    split Studio makes, and Edit > Undo still reaches the latter.
 - [x] **Table-stakes script editor conveniences**, per
   `studio/script-editor.md`, none of them depending on `luau-lsp`.
   - **Multi-cursor editing**: Alt-click adds a cursor, Alt+Shift-drag
@@ -1156,9 +1156,9 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     link to its API Keys tab, a three-slide walk-through, the settings to
     use, with restricting by experience and IP/expiration recommended),
     then checks the pasted key against `api-keys/v1/introspect` and lists
-    every permission it holds or lacks. Three are required —
+    every permission it holds or lacks. Three are required,
     `universe-places:write`, `legacy-asset:manage`,
-    `user.inventory-item:read` — and 22 are optional, each switching on
+    `user.inventory-item:read`: and 22 are optional, each switching on
     one feature (`rbx_cloud::scopes`; `rbxcloud check` prints the same
     list). The key form cannot be prefilled from a link: the Dashboard
     reads nothing but `?activeTab=`.
@@ -1171,16 +1171,16 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - **Home**: New (Baseplate, Open a file), Recent (last 20, with the
     Roblox place each file came from), My Games (personal and group
     experiences with their icons). Private experiences come from the
-    Inventory API's `CREATED_PLACE` listing — Open Cloud has no "list my
-    universes" endpoint, and the Dashboard's own one is cookie-only —
+    Inventory API's `CREATED_PLACE` listing, Open Cloud has no "list my
+    universes" endpoint, and the Dashboard's own one is cookie-only,
     and any single one can be added by its place ID or link. Opening a
     game downloads it into a local copy without overwriting an existing
     one unasked.
   - **Roblox publishing**: the stored key's status and permissions,
     Check again, Replace key, Remove key.
 - [x] **Throttled render loop while the window is unfocused.** Losing OS
-  focus (`gpui`'s window activation) caps the viewport's render thread —
-  not just the UI thread's own poll rate — to a user-chosen preset, 25 or
+  focus (`gpui`'s window activation) caps the viewport's render thread,
+  not just the UI thread's own poll rate, to a user-chosen preset, 25 or
   30 fps (`pacing::UnfocusedFps`, next to the quality dropdown in the
   Viewport dock); the first focus or input event
   (`pacing::FocusPacing::mark_input`) restores the full display rate
@@ -1188,7 +1188,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   flight, so nothing feels sluggish coming back. Persisted the same way
   the quality level and projection mode already are.
 
-- [x] **Colour-coded Explorer folders** — a `Folder` can carry a colour tag,
+- [x] **Colour-coded Explorer folders**: a `Folder` can carry a colour tag,
   edited through a synthetic "Explorer Colour" row the Properties panel
   adds only for a `Folder` (reusing the same `EditKind::Color` widget and
   `Name`-row precedent `properties.rs`/`properties/edit.rs` already had).
@@ -1199,12 +1199,12 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   its hover/selected background and selection outline use the tag colour
   too, faded, instead of the theme's default blue (`shell/rows.rs` paints
   a tagged row's own chrome, bypassing the vendored `ListItem`'s hardcoded
-  hover/selected colours — it has no per-instance override for either).
+  hover/selected colours, it has no per-instance override for either).
   Kept entirely out of the saved place file, per this bullet's own
   reasoning: a local, per-place store (`folder_colors.rs`, keyed by the
   place's file path and the folder's Explorer path) rather than an
   invented `Folder` property a real Studio session would trip over.
-  `Folder`-only, not "any instance" — the hedge in this bullet's original
+  `Folder`-only, not "any instance", the hedge in this bullet's original
   wording, deliberately not chased. **Known limitation**: keyed by
   Explorer path rather than a stable id (a `Ref` regenerates on every
   load), so renaming or moving a tagged folder orphans its tag; a
@@ -1222,23 +1222,23 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `ShapeKind`.
 - [x] A scriptable command line for `rbxstudio` itself (`cli.rs`):
   `--select <target>[,<target>...]` selects instances once the place is
-  open — a target being either an Explorer path anchored at a root
+  open, a target being either an Explorer path anchored at a root
   (`Workspace.Model.Part`) or a bare name, which matches the first
-  instance called that anywhere — `--run <script.luau>` runs a file
+  instance called that anywhere, `--run <script.luau>` runs a file
   against the place exactly as pasting it into the Command Bar would,
   `--verbose` narrates startup on stdout, and `--help` prints the lot.
   Enough to drive a GUI session from a CI job or a wrapper script without
   a human clicking through the Explorer first. The two older
-  `RBX_STUDIO_SELECT`/`RBX_STUDIO_RUN` variables still work unchanged —
-  they're how the rest of the screenshot aids are spelled — and a flag
+  `RBX_STUDIO_SELECT`/`RBX_STUDIO_RUN` variables still work unchanged,
+  they're how the rest of the screenshot aids are spelled, and a flag
   wins over its variable when both are set. Deliberately not matched from
   real Studio's own CLI: `--placeId`/`--universeId`/`--task`, which are
   tied to Roblox's published-place identifiers rather than to a local
   file, per this bullet's own reasoning when it was planned.
-- [x] `NumberSequence`/`ColorSequence` — a real curve/gradient editor
+- [x] `NumberSequence`/`ColorSequence`: a real curve/gradient editor
   widget (keypoints along a timeline, draggable), not just the read-only
-  text these used to fall back to. The row itself draws the sequence — a
-  gradient ramp or the curve — and clicking it opens a graph in a second
+  text these used to fall back to. The row itself draws the sequence, a
+  gradient ramp or the curve, and clicking it opens a graph in a second
   window of the editor's own (`crate::sequence_window`): fixed-size,
   floating above the main window, and wearing the editor's own title bar
   (`shell::chrome::panel_topbar`) rather than the platform's.
@@ -1258,17 +1258,17 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   is still one undo entry.
 - [x] `NumberSequence`/`ColorSequence` attributes are creatable. Both are
   in the Attributes section's type picker now, and their values edit
-  through the graph above — the same per-type widget an ordinary property
+  through the graph above, the same per-type widget an ordinary property
   of that type gets, never a second set of editors. `rbx_dom::attributes`
   already read and wrote both; the gap was entirely on the editor's side.
 
-- [x] **UI Editor — a dedicated UI-editing mode for `StarterGui`.** The
+- [x] **UI Editor: a dedicated UI-editing mode for `StarterGui`.** The
   Style Editor document is the **UI Editor** now, with two sub-tabs on the
   dock-tab pill: the new canvas (the default) and the style-sheet editor
   as it was (**Stylesheet**; View ⟩ Style Editor still lands there). The
   3D viewport never edits a GUI and is off screen while the canvas is up.
-  - **The canvas draws one GUI alone** — the `ScreenGui`, `BillboardGui`
-    or `SurfaceGui` the selection is in, enabled or not, on a part or not —
+  - **The canvas draws one GUI alone**: the `ScreenGui`, `BillboardGui`
+    or `SurfaceGui` the selection is in, enabled or not, on a part or not,
     through the viewport's own GUI layout and painter on the same render
     thread, over a flat backdrop with no scene pass. A `ScreenGui` is laid
     out at a simulated resolution: six device presets (desktop, laptop,
@@ -1277,14 +1277,14 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     own canvas size, the one its part gives it in the world. Pan with the
     wheel or the middle button, zoom with Ctrl+wheel or the toolbar, fit
     on demand.
-  - **The Explorer lists only the UI** while the canvas is up — every
-    `ScreenGui`/`BillboardGui`/`SurfaceGui` as a root with its subtree —
+  - **The Explorer lists only the UI** while the canvas is up, every
+    `ScreenGui`/`BillboardGui`/`SurfaceGui` as a root with its subtree,
     and the Properties, Output and Viewport docks are left out of the
     layout for the room, at render time only: leaving the canvas shows
     exactly what was there. A Figma-style **design panel** stands in for
     Properties: Position (align to the parent, X/Y, an anchor grid that
     keeps the element where it is, rotation and a quarter turn), Layout
-    (W/H with an aspect lock, auto layout flow — none, column, row, grid —
+    (W/H with an aspect lock, auto layout flow, none, column, row, grid,
     with gap, padding and alignment, clip content), Appearance (show/hide,
     opacity, corner radius, all corners or each one), Fill (swatch, hex,
     opacity, a gradient), Stroke and Constraints (aspect, size and text
@@ -1296,9 +1296,9 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - **Figma-like editing**, all through the shared selection and the one
     undo history (each gesture one entry, written through the Properties
     panel's own commit): click and marquee select, drag to move, eight
-    handles to resize and a knob to rotate — one element or the whole
+    handles to resize and a knob to rotate, one element or the whole
     selection, carried as one by a frame round it (Shift keeps the aspect,
-    and snaps a turn to 15°) — smart alignment guides against siblings, the
+    and snaps a turn to 15°), smart alignment guides against siblings, the
     parent and its padded box (Ctrl lets go of them), Alt for the distances
     to what the pointer is over, arrow nudging (Shift for 10 px), Delete,
     align left/centre/right/top/middle/bottom through the Align tool's own
@@ -1313,7 +1313,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     and it lands in the container under the pointer. Its `+` inserts a
     `ScreenGui`, layout or modifier through the Explorer's own insert, and
     an **Offset/Scale switch** picks which half of every `UDim` the canvas
-    writes — moves, resizes, nudges, aligns, anchors and new elements alike.
+    writes, moves, resizes, nudges, aligns, anchors and new elements alike.
   - **On the canvas, as in Sketch:** a W × H pill under the selection;
     corner radius handles (Alt for one corner); an auto layout's container,
     numbered children and gap and padding bands, each dragged to resize;
@@ -1330,8 +1330,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     off.
   - **Make responsive** folds every `Position`/`Size` offset of the
     selection (or the whole screen) into its scale at the current
-    resolution — against the parent's padded box, a `Size` along the axes
-    its `SizeConstraint` names — and gives each pixel-sized box that no
+    resolution, against the parent's padded box, a `Size` along the axes
+    its `SizeConstraint` names, and gives each pixel-sized box that no
     aspect constraint already shapes a `UIAspectRatioConstraint` at its
     shape, as one undo step.
 - [x] **`ViewportFrame` authoring in the UI Editor.** Setting one up in
@@ -1359,7 +1359,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     removes one again.
   - **Lighting and image**: `Ambient`, `LightColor`, `LightDirection`,
     `ImageColor3` and `ImageTransparency` as the design panel's own fields,
-    with the picture following live — the viewer now re-plans a frame's
+    with the picture following live, the viewer now re-plans a frame's
     tree when anything inside it changes, which it did not before.
 - [x] **Effects (drop shadows) in the UI Editor's design panel.** Figma's
   Effects section, and Sketch's, is a drop shadow per element, which Roblox
@@ -1408,7 +1408,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   **Local** space, relative to either the **Selection Bounds** (the
   selection's collective bounding box) or the **Active Object** (the last
   -selected object in a multi-selection, which stays fixed while the rest
-  align to it) — depended on multi-selection existing first, since aligning
+  align to it), depended on multi-selection existing first, since aligning
   a single object to itself is a no-op; multi-selection is now implemented
   (see "What's been implemented" → Editor), so that dependency is
   satisfied. Self-contained geometry math over whatever's already selected;
@@ -1416,7 +1416,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   Bounds/Active Object, a selected `Model` moving as one rigid body (the
   docs' "keeping the model intact"), and a compact popover on the
   transform toolbar rather than a full dialog.
-- [x] **Align's live preview** — the docs' "dynamically previewing the
+- [x] **Align's live preview**: the docs' "dynamically previewing the
   point of alignment before confirming". Opening the popover draws a ghost
   box where each object would land, redrawn as the toggles and the
   selection change and cleared when it closes; one box per top-level
@@ -1426,20 +1426,20 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   matrices and knows nothing about Align, so the next tool that wants one
   adds no pass. `RBX_STUDIO_ALIGN=...,preview` shows it without a click,
   the way that variable already stands in for the popover's own buttons.
-- [x] **DOM editing from the Explorer row** — beyond the old plain
+- [x] **DOM editing from the Explorer row**: beyond the old plain
   insert/delete:
   - A `+` on the hovered row (`Ctrl+I` from the keyboard) opens a
     searchable class list that inserts straight under that row, without
     going through a menu. A class the parent cannot take is **greyed
     rather than missing**, so the constraint is visible: the rule is
-    exactly the two refusals Roblox's own API dump states — `NotCreatable`
+    exactly the two refusals Roblox's own API dump states, `NotCreatable`
     (`Instance.new` refuses the class outright) and `Service` (a singleton
     the `DataModel` owns), since the dump carries no per-class table of
     legal parents to build anything wider on.
   - Right-click context menu on a row: **Cut**, **Copy**, **Duplicate**,
     **Paste Into**, **Rename**, **Insert Object…** (the same picker the
     `+` opens), **Group as Model**, **Ungroup**, **Delete**. Contextual
-    the way creator-docs describes, but *greyed* rather than absent — each
+    the way creator-docs describes, but *greyed* rather than absent, each
     row is enabled by the same guard its own handler returns early on, so
     a service's menu shows the same shape with most of it unavailable.
   - **Rename** in the row itself, from the menu or `F2`, committing
@@ -1456,14 +1456,14 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     selecting** (whether inserting/pasting/viewport-selecting an instance
     auto-expands the Explorer tree to reveal it, or only highlights the
     top-level parent).
-- [x] **Copy/paste/duplicate instances** (`Ctrl+C`/`V`/`D`) — real now,
+- [x] **Copy/paste/duplicate instances** (`Ctrl+C`/`V`/`D`), real now,
   from the keyboard, the Edit menu's Copy/Paste/Paste Into/Duplicate items
   and the ribbon's Copy, Paste and Duplicate tiles (Cut, never part of
   this bullet, landed with the Explorer row editing above). Copy is a deep,
   in-process clipboard, not the system one: descendants come along, a
   `Ref`/`Content::Object` property pointing at something copied along with
-  it is remapped to point at the copy instead — `Class.Instance:Clone()`'s
-  own documented rule — and the copy is independent of the original. Paste
+  it is remapped to point at the copy instead, `Class.Instance:Clone()`'s
+  own documented rule, and the copy is independent of the original. Paste
   always lands in `Workspace`, matching creator-docs' `explorer.md`, never
   wherever the selection is; Duplicate lands beside the original in its own
   existing parent instead, right after it among its siblings. A service can't be copied, pasted or duplicated,
@@ -1475,19 +1475,19 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `Instance:Clone()` does (the root itself is always copied, and the copy is
   always `Archivable`). Still open: the right-click **Paste Options** ⟩
   **Paste Into At Original Location** the docs mention.
-- [x] **Explorer export** — Save / Export rows on the Explorer row's
+- [x] **Explorer export**: Save / Export rows on the Explorer row's
   right-click menu, named as Studio's own are (`creator-docs`):
   **Save to File…** writes the selection's subtrees as a model file,
   `.rbxm` (or `.rbxmx` when that is the name picked), through the same
-  serializers Ctrl+S uses — a service included, so `Lighting` saves with
+  serializers Ctrl+S uses, a service included, so `Lighting` saves with
   its sky and effects; a reference to anything left out of the file is
   written as nil. **Export Selection…** writes a Wavefront `.obj` (what
   Studio's own Export Selection writes, per the `MeshPart` reference), and
   **Export as glTF…** a single self-contained glTF 2.0 file, its buffer
   inline. Both export every part in the selection as the viewport draws
-  it — procedural shapes and downloaded `MeshPart`/`SpecialMesh` triangles
+  it, procedural shapes and downloaded `MeshPart`/`SpecialMesh` triangles
   alike, in world space, in studs, and a legacy `UnionOperation` as the
-  boolean this project carves from its original parts — and are greyed
+  boolean this project carves from its original parts, and are greyed
   when the selection holds no part. Each part's colour goes along as its
   material (a `.mtl` beside the `.obj`), and a mesh drawn with a
   `TextureID`/`TextureId` image takes it too: a `.png` the `.mtl` maps,
@@ -1502,7 +1502,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 - [x] **Whole-place and fuller Explorer export.** File › **Save to File
   As…** writes the whole place (`.rbxl`, or `.rbxlx` when that is the name
   picked) under a name of the user's choosing and switches the session to
-  it — title, Ctrl+S's target, Recent list — as Studio's Save As does
+  it, title, Ctrl+S's target, Recent list, as Studio's Save As does
   (DevForum, "Improved Save Experience in Studio!", 2021); File ›
   **Export as glTF…** writes `Workspace`, the root Studio's own
   whole-place glTF export has. Both mesh exports now
@@ -1549,7 +1549,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     [fall 2026 update](https://devforum.roblox.com/t/creator-roadmap-2026-fall-update/4880208))
     writes one embedded `.gltf`, studs unscaled, Y-up, and keeps the
     instance tree with each instance's class and `Material` in `extras`.
-    This export now does the same — nodes per part and per container,
+    This export now does the same, nodes per part and per container,
     placed by rotation and translation. It differs on purpose where
     Studio's output is lossy: colour is linear as the specification asks
     (Studio writes sRGB bytes over 255), metalness and roughness are
@@ -1557,13 +1557,13 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     named only.
 - [x] Drag-and-drop reparenting in the Explorer tree. Dragging a row
   onto another reparents onto it, the way creator-docs describes
-  ("simply drag and drop them onto the new parent") — with a ghost under
+  ("simply drag and drop them onto the new parent"), with a ghost under
   the cursor, the hovered row highlighted only while the drop is legal,
   the new parent expanded and revealed afterwards, and one undo step per
   drag. A drop is refused onto the dragged instance itself, into its own
   subtree, onto the parent it already has, and for a service. Escape
   abandons a drag in flight (`App::stop_active_drag`, from the
-  window-level key handler), so nothing drops and no undo step is pushed —
+  window-level key handler), so nothing drops and no undo step is pushed,
   exercised in the running window, not just compiled. There is no drop
   *between* rows, which Studio does not offer either.
 - [x] **Multi-instance drag from any row of the selection.** Pressing a
@@ -1577,14 +1577,14 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   still selects on press and drags only itself. Exercised in the running
   window: a three-part selection dragged by its second and its last row
   both landed whole.
-- [x] `Rect`, `PhysicalProperties`, `Font` — all three edit now, where all
+- [x] `Rect`, `PhysicalProperties`, `Font`: all three edit now, where all
   three used to be read-only text. `Rect` is four labeled fields; `Font`
   turned out to already be editable before this item was picked up (the
   roadmap text describing it was stale); `PhysicalProperties` was the one
   that needed a shape rather than a field list, being a real enum rather
   than a struct.
-  It reuses `EditKind::Optional` — the checkbox-over-an-editor shape
-  `OptionalCFrame` already had — because the two read the same way even
+  It reuses `EditKind::Optional`: the checkbox-over-an-editor shape
+  `OptionalCFrame` already had, because the two read the same way even
   though they mean different things: a `Default` carries no numbers at all
   (the engine derives them from the material), so the five fields appear
   only under a ticked **Custom** box, which is also how Studio presents it.
@@ -1594,34 +1594,34 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   seeded from Roblox's `Plastic` defaults (`0.7 / 0.3 / 0.5 / 1 / 1`) so
   ticking it never commits a row of zeroes.
 - [x] Attributes editor (custom `Instance` attributes, distinct from
-  built-in properties) — a real, commonly-used modern Studio feature, not
+  built-in properties), a real, commonly-used modern Studio feature, not
   currently scoped anywhere. The Properties panel now has a dedicated
   Attributes section (below the reflected categories, matching where real
   Studio puts it): attributes are listed, added (name + a type picker),
   renamed, removed, and their values edited through the exact same
-  per-type widgets an ordinary property of that type gets — a `Bool`
+  per-type widgets an ordinary property of that type gets, a `Bool`
   becomes the panel's checkbox, a `Vector3` becomes three number fields,
-  and so on — never a second set of editors. Name validation follows
+  and so on, never a second set of editors. Name validation follows
   `Instance:SetAttribute`'s documented rules (alphanumeric plus
   `.`/`-`/`/`/`_`, ≤100 characters, no `RBX` prefix). `CFrame` is a
   creatable type now: `rbx_dom::attributes` reads and writes type `0x14` (a
   position and either a one-byte axis-aligned rotation id or nine raw
   floats), checked byte for byte against the two examples in `rojo-rbx/
-  rbx-dom`'s attribute format documentation — and, since a blob is packed
+  rbx-dom`'s attribute format documentation, and, since a blob is packed
   end to end, an instance whose attributes held a `CFrame` no longer loses
   every attribute stored after it.
-- [x] **Native Argon integration, not Rojo — live sync.** Argon
+- [x] **Native Argon integration, not Rojo, live sync.** Argon
   (`argon-rbx/argon`, Apache-2.0, open source) is the preferred target, and
-  its live two-way sync protocol — previously undocumented — turned out to
+  its live two-way sync protocol, previously undocumented, turned out to
   be readable straight from its own Studio plugin source
   (`argon-rbx/argon-roblox`, also Apache-2.0): HTTP+MsgPack against
   `argon serve`, long-polled. `crate::argon_client` implements it (the
   wire format, the background thread, the `WeakDom` apply/write-back path
   in `shell::argon_sync`), verified end to end against a real `argon serve`
   session. `ExecuteCode` (server-sent Luau) is decoded and always
-  discarded — see that module's doc comment. Still open, and genuinely
+  discarded, see that module's doc comment. Still open, and genuinely
   separate from the sync protocol: **file-tree ↔ DOM import/export and
-  `sourcemap.json` generation** — reading/writing a project's
+  `sourcemap.json` generation**: reading/writing a project's
   `*.project.json`/`default.project.json` tree directly (for `luau-lsp`,
   and for opening an Argon project without a running server) is unrelated
   work against the same file-format Rojo also uses, not yet started.
@@ -1639,12 +1639,12 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   MPL-2.0) is the de facto Luau/Roblox package manager. The Wally dock
   (`shell::scripting_tools`, Script Editor tab only) now searches the real
   `api.wally.run` registry as you type, and installing a result resolves
-  its *whole* dependency graph — a BFS matching Wally's own resolver shape
+  its *whole* dependency graph, a BFS matching Wally's own resolver shape
   (`crate::wally_client::resolve`), reusing an already-activated version
   when one satisfies a new requirement, erroring cleanly on an
   unsatisfiable one (a real stale dependency, `sleitnick/knit`'s
   `sleitnick/comm@^0.3`, is this codebase's own test fixture for that
-  path) — then installs every resolved package into the DOM in the same
+  path), then installs every resolved package into the DOM in the same
   on-disk shape real `wally install` produces: each package's content
   under `Packages/_Index/<scope>_<name>@<version>/<name>`, one alias
   `ModuleScript` per dependency edge beside it, and a top-level
@@ -1662,27 +1662,27 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   on the public `UpliftGames/wally-index` repo, so the newest commits
   (GitHub API) give the packages and `package-metadata` fills each card.
   A failure leaves the section out.
-- [x] **Icon and theme packs — the editor's look stops being hardcoded.**
+- [x] **Icon and theme packs, the editor's look stops being hardcoded.**
   The Explorer's class icons are now this project's own icon kit rather than
   Roblox's downloaded sheet (see "What's been implemented" above). Both
   variants, `assets/icons/default/dark` and `.../light`, are now embedded
-  at compile time, and an **editor setting for dark/light icons** — a
+  at compile time, and an **editor setting for dark/light icons**, a
   "Light Icons" checkbox in the Explorer panel's own overflow menu, next to
-  "Show all services" — picks between them at runtime, dark by default,
+  "Show all services", picks between them at runtime, dark by default,
   without a rebuild, persisted the same way `settings.rs`'s existing
   quality/service-visibility settings are.
   - **Installable icon packs** (`packs.rs`, `class_icons.rs`): a folder of
     SVGs under `icon_packs/<name>/` in the config directory, named by
     `ClassName` (`Part.svg`) or by the kit's tile slug
     (`humanoid-description.svg`, reaching every class that shares the
-    tile), layered *over* the built-in kit — a pack of three icons is a
+    tile), layered *over* the built-in kit, a pack of three icons is a
     pack, whatever it leaves out is still the kit's and then Lucide's. The
     Explorer's overflow menu lists what is installed and the choice
     persists in `appearance.json`. A drawing is scaled from its own size,
     not assumed 16x16, and one that will not parse falls through to the kit.
   - **Installable themes**: a toolkit `ThemeSet` JSON file under
     `themes/<name>.json`, named by `appearance.json`'s `theme`; its first
-    dark theme (under a name the registry does not already hold — it
+    dark theme (under a name the registry does not already hold, it
     ignores a duplicate) replaces the built-in at startup. Names read from
     `appearance.json` are refused unless they are one plain path segment.
 - [x] **A theme that reaches the whole editor** (`theme.rs`, `THEMES.md`).
@@ -1705,8 +1705,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   swaps it in atomically is in place but not yet reachable from the UI.
 - [x] **Light and High contrast, built in beside Default**
   (`assets/themes/{light,high-contrast}`, Studio Settings › Appearance ›
-  Theme). Both are ordinary themes layered over Default — only the
-  colours they change — embedded in the binary under ids no installed
+  Theme). Both are ordinary themes layered over Default, only the
+  colours they change, embedded in the binary under ids no installed
   theme can shadow or remove. A `theme.json` now declares its `mode`
   (`dark` by default): a light theme gets the toolkit's light widgets, a
   light syntax palette, and the class icons' light variant when switched
@@ -1769,23 +1769,23 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - [x] Property controls at the reference's full 130px, with the side
     docks 14px wider by default (314px) so the name column keeps every
     pixel it had.
-- [x] **Soften the editor's visual theme — calmer and lower-contrast,
+- [x] **Soften the editor's visual theme, calmer and lower-contrast,
   closer to real Studio but gentler.** Today's panels are high-contrast
   flat blocks: near-pure black/white backgrounds, hard 1px borders, sharp
   rectangular corners, tight padding, saturated colour used everywhere
   rather than reserved for anything in particular. Planned direction,
   taking inspiration (not a straight clone) from a community redesign
-  concept's dock/panel layout and surface treatment — credit
+  concept's dock/panel layout and surface treatment, credit
   [u/1324764019 on the Roblox DevForum](https://www.roblox.com/users/1324764019/profile),
   [reference screenshot](https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/f/0/8/f08fc6d47d3aef25edecb00dd708f13e4f0553c1.png):
   - **Palette**: a muted 6-8 step neutral grey ramp replacing today's
-    near-black/near-white panel backgrounds — nothing darker than
+    near-black/near-white panel backgrounds, nothing darker than
     roughly `#1a1a1a`, nothing lighter than roughly `#f0f0f0`.
   - **Panel separation**: hard 1px borders replaced by either a small
     background-luminance step between adjacent panels (2-4%) or a soft,
     low-opacity shadow (<15%) with no visible stroke.
   - **Corner radius**: a consistent small radius (4-6px) on buttons, icon
-    containers and panel corners — no sharp rectangles.
+    containers and panel corners, no sharp rectangles.
   - **Padding**: toolbar buttons and list/tree rows (Explorer, Properties)
     grow roughly 30-50% over today's values to read as less dense.
   - **Accent colour**: saturated colour reserved for the selection
@@ -1796,18 +1796,18 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   - **Dock/panel structure**: review the reference concept's
     floating/grouped-tab dock style and propose which pieces (tab
     grouping, panel grouping, drag handles) fit this project's existing
-    dock layout — presented as options to choose from, not a mandated
+    dock layout, presented as options to choose from, not a mandated
     rebuild.
   - **Deliverable**: a theme/token file (colours, radii, spacing, font
-    weights) the rest of the UI reads from — a concrete first instance of
-    the theme format the item above calls for — plus a before/after
+    weights) the rest of the UI reads from, a concrete first instance of
+    the theme format the item above calls for, plus a before/after
     screenshot of one representative panel (the Explorer, or a popup like
     Store/Upgrades) for review before it rolls out app-wide.
 
   Shipped: a real design-token module
-  (`crates/rbx_studio/src/tokens.rs`) every piece of chrome reads from —
+  (`crates/rbx_studio/src/tokens.rs`) every piece of chrome reads from,
   surfaces, state washes, borders, a seven-step text ramp, one radius, the
-  frame's measured dimensions and its type scale — with the palette also
+  frame's measured dimensions and its type scale, with the palette also
   expressed as a `ThemeSet`/`ThemeConfig` JSON
   (`assets/themes/dark-soft.json`) so the toolkit's own widgets follow it
   without a rebuild, and a test that fails the moment the two disagree.
@@ -1822,28 +1822,28 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   blue, which focus and selection borrow and nothing else may).
 
   The shell is now: a **title bar this editor draws itself** (client-side
-  window decorations — logo, centred title, minimize/maximize/close,
+  window decorations, logo, centred title, minimize/maximize/close,
   drag-to-move), the menu strip, **Row A** document tabs, **Row B** the
   ribbon's seven category tabs, **Row C** the ribbon, **Row D** a
-  three-column workspace — Properties left, the open document over Output
-  in the middle, Explorer right — each dock a tab strip over an inset body.
+  three-column workspace, Properties left, the open document over Output
+  in the middle, Explorer right, each dock a tab strip over an inset body.
   Ribbon commands are 42px tiles and 78px stacks; the snap increments are a
   live readout that opens its own editor. Chrome icons are Lucide, the set
   the design is drawn with; the multi-colour `class_icons` kit stays where
   identity matters, in the Explorer. Contrast is asserted rather than
-  eyeballed — every meaningful text token clears WCAG AA on every surface
+  eyeballed, every meaningful text token clears WCAG AA on every surface
   it can land on, and the disabled step is asserted from both sides.
 
   A second pass then grounded the whole thing in WCAG 2.1/2.2 and the
   WAI-ARIA APG rather than in taste. The editor is keyboard-operable end to
-  end — Tab between regions, arrows within one, the full APG Tree View
-  contract in the Explorer, Escape out of any menu — and three genuine
+  end, Tab between regions, arrows within one, the full APG Tree View
+  contract in the Explorer, Escape out of any menu, and three genuine
   keyboard traps were found and fixed by driving the window. Focus rings
   appear for keyboard focus only and clear 3:1 on every surface; selection
   and focus are no longer drawn the same way. There is a persisted UI scale
   (Ctrl+= / Ctrl+− / Ctrl+0, 0.5x-2.0x) over every font *and* every box, so
   text reaches 200% without losing layout. Controls are sized to the
-  `InputsStyle` frame and clear WCAG's 24x24 target floor — the checkbox was
+  `InputsStyle` frame and clear WCAG's 24x24 target floor, the checkbox was
   10px. Each transform tool has its own pastel plus a border, so its state
   never depends on colour alone. Contrast, target sizes and the toolkit
   theme mirror are all asserted in tests.
@@ -1855,7 +1855,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 
   `UX_GUIDELINES.md` §11 lists every deviation from the frame with its
   reason, and §1 states where the editor stands against the reference
-  guidance's Stage 1/2/3 — failures included.
+  guidance's Stage 1/2/3, failures included.
 - [x] **Arrow keys inside the editor's dropdown menus** (`shell::menu`:
   every overflow `⋯`, the ribbon's insert menus, the Argon and Wally
   pickers), per the APG menu pattern: an open menu holds focus, Up/Down
@@ -1876,10 +1876,10 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   next to Explorer's and Viewport's toggles (`Shell::output_show_timestamps`,
   `shell/dock.rs`), prints a per-row timestamp in `HH:MM:SS.SSS`; rows now
   carry a per-kind color and icon in place of the old plain `✕`/`✓`
-  marker — `print`/a successful run in the default text color with a
+  marker, `print`/a successful run in the default text color with a
   check icon, `warn` in orange with an alert icon, `error` in red with an
   X icon (`OutputEntry::kind`/`RowKind`, `shell/output.rs`). **Free-text
-  search over the log** is shipped too — a box in the Output tab's own
+  search over the log** is shipped too, a box in the Output tab's own
   title bar, beside the level filter, matching case-insensitively against
   both halves of what a row shows (the command and the result) and
   narrowing *within* the level filter rather than replacing it
@@ -1888,7 +1888,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   label and again as the Output dock's permanent row; the label now
   appears only while the dock is collapsed
   (`Feedback::shown_inline`), when it is the one place the result would
-  otherwise be lost — which is why a `Ctrl+S` save, which used to report
+  otherwise be lost, which is why a `Ctrl+S` save, which used to report
   through the label alone, now logs a `Save` row too.
 - [x] **Output window: the half that needed the sandbox**, checked against
   `studio/output.md`. A **context filter** (All Contexts / Edit / Server /
@@ -1969,20 +1969,20 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   stay a window of their own, as in Studio. Nothing on the screen is
   marked `SOON` any more (see the next two bullets under Editor in
   "What's planned").
-- [x] **Discord Rich Presence, switched on from Studio Settings** —
+- [x] **Discord Rich Presence, switched on from Studio Settings**,
   an rbx-native addition, not Studio parity: real Studio has no built-in
   Discord presence, only third-party plugins and companion apps. A toggle
   in Studio Settings › Account (off by default) shows the open place,
   what's being edited (a script's name, the viewport or the UI Editor) and
   elapsed time on the user's Discord profile; a second toggle hides place
   and script names for anyone working on something unannounced. It talks
-  to Discord's local IPC on a background thread — the `discord-ipc-0`
+  to Discord's local IPC on a background thread, the `discord-ipc-0`
   socket under `$XDG_RUNTIME_DIR` on Linux (Flatpak and Snap paths
-  probed too) and the `\\.\pipe\discord-ipc-0` named pipe on Windows —
+  probed too) and the `\\.\pipe\discord-ipc-0` named pipe on Windows,
   with this project's own Discord application id. No Discord running
   means silently nothing, never an error.
 - [x] **Explorer search**: the search field above the tree filters it as
-  you type — every instance whose name contains the text (ignoring case),
+  you type, every instance whose name contains the text (ignoring case),
   under the rows that lead to it, which open. Unlike real Studio's, a
   result stays browsable without clearing the search (a real devforum
   request, `view-descendants-of-matching-instances-in-explorer-search`): a
@@ -2008,8 +2008,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   any such copy a crashed editor left is moved aside like slot 1's. A
   place opened from the recovery folder itself gets no copies
   and a warning that Ctrl+S saves it there. A copy is a plain place file
-  in the place's own format, so — unlike a recovered Studio file, which
-  loses its place link — it opens like any other. A failed copy is a
+  in the place's own format, so, unlike a recovered Studio file, which
+  loses its place link, it opens like any other. A failed copy is a
   warning in Output and is tried again. The copies are reached from
   Settings' Open auto-saves or File › Open Auto Saves (Studio's own name;
   Studio files it under File › Advanced, but this menu bar draws no
@@ -2023,8 +2023,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 - [x] **The accessibility guidance's Stage 2 and Stage 3**, on top of the
   Stage 1 baseline:
   - **Viewport font size** in Studio Settings › Appearance (8 to 24 px,
-    times the UI scale) for the text drawn over the 3D view — readouts,
-    guide labels, the measurement box, the orientation indicator — VS
+    times the UI scale) for the text drawn over the 3D view, readouts,
+    guide labels, the measurement box, the orientation indicator, VS
     Code's `editor.fontSize` beside `window.zoomLevel`. The place's own
     BillboardGui and SurfaceGui text stays as authored, as in Studio.
   - **44×44 targets on primary and destructive controls by default**
@@ -2033,8 +2033,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     Settings, picker and sequence editor's primary and destructive buttons.
   - **A command palette** that is also Studio's Quick Open: Ctrl+P finds an
     instance by name or path, Ctrl+Alt+P or a leading `>` finds any
-    command — menu items, ribbon commands, tools, and a "Focus" row per
-    dock and document — each with its shortcut, recent ones first.
+    command, menu items, ribbon commands, tools, and a "Focus" row per
+    dock and document, each with its shortcut, recent ones first.
   - **Keyboard focus apart from selection in the Explorer**, after the APG
     tree pattern's multi-select model: Ctrl+Up/Down moves focus, Ctrl+Space
     toggles the focused row, and the focus ring stays legible over any
@@ -2048,8 +2048,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   Studio's set back. A ticked service lands where Studio lists it, in
   `ReflectionMetadata.xml`'s `ExplorerOrder` (`services::EXPLORER_ORDER`).
 - [x] **Named dock layouts** in Studio Settings › Layout (Blender's
-  workspaces): the current arrangement saved under a name — every edge's
-  docks, tabs and size, and which panels float or are shut — and switched
+  workspaces): the current arrangement saved under a name, every edge's
+  docks, tabs and size, and which panels float or are shut, and switched
   back to with a click, through the same `Layout::restore` a launch uses,
   so a floating panel gets its window back. The one matching the docks is
   marked Active; saving under a used name replaces it, and each has a
@@ -2102,14 +2102,14 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   cross-section**: dragging any Scale handle on a Ball or Cylinder used to
   grow only the one axis grabbed, same as any other part, which turned a
   sphere oval or a cylinder's round end into an ellipse. Native Studio's
-  own docs give Scale no shape-specific behavior at all — `BasePart.Size`
-  is three independent numbers regardless of `Shape` — so this isn't a
+  own docs give Scale no shape-specific behavior at all, `BasePart.Size`
+  is three independent numbers regardless of `Shape`: so this isn't a
   Studio-parity gap so much as a genuinely useful addition modeled on
   F3X's real, open-source `Resize.lua`.
   **Ball and Cylinder are both done**: holding `Alt` while dragging a
   Ball's Scale handle now grows all three axes together (`Size +
   (d,d,d)`, keeping it a sphere); on a Cylinder, `Alt` locks whichever two
-  axes form its round end together when either is the one grabbed —
+  axes form its round end together when either is the one grabbed,
   grabbing the length axis instead is unaffected either way, since
   nothing else is meant to grow alongside a cylinder's length. Which axis
   *is* the length wasn't guessed at or taken from F3X's own source: this
@@ -2120,23 +2120,23 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   fact rather than a second, independent determination of it.
   `Shift` was the modifier F3X itself uses and the one this bullet
   originally asked for, but it already means "invert the current snap
-  state" on every other tool in this editor — `Alt` was picked instead
+  state" on every other tool in this editor, `Alt` was picked instead
   because it is provably inert at the exact moment a Scale handle is
   grabbed (it only means "cycle selection" on a click that falls through
   to a *pick*, a branch a handle grab never reaches), not because it
   matches F3X. **Wedge/CornerWedge need nothing**: `Resize.lua` gates its
-  shape-specific branch on `Part:IsA 'Part'` and sends every other class —
-  `WedgePart`, `CornerWedgePart`, `MeshPart` — through the same plain
+  shape-specific branch on `Part:IsA 'Part'` and sends every other class,
+  `WedgePart`, `CornerWedgePart`, `MeshPart`: through the same plain
   per-axis resize, so there is no case to model, and native Studio's docs
   give Scale no shape-specific behavior either. Plain `Part`s and
-  `MeshPart`s keep today's per-axis behavior regardless. — see
+  `MeshPart`s keep today's per-axis behavior regardless. see
   `F3XTeam/RBX-Building-Tools`'s `Tools/Resize.lua`.
 - [x] **A live stud-count readout while a Move/Scale drag is in progress**
   (e.g. a floating "12" near the handle showing studs moved/grown so
-  far) — genuinely useful, not documented as a specific Studio feature
+  far), genuinely useful, not documented as a specific Studio feature
   either way. A small label follows the cursor while a drag is held,
   reading the straight-line distance moved so far for a Move, or the
-  dragged axis's growth (or shrink) in studs for a Scale — both to two
+  dragged axis's growth (or shrink) in studs for a Scale, both to two
   decimal places, matching Studio's own numeric-field precision. Reads
   the same delta `gizmo.rs`'s own drag math already computes for the
   part itself (see `workspace_view::readout`), so there is nothing new
@@ -2159,8 +2159,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   plugin sorts by (`createGeneralFilter` in Roblox-Client-Tracker's
   `CompiledPackages/Properties`), and creator-docs' `studio/properties.md`
   screenshot shows the same Appearance, Data, Transform start. The two
-  papercuts first filed with it — tight rows, and a numeric value clipped
-  by a narrow field — went with the panel's rework: hairline seams between
+  papercuts first filed with it, tight rows, and a numeric value clipped
+  by a narrow field, went with the panel's rework: hairline seams between
   rows, and a numeric value shown whole on its own row with its components
   behind an expander.
 - [x] **Save/Publish to Roblox from the editor UI.** File › Save to Roblox
@@ -2170,8 +2170,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   version. A file opened from Home already carries its universe/place ids;
   any other file picks its game once from a window listing Home's own My
   Games (the same listing, cache and owner dropdown, the user's and their
-  groups' experiences), which links it to the experience's starting place —
-  Roblox's listings carry no other place — while Home's add-by-place-ID-or-
+  groups' experiences), which links it to the experience's starting place,
+  Roblox's listings carry no other place, while Home's add-by-place-ID-or-
   link row links any other place, listed or not (File › Link to Roblox
   Place… changes it). Every upload is confirmed first in a dialog naming the
   experience and place and saying what will happen: Publish saves a new
@@ -2182,7 +2182,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   History, the next bullet. Roblox's own limit, from `creator-docs`
   (`cloud/guides/usage-place-publishing.md`): this API does **not** update
   `EditableImage`, `EditableMesh`, `PartOperation` (unions),
-  `SurfaceAppearance` or `BaseWrap` instances — edits to those only go live
+  `SurfaceAppearance` or `BaseWrap` instances, edits to those only go live
   when published from Roblox Studio. A successful upload of a place holding
   any of them adds a warning row to the Output dock saying so.
 - [x] **Place version history (browse and restore).** File › Version
@@ -2196,7 +2196,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   and whether it was published; one pill per contributor filters the list
   to their versions. **Open** downloads that version through the keyed
   asset-delivery route with `/version/{n}` and opens it, unlinked, in a new
-  editor — Studio's Open Local Copy. **Restore** uploads that version's
+  editor, Studio's Open Local Copy. **Restore** uploads that version's
   file as a new version of the place, which is what Roblox's own restore
   does (`creator-docs`, `projects/version-history.md`; Open Cloud has no
   revert call): Restore only saves it, as Roblox's does, and Restore and
@@ -2206,11 +2206,11 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   links its place from the window through the same game picker, and the
   window follows a relink or an upload from the File menu.
 
-- [x] **"Freeze"/"Apply" a `MeshPart`'s rotation** — Explorer ›
+- [x] **"Freeze"/"Apply" a `MeshPart`'s rotation**: Explorer ›
   right-click › **Freeze Rotation** clears an instance's turn to `0, 0, 0`
   while it keeps looking where and how it was, Blender's Apply › Rotation
   ("rotation values are cleared to zero … the geometry itself is adjusted
-  so that the object continues to appear unchanged") — the devforum's
+  so that the object continues to appear unchanged"), the devforum's
   [`allow-to-reset-the-orientation-of-a-part-to-000-and-keep-the-object-at-its-current-rotation`](https://devforum.roblox.com/t/allow-to-reset-the-orientation-of-a-part-to-000-and-keep-the-object-at-its-current-rotation/1301322),
   which asks it of parts, meshes and models alike, including ones built
   in Studio. As in Blender the origin stays put and loses its turn: the
@@ -2218,12 +2218,12 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `C0`/`C1` of joints naming the part keep their whole world frame. Only
   what Roblox itself would store is written, so four cases qualify:
   a **`Model`**, whose turn is its pivot's (`WorldPivot`, or its
-  `PrimaryPart`'s `PivotOffset`) — cleared with no part moving; a
+  `PrimaryPart`'s `PivotOffset`), cleared with no part moving; a
   **`Block`** turned by quarter turns, re-described unturned by swapping
   its `Size` axes, with its surfaces and any `Decal`/`Texture`/`SurfaceGui`
   `Face` moved to the face now pointing their way; a **`Ball`** at any
   angle (unless something sits on one of its faces); and a **`MeshPart`**,
-  whose drawn triangles (turn *and* stretch — a stretched mesh turned
+  whose drawn triangles (turn *and* stretch, a stretched mesh turned
   cannot be re-stretched along the new axes, so this is Apply › Rotation
   & Scale, Roblox having no other scale channel) are baked into a
   one-mesh glTF and uploaded through `rbx_cloud` as a real `Model` asset
@@ -2250,9 +2250,9 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   on the region), Transform (move, turn, stretch, Merge Empty, Live
   Edit), Fill and Replace, Sea Level's Create and Evaporate, and the Draw,
   Sculpt, Smooth, Paint and Flatten brushes with every option the page
-  lists — sphere/box/cylinder, size 1–64, height, strength 0.1–1, pivot,
+  lists, sphere/box/cylinder, size 1–64, height, strength 0.1–1, pivot,
   snapping, plane lock, Ignore Water, Ignore Parts, Auto Material, Erode
-  and Grow to Flat, fixed flatten plane, Paint's Replace — and its
+  and Grow to Flat, fixed flatten plane, Paint's Replace, and its
   shortcuts (Ctrl subtracts, Shift smooths, B with the wheel sizes the
   brush, Ctrl+B its height, Shift+B its strength). Every terrain material
   can be laid on voxels, picked from swatches in the place's own colours.
@@ -2276,37 +2276,37 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   other place to treat the two as one kind.)
 - [x] **Rig / avatar insertion**, matching Studio's real **Rig
   Generator** tool (checked against `studio/rig-builder.md` and
-  `avatar/character-bodies/specifications.md` rather than assumed — some
+  `avatar/character-bodies/specifications.md` rather than assumed, some
   of the originally-requested names don't map onto real, current Roblox
   terminology, corrected below):
   - **Rig type**: legacy **R6** (6 mesh objects) or **R15** (15 mesh
-    objects plus a full joint set) — R15 is required for layerable
+    objects plus a full joint set), R15 is required for layerable
     clothing/accessories, R6 has a more limited motion range. Both are
     real, current, documented options.
   - **Body shape**: **Masculine** or **Feminine**, for either rig type.
   - **Body scale**: Roblox's own three standards are **Classic** (the
-    original blocky proportions — this is what "block avatar" maps to,
+    original blocky proportions, this is what "block avatar" maps to,
     not a 2012-specific variant), **Rthro Normal**, and **Rthro Slender**
     (both realistic-proportion scales, selected via **Rig Type > Rthro**
-    in the real Importer) — not the "mesh avatar (2012/2016)" split
+    in the real Importer), not the "mesh avatar (2012/2016)" split
     originally guessed; creator-docs doesn't document body scale by
     release year, it documents it by these three named standards.
   - **Which character to spawn**: a generic mannequin (any rig
-    type/shape/scale combination above with no specific identity), or —
-    genuinely uncertain, flagging rather than assuming — the signed-in
+    type/shape/scale combination above with no specific identity), or,
+    genuinely uncertain, flagging rather than assuming, the signed-in
     user's *own* avatar, including their actual equipped characterization
     and accessories. Real Studio's Rig Generator only documents inserting
     generic pre-built rigs; pulling a specific account's real avatar
     configuration would need Roblox's avatar/catalog APIs
     (`Class.Players:GetCharacterAppearanceInfoAsync`-equivalent data over
-    Open Cloud or the public avatar API) — needs its own investigation
+    Open Cloud or the public avatar API), needs its own investigation
     pass on what's actually exposed for a third-party tool before
     committing to it, likely in the same risk tier as other
     account-data-dependent items on this roadmap.
   - Whichever combination is chosen, insert as a real character `Model`
-    (matching Studio's own output: correct joints — `AnimationConstraint`s or `Motor6D`s, see the Avatar Joint Upgrade item above — and
-    `Class.Humanoid` so the rig is immediately animatable — ties directly
-    into the Animation work above) — either built locally from known
+    (matching Studio's own output: correct joints, `AnimationConstraint`s or `Motor6D`s, see the Avatar Joint Upgrade item above, and
+    `Class.Humanoid` so the rig is immediately animatable, ties directly
+    into the Animation work above), either built locally from known
     proportions/meshes, or, if a specific official asset id is the more
     faithful source for a given rig, imported directly as a real `.rbxm`
     the same way any other asset import works.
@@ -2501,7 +2501,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   with live parameters.
 - [x] **The Animation Graph matched to Roblox's own**, from its docs,
   DevForum posts and the shipping Studio plugin (sources in
-  `agents/animation-research.md`):
+  `docs/research/animation.md`):
   - **Storage**: the plugin's own layout. That covers a `Configuration`
     of `AnimGraph_*` layout attributes, `Parameter_<Name>` folders and
     `param::` bindings, `SharedMasks`, transitions named `X_to_Y`, and
@@ -2607,7 +2607,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   writer the Terrain Editor brought. Studio's themed templates (Village,
   Castle, Obby, …) are whole games built from Roblox's assets and are not
   redrawn here. An account switcher (one key per Roblox account) would be
-  an rbx-native addition, not Studio parity — real Studio has none.
+  an rbx-native addition, not Studio parity, real Studio has none.
 - [x] **Branch and merge place files**, with conflict resolution at the
   property and script level. `rbx_dom::merge` merges a base and two
   descendants of it three-way: instances added, removed or reparented,
@@ -2769,9 +2769,9 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   the real ones, and a service name built at runtime (not a string
   literal), which is not rewritten. `examples/market_place.rs` writes the probed copy for a
   check in real Studio.
-- [x] **Network Simulator equivalent** — real Studio's tool
+- [x] **Network Simulator equivalent**: real Studio's tool
   (`studio/network-simulator.md`): a **Network** tile in the Test ribbon
-  with the connection-type pill opens a **Network simulation** popover —
+  with the connection-type pill opens a **Network simulation** popover,
   Preset (Studio's five built-ins plus saved customs, which persist in
   settings), **Inbound** and **Outbound** groups with **Latency**,
   **Jitter** and **Packet loss** in Studio's ranges, and **Apply** /
@@ -2800,7 +2800,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `probability` on those rules, and Output says so when it does not.
   Research and a live-test checklist for each:
   `docs/research/play-sandbox/network-simulator-windows-macos.md`.
-- [x] **Device Simulator** — a Device menu in the Test ribbon: phones
+- [x] **Device Simulator**: a Device menu in the Test ribbon: phones
   (flagship, mid-range, entry level), tablets, desktops, consoles and a
   headset with real logical resolutions and iPhone safe-area insets, a
   Custom device (size and platform, kept in settings), Rotate for phones
@@ -2816,15 +2816,15 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   reports, so the real client reports the device's values. The Play half
   is not yet live-tested.
 - [x] **Device Simulator: keyboard cover, Android back, display scaling
-  and a client self-report** — the Device menu gains an **On-screen
+  and a client self-report**: the Device menu gains an **On-screen
   keyboard** toggle (our own key grid at each phone's and tablet's
   approximate keyboard height per orientation, cut out of the Play client
   and also shown while the game has a TextBox focused; the game is not
   told, `OnScreenKeyboardSize` stays 0), Studio's **Android back button**
   for Android devices during Play (Escape sent to the embedded client
-  through XTest, Linux only), and **Display scaling** — Fit to window,
+  through XTest, Linux only), and **Display scaling**: Fit to window,
   Actual resolution or Physical size (each device's PPI against 96 dpi ×
-  the window scale, as Studio's auto-detect does) — for Edit; Roblox
+  the window scale, as Studio's auto-detect does), for Edit; Roblox
   exposes no DPI to scripts, so how big the screen looks is the only
   effect pixel density has. During Play the client probe reports its
   `ViewportSize`, `TouchEnabled`, `IsTenFootInterface`, input kinds and
@@ -2837,8 +2837,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   focused TextBox. Research, verdicts and measurements:
   `docs/research/play-sandbox/device-simulator.md`.
 - [x] **Controller Emulator** (`rbx_play::gamepad`,
-  `shell/controller_emulator`; Test › Controller): Studio's widget —
-  Generic Gamepad, PS4, PS5, Xbox and Generic Handheld — drawn with the
+  `shell/controller_emulator`; Test › Controller): Studio's widget,
+  Generic Gamepad, PS4, PS5, Xbox and Generic Handheld, drawn with the
   editor's own shapes, with clickable buttons, draggable analog sticks and
   triggers, keyboard forwarding while the window has focus (WASD / IJKL
   sticks, arrows D-pad, Space/F/R/T face buttons, Q/E bumpers, Z/C
@@ -2895,13 +2895,13 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     `UseFixedSimulation` is likewise unchecked.
 
 ### Platform
-- [x] Linux (X11) — the daily-driven target.
-- [x] Windows — asset cache and settings now fall back to
+- [x] Linux (X11), the daily-driven target.
+- [x] Windows: asset cache and settings now fall back to
   `%LOCALAPPDATA%`/`%APPDATA%` when no `XDG_*`/`HOME` is set; the
   rendering/editor stack (`wgpu`, GPUI Kit) is cross-platform by
-  construction. Never built on a real Windows machine yet — see
+  construction. Never built on a real Windows machine yet, see
   the Windows items below.
-- [x] Windows-native texture fallback — when `setup.rbxcdn.com` cannot
+- [x] Windows-native texture fallback, when `setup.rbxcdn.com` cannot
   serve an `rbxasset://` file (offline, or absent from its packages),
   `rbx_assets` reads it off a Roblox/Studio install on the same machine:
   every `%LOCALAPPDATA%\Roblox\Versions\version-*` folder, newest first,
@@ -2920,7 +2920,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `..`, `\`, `:`, an empty or `.` segment, a root or drive prefix, or a
   Windows device name (`NUL`, `CON`, `COM1`…), rather than handed to the
   filesystem.
-- [x] A first real build on Windows, and CI coverage for it — every
+- [x] A first real build on Windows, and CI coverage for it, every
   change now runs `cargo clippy -D warnings`, `cargo build` and
   `cargo test --workspace` on `windows-latest`
   (`.github/workflows/ci.yml`). The workspace compiles and its tests pass
@@ -2928,7 +2928,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   *running*: it is headless, so no window, GPU surface or input path has
   been exercised on Windows. Launching the editor there is still open.
 - [x] Daily API-Dump sync (`.github/workflows/sync-api-dump.yml`).
-- [x] The viewer in a browser — `rbx_viewer` builds for
+- [x] The viewer in a browser, `rbx_viewer` builds for
   `wasm32-unknown-unknown` (`scripts/build-web.sh`) and runs on WebGPU
   with the same renderer, streaming loader, legacy-union booleans,
   fallbacks, quality levels (`Automatic` included) and camera controller
@@ -2950,12 +2950,12 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   GUI shapes text before any font face exists (no system fonts in a
   browser). Rebuilding the material arrays after a pack streams in now
   copies every layer the old arrays already hold on the GPU instead of
-  mip-mapping it again on the CPU — about a second per landing in the
+  mip-mapping it again on the CPU, about a second per landing in the
   browser, and a real cut to every native swap-in too.
   Not there yet: WebGL2 (the renderer needs storage buffers and compute),
   threads (union booleans and decodes run on the page's one thread), and a
   size diet (the wasm is ~10 MB, mostly the embedded API dump).
-- [x] Mouse capture in the free-flight camera — a Win32 backend beside the
+- [x] Mouse capture in the free-flight camera, a Win32 backend beside the
   X11 one in `pointer_lock::server`: `ShowCursor` hides, `SetCursorPos`
   warps back to the viewport centre after every move. No `ClipCursor`:
   GPUI already `SetCapture`s on button press, so moves keep arriving
@@ -2963,20 +2963,20 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   the Windows CI job, but not yet driven on a real Windows desktop.
 - [x] A job that rebuilds against the current Studio version and
   compares parsed output to reference dumps, to catch a format drift
-  before a user does — the nightly API-dump sync now runs
+  before a user does, the nightly API-dump sync now runs
   `rbx_parser_cli`/`rbx_reflection`/`rbx_lua`'s tests with Studio's newest
   dump embedded before committing it, including a golden comparison of
   every fixture's `rbxdump` output against `assets/tests/dumps/`. A
   failure blocks the commit. Ceiling: the fixtures are old saves, so this
   catches reflection drift (renamed/dropped enums, defaults), not a new
   binary chunk that only a fresh Studio save would contain.
-- [x] macOS build CI — a `macos-latest` job beside the Windows one:
+- [x] macOS build CI, a `macos-latest` job beside the Windows one:
   clippy, build and test. macOS is still not a supported target; the job
   only keeps the workspace from rotting there.
 
 ### Collaboration (`rbx_presence`)
 - [x] **Live co-editing between rbx-native editors, and with Studio
-  through the Team Presence plugin (beta)** — edits travel as operations
+  through the Team Presence plugin (beta)**: edits travel as operations
   through the hosted presence relay's op log, end-to-end encrypted like
   presence itself (HKDF from the place secret → ChaCha20-Poly1305; the
   plugin's Luau implementation was checked against the shared test vectors
@@ -2989,17 +2989,17 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 
 ## What's planned
 
-### Script authoring — the biggest real gap
+### Script authoring: the biggest real gap
 - [ ] ⚠️ **Inline AI code completion**, matching what real Studio calls
-  **Code Assist** (`studio/script-editor.md`) — suggests a line/block of
+  **Code Assist** (`studio/script-editor.md`), suggests a line/block of
   code inline as you type or pause, distinct from `luau-lsp`'s
   diagnostics/autocomplete above. Explicitly not attemptable as *Studio
   parity*: Roblox's version is backed by a model Roblox trained and hosts
   itself, nothing this project has access to. A workaround exists in the
   same shape as the Material/Texture Generator item under
-  [Possible via a workaround](#ai-content-generation) below — wire the
+  [Possible via a workaround](#ai-content-generation) below, wire the
   editor's completion request to any third-party or
-  locally-hosted code-completion API instead — but that's a distinct,
+  locally-hosted code-completion API instead, but that's a distinct,
   lower-priority idea worth its own decision on which backend (if any),
   not a default this project should ship opinionated about.
 
@@ -3008,7 +3008,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   server (see "What's been implemented" → Editor) still lacks what lets
   an AI client run the session, matching the
   shape (not the exact tool surface) of Roblox's own built-in Studio MCP
-  server (checked against `studio/mcp.md` rather than assumed — real,
+  server (checked against `studio/mcp.md` rather than assumed, real,
   current, `stdio`-transport, ships in Studio itself, lets an AI client
   read/write scripts, run Luau, inspect the DataModel, and drive
   playtesting). Most of what is left is a thin protocol wrapper around
@@ -3018,10 +3018,10 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `start_stop_play`/`get_console_output` over Play (see
   [Play / Test workflow](#play--test-workflow)) and the Output dock. Two sub-capabilities are **not** reachable the same
   way: `search_asset`/`insert_asset` depend on Roblox's Creator Store/
-  Creator Inventory catalog — the same
+  Creator Inventory catalog, the same
   [Toolbox/marketplace parity](#explicitly-impossible-without-robloxs-engine)
   wall as everywhere else in this document, arbitrary third-party assets
-  aren't fetchable — and `generate_mesh`/`generate_material` are AI
+  aren't fetchable, and `generate_mesh`/`generate_material` are AI
   content generation, covered separately under
   [Possible via a workaround](#ai-content-generation) below. Whatever this
   project exposes over MCP is still bound by the same file-format rule as
@@ -3066,7 +3066,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows
   embeds through `SetParent` (type-checked for the MSVC target only); on
   macOS the client keeps its own window.
-- [ ] 📋 **Network Simulator on Windows and macOS: never run** — neither
+- [ ] 📋 **Network Simulator on Windows and macOS: never run**, neither
   shaper has run on a real Windows PC or Mac (only their platform-free
   parts are unit-tested, and a scripted pf/dnctl stand-in on Linux):
   WinDivert's address bit layout, driver loading under Secure Boot or
@@ -3074,7 +3074,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   accepting `probability` and port lists on dummynet rules in the
   `com.apple/*` sub-anchor, and whether Roblox's anti-cheat reacts to
   either.
-- [ ] 📋 **Device Simulator: what is still open** — known caveats of Play
+- [ ] 📋 **Device Simulator: what is still open**, known caveats of Play
   through Sober, measured live: a click reaches the game as `MouseButton1`,
   never a touch (no multi-touch), and Roblox's own UI chosen by
   `PreferredInput` (which stays `KeyboardAndMouse`) is not simulated; a
@@ -3102,7 +3102,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   under "Explicitly impossible". What remains of the item is the Network
   Simulator above, which is what would matter most for these places.
 - [ ] 📋 **Controller Emulator: make Sober take the virtual pad's input, and
-  the devices still missing** — run against a live Play (2026-10-18), Sober
+  the devices still missing**: run against a live Play (2026-10-18), Sober
   sees the uinput pad (`GamepadEnabled` true) but passes none of its input
   on: A held on the drawing sends `BTN_SOUTH` on the pad's `/dev/input`
   node, yet `GetLastInputType` stays Touch and the character does not jump,
@@ -3323,31 +3323,31 @@ wouldn't want to pay.
 
 ## Explicitly impossible without Roblox's engine
 
-These aren't missing features — they require Roblox's own closed-source
+These aren't missing features, they require Roblox's own closed-source
 game engine (rendering, physics, replication, anti-cheat) to exist at all,
 and no amount of reverse engineering changes that:
 
 - **Playing or testing a live game with real physics and client/server
   replication.** rbx-native can never have a native "Play" button in the
-  way Studio does — see [Play / Test workflow](#play--test-workflow) for
+  way Studio does, see [Play / Test workflow](#play--test-workflow) for
   the private sandbox that stands in for it.
-- **Team Create** — proprietary real-time collaboration, no public
+- **Team Create**: proprietary real-time collaboration, no public
   equivalent API.
-- **Toolbox/marketplace parity** — public APIs (Creator Store, Open Cloud,
+- **Toolbox/marketplace parity**: public APIs (Creator Store, Open Cloud,
   `catalog.roblox.com`) expose metadata and let you manage your *own*
   assets; none of them let you download and insert an arbitrary third-
   party asset the way Studio's Toolbox does.
-- **A pixel-faithful plugin UI** — `DockWidgetPluginGui` is rendered by
+- **A pixel-faithful plugin UI**: `DockWidgetPluginGui` is rendered by
   Roblox's own UI engine (`GuiBase2d`/`LayerCollector`); reproducing it
   means reimplementing that whole subsystem, which is out of scope. A
   headless, DataModel-only plugin subset is reachable instead (see above).
 - **Bit-exact CSG results** (`PhysicalConfigData`, and carving a tree
-  exactly as Roblox's own boolean does) — undocumented and
+  exactly as Roblox's own boolean does), undocumented and
   version-unstable; not worth chasing when a real from-scratch boolean
   already exists. Roblox's baked `MeshData` itself is read where a union
   has no tree or its tree will not carve (versions 2, 4 and 5, see
   "What's been implemented").
-- **Physics simulation and anti-cheat** — proprietary physics engine, no
+- **Physics simulation and anti-cheat**: proprietary physics engine, no
   real server authority possible from rbx-native. That covers Roblox's new
   Server Authority model too: client prediction, rollback and resimulation
   are engine behaviour, so only its settings can be edited here (see
@@ -3365,21 +3365,21 @@ Real Studio's **Material Generator** and **Texture Generator**
 (`studio/material-generator.md`, `studio/texture-generator.md`, the
 latter still in beta) turn a text prompt into a paintable
 `MaterialVariant` or a mesh-specific texture within seconds. Both are
-backed by an image-generation model Roblox trained and hosts itself —
+backed by an image-generation model Roblox trained and hosts itself,
 nothing about the *model* is reachable here, so this can never be Studio
 parity in the sense of reproducing Roblox's own generations. What *is*
 reachable is the same workflow shape with a different backend:
 
 1. A prompt box in the Material/Texture picker UI (same entry points real
-   Studio uses — the `Material` widget's picker popup, or a selected
+   Studio uses, the `Material` widget's picker popup, or a selected
    `MeshPart`) sends the user's text prompt to any external text-to-image
-   API the user configures (their own key, their own choice of provider —
+   API the user configures (their own key, their own choice of provider,
    this project shouldn't hardcode or default to one, the same stance the
    Inline AI code completion item under "Script authoring" above takes).
 2. The returned image is saved locally and, critically for staying
    format-compatible, **uploaded as a real Roblox image asset** through
-   the existing `rbx_cloud` Open Cloud client — the same path the 3D
-   asset import item already uses — never embedded or referenced as a
+   the existing `rbx_cloud` Open Cloud client, the same path the 3D
+   asset import item already uses, never embedded or referenced as a
    local file path inside the saved place.
 3. The result is applied through ordinary, real properties: a generated
    material becomes a real `Class.MaterialVariant` (`BaseMaterial`,
@@ -3388,34 +3388,34 @@ reachable is the same workflow shape with a different backend:
    generated texture becomes a real `Class.Texture`/`Class.SurfaceAppearance`
    asset reference. From a saved-file standpoint this is indistinguishable
    from a developer manually uploading custom art and wiring it up by
-   hand — which is exactly the property this whole document holds every
+   hand, which is exactly the property this whole document holds every
    write path to.
 
-Not implemented, not even designed in detail yet — recorded here as a
+Not implemented, not even designed in detail yet, recorded here as a
 real, workable shape rather than a rejected idea.
 
 ### Studio fallback
 
 A literal "Open in Studio" button (Vinegar/Wine) for anything rbx-native
 genuinely can't do yet, with sync via a Rojo/Argon-style plugin. Reparenting
-the real Studio window into rbx-native's own was considered and rejected —
+the real Studio window into rbx-native's own was considered and rejected,
 Wine + Qt + X11 stacked together isn't worth it as an integrated Play
 engine, just as an escape hatch.
 
 ### Collaboration
 
-- [ ] 📋 **Co-editing without an rbx-native host, and at scale** — only the
+- [ ] 📋 **Co-editing without an rbx-native host, and at scale**, only the
   hosted relay (an rbx-native user's own) keeps the op log, so Studio users
   alone cannot co-edit, and a new host starts with an empty log. Attributes
   and tags are not sent from Studio, and large places (tens of thousands of
   instances) are untested.
 
 Neither replaces **Team Create**, Roblox's actual real-time multi-user
-editing — that stays proprietary with no public protocol to build against
+editing, that stays proprietary with no public protocol to build against
 (see [Explicitly impossible](#explicitly-impossible-without-robloxs-engine))
-— the sandbox above covers testing as a team instead of editing as one.
+the sandbox above covers testing as a team instead of editing as one.
 
 ---
 
-For more detail on anything above — what was actually tried, what was
-measured, what a fix turned out to really be — see [CHANGELOG.md](CHANGELOG.md).
+For more detail on anything above, what was actually tried, what was
+measured, what a fix turned out to really be, see [CHANGELOG.md](CHANGELOG.md).

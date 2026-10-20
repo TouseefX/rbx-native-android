@@ -98,8 +98,8 @@ const SAME_TURN: f32 = 1e-6;
 
 /// The front-most part under a click, when it is one of the rig's posable
 /// parts (`rigged`): what a plain click selects while posing, so the drag
-/// that follows lands on that part's joint. Anything else in front — a
-/// wall, another model — leaves the ordinary resolution to run.
+/// that follows lands on that part's joint. Anything else in front, a
+/// wall, another model, leaves the ordinary resolution to run.
 ///
 /// The rig's `root` (an R15's `HumanoidRootPart`, invisible and wrapped
 /// round the torso) is passed over when a limb of the rig stands behind it,
@@ -288,7 +288,7 @@ impl Shell {
         PoseShown(swapped, pivots)
     }
 
-    /// Puts back what [`Shell::pose_in`] swapped — except a `CFrame` written
+    /// Puts back what [`Shell::pose_in`] swapped, except a `CFrame` written
     /// in between (a drag step on an already posed limb), which is left for
     /// [`Shell::settle_pose_edits`] to key. Restoring it too would throw away
     /// every drag step after the first on a limb that is no longer at rest.
@@ -447,7 +447,7 @@ impl Shell {
     }
 
     /// What a click on the posed rig takes while posing: the rig part
-    /// nearest under the cursor — the part whose joint a drag keys — rather
+    /// nearest under the cursor, the part whose joint a drag keys, rather
     /// than the whole rig `Model` a click elsewhere would take. `Alt` keeps
     /// its cycling (`None` here, so the ordinary resolution runs), and so
     /// does anything that isn't one of the rig's parts.

@@ -202,9 +202,9 @@ fn parents(
 /// Survival, per node: in ours and theirs → kept; added by one side (no
 /// base, absent on the other) → kept, unless its parent is not in the
 /// output (then dropped silently); removed by both → gone. Removed by one
-/// side only → gone, unless the other side changed it — its content
+/// side only → gone, unless the other side changed it, its content
 /// differs from base, it moved, or any instance under it on that side was
-/// added, changed, moved in or out — which is `Target::Existence {
+/// added, changed, moved in or out, which is `Target::Existence {
 /// removed_by }` (one conflict, at the topmost removed instance only, none
 /// for its descendants): ours keeps ours' state, `Theirs` takes theirs'.
 /// A kept instance whose removed-by-the-other-side subtree is restored

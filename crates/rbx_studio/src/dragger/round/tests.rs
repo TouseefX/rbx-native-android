@@ -194,7 +194,7 @@ fn a_ball_drag_draws_the_latitude_and_meridian_through_the_point() {
     let at_latitude =
         |line: &&&Line| (line.from.y - 1.0).abs() < 1e-4 && (line.to.y - 1.0).abs() < 1e-4;
     assert_eq!(yellow.iter().filter(at_latitude).count(), 24);
-    // A tick of two chords at every other grid latitude up to the pole —
+    // A tick of two chords at every other grid latitude up to the pole,
     // not at y = 1, the latitude itself, nor at the pole, where it has no
     // length.
     let mut ticks: Vec<f32> = guides
