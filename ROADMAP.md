@@ -269,7 +269,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     then each turns about its own. `ClipsDescendants` is still a no-op
     under any rotation, per the docs' default
     `ClipsDescendantsSupportsRotation` mode.
-  - `UIGradient`, `Color`/`Transparency` sequences, `Rotation`, `Offset`,
+  - `UIGradient`: `Color`/`Transparency` sequences, `Rotation`, `Offset`,
     `Scale`, `Type` (`Linear`/`Radial`/`Elliptical`/`Conical`) and
     `TileMode`, applied
     to the background, the image and the text alike through a gradient
