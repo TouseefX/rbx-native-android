@@ -44,7 +44,7 @@ fn edits_apply_in_order_each_on_what_the_last_left() {
     let (failed, result, planned) = edit(
         &dom,
         json!({
-            "path": GAME_LOOP,
+            "file_path": GAME_LOOP,
             "edits": [
                 replacement("rounds = 0", "rounds = 1"),
                 replacement("rounds = 1\n", "rounds = 1 -- first round\n"),
@@ -53,9 +53,8 @@ fn edits_apply_in_order_each_on_what_the_last_left() {
         }),
     );
     assert!(!failed, "{result}");
-    assert_eq!(result["created"], false);
-    assert_eq!(result["changed"], true);
-    assert_eq!(result["lines"], 3);
+    // Studio's own sentence, "edits" even when there is a count of one.
+    assert_eq!(result, "Modified GameLoop (Script) with 3 edits applied");
     let planned = planned.unwrap();
     assert_eq!(planned.target, Target::Existing(script));
     assert!(
@@ -75,13 +74,16 @@ fn one_edit_that_cannot_apply_leaves_the_script_untouched() {
     let (failed, result, planned) = edit(
         &dom,
         json!({
-            "path": GAME_LOOP,
+            "file_path": GAME_LOOP,
             "edits": [replacement("rounds = 0", "rounds = 5"), replacement("no such text", "x")],
         }),
     );
     assert!(failed);
     assert!(planned.is_none(), "all or none");
-    assert!(result.as_str().unwrap().starts_with("edit 2:"), "{result}");
+    assert_eq!(
+        result,
+        "Edit 2 - old_string 'no such text' not found in current content"
+    );
 }
 
 #[test]
@@ -89,7 +91,7 @@ fn text_that_appears_twice_needs_replace_all() {
     let dom = place();
     let (failed, result, _) = edit(
         &dom,
-        json!({ "path": GAME_LOOP, "edits": [replacement("rounds", "laps")] }),
+        json!({ "file_path": GAME_LOOP, "edits": [replacement("rounds", "laps")] }),
     );
     assert!(failed);
     assert!(result.as_str().unwrap().contains("2 times"), "{result}");
@@ -97,7 +99,7 @@ fn text_that_appears_twice_needs_replace_all() {
     let (failed, _, planned) = edit(
         &dom,
         json!({
-            "path": GAME_LOOP,
+            "file_path": GAME_LOOP,
             "edits": [{ "old_string": "rounds", "new_string": "laps", "replace_all": true }],
         }),
     );
@@ -109,15 +111,29 @@ fn text_that_appears_twice_needs_replace_all() {
 }
 
 #[test]
-fn an_edit_that_changes_nothing_plans_nothing() {
+fn edits_that_end_where_they_started_plan_nothing() {
     let dom = place();
     let (failed, result, planned) = edit(
         &dom,
-        json!({ "path": GAME_LOOP, "edits": [replacement("rounds += 1", "rounds += 1")] }),
+        json!({
+            "file_path": GAME_LOOP,
+            "edits": [replacement("rounds += 1", "rounds -= 1"), replacement("rounds -= 1", "rounds += 1")],
+        }),
     );
-    assert!(!failed);
-    assert_eq!(result["changed"], false);
+    assert!(!failed, "{result}");
+    assert_eq!(result, "Modified GameLoop (Script) with 2 edits applied");
     assert!(planned.is_none(), "no undo step that reverts nothing");
+}
+
+#[test]
+fn an_edit_whose_old_and_new_text_match_is_refused() {
+    let dom = place();
+    let (failed, result, planned) = edit(
+        &dom,
+        json!({ "file_path": GAME_LOOP, "edits": [replacement("rounds += 1", "rounds += 1")] }),
+    );
+    assert!(failed && planned.is_none());
+    assert_eq!(result, "Edit 1 has identical old_string and new_string");
 }
 
 #[test]
@@ -127,14 +143,13 @@ fn a_missing_script_is_created_under_its_parent() {
     let (failed, result, planned) = edit(
         &dom,
         json!({
-            "path": "game.ServerScriptService.Shop",
-            "class_name": "ModuleScript",
+            "file_path": "game.ServerScriptService.Shop",
+            "className": "ModuleScript",
             "edits": [replacement("", "return {}\n")],
         }),
     );
     assert!(!failed, "{result}");
-    assert_eq!(result["created"], true);
-    assert_eq!(result["path"], "game.ServerScriptService.Shop");
+    assert_eq!(result, "Created Shop (ModuleScript) with 1 edits applied");
     let planned = planned.unwrap();
     assert!(planned.creates());
     let shop = apply(&mut dom, &planned).unwrap();
@@ -148,11 +163,28 @@ fn a_missing_script_is_created_under_its_parent() {
 }
 
 #[test]
-fn a_new_script_defaults_to_script_and_needs_a_parent_that_exists() {
+fn a_new_script_needs_its_class_and_a_parent_that_exists() {
     let dom = place();
+    let (failed, result, planned) = edit(
+        &dom,
+        json!({ "file_path": "ServerScriptService.Boot", "edits": [replacement("", "print(1)")] }),
+    );
+    assert!(
+        failed && planned.is_none(),
+        "Studio asks for className rather than guess"
+    );
+    assert_eq!(
+        result,
+        "`className` is required when creating a new script at path: ServerScriptService.Boot"
+    );
+
     let (_, _, planned) = edit(
         &dom,
-        json!({ "path": "ServerScriptService.Boot", "edits": [replacement("", "print(1)")] }),
+        json!({
+            "file_path": "ServerScriptService.Boot",
+            "className": "Script",
+            "edits": [replacement("", "print(1)")],
+        }),
     );
     assert!(matches!(
         planned.unwrap().target,
@@ -165,15 +197,19 @@ fn a_new_script_defaults_to_script_and_needs_a_parent_that_exists() {
     // Only the last level is new: a typo above it is not a script name.
     let (failed, result, planned) = edit(
         &dom,
-        json!({ "path": "game.ServerScriptServic.Boot", "edits": [replacement("", "x")] }),
+        json!({
+            "file_path": "game.ServerScriptServic.Boot",
+            "className": "Script",
+            "edits": [replacement("", "x")],
+        }),
     );
     assert!(failed && planned.is_none(), "{result}");
 
     let (failed, result, _) = edit(
         &dom,
         json!({
-            "path": "game.ServerScriptService.Boot",
-            "class_name": "Part",
+            "file_path": "game.ServerScriptService.Boot",
+            "className": "Part",
             "edits": [replacement("", "x")],
         }),
     );
@@ -185,13 +221,13 @@ fn an_empty_old_string_only_fills_an_empty_script() {
     let dom = place();
     let (failed, _, _) = edit(
         &dom,
-        json!({ "path": GAME_LOOP, "edits": [replacement("", "-- header\n")] }),
+        json!({ "file_path": GAME_LOOP, "edits": [replacement("", "-- header\n")] }),
     );
     assert!(failed);
     let (failed, _, planned) = edit(
         &dom,
         json!({
-            "path": "game.ServerScriptService.Empty",
+            "file_path": "game.ServerScriptService.Empty",
             "edits": [replacement("", "print(1)")],
         }),
     );
@@ -204,7 +240,7 @@ fn what_is_not_a_script_or_not_the_edit_data_model_is_refused() {
     let dom = place();
     let (failed, result, _) = edit(
         &dom,
-        json!({ "path": "game.Workspace.Tower.Door", "edits": [replacement("a", "b")] }),
+        json!({ "file_path": "game.Workspace.Tower.Door", "edits": [replacement("a", "b")] }),
     );
     assert!(failed);
     assert!(
@@ -215,18 +251,18 @@ fn what_is_not_a_script_or_not_the_edit_data_model_is_refused() {
     let (failed, _, _) = edit(
         &dom,
         json!({
-            "path": GAME_LOOP,
+            "file_path": GAME_LOOP,
             "datamodel_type": "Server",
             "edits": [replacement("rounds = 0", "x")],
         }),
     );
     assert!(failed);
 
-    let (failed, _, _) = edit(&dom, json!({ "path": GAME_LOOP, "edits": [] }));
+    let (failed, _, _) = edit(&dom, json!({ "file_path": GAME_LOOP, "edits": [] }));
     assert!(failed, "an empty list is a mistake, not a no-op");
     let (failed, _, _) = edit(
         &dom,
-        json!({ "path": GAME_LOOP, "edits": [{ "old_string": "x" }] }),
+        json!({ "file_path": GAME_LOOP, "edits": [{ "old_string": "x" }] }),
     );
     assert!(failed);
 }
@@ -241,7 +277,7 @@ fn nothing_is_edited_while_a_live_playtest_is_shown() {
     let (failed, result, planned) = edit_with(
         &dom,
         &showing,
-        json!({ "path": GAME_LOOP, "edits": [replacement("rounds = 0", "rounds = 1")] }),
+        json!({ "file_path": GAME_LOOP, "edits": [replacement("rounds = 0", "rounds = 1")] }),
     );
     assert!(failed && planned.is_none(), "{result}");
 }
@@ -252,7 +288,7 @@ fn applying_to_a_script_deleted_meanwhile_writes_nothing() {
     let script = resolve(&dom, GAME_LOOP).unwrap();
     let (_, _, planned) = edit(
         &dom,
-        json!({ "path": GAME_LOOP, "edits": [replacement("rounds = 0", "rounds = 1")] }),
+        json!({ "file_path": GAME_LOOP, "edits": [replacement("rounds = 0", "rounds = 1")] }),
     );
     dom.remove(script);
     assert_eq!(apply(&mut dom, &planned.unwrap()), None);

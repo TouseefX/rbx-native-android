@@ -1,5 +1,5 @@
 //! `get_studio_state` and `list_roblox_studios`: which editor answered, and
-//! what it is doing.
+//! what it is doing, in the shapes real Studio answers them with.
 
 use serde_json::{json, Value};
 
@@ -8,22 +8,40 @@ use crate::mcp::{PlayState, Studio};
 pub(crate) const STUDIO_STATE: &str = "get_studio_state";
 pub(crate) const LIST_STUDIOS: &str = "list_roblox_studios";
 
-/// One row of `list_roblox_studios`. A place with no place ID is listed by
-/// name only, as Studio lists it.
+/// The key Studio's `list_roblox_studios` answer holds its rows under.
+pub(crate) const STUDIOS_KEY: &str = "studios";
+
+/// This editor's row of `list_roblox_studios`: the session's `id` to pass as
+/// `studio_id`, and a name to pick it by. Studio names a row by its place
+/// file (`TestPlace.rbxl`); a place linked to Roblox adds its place ID,
+/// which is what tells two copies of one place apart.
 pub(crate) fn describe(studio: &Studio) -> Value {
-    let mut row = json!({ "studio_id": studio.id, "name": studio.name });
-    if let Some(place_id) = studio.place_id {
-        row["place_id"] = json!(place_id);
-    }
-    row
+    let name = match studio.place_id {
+        Some(place_id) => format!("{} (place {place_id})", studio.name),
+        None => studio.name.clone(),
+    };
+    json!({ "id": studio.id, "name": name })
 }
 
+/// `list_roblox_studios` as one editor answers it: only itself.
+pub(super) fn list(studio: &Studio) -> Value {
+    json!({ STUDIOS_KEY: [describe(studio)] })
+}
+
+/// Studio's own three lines. A playtest here runs in a real Roblox client,
+/// not in the editor, so the edited place is the only data model a tool can
+/// reach. While the viewport shows a running playtest's tree, tools still
+/// read the edited place but `multi_edit` waits for it to come back.
 pub(super) fn state(studio: &Studio) -> Value {
-    let mut state = describe(studio);
-    state["play_state"] = json!(studio.play.label());
-    // A playtest here runs in a real Roblox client, not in the editor, so
-    // the edited place is the only data model a tool can reach.
-    state["datamodel_types"] = json!(["Edit"]);
-    state["editable"] = json!(studio.play != PlayState::ShowingLive);
-    state
+    let focused = match studio.play {
+        PlayState::ShowingLive => {
+            "a running playtest (Edit is read-only until it is switched back)"
+        }
+        _ => "Edit",
+    };
+    Value::String(format!(
+        "- Current Studio Mode: {}\n- Available DataModels: Edit\n- Focused DataModel in the \
+         viewport: {focused}",
+        studio.play.label()
+    ))
 }

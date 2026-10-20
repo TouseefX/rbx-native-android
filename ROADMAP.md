@@ -2681,28 +2681,32 @@ both the plain fetch failure and the silent fall back to a default
   `docs/screenshots/datastore-browser/`.
 - [x] **An MCP server over the live editor session: reading, script
   editing and several editors at once** (Settings › Beta features › MCP
-  server), shaped after Roblox's built-in Studio MCP server (`studio/mcp.md`)
-  and its tool names. An MCP client launches `rbxstudio --mcp`, a stdio
-  bridge that reaches every open editor over loopback; each editor writes
-  its `studio_id`, port and a random token to `<config>/mcp/<studio_id>.json`
-  and closes any connection that does not open with that token. Every
-  request is answered on the UI thread against the DOM as the Explorer
-  shows it: `search_game_tree` (start path, class filter matching
-  subclasses, name keywords, depth limit), `inspect_instance` (properties
-  formatted as the Properties panel shows them, attributes, tags, children,
-  descendant count), `script_read` (numbered lines, a range),
-  `script_search` (fuzzy by name, 10 results) and `script_grep` (literal
-  text, 50 matches). `multi_edit` applies several exact-text replacements
-  to a script's `Source` all or none, as one undo step through the same
-  write a script tab's own edits take, and creates the script (`Script`,
-  `LocalScript` or `ModuleScript`) under an existing parent when nothing is
-  at the path; it is refused while a live playtest is shown.
-  `list_roblox_studios` lists the open editors (place name, and place ID
-  for a linked place), `get_studio_state` adds the play state, and every
-  other tool takes a `studio_id`, optional when only one editor is open. A
-  file left behind by an editor that was killed is dropped the first time
-  its port refuses. Instances are named `game.Workspace.Model.Part`, names
-  with dots included.
+  server), shaped after Roblox's built-in Studio MCP server (`studio/mcp.md`).
+  Every tool takes the arguments real Studio's `StudioMCP` lists and answers
+  in the shape it answers with, compared side by side against it. An MCP
+  client launches `rbxstudio --mcp`, a stdio bridge that reaches every open
+  editor over loopback; each editor session writes its own id, port and a
+  random token to `<config>/mcp/<studio_id>.json` and closes any connection
+  that does not open with that token. Every request is answered on the UI
+  thread against the DOM as the Explorer shows it: `search_game_tree`
+  (start path, class filter matching subclasses, name keywords, depth and
+  head limits, children summarized past the depth), `inspect_instance`
+  (properties, attributes, tags, children and descendants; the path ignores
+  case and every sibling it names is returned, up to 20), `script_read`
+  (numbered lines, a range), `script_search` (fuzzy by name, 10 results)
+  and `script_grep` (a string or Luau pattern through Luau's own
+  `string.find`, 50 matches). `multi_edit` applies several exact-text
+  replacements to a script's `Source` all or none, as one undo step through
+  the same write a script tab's own edits take, and creates the script
+  (`Script`, `LocalScript` or `ModuleScript`, named by `className`) under an
+  existing parent when nothing is at the path; it is refused while a live
+  playtest is shown. `list_roblox_studios` lists the open editors (place
+  file name, and place ID for a linked place), `get_studio_state` reports
+  the play state, and every other tool takes a `studio_id`, optional when
+  only one editor is open. A file left behind by an editor that was killed
+  is dropped the first time its port refuses. Instances are named
+  `Workspace.Model.Part`, with or without `game.` in front, names with dots
+  included.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):

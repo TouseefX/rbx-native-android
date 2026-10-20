@@ -101,8 +101,8 @@ impl Shell {
                 .unwrap_or_default(),
             name: self
                 .path
-                .file_stem()
-                .map(|stem| stem.to_string_lossy().into_owned())
+                .file_name()
+                .map(|file| file.to_string_lossy().into_owned())
                 .unwrap_or_default(),
             place_id: crate::home::link_of(&self.path).map(|link| link.place_id),
             play,
