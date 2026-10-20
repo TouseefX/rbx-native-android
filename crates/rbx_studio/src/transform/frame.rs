@@ -4,7 +4,7 @@
 use glam::{Mat3, Mat4, Vec3};
 use rbx_dom::{CFrameData, Vector3Data};
 
-/// A `CFrame` as the matrix glam turns points with — `CFrameData` keeps its
+/// A `CFrame` as the matrix glam turns points with, `CFrameData` keeps its
 /// rotation row by row, glam column by column.
 pub(crate) fn rigid(frame: &CFrameData) -> Mat4 {
     let position = Vec3::new(frame.position.x, frame.position.y, frame.position.z);

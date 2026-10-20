@@ -173,7 +173,7 @@ fn a_colour_edit_on_a_box_is_rewritten_in_its_own_slot() {
 
 // Crossing between the opaque, blended and invisible buckets, flipping the
 // shadow flag, or changing shape: each is a different GPU batch, and moving
-// the record is the renderer's business — the scene still has exactly one
+// the record is the renderer's business, the scene still has exactly one
 // part to hand it, whatever bucket it belongs in now.
 #[test]
 fn a_box_keeps_its_place_across_every_bucket_and_shape() {
@@ -236,7 +236,7 @@ fn a_part_gone_from_the_dom_is_taken_out() {
 }
 
 // A part's `CFrame` is world-space, so a move between two `Workspace`
-// models changes nothing visible — but the part is re-read all the same,
+// models changes nothing visible, but the part is re-read all the same,
 // which is what makes the answer right without a special case.
 #[test]
 fn a_move_within_workspace_keeps_the_part_and_a_move_out_removes_it() {
@@ -316,7 +316,7 @@ fn a_mesh_parts_edits_land_on_its_resolved_instance() {
 }
 
 // A fully transparent mesh is dropped from the resolved set (a full build
-// never lists one) and comes back once visible again — its suppressed box
+// never lists one) and comes back once visible again, its suppressed box
 // is what still says the referent belongs to the mesh path.
 #[test]
 fn an_invisible_mesh_part_is_gone_and_comes_back() {
@@ -337,7 +337,7 @@ fn an_invisible_mesh_part_is_gone_and_comes_back() {
 
 // Swapping to a mesh another instance already draws through is a batch
 // move; swapping to one nobody has downloaded yet is never a rebuild either
-// — the part draws its box until the mesh lands (see `Headless::apply_changes`'s
+// the part draws its box until the mesh lands (see `Headless::apply_changes`'s
 // asset-streaming path), and the swap takes over in place once it does.
 #[test]
 fn a_mesh_id_swap_follows_only_a_downloaded_mesh() {
@@ -395,7 +395,7 @@ fn a_part_crosses_between_the_box_and_the_mesh_path() {
 }
 
 // A material never seen elsewhere in the place needs a texture-array layer
-// the renderer has not uploaded — what a full reload uploads.
+// the renderer has not uploaded, what a full reload uploads.
 #[test]
 fn a_material_needing_a_new_layer_is_a_rebuild() {
     let (mut dom, mut scene) = place();
@@ -419,7 +419,7 @@ fn a_material_needing_a_new_layer_is_a_rebuild() {
 
 /// `place()` with a `UnionOperation` added, resolved through the very
 /// `resolve_unions` a load runs against a synthetic asset whose boolean
-/// carves everything away — so the union is drawn as the three additive
+/// carves everything away, so the union is drawn as the three additive
 /// pieces recovered from its tree, and the evaluations handed back are the
 /// ones a real place's `Resident` would be holding.
 fn union_place() -> (WeakDom, Scene, UnionEvaluations) {
@@ -525,8 +525,8 @@ fn a_union_drawn_as_pieces_moves_piece_by_piece() {
 }
 
 // The union itself is what the Explorer, an outline, a decal and a click all
-// address, so the one placement the scene keeps for it is its own box — the
-// very box `pick` hit-tests it as — and not one of the pieces standing
+// address, so the one placement the scene keeps for it is its own box, the
+// very box `pick` hit-tests it as, and not one of the pieces standing
 // inside that box.
 #[test]
 fn a_union_drawn_as_pieces_is_placed_by_its_own_box() {
@@ -586,7 +586,7 @@ fn recolouring_a_union_drawn_as_pieces_leaves_its_pieces_alone() {
 }
 
 // A deleted union takes every piece with it, and the renderer is told which
-// piece slots to let go of — nothing keys them but the union's own referent.
+// piece slots to let go of, nothing keys them but the union's own referent.
 #[test]
 fn a_union_deleted_goes_with_its_pieces() {
     let (mut dom, mut scene, unions) = union_place();
@@ -605,7 +605,7 @@ fn a_union_deleted_goes_with_its_pieces() {
 
 // An operation tree with nothing additive left in it recovers no piece at
 // all: `resolve_unions` hides the box regardless (an empty union being a
-// better guess than a solid one), so there is simply nothing to draw — and
+// better guess than a solid one), so there is simply nothing to draw, and
 // an edit to it is still an edit, not a rebuild.
 #[test]
 fn a_union_with_no_recovered_pieces_draws_nothing() {
@@ -634,7 +634,7 @@ fn a_union_with_no_recovered_pieces_draws_nothing() {
 }
 
 // A union pointed at an asset this place asked for and never got draws as
-// its own box and lets go of the pieces it used to be drawn as — exactly
+// its own box and lets go of the pieces it used to be drawn as, exactly
 // the box a rebuild would leave it as.
 #[test]
 fn a_union_pointed_at_an_asset_that_never_came_drops_its_pieces() {
@@ -685,7 +685,7 @@ fn a_union_pointed_elsewhere_and_back_redraws_its_own_pieces() {
 }
 
 /// [`union_place`]'s DOM against evaluations that carved a *different*
-/// asset — another place's rock, kept in the `load::Resident` both share —
+/// asset, another place's rock, kept in the `load::Resident` both share,
 /// and a scene that holds none of that asset's computed mesh, because it
 /// never planned for it.
 fn union_carved_elsewhere() -> (WeakDom, Scene, UnionEvaluations) {
@@ -716,9 +716,9 @@ fn union_carved_elsewhere() -> (WeakDom, Scene, UnionEvaluations) {
 // A union pointed at an asset whose boolean carved for another place, but
 // whose computed mesh this scene never uploaded: the entry cannot be drawn
 // yet, so the edit patches onto the union's own box rather than naming a
-// mesh nothing holds — the background loader is asked for the upload (see
+// mesh nothing holds, the background loader is asked for the upload (see
 // `Headless::apply_changes`), never a rebuild. The file-mesh arm answers
-// the same way — see `a_mesh_never_asked_for_is_still_a_box_edit`.
+// the same way, see `a_mesh_never_asked_for_is_still_a_box_edit`.
 #[test]
 fn a_union_carved_but_never_uploaded_is_a_box_edit_not_a_dangling_instance() {
     let (mut dom, mut scene, unions) = union_carved_elsewhere();
@@ -772,8 +772,8 @@ fn bounds_leave_out_a_unions_recovered_pieces() {
     );
 }
 
-/// [`place`] with the `MeshPart`'s mesh asked for and never delivered — a
-/// 404, or a download that failed — so it stays drawn as its box.
+/// [`place`] with the `MeshPart`'s mesh asked for and never delivered, a
+/// 404, or a download that failed, so it stays drawn as its box.
 fn place_without_the_mesh() -> (WeakDom, Scene) {
     let (dom, _) = place();
     let database = ReflectionDatabase::embedded();
@@ -785,7 +785,7 @@ fn place_without_the_mesh() -> (WeakDom, Scene) {
 }
 
 // A mesh the load asked for and never got leaves its part a box, and every
-// later edit of that part — colour, frame, anything — is a box edit, not a
+// later edit of that part, colour, frame, anything, is a box edit, not a
 // reload asking for the same mesh again: the box is exactly what a rebuild
 // would show for it too.
 #[test]
@@ -878,7 +878,7 @@ fn a_delete_leaves_every_other_part_where_it_can_be_found() {
     assert!(scene.placement_of(Ref::new(MESH_PART)).is_none());
 }
 
-/// What a recount of every part answers — the extent a rebuild would frame,
+/// What a recount of every part answers, the extent a rebuild would frame,
 /// which is every instance's own box and none of a union's pieces.
 fn recounted(scene: &Scene) -> crate::scene::Bounds {
     let originals = scene.parts().iter().filter(|part| part.id.is_whole());
@@ -886,8 +886,8 @@ fn recounted(scene: &Scene) -> crate::scene::Bounds {
 }
 
 // The extent follows a part out and back exactly as a recount would: grown
-// in place on the way out, recounted on the way back — the part was holding
-// the edge — and either way what a rebuild would frame.
+// in place on the way out, recounted on the way back, the part was holding
+// the edge, and either way what a rebuild would frame.
 #[test]
 fn the_extent_follows_a_part_out_and_back_in() {
     let (mut dom, mut scene) = place();

@@ -1,5 +1,5 @@
-//! The sheet's small parts — its text and icon buttons, a separator, mono
-//! text — and the arithmetic of its readouts and its stage.
+//! The sheet's small parts, its text and icon buttons, a separator, mono
+//! text, and the arithmetic of its readouts and its stage.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{h_flex, Icon};
@@ -19,7 +19,7 @@ pub(in crate::shell::ui_editor) enum Look {
     Primary,
 }
 
-/// An icon and a label, 24 tall — the boards' one text button.
+/// An icon and a label, 24 tall, the boards' one text button.
 pub(in crate::shell::ui_editor) fn text_button(
     id: impl Into<ElementId>,
     icon: IconName,

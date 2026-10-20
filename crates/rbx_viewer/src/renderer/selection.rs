@@ -1,13 +1,13 @@
 //! The Explorer's selection, drawn as a thin outline around what it covers:
-//! a selected part's own oriented bounding box, or — for a `Model`, a
-//! `Folder`, or any other container with no placement of its own — one box
+//! a selected part's own oriented bounding box, or, for a `Model`, a
+//! `Folder`, or any other container with no placement of its own, one box
 //! around every part beneath it, squared to its pivot (see
 //! `outline::box_of`).
 //!
 //! [`Scene::all_placements`] is keyed by `BasePart` referent and never has an
 //! entry for a container, so the parts each selected instance stands for are
 //! resolved against the DOM by the *editor* and arrive here already worked
-//! out, as [`Selected`] — see `crate::pick::selection` for why both sides
+//! out, as [`Selected`], see `crate::pick::selection` for why both sides
 //! resolve them through one function. A container holding no drawable
 //! geometry at all still outlines nothing: there is genuinely nothing to
 //! draw a box around.
@@ -34,7 +34,7 @@ const SHADER: &str = include_str!("selection.wgsl");
 
 // Drawn with the depth test off (`compare: Always`) by default: a selection
 // box reads as a control the user is acting on, not scenery, so it is never
-// occluded by the geometry it wraps — the whole box shows through, which is
+// occluded by the geometry it wraps, the whole box shows through, which is
 // what Studio does and what makes a part selected behind another object still
 // visible. Drawn last of the scene geometry (see `renderer::pass`), so drawing
 // on top writes no depth anything later reads except the draggers, which have
@@ -46,7 +46,7 @@ const SHADER: &str = include_str!("selection.wgsl");
 // `rbxstudio` carries the choice as a persisted setting.
 
 /// Where the transform gizmo takes its frame of reference: the first part the
-/// selection covers that actually has a placement — a container's own first
+/// selection covers that actually has a placement, a container's own first
 /// descendant part, so Scale and Rotate act on real geometry rather than on a
 /// `Model` that has no `Size` or `CFrame` to write. A referent with nothing
 /// drawn under it is skipped rather than silently hiding the gizmo. `None`
@@ -55,7 +55,7 @@ const SHADER: &str = include_str!("selection.wgsl");
 /// The whole matrix rather than a centre and a rotation: a part's model matrix
 /// folds its `Size` into the same columns its rotation lives in, and the Scale
 /// tool's handles need those lengths to find the part's own faces (the gizmo
-/// normalizes them where it wants directions instead — see `gizmo::basis`).
+/// normalizes them where it wants directions instead, see `gizmo::basis`).
 ///
 /// `rbxstudio` picks the same part the same way (`transform::Targets::read`
 /// flattens the very `pick::selection` entries these are, dedup and order
@@ -75,13 +75,13 @@ fn anchor_of(placements: &HashMap<Ref, Placement>, selected: &[Selected]) -> Opt
 /// still match.
 ///
 /// Apart from [`Selection`] because a group drag leans on the bookkeeping
-/// here — one aggregate rebuild per frame, however many of a model's parts
-/// moved in it — and that is worth being able to test without a device.
+/// here, one aggregate rebuild per frame, however many of a model's parts
+/// moved in it, and that is worth being able to test without a device.
 #[derive(Default)]
 struct Outline {
-    /// Every part's placement — including one whose box a resolved mesh
+    /// Every part's placement, including one whose box a resolved mesh
     /// replaced, which is still selectable and still has the box Studio
-    /// outlines (see [`Scene::all_placements`]) — read once from the scene at
+    /// outlines (see [`Scene::all_placements`]), read once from the scene at
     /// construction and kept in step by [`Outline::place`] afterwards, so
     /// there is no reason to walk the scene again on every selection change.
     placements: HashMap<Ref, Placement>,
@@ -117,9 +117,9 @@ impl Outline {
         self.stale |= self.covered.contains(&referent);
     }
 
-    /// Forgets where one part was drawn — it stopped drawing as a box (a mesh
+    /// Forgets where one part was drawn, it stopped drawing as a box (a mesh
     /// took over, so a full build would list no placement for it either) or
-    /// is gone — and notes the outline as owing a rebuild if that part was one
+    /// is gone, and notes the outline as owing a rebuild if that part was one
     /// it covers: an outline around nothing is exactly what a deleted part
     /// leaves behind.
     fn remove(&mut self, referent: Ref) {
@@ -221,7 +221,7 @@ impl Selection {
             // Reversed-Z (see `camera::Camera::projection`) makes `Greater`
             // the ordinary test; `GreaterEqual` takes the tie as well, so an
             // edge drawn exactly on the surface of the part it wraps is not
-            // swallowed by it — the same compare `renderer::hover` picks.
+            // swallowed by it, the same compare `renderer::hover` picks.
             with_compare(wgpu::CompareFunction::GreaterEqual),
         )
     }
@@ -238,7 +238,7 @@ impl Selection {
     }
 
     /// Replaces every placement with a rebuilt scene's, keeping the pipeline
-    /// and the selection itself — redrawn straight away around wherever its
+    /// and the selection itself, redrawn straight away around wherever its
     /// parts stand in the new scene, or around nothing if they are gone.
     pub(super) fn rebuild(&mut self, device: &wgpu::Device, placements: HashMap<Ref, Placement>) {
         self.outline.placements = placements;
@@ -253,7 +253,7 @@ impl Selection {
         self.flush(device);
     }
 
-    /// Records where one part is drawn now — a Properties-panel edit moved,
+    /// Records where one part is drawn now, a Properties-panel edit moved,
     /// resized or reshaped it, or a drag is walking a whole model's parts
     /// through their new placements one at a time.
     ///
@@ -264,7 +264,7 @@ impl Selection {
         self.outline.place(referent, placement);
     }
 
-    /// Whether geometry in front of the selection hides its box — see this
+    /// Whether geometry in front of the selection hides its box, see this
     /// module's own note above. Nothing is re-uploaded and nothing is rebuilt:
     /// only which of the two pipelines [`Selection::draw`] binds changes.
     pub(super) fn set_occluded(&mut self, occluded: bool) {
@@ -272,7 +272,7 @@ impl Selection {
     }
 
     /// Uploads the outline again if anything has moved under it since the last
-    /// frame — the edited instance is nearly always the selected one, and
+    /// frame, the edited instance is nearly always the selected one, and
     /// during a drag of a whole `Model` it is one of its descendants rather
     /// than the selected instance itself, which is exactly the case that would
     /// otherwise leave the box behind where the model used to stand.
@@ -290,9 +290,9 @@ impl Selection {
         });
     }
 
-    /// Forgets where one part was drawn — it stopped drawing as a box (a
+    /// Forgets where one part was drawn, it stopped drawing as a box (a
     /// mesh took over, so a full build would list no placement for it
-    /// either) or is gone — and notes the outline as owing a rebuild if that
+    /// either) or is gone, and notes the outline as owing a rebuild if that
     /// part was one it covers, the same deferred way [`Selection::place`]
     /// does: an outline around nothing is exactly what a deleted part
     /// leaves behind.
@@ -300,7 +300,7 @@ impl Selection {
         self.outline.remove(referent);
     }
 
-    /// The first outlined part's placement (see `renderer::gizmo`) — the part
+    /// The first outlined part's placement (see `renderer::gizmo`), the part
     /// Scale and Rotate transform, whose faces Scale's balls stand on, and
     /// whose frame the local-orientation toggle takes. `None` when the
     /// selection covers nothing drawn.
@@ -312,7 +312,7 @@ impl Selection {
         anchor_of(&self.outline.placements, &self.outline.selected)
     }
 
-    /// The box the Scale handles stand on — see `gizmo::scale_box`. `pivot`
+    /// The box the Scale handles stand on, see `gizmo::scale_box`. `pivot`
     /// is the selection's, and goes unused for a lone part, whose own box
     /// Studio scales whatever its `PivotOffset`.
     pub(super) fn scale_box(&self, pivot: Option<Mat4>, local: bool) -> Option<Mat4> {
@@ -320,7 +320,7 @@ impl Selection {
         gizmo::scale_box(self.models(), pivot.filter(|_| !lone_part), local)
     }
 
-    /// The same box squared to `axes` — see `gizmo::box_along`.
+    /// The same box squared to `axes`: see `gizmo::box_along`.
     pub(super) fn box_along(&self, axes: Mat3) -> Option<Mat4> {
         gizmo::box_along(self.models(), axes)
     }
@@ -334,7 +334,7 @@ impl Selection {
     }
 
     /// The centre of the world-axis-aligned box containing every part the
-    /// selection covers — where one gizmo for a whole selection belongs. For a
+    /// selection covers, where one gizmo for a whole selection belongs. For a
     /// single part this is simply that part's own centre; for a `Model` it is
     /// the middle of the very box `outline::box_of` outlines it with.
     ///

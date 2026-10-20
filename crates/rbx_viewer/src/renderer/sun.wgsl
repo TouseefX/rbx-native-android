@@ -2,7 +2,7 @@
 // from the light direction the lighting uniform already carries.
 //
 // `lighting.wgsl` is concatenated in front of this file, which is where the
-// direction comes from — the bodies move with the time of day for free.
+// direction comes from, the bodies move with the time of day for free.
 
 @group(1) @binding(0) var image: texture_2d<f32>;
 @group(1) @binding(1) var image_sampler: sampler;

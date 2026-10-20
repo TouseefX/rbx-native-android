@@ -1,4 +1,4 @@
-//! Which drawn box a renderer record stands for — see [`PartId`].
+//! Which drawn box a renderer record stands for, see [`PartId`].
 
 use rbx_dom::Ref;
 
@@ -15,14 +15,14 @@ use rbx_dom::Ref;
 /// referent the DOM knows.
 ///
 /// A piece's index is its position in the operation tree's own additive
-/// order, which is a function of the union's asset bytes alone — never of
+/// order, which is a function of the union's asset bytes alone, never of
 /// where the union stands or what colour it is. So moving, recolouring or
 /// re-reading a union cannot renumber its pieces, and the record an edit
 /// rewrites is the record that leaf already had.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(crate) struct PartId {
     referent: Ref,
-    /// `None` is the instance's own box — every ordinary `BasePart`, and the
+    /// `None` is the instance's own box, every ordinary `BasePart`, and the
     /// (suppressed) box of an instance a mesh or a set of pieces draws for.
     piece: Option<u32>,
 }
@@ -55,7 +55,7 @@ impl PartId {
         self.piece
     }
 
-    /// Whether this is the instance's own box rather than a piece of it —
+    /// Whether this is the instance's own box rather than a piece of it,
     /// the one box per referent that carries its placement (see
     /// [`super::Scene::placements`]) and its share of the scene's extent.
     pub(crate) fn is_whole(&self) -> bool {

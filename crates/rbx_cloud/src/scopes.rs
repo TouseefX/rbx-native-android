@@ -1,5 +1,5 @@
 //! Which Open Cloud permissions the editor asks an API key for, and which of
-//! them a given key actually holds — what the setup wizard shows as a
+//! them a given key actually holds, what the setup wizard shows as a
 //! pass/fail list.
 //!
 //! Scope strings are the `x-roblox-scopes` names in `Roblox/creator-docs`'
@@ -19,7 +19,7 @@ pub struct Permission {
     /// `name:operation`, exactly as the Dashboard's operation picker and the
     /// OpenAPI spec spell it.
     pub scope: &'static str,
-    /// The editor feature that stops working without it — the wizard's row
+    /// The editor feature that stops working without it, the wizard's row
     /// label.
     pub feature: &'static str,
     /// Whether the editor's core loop (open a place from Roblox, save it

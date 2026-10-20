@@ -286,7 +286,7 @@ fn surface_angles_zero_and_half_sphere_bound_the_frustum() {
         size,
         &[face(TOP), angle(180.0), range(10.0)],
     );
-    // Angle 180: "outward perpendicular to the surface" — the far rectangle
+    // Angle 180: "outward perpendicular to the surface", the far rectangle
     // lies in the face's own plane, a range wider on every side.
     for corner_line in flat[1..].iter().step_by(2) {
         assert!(near(corner_line.to.y, 2.0));
@@ -348,7 +348,7 @@ fn a_cone_light_with_nothing_stored_draws_its_class_defaults() {
 }
 
 /// A part staged outside `Workspace` is never drawn, so a guide for a light
-/// on it would float where nothing is — directly on it, or on its attachment.
+/// on it would float where nothing is, directly on it, or on its attachment.
 #[test]
 fn a_light_on_a_part_outside_the_workspace_has_no_guide() {
     let mut fixture = Fixture::new();

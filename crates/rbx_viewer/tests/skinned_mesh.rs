@@ -1,12 +1,12 @@
 //! A skinned `MeshPart` bends with the parts its bones are named after: a
 //! ribbon skinned half to `UpperArm` (the mesh part itself) and half to
 //! `LowerArm` (an invisible sibling part in the same `Model`) swings its lower
-//! half out sideways when `LowerArm` is turned a quarter about the joint — as
+//! half out sideways when `LowerArm` is turned a quarter about the joint, as
 //! a patch through `Headless::apply_changes`, not a reload.
 //!
 //! The mesh is written here as `version 4.00` bytes and served from the local
 //! asset cache as `rbxasset://rbx-native-local/...` native content, the way
-//! the auto-rigger previews its meshes — including a rig inserted after the
+//! the auto-rigger previews its meshes, including a rig inserted after the
 //! place opened and swapped for a new one, the way the auto-rigger edits.
 //!
 //! Needs a GPU. Without one the test says so and passes, rather than being
@@ -25,7 +25,7 @@ const IDENTITY: [f32; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
 /// 90° about +Z, row-major: +X goes to +Y.
 const QUARTER_Z: [f32; 9] = [0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
 /// `Enum.Material.SmoothPlastic`: no maps to fetch, so nothing waits on the
-/// network, and the one material layer every part here shares — a part
+/// network, and the one material layer every part here shares, a part
 /// inserted on a layer the place never loaded is a reload, not a patch.
 const SMOOTH_PLASTIC: u32 = 272;
 const NATIVE_PATH: &str = "rbx-native-local/tests/rbx_viewer-skinned-arm.mesh";
@@ -217,7 +217,7 @@ fn place() -> WeakDom {
     dom
 }
 
-/// Writes `lower`'s `CFrame` and patches it in — a quarter turn about +Z
+/// Writes `lower`'s `CFrame` and patches it in, a quarter turn about +Z
 /// around the joint at the origin when `bent` (its centre swings from
 /// (0, −1.5) to (1.5, 0)), hanging at rest otherwise.
 fn turn(headless: &mut Headless, dom: &mut WeakDom, lower: Ref, bent: bool) {
@@ -360,7 +360,7 @@ fn turning_the_lower_arm_bends_the_skinned_mesh_as_a_patch() {
 
 /// What the auto-rigger does: the rig arrives after the place is open, as
 /// one batch of inserts, and every edit swaps the whole `Model` for a new
-/// one — each of which has to bend.
+/// one, each of which has to bend.
 #[test]
 fn a_rig_inserted_after_load_and_then_replaced_bends_each_time() {
     let Some(mut headless) = headless() else {

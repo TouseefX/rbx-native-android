@@ -18,9 +18,9 @@ pub(super) struct Run {
     pub(super) blended: bool,
 }
 
-/// The instance buffer in draw order — opaque parts grouped by shape, then
+/// The instance buffer in draw order, opaque parts grouped by shape, then
 /// the translucent ones furthest from `eye` first, the way the main pass
-/// sorts its own blended geometry — and the runs that split it.
+/// sorts its own blended geometry, and the runs that split it.
 pub(super) fn batch(parts: &[&Part], eye: Vec3) -> (Vec<InstanceRaw>, Vec<Run>) {
     let mut ordered: Vec<&Part> = Vec::with_capacity(parts.len());
     let mut kinds: Vec<ShapeKind> = Vec::new();

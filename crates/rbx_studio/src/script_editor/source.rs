@@ -40,7 +40,7 @@ pub(crate) fn is_script(dom: &WeakDom, db: &ReflectionDatabase, reference: Ref) 
 }
 
 /// The instance's `Source` as it stands. `None` when the referent no longer
-/// resolves, or when it has no `Source` — a script inserted through the
+/// resolves, or when it has no `Source`: a script inserted through the
 /// Explorer has none until something writes one.
 pub(crate) fn read(dom: &WeakDom, reference: Ref) -> Option<String> {
     match dom.get(reference)?.properties().get(SOURCE_PROPERTY)? {
@@ -50,7 +50,7 @@ pub(crate) fn read(dom: &WeakDom, reference: Ref) -> Option<String> {
 }
 
 /// Whether the instance's `Source` is already exactly `text`, answered
-/// without cloning the source out of the DOM to find out — this runs once per
+/// without cloning the source out of the DOM to find out, this runs once per
 /// open tab on every render of the panel (see
 /// `crate::shell::Shell::resync_scripts`).
 pub(crate) fn is(dom: &WeakDom, reference: Ref, text: &str) -> bool {
@@ -66,7 +66,7 @@ pub(crate) fn is(dom: &WeakDom, reference: Ref, text: &str) -> bool {
 ///
 /// Writing a value already there is reported as no change and skipped, which
 /// is what stops an editor re-seeded from the DOM (after an undo, say) from
-/// echoing that same text straight back as a fresh edit — and so from burying
+/// echoing that same text straight back as a fresh edit, and so from burying
 /// the undo the user just asked for under a new history entry.
 pub(crate) fn write(dom: &mut WeakDom, reference: Ref, source: &str) -> bool {
     if is(dom, reference, source) {

@@ -1,6 +1,6 @@
 //! The script editor's finder overlay: Studio's Script Function Filter
 //! (Alt+F, the active script's functions) and Find All / Replace All
-//! (Ctrl+Shift+F, every open tab). One overlay for both — each is a query
+//! (Ctrl+Shift+F, every open tab). One overlay for both, each is a query
 //! field over a list of places to jump to, and they differ only in where the
 //! list comes from.
 //!

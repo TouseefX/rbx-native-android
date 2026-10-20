@@ -1,8 +1,8 @@
 //! A tree of changes between two DOMs, in the shape the editor's diff
 //! window draws.
 //!
-//! These types live here (not in the editor) so that [`diff`] — a pure
-//! comparison of two [`WeakDom`]s — can produce them without any editor
+//! These types live here (not in the editor) so that [`diff`], a pure
+//! comparison of two [`WeakDom`]s, can produce them without any editor
 //! code. The Argon review path builds the same [`DiffNode`]s its own way;
 //! this module adds a second producer that compares two arbitrary DOMs,
 //! for the team-presence "View changes" (where the place now differs from

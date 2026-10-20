@@ -9,7 +9,7 @@
 //! module understands every type in it.
 //!
 //! The type ids are the attribute format's own and do not line up with the
-//! binary format's property type ids — `0x0F` is a `Color3` here and a `Ref`
+//! binary format's property type ids, `0x0F` is a `Color3` here and a `Ref`
 //! there.
 //!
 //! An `Instance` attribute (`0x25`) is a `u32` little-endian referent: the
@@ -24,8 +24,8 @@
 //! the referent map is the identity and the blob needs no rewriting on load
 //! or save. Code that renumbers instances (a paste, Save to File) carries
 //! these through [`remap_refs`] as it does `Ref` properties. A nil
-//! `Instance` attribute cannot exist — `SetAttribute(name, nil)` removes the
-//! attribute — so no null referent is written.
+//! `Instance` attribute cannot exist, `SetAttribute(name, nil)` removes the
+//! attribute, so no null referent is written.
 //!
 //! The XML formats have no settled form for it: `rbx_xml` keeps the blob as
 //! `BinaryString` bytes, but XML referents are strings (`RBX…`) that a `u32`
@@ -242,7 +242,7 @@ impl Cursor<'_> {
 ///
 /// `enum_type` names the enum a [`Variant::Enum`] belongs to: the format
 /// writes that name beside the ordinal and `Variant::Enum` only carries the
-/// ordinal, so the caller — which knows the class the property sits on — has
+/// ordinal, so the caller, which knows the class the property sits on, has
 /// to supply it. An enum whose name it cannot give is refused rather than
 /// written with an empty one, since nothing here can say whether Roblox's own
 /// reader needs it.
@@ -284,7 +284,7 @@ fn color3(out: &mut Vec<u8>, value: &Color3Data) {
     out.extend(value.b.to_le_bytes());
 }
 
-/// One value, its type id first — the exact inverse of `Cursor::value`.
+/// One value, its type id first, the exact inverse of `Cursor::value`.
 fn write(out: &mut Vec<u8>, value: &Variant, enum_type: impl Fn() -> Option<String>) -> Option<()> {
     match value {
         Variant::String(text) => {
@@ -459,7 +459,7 @@ pub fn remap_refs(value: &Variant, map: impl Fn(Ref) -> Option<Ref>) -> Option<V
 
 /// Each entry of the blob `value`: its name, its decoded value and its raw
 /// bytes (name, type id and value, exactly as stored), for code that mixes
-/// entries of two blobs without re-encoding them — an enum's type name,
+/// entries of two blobs without re-encoding them, an enum's type name,
 /// which [`decode`] does not keep, survives that way. `None` when the blob
 /// cannot be read whole.
 pub(crate) fn split_entries(value: &Variant) -> Option<Vec<(String, Variant, Vec<u8>)>> {
@@ -493,11 +493,11 @@ pub fn tags(value: Option<&Variant>) -> Vec<&str> {
     text.split('\0').filter(|tag| !tag.is_empty()).collect()
 }
 
-/// The `Tags` property text for `tags` — the exact inverse of [`tags`]: each
+/// The `Tags` property text for `tags`: the exact inverse of [`tags`]: each
 /// name followed by its own NUL, the same shape a Studio-written file already
 /// round-trips through [`tags`] (see this module's tests). A tag holding a
 /// NUL byte itself would read back as two, so the caller is expected to have
-/// refused one before this is called — this function does not check, the
+/// refused one before this is called, this function does not check, the
 /// same way [`encode`] does not validate an attribute name.
 pub fn encode_tags(tags: &[&str]) -> String {
     tags.iter().map(|tag| format!("{tag}\0")).collect()
@@ -722,7 +722,7 @@ mod tests {
         assert!(decode(Some(&blob(&REAL_STYLE_RULE[..20]))).is_empty());
     }
 
-    /// `encode` is the inverse of `decode` for every type the cursor reads —
+    /// `encode` is the inverse of `decode` for every type the cursor reads,
     /// the blob, not just the map, so a re-encoded property is byte for byte
     /// what Studio would have written.
     #[test]
@@ -834,7 +834,7 @@ mod tests {
     }
 
     /// The blob a re-encode writes is the same bytes Studio wrote, not just
-    /// the same map — what makes writing one back to `PropertiesSerialize`
+    /// the same map, what makes writing one back to `PropertiesSerialize`
     /// safe.
     #[test]
     fn a_studio_written_rule_re_encodes_to_the_same_bytes() {

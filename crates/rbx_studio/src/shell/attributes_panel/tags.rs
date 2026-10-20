@@ -98,7 +98,7 @@ impl Shell {
                 self.properties_nav.claim(
                     // `chrome::icon_button` rather than a hand-rolled div: it
                     // already carries WCAG 2.5.8's 24x24 target, a focus ring
-                    // and a tooltip — a smaller one-off `x` here would fail
+                    // and a tooltip, a smaller one-off `x` here would fail
                     // the same target-size bar this panel is held to
                     // elsewhere (see `UX_GUIDELINES.md` §4).
                     chrome::icon_button(

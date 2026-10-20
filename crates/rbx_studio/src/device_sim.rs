@@ -118,7 +118,7 @@ pub(crate) struct Device {
     pub(crate) tier: Option<Tier>,
     pub(crate) os: Os,
     /// Logical size in the device's natural orientation (portrait for
-    /// phones/tablets, landscape for the rest), in points/dp — what Roblox
+    /// phones/tablets, landscape for the rest), in points/dp, what Roblox
     /// reports as `Camera.ViewportSize`.
     pub(crate) size: (u32, u32),
     pub(crate) portrait_insets: Insets,
@@ -205,7 +205,7 @@ pub(crate) fn needs_restart(launched: Option<Platform>, now: Option<Platform>) -
     }
 }
 
-/// How big the simulated screen is drawn in Edit — Studio's three
+/// How big the simulated screen is drawn in Edit, Studio's three
 /// Display scaling modes. Play is always 1:1: the client is a foreign
 /// window that can be sized, never scaled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

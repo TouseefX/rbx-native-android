@@ -1,6 +1,6 @@
 //! Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z, dispatched from the same window-level
 //! `Shell::handle_shell_key` Ctrl+S already uses (see `shell::save`) rather
-//! than a second `on_key_down` — a key event bubbles up from whatever holds
+//! than a second `on_key_down`: a key event bubbles up from whatever holds
 //! focus, and undo must go through no matter which panel is focused.
 //!
 //! Undo/redo reaches the viewport exactly the way the mutation it reverts or
@@ -10,14 +10,14 @@
 //! and [`Shell::install`] below hands that same log to
 //! `Shell::reflect_changes` (see `shell::command`) with the restored DOM.
 //! The viewport reads a log as *which* instances to look at again, not as
-//! what happened to them — so the log of an insert, applied against the DOM
+//! what happened to them, so the log of an insert, applied against the DOM
 //! the undo put back, takes the part out; applied again by the redo, it puts
-//! it back — and every step, whatever it was, patches in place.
+//! it back, and every step, whatever it was, patches in place.
 //!
 //! `RBX_STUDIO_UNDO=1` applies one undo once, right after startup, through
-//! this exact path — a debugging aid for a screenshot that proves a mutation
+//! this exact path, a debugging aid for a screenshot that proves a mutation
 //! was reverted, since nothing else can send a keystroke to the window on the
-//! editor's behalf (see `AGENTS.md`'s safety rules).
+//! editor's behalf.
 
 use gpui_kit::Context;
 use rbx_dom::{Change, WeakDom};
@@ -32,9 +32,9 @@ pub(crate) const UNDO_VARIABLE: &str = "RBX_STUDIO_UNDO";
 
 impl Shell {
     /// Snapshots `self.dom` onto the undo stack. Called right before every
-    /// mutation call site — `shell::command`'s script run, `shell::edit`'s
+    /// mutation call site, `shell::command`'s script run, `shell::edit`'s
     /// committed property edit, `shell::keys`'s insert and delete, a
-    /// viewport drag's first step — so the snapshot always reflects the DOM
+    /// viewport drag's first step, so the snapshot always reflects the DOM
     /// as it stood immediately before that mutation was applied. Also
     /// drains whatever the change log holds already: it belongs to
     /// something already reflected before this checkpoint, not to the
@@ -51,8 +51,8 @@ impl Shell {
     /// landed. Draining the stale change log is then the caller's job too,
     /// for the reason `push_history` does it above.
     ///
-    /// `shell::scripts`'s debounced `Source` write needs this — a tab can
-    /// outlive its script by a frame — and so does a Properties edit
+    /// `shell::scripts`'s debounced `Source` write needs this, a tab can
+    /// outlive its script by a frame, and so does a Properties edit
     /// (`Shell::apply_edit`), which can be refused or change nothing. A
     /// snapshot pushed for a write that never happened is a Ctrl+Z that
     /// reverts nothing, having cleared the redo stack to offer it.
@@ -65,9 +65,9 @@ impl Shell {
         self.history.push(before);
     }
 
-    /// Attaches `changes` — the `Change` log the mutation `push_history`
+    /// Attaches `changes`: the `Change` log the mutation `push_history`
     /// (or, for a multi-step drag, the gesture's own most recent step) just
-    /// preceded produced — to the entry currently on top of the undo stack.
+    /// preceded produced, to the entry currently on top of the undo stack.
     /// Called once per mutating call site, right after that mutation
     /// completes, so undo/redo can reflect it later without re-diffing two
     /// `WeakDom` trees.
@@ -112,8 +112,8 @@ impl Shell {
     }
 
     /// Installs `dom` as the canonical tree and reflects it in the viewport
-    /// — through `Shell::reflect_changes`, with the log the step's mutation
-    /// produced (see this module's doc comment) — plus the Explorer and the
+    /// through `Shell::reflect_changes`, with the log the step's mutation
+    /// produced (see this module's doc comment), plus the Explorer and the
     /// selection: each entry kept exactly as far as its referent still
     /// resolves in `dom`, the same rule `shell::keys::selection_after_removal`
     /// applies to a delete, so undoing a group drag leaves the group
@@ -169,11 +169,11 @@ impl Shell {
 
 // `Shell::undo`/`redo`/`install` themselves need a live GPUI `Context` (a
 // window, a viewport entity, an Explorer tree) this crate has no headless
-// harness for — see the other `shell::*` test modules, which stop at the
+// harness for, see the other `shell::*` test modules, which stop at the
 // same boundary and test the pure logic underneath a GPUI call instead of
 // the call itself. What is tested below is that same underneath: a real
 // `History` (from `crate::history`), fed real `WeakDom` mutations, and what
-// it hands `install` for each — the restored DOM, and the log the viewport
+// it hands `install` for each, the restored DOM, and the log the viewport
 // is then told to reflect against it, which has to be the mutation's own
 // (its referents are what the viewport looks at again) for undo and redo
 // alike.
@@ -195,7 +195,7 @@ mod tests {
         Variant::Vector3(Vector3Data { x, y, z })
     }
 
-    /// An unrotated frame centred at `(x, y, z)` — the whole of what a move
+    /// An unrotated frame centred at `(x, y, z)`: the whole of what a move
     /// or Scale step changes about a part's `CFrame`.
     fn cframe_at(x: f32, y: f32, z: f32) -> Variant {
         Variant::CFrame(CFrameData {
@@ -304,7 +304,7 @@ mod tests {
     }
 
     // The log of an insert, against a DOM the insert has been undone in,
-    // names an instance that is no longer there — which is exactly how the
+    // names an instance that is no longer there, which is exactly how the
     // viewport learns to take it out.
     #[test]
     fn undoing_an_instance_create_removes_it_and_names_it() {

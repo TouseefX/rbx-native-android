@@ -26,7 +26,7 @@ fn bool_decodes_from_the_msgpack_boolean_type() {
 
 // The quirk `argon-roblox`'s own hand-rolled MsgPack encoder has: a whole
 // number is written as a MsgPack *integer*, never a float, regardless of
-// what type tag it's filed under — this is `Part.Size.X == 4.0` arriving as
+// what type tag it's filed under, this is `Part.Size.X == 4.0` arriving as
 // plain `4`, not `4.0`.
 #[test]
 fn a_float64_tagged_whole_number_decodes_even_when_the_wire_int_never_carries_a_dot() {
@@ -138,7 +138,7 @@ fn cframe_round_trips() {
 }
 
 // Canonical properties collapse an enum-typed reflection `DataType` to the
-// bare tag `Enum`, carrying only the ordinal — no enum-type name at all on
+// bare tag `Enum`, carrying only the ordinal, no enum-type name at all on
 // the wire (that's `EnumItem`'s job, used only for generic Attributes,
 // which this client doesn't decode through this path).
 #[test]

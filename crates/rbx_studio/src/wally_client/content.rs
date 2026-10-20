@@ -1,6 +1,6 @@
-//! `GET /v1/package-contents/{scope}/{name}/{version}` — a zip of the
+//! `GET /v1/package-contents/{scope}/{name}/{version}`: a zip of the
 //! package's raw source tree, `wally.toml` included. Needs a
-//! `Wally-Version` header (confirmed by hand: 426 without it — the
+//! `Wally-Version` header (confirmed by hand: 426 without it, the
 //! registry only checks that *something* plausible is sent, not that this
 //! is the real `wally` binary).
 
@@ -56,7 +56,7 @@ struct RawManifest {
 }
 
 /// One `[dependencies]`/`[server-dependencies]` entry, parsed from its
-/// `"scope/name@requirement"` value string — the alias itself (`Comm`,
+/// `"scope/name@requirement"` value string, the alias itself (`Comm`,
 /// `Promise`, ...) is the table key, kept alongside since it's also the
 /// name the installed alias file needs.
 pub(crate) struct Dependency {
@@ -76,7 +76,7 @@ pub(crate) struct Package {
 }
 
 /// `"scope/name@requirement"` → its three parts. `None` for anything not
-/// shaped like that — an entry this client can't parse is dropped from
+/// shaped like that, an entry this client can't parse is dropped from
 /// resolution rather than failing the whole manifest read, the same
 /// "degrade instead of refuse" choice `rbx_xml`'s decoders make for an
 /// unrecognized property tag.
@@ -95,7 +95,7 @@ fn parse_requirement(alias: &str, value: &str) -> Option<Dependency> {
 /// Deliberately doesn't read `[package].name`/`registry`/`version` from
 /// the manifest at all: this client already knows exactly which `scope`/
 /// `name`/`version` it asked for (the registry's own search association,
-/// not the package's self-report — a `wally.toml` typo or stale rename
+/// not the package's self-report, a `wally.toml` typo or stale rename
 /// can't desync this client's identity for it the way trusting the file
 /// would), and `resolve::ResolvedPackage` carries that identity
 /// separately. Only `realm` and the dependency tables are real inputs.
@@ -118,7 +118,7 @@ fn unzip(bytes: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
         if entry.is_dir() {
             continue;
         }
-        // `enclosed_name` refuses an absolute path or a `..` component —
+        // `enclosed_name` refuses an absolute path or a `..` component,
         // this zip comes from the network, so a path is trusted only once
         // it's been sanitized against writing outside the tree this client
         // itself builds in memory (there's no filesystem extraction here,

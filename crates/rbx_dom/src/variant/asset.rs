@@ -36,7 +36,7 @@ impl From<u8> for FontStyle {
 }
 
 /// The ordinal `FontStyle` was read from, which is what the attribute and
-/// binary formats both store — see `attributes::encode`.
+/// binary formats both store, see `attributes::encode`.
 impl From<FontStyle> for u8 {
     fn from(style: FontStyle) -> Self {
         match style {
@@ -125,8 +125,8 @@ const LEGACY_FONTS: [(u32, &str, u16, bool); 52] = [
 pub const FONT_UNKNOWN: u32 = 100;
 
 impl Font {
-    /// The `FontFace` a legacy `Font` enum ordinal stands for — the docs on
-    /// `TextLabel.Font` say the two properties are "kept in sync" — or `None`
+    /// The `FontFace` a legacy `Font` enum ordinal stands for, the docs on
+    /// `TextLabel.Font` say the two properties are "kept in sync", or `None`
     /// for `Unknown` and any ordinal a newer client may add.
     pub fn from_legacy(font: u32) -> Option<Font> {
         let &(_, family, weight, italic) = LEGACY_FONTS.iter().find(|row| row.0 == font)?;

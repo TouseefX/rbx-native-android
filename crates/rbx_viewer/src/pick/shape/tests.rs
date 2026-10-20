@@ -225,7 +225,7 @@ fn a_flattened_solid_is_not_pickable() {
 // --- Against the drawn meshes ---------------------------------------------
 
 /// Every solid's analytic test, checked against the triangles `shapes`
-/// builds for the GPU — the definition of what is on screen — across a grid
+/// builds for the GPU, the definition of what is on screen, across a grid
 /// of rays from four directions, under the identity and under an arbitrary
 /// transform. This is what pins the slope planes and the cylinder axes to the
 /// geometry rather than to a reading of it.
@@ -348,7 +348,7 @@ fn as_file_mesh(data: &MeshData) -> rbx_mesh::Mesh {
 // The bug this exists for: `hit` answers 0 for a ray starting inside a box, so
 // a part the camera sits inside sorted first and swallowed every click and
 // hover. `hit_key` orders it by where the ray leaves it instead, so a child in
-// front of it — reached only by cycling past the enclosing part before — is
+// front of it, reached only by cycling past the enclosing part before, is
 // picked directly.
 #[test]
 fn a_box_the_ray_starts_inside_is_keyed_by_its_exit_not_zero() {

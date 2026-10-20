@@ -1,5 +1,5 @@
-//! The `UIComponent`s that change how big a `GuiObject` ends up — `UIPadding`,
-//! `UIScale` and the `UIConstraint` family — plus the `GuiObject` properties
+//! The `UIComponent`s that change how big a `GuiObject` ends up, `UIPadding`,
+//! `UIScale` and the `UIConstraint` family, plus the `GuiObject` properties
 //! that decide what its `Size` is even measured against.
 //!
 //! Roblox honours one instance of each class per parent; where several are
@@ -14,8 +14,8 @@ use rbx_reflection::ReflectionDatabase;
 use super::props::{enum_of, float, integer, udim, vector2};
 use crate::scene::gui::style::Styled;
 
-/// `UIPadding`, four `UDim`s that shrink the box this element's children —
-/// and any layout arranging them — resolve against.
+/// `UIPadding`, four `UDim`s that shrink the box this element's children,
+/// and any layout arranging them, resolve against.
 ///
 /// Each side is "relative to the parent's normal size" per the docs, which do
 /// not name an axis; the scale is taken against the matching axis of the
@@ -30,7 +30,7 @@ pub(in crate::scene::gui) struct Padding {
 }
 
 impl Padding {
-    /// The four sides in pixels — left, right, top, bottom — inside a box of
+    /// The four sides in pixels, left, right, top, bottom, inside a box of
     /// `extent`.
     pub(in crate::scene::gui) fn against(&self, extent: [f32; 2]) -> [f32; 4] {
         [
@@ -69,7 +69,7 @@ pub(in crate::scene::gui) struct SizeBounds {
 pub(in crate::scene::gui) enum SizeAxes {
     #[default]
     RelativeXY,
-    /// "The scale of X is shared with Y" — both axes resolve against width.
+    /// "The scale of X is shared with Y", both axes resolve against width.
     RelativeXX,
     RelativeYY,
 }
@@ -93,7 +93,7 @@ pub(in crate::scene::gui) enum Border {
     #[default]
     Outline,
     /// The border grows evenly inward and outward, so the drawn area it eats
-    /// into shrinks by one pixel per pixel of width — the docs' "1:1 ratio".
+    /// into shrinks by one pixel per pixel of width, the docs' "1:1 ratio".
     Middle,
     /// The border grows inward only: two pixels of the box per pixel of
     /// width, the docs' "1:2 ratio".
@@ -120,7 +120,7 @@ pub(in crate::scene::gui) struct Constraints {
     pub(in crate::scene::gui) size_bounds: Option<SizeBounds>,
     /// `UITextSizeConstraint`'s `MinTextSize`/`MaxTextSize`. Read here because
     /// it is one of the `UIConstraint` family; nothing in this module acts on
-    /// it — it is the text side that clamps a font size with it.
+    /// it, it is the text side that clamps a font size with it.
     pub(in crate::scene::gui) text_size_bounds: Option<(f32, f32)>,
 }
 
@@ -189,7 +189,7 @@ pub(in crate::scene::gui) fn automatic_size(properties: &BTreeMap<String, Varian
 }
 
 /// An `Enum.AutomaticSize` property as its two axes: `X` is 1, `Y` 2, `XY`
-/// 3 — a bit mask, which `ScrollingFrame.AutomaticCanvasSize` shares.
+/// 3, a bit mask, which `ScrollingFrame.AutomaticCanvasSize` shares.
 pub(in crate::scene::gui) fn automatic_axes(
     properties: &BTreeMap<String, Variant>,
     name: &str,
@@ -251,7 +251,7 @@ pub(in crate::scene::gui) const TOP_BAR_INSET: f32 = 36.0;
 /// the top bar.
 ///
 /// Only the core-UI modes reserve anything here. `DeviceSafeInsets` insets for
-/// screen cutouts — "no inset is added for Roblox core UI elements" — and a
+/// screen cutouts, "no inset is added for Roblox core UI elements", and a
 /// desktop window has none, so it comes to nothing; `TopbarSafeInsets` is
 /// measured against the top bar area itself, so its contents still start below
 /// the bar.

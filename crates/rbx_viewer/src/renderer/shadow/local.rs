@@ -25,7 +25,7 @@ use crate::lighting::LocalLight;
 pub(super) const NEAR_STUDS: f32 = 0.1;
 
 /// Below this the cone axis is vertical and `Vec3::Y` stops being a usable up
-/// vector for the light's own view — the same threshold `shadow::fit` uses.
+/// vector for the light's own view, the same threshold `shadow::fit` uses.
 const VERTICAL_LIGHT: f32 = 0.999;
 
 /// A rectilinear projection cannot reach a full hemisphere; this keeps the FOV
@@ -33,8 +33,8 @@ const VERTICAL_LIGHT: f32 = 0.999;
 /// `Angle` slider goes without being a `PointLight`.
 const MAX_FOV_RADIANS: f32 = 170.0 / 180.0 * std::f32::consts::PI;
 
-/// The narrowest a face light's map is made, so an `Angle` of 0 — a prism
-/// straight out of the face, which no perspective reaches — still gets an eye
+/// The narrowest a face light's map is made, so an `Angle` of 0, a prism
+/// straight out of the face, which no perspective reaches, still gets an eye
 /// a finite distance behind it. A spot's own cone never gets this narrow:
 /// `crate::lighting::local::cone` keeps its outer edge a little open.
 const MIN_HALF_FOV_RADIANS: f32 = 0.25 / 180.0 * std::f32::consts::PI;
@@ -42,7 +42,7 @@ const MIN_HALF_FOV_RADIANS: f32 = 0.25 / 180.0 * std::f32::consts::PI;
 /// One light selected to cast a shadow this frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(in crate::renderer) struct Selected {
-    /// Position in the slice [`select`] was given — the same index the local
+    /// Position in the slice [`select`] was given, the same index the local
     /// light storage buffer uses, and so the index [`pack`] writes this entry's
     /// record at.
     pub(in crate::renderer) index: usize,
@@ -54,7 +54,7 @@ pub(in crate::renderer) struct Selected {
 ///
 /// Recomputed every frame rather than once: nothing in this viewer moves a
 /// light, but the camera does, and it is the `cap` nearest lights *to the
-/// camera* that earn a map — the ones a screenshot is actually looking at.
+/// camera* that earn a map, the ones a screenshot is actually looking at.
 pub(in crate::renderer) fn select(
     lights: &[LocalLight],
     camera: Vec3,
@@ -87,11 +87,11 @@ pub(in crate::renderer) fn select(
 /// A spot's eye is its position. A `SurfaceLight` on a part shines that cone
 /// from every point of its face (see `lights.wgsl`'s `local_terms`), so its
 /// eye backs off behind the face until the cone from there takes in the
-/// whole face — and so, widening at the same angle, the whole frustum the
-/// face lights — with the near plane on the face itself, which keeps the
+/// whole face, and so, widening at the same angle, the whole frustum the
+/// face lights, with the near plane on the face itself, which keeps the
 /// light's own part out of its map.
 ///
-/// Standard (not reversed) depth, matching `Shadows::render`'s own convention —
+/// Standard (not reversed) depth, matching `Shadows::render`'s own convention,
 /// see that module's doc comment for why the sun map is not reversed either.
 fn view_projection(light: &LocalLight) -> Mat4 {
     let up = if light.direction.y.abs() > VERTICAL_LIGHT {
@@ -129,7 +129,7 @@ pub(in crate::renderer) struct LightShadowRaw {
     /// x: the array layer this cone light's map lives in. y: the cube of the
     /// point-light array this light's six faces live in (see
     /// `renderer::shadow::point`). Each is negative for a light that has
-    /// none — not selected, `Shadows = false`, or simply the other kind —
+    /// none, not selected, `Shadows = false`, or simply the other kind,
     /// which `local_light_visibility` reads as "not shadowed" without
     /// touching either texture array at all.
     layer: [f32; 4],
@@ -142,8 +142,8 @@ const UNSHADOWED: LightShadowRaw = LightShadowRaw {
 
 /// One record per local light the place has uploaded (`lights.len()`, which the
 /// shader's `local_lights` and `light_shadows` arrays must always agree on),
-/// filled in at each selected light's own index — a cone light with the layer
-/// and matrix it drew into, a point light with the cube it holds — and
+/// filled in at each selected light's own index, a cone light with the layer
+/// and matrix it drew into, a point light with the cube it holds, and
 /// [`UNSHADOWED`] everywhere else.
 pub(in crate::renderer) fn pack(
     lights: usize,
@@ -173,7 +173,7 @@ pub(in crate::renderer) fn pack(
 }
 
 /// The storage buffer `pack` fills, sized once for `lights` local lights and
-/// rewritten every frame after (see `Renderer::draw`) — never empty, for the
+/// rewritten every frame after (see `Renderer::draw`), never empty, for the
 /// same reason the local light buffer itself never is.
 pub(in crate::renderer) fn buffer(device: &wgpu::Device, lights: usize) -> wgpu::Buffer {
     let packed = vec![UNSHADOWED; lights.max(1)];

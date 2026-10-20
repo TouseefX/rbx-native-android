@@ -24,10 +24,10 @@ struct Item {
     kind: ShapeKind,
     center: Vec3,
     /// World-space bounding radius, for the same cull test the opaque pass
-    /// uses (see `super::cull::MainCull`) — checked in [`Translucent::prepare`]
+    /// uses (see `super::cull::MainCull`), checked in [`Translucent::prepare`]
     /// before an item is even considered for sorting.
     radius: f32,
-    /// Drawn from both sides — see [`super::pipeline::inside_pipeline`].
+    /// Drawn from both sides, see [`super::pipeline::inside_pipeline`].
     force_field: bool,
     instance: InstanceRaw,
 }
@@ -42,7 +42,7 @@ struct Run {
 
 pub(super) struct Translucent {
     items: Vec<Item>,
-    /// Where each box's `Item` sits in `items` — flat, not grouped by
+    /// Where each box's `Item` sits in `items`: flat, not grouped by
     /// shape (unlike `renderer::shaped::Shaped`), since [`Translucent::prepare`]
     /// already re-sorts and re-uploads the whole buffer every frame; an edit
     /// here only has to update the CPU-side item, not write the GPU directly.
@@ -119,7 +119,7 @@ impl Translucent {
         }));
     }
 
-    /// Takes one box out of this pass — it stopped blending, or is gone.
+    /// Takes one box out of this pass, it stopped blending, or is gone.
     /// CPU-side only, like [`Translucent::place`]; a no-op for an id not
     /// held.
     pub(super) fn remove(&mut self, id: PartId) {
@@ -253,7 +253,7 @@ fn back_to_front(
 /// Splits a sorted order into the longest possible runs of one shape and one
 /// sidedness.
 ///
-/// The sort comes first and the batching second — never the other way round, or
+/// The sort comes first and the batching second, never the other way round, or
 /// a near window would blend under a far one just because they were different
 /// shapes.
 fn runs(items: &[Item], order: &[usize]) -> Vec<Run> {

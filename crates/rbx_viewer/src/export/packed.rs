@@ -1,7 +1,7 @@
 //! A part whose `Material` has a texture pack: tiled straight from the
 //! pack's own images on every face one projection covers, as
 //! `renderer/material.wgsl`'s fast path draws it, and baked (see
-//! [`super::bake`]) wherever the shader does more than one UV set can say —
+//! [`super::bake`]) wherever the shader does more than one UV set can say,
 //! a facet blending three projections, or a mesh multiplying the pack under
 //! its own image.
 
@@ -222,8 +222,8 @@ struct Projected {
 /// axis each of these triangles faces: in studs along the part, one tile
 /// every `studs_per_tile`. Unshared, three vertices a triangle, so two faces
 /// meeting at an edge each keep their own projection. Each carries the
-/// tangent the shader's own `tangent_normal` builds — image right, the
-/// bitangent up the image — so a viewer reads the normal map in that frame
+/// tangent the shader's own `tangent_normal` builds, image right, the
+/// bitangent up the image, so a viewer reads the normal map in that frame
 /// rather than guessing one from the UVs.
 fn project(triangles: &[[Corner; 3]], extent: Vec3, studs_per_tile: f32) -> Projected {
     let tile = studs_per_tile.max(0.001);

@@ -4,7 +4,7 @@
 //! A texture-to-buffer copy is only *queued* by the CPU; the bytes exist once the
 //! GPU has run it, and waiting for that right away idles the CPU for a whole
 //! frame. So two buffers alternate: the copy of frame N is queued and its
-//! mapping asked for, then frame N-1 — whose copy the GPU finished long ago — is
+//! mapping asked for, then frame N-1, whose copy the GPU finished long ago, is
 //! trimmed and handed back. One frame of latency buys the entire overlap.
 
 use std::sync::mpsc::{self, Receiver};
@@ -47,7 +47,7 @@ impl Target {
             dimension: wgpu::TextureDimension::D2,
             format: FORMAT,
             // `COPY_DST` for a picture drawn elsewhere and only read back
-            // through here — a `ViewportFrame`'s bake (`Offscreen::viewport_frame`).
+            // through here, a `ViewportFrame`'s bake (`Offscreen::viewport_frame`).
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                 | wgpu::TextureUsages::COPY_SRC
                 | wgpu::TextureUsages::COPY_DST,

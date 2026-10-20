@@ -1,5 +1,5 @@
 //! Samples one `Trail`'s appearance (`WidthScale`/`Color`/`Transparency`)
-//! along its recorded [`super::history::Recorder`] — the eye-independent half
+//! along its recorded [`super::history::Recorder`], the eye-independent half
 //! of building a trail's ribbon; `renderer::trail::ribbon` does the rest
 //! (`FaceCamera`, the final GPU vertices) once it knows where the camera is.
 
@@ -16,23 +16,23 @@ use crate::scene::{eval_color, eval_number};
 pub(crate) struct RibbonPoint {
     pub(crate) position0: Vec3,
     pub(crate) position1: Vec3,
-    /// `WidthScale` at this point's age, already evaluated — multiplies the
+    /// `WidthScale` at this point's age, already evaluated, multiplies the
     /// distance between `position0` and `position1` (see `Trail.WidthScale`'s
     /// docs' worked example).
     pub(crate) width_scale: f32,
     pub(crate) color: [f32; 3],
     pub(crate) alpha: f32,
     /// How far along the trail's length this point sits, in studs travelled
-    /// by its midpoint — what `TextureLength` tiles against, the same
+    /// by its midpoint, what `TextureLength` tiles against, the same
     /// arc-length role `renderer::beam::ribbon::arc_length` fills for a beam.
     pub(crate) distance: f32,
 }
 
-/// Turns a recorder's history into ribbon points, oldest first — consecutive
+/// Turns a recorder's history into ribbon points, oldest first, consecutive
 /// points already read as a triangle strip in the order returned.
 ///
 /// A trail needs two samples to have any shape at all; fewer than that (this
-/// viewer's own case whenever nothing has moved — see `scene::trail`'s module
+/// viewer's own case whenever nothing has moved, see `scene::trail`'s module
 /// doc) yields an empty result rather than a degenerate one-point strip.
 pub(crate) fn segments(trail: &Trail, recorder: &Recorder, now: f32) -> Vec<RibbonPoint> {
     let samples = recorder.samples();
@@ -70,7 +70,7 @@ pub(crate) fn segments(trail: &Trail, recorder: &Recorder, now: f32) -> Vec<Ribb
 ///
 /// Confirmed by `Trail.Lifetime`'s own docs: "the lifetime of a trail is also
 /// used by that effect's `Color` and `Transparency` properties to determine
-/// how each segment is drawn ... as the segment ages" — age runs from 0 at
+/// how each segment is drawn ... as the segment ages", age runs from 0 at
 /// creation up to `Lifetime` at expiry, and each sequence is defined over
 /// that same `0..1` span in the same direction.
 fn age_t(trail: &Trail, sample: &Sample, now: f32) -> f32 {
