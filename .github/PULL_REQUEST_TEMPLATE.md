@@ -9,20 +9,15 @@
      what makes the PR findable by a future `gh pr list --search`), an
      issue, or "none". -->
 
-## How I verified it
+## How I tested it
 
-<!--
-`./scripts/check.sh` must be green before this is ready for review.
-If this touches rendering, lighting, or anything visual, a passing test
-suite alone isn't proof, include a before/after screenshot, ideally next
-to a real Roblox Studio screenshot of the same view.
--->
+<!-- All three are required, see "Testing (no exceptions)" in CONTRIBUTING.md.
+     Say what you actually did, not what should happen. -->
 
-- [ ] `./scripts/check.sh` passes (fmt, clippy `-D warnings`, full test suite)
-- [ ] Added/updated tests for the actual change
-- [ ] Screenshot(s) or a short screen recording attached below, for any
-      change with a visible effect (a new feature, a UI change, a
-      rendering fix), see below if this one genuinely has none
+- [ ] Unit tests for the change, and `./scripts/check.sh` is green
+- [ ] End to end: used the feature in `rbxstudio` on a real place (what you did)
+- [ ] Real Roblox Studio: compared side by side, or opened what we saved or
+      published in Studio (what you checked)
 
 ## Screenshots / recording
 
@@ -45,8 +40,8 @@ local file path and describe what it shows instead, and say plainly that
 the image still needs attaching by whoever can.
 -->
 
-## Anything left undone or worth flagging for review
+## Limits on purpose
 
-<!-- A known limitation, an approximation where Roblox doesn't publish the
-     real formula, a case you didn't get to test, say so here rather than
-     leaving a reviewer to find it. -->
+<!-- Only things that are limited by design, with the reason (for example
+     Roblox doesn't publish the formula). Nothing unfinished or untested goes
+     here: if it isn't done, the PR isn't ready. Write "none" if there are none. -->

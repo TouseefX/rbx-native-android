@@ -70,6 +70,36 @@ don't have one, you don't need Roblox assets on hand to contribute.
 6. Write a commit message that explains *why*, not just what changed, the
    diff already shows what changed.
 
+## Testing (no exceptions)
+
+This is the one rule I won't bend on. A PR doesn't get merged until all
+three of these are done, for everything it touches:
+
+1. **Unit tests.** Every new behaviour and every bug fix comes with tests
+   that would fail without the change. `./scripts/check.sh` has to be green.
+2. **End to end.** Build `rbxstudio` (or the tool you changed) and actually
+   use the feature on a real place: click through it, undo it, save, reopen.
+   A nested X server like Xephyr is fine for this. Screenshots or a short
+   recording go in the PR.
+3. **Against real Roblox Studio.** If it copies something Studio does, open
+   the same thing in real Studio and compare them side by side. If it saves,
+   exports or publishes, open the result in real Studio and check it loads
+   and looks right. If it talks to Roblox (Open Cloud, publishing, Play),
+   run it for real at least once, not only against a mock. Put both
+   screenshots in the PR.
+
+And nothing gets left for later:
+
+- "Not tested", "not verified", "should work", "follow-up" or "TODO" in a PR
+  means it isn't ready. Finish it or take it out of the PR.
+- If a limit is there on purpose (Roblox doesn't publish a formula, a
+  feature needs Roblox's own servers), say what it is and why in the PR.
+  That's a design choice, not unfinished work.
+- If part of it only runs on a platform you don't have, say so, and it waits
+  until someone has tested it there.
+
+PRs that skip any of this get sent back, no matter how small they are.
+
 ## Opening a pull request
 
 Opening one fills in a template (`.github/PULL_REQUEST_TEMPLATE.md`), fill
