@@ -130,13 +130,16 @@ pub(crate) enum Panel {
     /// The place's `InputContext`s, actions and bindings as one table
     /// (`shell::input_panel`). Shut until asked for.
     InputActions,
+    /// The whole-place security audit (`shell::security_audit`). Shut until
+    /// asked for.
+    SecurityAudit,
 }
 
 impl Panel {
     /// In the order a fresh layout seats them, which is what makes the
     /// Viewport, Argon and Wally docks tabs beside Output rather than
     /// docks of their own.
-    pub(crate) const ALL: [Panel; 13] = [
+    pub(crate) const ALL: [Panel; 14] = [
         Panel::Explorer,
         Panel::Properties,
         Panel::Output,
@@ -150,6 +153,7 @@ impl Panel {
         Panel::Collaborators,
         Panel::PluginWidgets,
         Panel::InputActions,
+        Panel::SecurityAudit,
     ];
 
     /// Where this panel lives in a layout nobody has rearranged — also
@@ -166,7 +170,8 @@ impl Panel {
             | Panel::ScriptAnalysis
             | Panel::Watch
             | Panel::CallStack
-            | Panel::InputActions => Edge::Bottom,
+            | Panel::InputActions
+            | Panel::SecurityAudit => Edge::Bottom,
         }
     }
 
@@ -187,6 +192,7 @@ impl Panel {
             Panel::Collaborators => "Collaborators",
             Panel::PluginWidgets => "Plugin Widgets",
             Panel::InputActions => "Input Actions",
+            Panel::SecurityAudit => "Security Audit",
         }
     }
 
@@ -200,6 +206,7 @@ impl Panel {
                 | Panel::Collaborators
                 | Panel::PluginWidgets
                 | Panel::InputActions
+                | Panel::SecurityAudit
         )
     }
 

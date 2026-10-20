@@ -2,6 +2,20 @@
 
 ## 2026-10-20
 
+- **A Security Audit dock, and `rbxaudit` for CI.** View › Security Audit
+  (also a ribbon toggle) audits every script in the place, something
+  Studio has no equivalent for: remote handlers that let a client's
+  arguments reach currency, `Health`, `CFrame`, `Parent`, `:Destroy()`,
+  `Instance.new`, data store writes, `MarketplaceService`, `require` or
+  `loadstring` unchecked (type checks, `tonumber`, `math.clamp`,
+  whitelist lookups and early returns count as checks); handlers that
+  treat the Player argument as data; remotes nothing on the server
+  listens on, and calls on remotes the place doesn't have; `require`
+  targets that aren't ModuleScripts; and server-only services reached
+  from the client, or `InvokeClient` on the server. Each finding has a
+  severity and opens its script at the line. `rbxaudit place.rbxl`
+  prints the same findings and exits 1 on any high one. — @chteau
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its

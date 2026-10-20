@@ -39,7 +39,8 @@ pub(super) fn entry(panel: Panel) -> Option<Entry> {
         | Panel::TerrainEditor
         | Panel::Collaborators
         | Panel::PluginWidgets
-        | Panel::InputActions => None,
+        | Panel::InputActions
+        | Panel::SecurityAudit => None,
     }
 }
 

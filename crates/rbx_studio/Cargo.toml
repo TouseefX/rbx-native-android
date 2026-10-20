@@ -36,6 +36,8 @@ rbx_binary = { path = "../rbx_binary" }
 rbx_cloud = { path = "../rbx_cloud" }
 # Play/Test without Studio: probe, channel, tunnel, launcher, embedding.
 rbx_play = { path = "../rbx_play" }
+# The Security Audit dock runs the whole-place remote/script audit.
+rbx_audit = { path = "../rbx_audit" }
 rbx_animation = { path = "../rbx_animation" }
 rbx_autorig = { path = "../rbx_autorig" }
 rbx_dom = { path = "../rbx_dom" }
