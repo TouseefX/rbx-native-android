@@ -121,6 +121,7 @@ offscreen frame are both too slow to use otherwise — don't be surprised that
 | `rbx_materials` | The table of texture packs (colour, normal, metalness, roughness) behind each `Enum.Material`. |
 | `rbx_import` | Reads `.fbx`/`.obj`/`.gltf`/`.glb`, counts triangles against Roblox's budget and prepares the file for upload. |
 | `rbx_cloud` | Open Cloud API client and the `rbxcloud` CLI. |
+| `rbx_loren` | Loren, the optional built-in game framework (by fabi): the `rbxstudio loren` CLI, its vendored Luau runtime, and the project graph, place and spec runs the editor reads. |
 | `rbx_viewer` | The wgpu renderer and the `rbxview` binary (desktop and WebGPU). |
 | `rbx_studio` | The desktop editor (`rbxstudio`), built on GPUI Kit. |
 | `rbx_parser_cli` | The `rbxdump` and `rbxlua` command-line tools. |
@@ -408,6 +409,15 @@ the autonomous-contribution workflow specifically.
   definitions, and Roblox's API reference text from
   [Roblox-Client-Tracker](https://github.com/MaximumADHD/Roblox-Client-Tracker),
   are fetched at run time, not shipped.
+- **fabi** — [Loren](https://github.com/fabideveloper/Loren-Framework)
+  (MIT), the game framework rbx-native offers as its optional built-in one:
+  Services and Controllers booted in dependency order, packed networking
+  with typed specs and middleware, and `Loren.Testing`. Its Luau runtime,
+  project template and unit specs are vendored unchanged apart from the
+  documented performance patches (`vendor/loren/`, with fabi's licence and
+  the bundled Promise's own), and its `loren` CLI is ported to Rust as
+  `rbxstudio loren` (`crates/rbx_loren`). If you build on Loren, use fabi's
+  framework and docs: [fabideveloper.github.io/Loren-Framework](https://fabideveloper.github.io/Loren-Framework/).
 - **Twitter and jdecked** — [Twemoji](https://github.com/jdecked/twemoji)
   graphics (CC-BY 4.0), the emoji on the Device Simulator's keyboard
   cover, shipped unmodified in `assets/twemoji/` with their licence.
