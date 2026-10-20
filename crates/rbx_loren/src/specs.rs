@@ -232,6 +232,36 @@ pub fn run_specs(
     )?;
     let database = ReflectionDatabase::embedded();
     let enums = enum_names(&database);
+    let source = driver(container, filter, &enums);
+    parse_report(drive(dom, database, &source, SUMMARY_MARK)?)
+}
+
+/// Runs `source` with the spec prelude on the same virtual clock as
+/// [`run_specs`] and returns everything it printed.
+pub fn run_script(dom: WeakDom, source: &str) -> Result<String, String> {
+    let database = ReflectionDatabase::embedded();
+    let enums = enum_names(&database);
+    let chunk = format!(
+        "{enums}{PRELUDE}\nsetfenv(1, __lorenEnv)\ndo\n{source}\nend\nprint({})\n",
+        lua_string(DONE_MARK)
+    );
+    let output = drive(dom, database, &chunk, DONE_MARK)?;
+    Ok(output
+        .lines()
+        .filter(|line| !line.starts_with(DONE_MARK))
+        .map(|line| format!("{line}\n"))
+        .collect())
+}
+
+const DONE_MARK: &str = "@@LORENDONE";
+
+/// Runs `chunk` until it prints `mark` or finishes; the printed text either way.
+fn drive(
+    dom: WeakDom,
+    database: ReflectionDatabase,
+    chunk: &str,
+    mark: &str,
+) -> Result<String, String> {
     let mut runtime = Runtime::new(dom, database).map_err(|err| err.to_string())?;
     // Specs wait on timeouts and `task.wait`; a virtual clock that jumps to
     // the next wake-up keeps a run quick without changing what it observes.
@@ -239,30 +269,28 @@ pub fn run_specs(
     let read = clock.clone();
     runtime.set_clock(move || read.get());
     let started = Instant::now();
-    runtime.start(&driver(container, filter, &enums));
+    runtime.start(chunk);
     let mut output = Output::default();
     loop {
         let step = runtime.resume();
-        let reported = step.output.text().contains(SUMMARY_MARK);
+        let reported = step.output.text().contains(mark);
         output.extend(step.output);
         if reported {
             // Loops the runtime and the specs leave running (heartbeats,
-            // retry timers) never end on their own; the report is all a run owes.
+            // retry timers) never end on their own; the mark is all a run owes.
             runtime.cancel();
-            return parse_report(output.text());
+            return Ok(output.text());
         }
         match step.state {
-            RunState::Finished => return parse_report(output.text()),
+            RunState::Finished => return Ok(output.text()),
             RunState::Failed(error) => return Err(format!("{}\n{error}", output.text())),
             RunState::Pending { wake_in } => {
                 // Roblox resumes waiting threads once per frame at most.
                 clock.set(clock.get() + wake_in.max(FRAME));
                 if clock.get() > VIRTUAL_LIMIT || started.elapsed() > WALL_LIMIT {
                     runtime.cancel();
-                    return Err(format!(
-                        "The spec run did not finish in time:\n{}",
-                        output.text()
-                    ));
+                    let text = output.text();
+                    return Err(format!("The run did not finish in time:\n{text}"));
                 }
             }
         }
