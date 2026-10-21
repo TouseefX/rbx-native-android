@@ -4,6 +4,7 @@
 use std::fs;
 use std::io::Cursor;
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::commands::refresh::{refresh_project, resolve_project_tool};
@@ -149,7 +150,12 @@ pub fn add_command(
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos();
-    let tmp = std::env::temp_dir().join(format!("loren-add-{}-{nanos}", std::process::id()));
+    // The counter keeps two adds in one process apart: macOS's clock only
+    // ticks in microseconds, so parallel tests got the same folder and one
+    // deleted the other's clone.
+    static ADDS: AtomicU64 = AtomicU64::new(0);
+    let n = ADDS.fetch_add(1, Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("loren-add-{}-{nanos}-{n}", std::process::id()));
     let staged = stage_and_install(
         ctx,
         &root,
