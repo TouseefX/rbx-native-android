@@ -234,6 +234,28 @@ fn attributes_and_their_signals() {
     );
 }
 
+/// An `EnumItem` attribute a collaborator's Studio sent (the DOM keeps no
+/// enum name for it) must not stop the script writing another one.
+#[test]
+fn an_enum_attribute_does_not_block_writing_another() {
+    let mut dom = place();
+    let ws = dom.root_refs()[0];
+    let part = dom.new_instance("Part", "P", Some(ws));
+    let blob = rbx_dom::attributes::set_attribute(
+        None,
+        "Kind",
+        Some(&Variant::Enum(288)),
+        Some("Material"),
+    )
+    .unwrap();
+    dom.set_property(part, "AttributesSerialize", blob).unwrap();
+    let mut runtime = Runtime::new(dom, ReflectionDatabase::embedded()).unwrap();
+    let output = runtime
+        .run("workspace.P:SetAttribute('Team', 'red') print(workspace.P:GetAttribute('Team'))")
+        .unwrap();
+    assert_eq!(output.lines(), ["red"]);
+}
+
 #[test]
 fn changed_reaches_only_connections_made_before_the_change() {
     let printed = lines(

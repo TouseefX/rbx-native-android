@@ -266,11 +266,14 @@ pub(crate) struct Scene {
     terrain: Option<terrain::Terrain>,
 }
 
+/// Half the size of the world an empty place is framed on.
+const EMPTY_EXTENT: f32 = 32.0;
+
 impl Scene {
     /// Extracts drawable parts from a DOM.
     ///
-    /// Returns an error if no BasePart descendants exist: there is nothing to show,
-    /// and computing camera framing on an empty scene would be meaningless.
+    /// A place with no parts and no terrain frames an [`EMPTY_EXTENT`] box
+    /// round the origin. The `Result` is kept for the callers' sake.
     pub(crate) fn from_dom(dom: &WeakDom, database: &ReflectionDatabase) -> Result<Self, String> {
         let mut materials = Catalog::new(dom, database);
         let parts: Vec<Part> = workspace_descendants(dom, database)
@@ -286,7 +289,13 @@ impl Scene {
         .into_iter()
         .flatten()
         .reduce(Bounds::union)
-        .ok_or_else(|| "no BasePart or terrain to draw".to_string())?;
+        // A place with nothing drawn yet (a scripts-only Argon project, or
+        // one whose parts were all deleted) opens on an empty world framed
+        // round the origin, as Studio opens it, rather than not at all.
+        .unwrap_or(Bounds {
+            min: Vec3::splat(-EMPTY_EXTENT),
+            max: Vec3::splat(EMPTY_EXTENT),
+        });
         let file_mesh_plan = filemesh::plan(dom, database, &mut materials);
         let union_plan = union::plan(dom, database, &mut materials);
         let standing = parts

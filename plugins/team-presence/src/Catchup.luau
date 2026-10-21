@@ -19,6 +19,8 @@ export type JournalEntry = {
 	name: string,
 	path: string,
 	property: string,
+	-- The edited value as display text ("" from an older peer).
+	value: string?,
 	at: number,
 }
 
@@ -112,7 +114,7 @@ function Catchup.summarize(entries: { JournalEntry }): Summary
 	return { authors = authors, instances = pathCount, properties = propCount, edits = total }
 end
 
--- The value-less journal entries lifted out of a list of peer states (the
+-- The journal entries lifted out of a list of peer states (the
 -- ntfy transport's catch-up: retained messages are the peers' states).
 function Catchup.fromStates(states: { any }): { JournalEntry }
 	local entries: { JournalEntry } = {}
@@ -123,6 +125,7 @@ function Catchup.fromStates(states: { any }): { JournalEntry }
 				name = state.name,
 				path = edit.path,
 				property = edit.property,
+				value = edit.value,
 				at = edit.at,
 			})
 		end

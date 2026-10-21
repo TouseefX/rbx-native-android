@@ -35,10 +35,21 @@ use crate::explorer::{self, insert};
 
 use super::Shell;
 
+mod lift;
+
 const WORKSPACE_NAME: &str = "Workspace";
 /// `Instance.Archivable` as a file saves it, and as a loaded place holds it
 /// (see `rbx_reflection::ReflectionDatabase::normalize_names`).
 const ARCHIVABLE: &str = "archivable";
+
+/// Where a paste puts its copies: lifted clear of whatever they would land
+/// inside, as Studio's Paste and Paste Into do, or exactly where the
+/// originals were, its "at Original Location" pair.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Landing {
+    Clear,
+    Original,
+}
 
 /// What one keystroke does at the window level, or `None` if it means
 /// something else, see [`action_for`].
@@ -404,7 +415,17 @@ impl Shell {
             return;
         }
         let parent = explorer::find_by_name(&self.dom, WORKSPACE_NAME);
-        self.paste_under(&[parent], cx);
+        self.paste_under(&[parent], Landing::Clear, cx);
+    }
+
+    /// Edit › Paste at Original Location: Paste without the lift, the copy
+    /// exactly where the original was, overlapping it or not.
+    pub(crate) fn paste_at_original(&mut self, cx: &mut Context<Self>) {
+        if self.clipboard.is_empty() {
+            return;
+        }
+        let parent = explorer::find_by_name(&self.dom, WORKSPACE_NAME);
+        self.paste_under(&[parent], Landing::Original, cx);
     }
 
     /// Ctrl+Shift+V: pastes the whole clipboard into *each* selected
@@ -414,6 +435,15 @@ impl Shell {
     /// with nothing on the clipboard or nothing selected. `pub(crate)`: also
     /// `menu_bar`'s Paste Into item's entry point.
     pub(crate) fn paste_into_selected(&mut self, cx: &mut Context<Self>) {
+        self.paste_into(Landing::Clear, cx);
+    }
+
+    /// Edit › Paste into at Original Location: Paste Into without the lift.
+    pub(crate) fn paste_into_at_original(&mut self, cx: &mut Context<Self>) {
+        self.paste_into(Landing::Original, cx);
+    }
+
+    fn paste_into(&mut self, landing: Landing, cx: &mut Context<Self>) {
         let parents: Vec<Option<Ref>> = self
             .selected_all()
             .iter()
@@ -424,14 +454,14 @@ impl Shell {
         if self.clipboard.is_empty() || parents.is_empty() {
             return;
         }
-        self.paste_under(&parents, cx);
+        self.paste_under(&parents, landing, cx);
     }
 
     /// Materializes the clipboard once under every entry of `parents`,
     /// selects the copies and records the whole batch as one undo step,
     /// the single path Paste and Paste Into share, so neither can drift from
     /// the other in how it reaches the history or the viewport.
-    fn paste_under(&mut self, parents: &[Option<Ref>], cx: &mut Context<Self>) {
+    fn paste_under(&mut self, parents: &[Option<Ref>], landing: Landing, cx: &mut Context<Self>) {
         let increment = self.increment_names();
         // See `shell::history`: snapshotted before the inserts below, so one
         // Paste is one undo step however many entries the clipboard holds.
@@ -449,6 +479,12 @@ impl Shell {
                     let _ = dom.set_name(copy, &name);
                 }
                 pasted.push(copy);
+            }
+            // One parent's batch at a time, so a copy pasted into two
+            // parents climbs onto the first one's.
+            if landing == Landing::Clear {
+                let batch = &pasted[pasted.len() - self.clipboard.len()..];
+                lift::lift(&mut dom, &self.database, batch);
             }
         }
         self.dom = dom;

@@ -120,6 +120,11 @@ pub(super) fn describe(err: &CloudError) -> String {
         }
         (Some(403), _) => "Publishing isn\u{2019}t allowed on this place.",
         (Some(404), _) => "The place or its experience doesn\u{2019}t exist.",
+        // Roblox also answers 409 while a Team Create session holds the
+        // place ("Conflict: Save failed. Server is busy ..."), seen live.
+        (Some(409), CloudError::Refused { message, .. }) if message.contains("busy") => {
+            "Roblox is busy with this place, usually an open Team Create session. Try again in a couple of minutes."
+        }
         (Some(409), _) => "The place isn\u{2019}t part of that experience.",
         (_, CloudError::NoApiKey) => {
             return "No Open Cloud API key is set up. Add one from Home \u{203a} Manage key.".to_string()

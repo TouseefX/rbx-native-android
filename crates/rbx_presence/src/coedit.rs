@@ -21,6 +21,7 @@
 //!   (`/v1/rooms/<room>/ops`). A late joiner replays the log from the start;
 //!   every op is idempotent, so replaying onto a newer save converges.
 
+pub mod attrs;
 pub mod channel;
 pub mod chunk;
 pub mod diff;

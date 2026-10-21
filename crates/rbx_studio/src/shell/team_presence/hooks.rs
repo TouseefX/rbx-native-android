@@ -11,6 +11,25 @@ use rbx_viewer::Pose;
 use super::model::Status;
 use super::{now_ms, Shell};
 
+/// The edit-list entry for the attribute and tag blobs: what they hold
+/// (attribute names, tag names), not their bytes.
+fn blob_edit(name: &str, value: &rbx_dom::Variant) -> Option<(String, String)> {
+    match name {
+        "Tags" => Some((
+            "Tags".to_owned(),
+            rbx_dom::attributes::tags(Some(value)).join(", "),
+        )),
+        "AttributesSerialize" => Some((
+            "Attributes".to_owned(),
+            rbx_dom::attributes::decode(Some(value))
+                .into_keys()
+                .collect::<Vec<_>>()
+                .join(", "),
+        )),
+        _ => None,
+    }
+}
+
 impl Shell {
     /// The viewport's throttled camera pose.
     pub(in crate::shell) fn presence_pose(&mut self, pose: Pose) {
@@ -58,8 +77,13 @@ impl Shell {
                     ) else {
                         continue;
                     };
-                    let text = self.properties.format(&self.dom, class, name, value);
-                    self.team_presence.edits.note(path, name.clone(), text, now);
+                    let (property, text) = blob_edit(name, value).unwrap_or_else(|| {
+                        (
+                            name.clone(),
+                            self.properties.format(&self.dom, class, name, value),
+                        )
+                    });
+                    self.team_presence.edits.note(path, property, text, now);
                 }
                 _ => structural = true,
             }
@@ -112,4 +136,28 @@ fn initial(name: &str) -> SharedString {
         .map(|first| first.to_uppercase().collect::<String>())
         .unwrap_or_default()
         .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use rbx_dom::Variant;
+
+    use super::blob_edit;
+
+    #[test]
+    fn tags_and_attributes_read_as_names() {
+        let tags = Variant::String("Lava\0Kill\0".into());
+        assert_eq!(
+            blob_edit("Tags", &tags),
+            Some(("Tags".into(), "Lava, Kill".into()))
+        );
+        let attrs =
+            rbx_dom::attributes::set_attribute(None, "Speed", Some(&Variant::Float64(1.0)), None)
+                .unwrap();
+        assert_eq!(
+            blob_edit("AttributesSerialize", &attrs),
+            Some(("Attributes".into(), "Speed".into()))
+        );
+        assert_eq!(blob_edit("Transparency", &Variant::Float32(0.5)), None);
+    }
 }

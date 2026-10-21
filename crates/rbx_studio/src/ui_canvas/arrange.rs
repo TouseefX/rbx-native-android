@@ -28,6 +28,7 @@ pub(crate) fn align(boxes: &[(Ref, Rect)], axis: usize, mode: Mode) -> Vec<(Ref,
                     * Mat4::from_scale(Vec3::new(rect.w, rect.h, 1.0)),
                 sphere: false,
                 cylinder: false,
+                slope: crate::transform::Slope::None,
             }]
         })
         .collect();

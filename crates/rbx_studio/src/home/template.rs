@@ -114,6 +114,7 @@ impl Template {
                 set(&mut dom, player, "CameraMaxZoomDistance", float(400.0));
             }
         }
+        lighting_model(&mut dom, lighting);
         dom
     }
 
@@ -330,6 +331,20 @@ fn modern_lighting(dom: &mut WeakDom, lighting: Ref) {
     set(dom, depth, "Enabled", boolean(false));
 }
 
+/// The lighting model every template carries. Without `Technology` in the
+/// file, current Studio reads the place as `Compatibility` and stops on a
+/// "Lighting Technology Migration" dialog before it opens. All three of
+/// Studio's own templates load as `LightingStyle` Soft with
+/// `PrioritizeLightingQuality` on (read off each in real Studio), and that
+/// pair is what Studio writes with `Technology` = ShadowMap. `Technology`
+/// itself isn't script-readable any more, so ShadowMap is taken from what
+/// Studio saves.
+fn lighting_model(dom: &mut WeakDom, lighting: Ref) {
+    set(dom, lighting, "Technology", enumeration(3));
+    set(dom, lighting, "LightingStyle", enumeration(1));
+    set(dom, lighting, "PrioritizeLightingQuality", boolean(true));
+}
+
 fn classic_lighting(dom: &mut WeakDom, lighting: Ref) {
     set(dom, lighting, "Ambient", grey(138.0 / 255.0));
     set(dom, lighting, "OutdoorAmbient", grey(128.0 / 255.0));
@@ -446,6 +461,20 @@ mod tests {
         assert!(named(&dom, workspace, "SpawnLocation").is_none());
         let lighting = service(&dom, "Lighting");
         assert!(!children(&dom, lighting).iter().any(|(c, _)| c == "Sky"));
+    }
+
+    #[test]
+    fn every_template_writes_studios_lighting_model() {
+        for template in Template::ALL {
+            let dom = read(template);
+            let lighting = dom.get(service(&dom, "Lighting")).unwrap().properties();
+            assert_eq!(lighting.get("Technology"), Some(&Variant::Enum(3)));
+            assert_eq!(lighting.get("LightingStyle"), Some(&Variant::Enum(1)));
+            assert_eq!(
+                lighting.get("PrioritizeLightingQuality"),
+                Some(&Variant::Bool(true))
+            );
+        }
     }
 
     #[test]

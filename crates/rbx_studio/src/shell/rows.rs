@@ -833,31 +833,38 @@ fn render_row_editor(
                 }))
                 .into_any_element()
         }
-        RowEditor::Text(input) => text_field(&input, tab_index, cx).into_any_element(),
+        RowEditor::Text(input) => {
+            stops.register(&input.read(cx).focus_handle(cx));
+            text_field(&input, tab_index, cx).into_any_element()
+        }
         // Rail first, number second: the drag is the reason the row looks
         // like this, and the field is what it settles into. The field
         // keeps a fixed width so the rails of a `Lighting` all end on the
         // same edge however long the numbers beside them get.
-        RowEditor::Slider(input, rail) => h_flex()
-            .w_full()
-            .items_center()
-            .gap(tokens::label_gap())
-            .child(slider::slider(&rail, cx))
-            .child(
-                div()
-                    .flex_none()
-                    // Narrower than a labelled field (`field_min_width`):
-                    // there is no label in front of this one, and every
-                    // value a rail spans is a handful of digits.
-                    .w(tokens::scaled_width(52.))
-                    .child(text_field(&input, tab_index, cx)),
-            )
-            .into_any_element(),
+        RowEditor::Slider(input, rail) => {
+            stops.register(&input.read(cx).focus_handle(cx));
+            h_flex()
+                .w_full()
+                .items_center()
+                .gap(tokens::label_gap())
+                .child(slider::slider(&rail, cx))
+                .child(
+                    div()
+                        .flex_none()
+                        // Narrower than a labelled field (`field_min_width`):
+                        // there is no label in front of this one, and every
+                        // value a rail spans is a handful of digits.
+                        .w(tokens::scaled_width(52.))
+                        .child(text_field(&input, tab_index, cx)),
+                )
+                .into_any_element()
+        }
         // Captioned lines, a `CFrame`'s Position over its Orientation.
         // Each group is its own run of field rows under its own caption,
         // which is what makes six numbers readable where one flat run of
         // six is a wall.
         RowEditor::Groups(groups, _, inputs) => {
+            register_fields(stops, &inputs, cx);
             let mut taken = 0;
             v_flex()
                 .w_full()
@@ -903,6 +910,7 @@ fn render_row_editor(
                 .into_any_element()
         }
         RowEditor::Fields(fields, _, inputs) => {
+            register_fields(stops, &inputs, cx);
             number_fields(fields, &inputs, 0, tab_index, on_scrub, 1, cx).into_any_element()
         }
         // The checkbox is the only control an absent value has: there is
@@ -987,13 +995,32 @@ fn render_row_editor(
             )
             .into_any_element(),
         RowEditor::Color(state) => {
-            stops.register(&state.read(cx).focus_handle(cx));
+            let handle = state.read(cx).focus_handle(cx);
+            stops.register(&handle);
+            // The picker draws no ring of its own, so a keyboard focus on
+            // it was invisible: the same ring a dropdown gets, on a
+            // target-sized box around the swatch.
+            let ringed = handle.contains_focused(window, cx) && window.last_input_was_keyboard();
             // The toolkit's default featured row repeats colours its palette
             // already lists, and two swatches of one colour share an element
             // id (a debug-build panic): the palette alone is the choice.
-            ColorPicker::new(&state)
-                .featured_colors(Vec::new())
-                .with_size(tokens::field_size())
+            div()
+                .flex_none()
+                .size(tokens::checkbox_target())
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(tokens::radius())
+                // Inset, like a dropdown's: the row clips anything drawn
+                // outside the swatch's box.
+                .relative()
+                .when(ringed, |this| this.shadow(tokens::focus_ring_inset()))
+                .child(super::reveal::mark(&handle))
+                .child(
+                    ColorPicker::new(&state)
+                        .featured_colors(Vec::new())
+                        .with_size(tokens::field_size()),
+                )
                 .into_any_element()
         }
         // `appearance(false)` drops the toolkit's own border and fill but
@@ -1105,6 +1132,13 @@ fn number_fields(
         )
 }
 
+/// Puts each of a row's number fields in the window's Tab order, in order.
+fn register_fields(stops: &TabOrder, inputs: &[Entity<InputState>], cx: &App) {
+    for input in inputs {
+        stops.register(&input.read(cx).focus_handle(cx));
+    }
+}
+
 /// Where a name sits in the name column: past the row's own padding and the
 /// column an expander chevron occupies, then one more step per level of
 /// nesting. A row with no chevron still clears the slot, so every property
@@ -1119,8 +1153,10 @@ pub(super) fn name_indent(depth: usize) -> Pixels {
 pub(super) fn text_field(input: &Entity<InputState>, tab_index: isize, cx: &App) -> Div {
     let handle = input.read(cx).focus_handle(cx);
     field_box()
+        .relative()
         .track_focus(&handle)
         .focus(|this| this.border_color(tokens::accent_line()))
+        .child(super::reveal::mark(&handle))
         .child(
             Input::new(input)
                 .appearance(false)
@@ -1155,7 +1191,10 @@ pub(super) fn select_box() -> Div {
 /// outside it, and a shadow moves nothing, so the column stays aligned.
 pub(super) fn select_field(handle: &FocusHandle, window: &Window, cx: &App) -> Div {
     let ringed = handle.contains_focused(window, cx) && window.last_input_was_keyboard();
-    select_box().when(ringed, |this| this.shadow(tokens::focus_ring_inset()))
+    select_box()
+        .relative()
+        .when(ringed, |this| this.shadow(tokens::focus_ring_inset()))
+        .child(super::reveal::mark(handle))
 }
 
 fn field_surface(surface: Rgba) -> Div {

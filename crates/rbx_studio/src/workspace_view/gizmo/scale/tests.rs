@@ -189,6 +189,7 @@ fn ctrl_resizes_a_lone_part_about_its_middle() {
         component: 0,
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
         centred: true,
     };
     let (_, change) = advance(drag, looking_at(2.0, 0.0), free()).unwrap();

@@ -65,6 +65,7 @@ impl Shell {
             } => self.resize_parts(parts, *pivot, *first, cx),
             ViewportAction::Rotated { parts, first } => self.rotate_parts(parts, *first, cx),
             ViewportAction::Sun { ray, first } => self.sun_step(*ray, *first, cx),
+            ViewportAction::SnapView(forward) => self.snap_view(*forward, cx),
             ViewportAction::Terrain(input) => self.terrain_step(*input, cx),
             ViewportAction::Pivot { to, first } => self.pivot_step(*to, *first, cx),
             ViewportAction::Joint { index, to, phase } => {

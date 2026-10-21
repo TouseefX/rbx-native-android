@@ -266,6 +266,13 @@ impl Shell {
                 |shell, _, cx| shell.paste_into_selected(cx),
             ),
             row(
+                "paste-into-original",
+                IconName::ClipboardPaste,
+                "Paste into at Original Location",
+                live.paste,
+                |shell, _, cx| shell.paste_into_at_original(cx),
+            ),
+            row(
                 "rename",
                 IconName::Pencil,
                 "Rename",

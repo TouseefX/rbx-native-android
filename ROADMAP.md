@@ -3423,9 +3423,10 @@ engine, just as an escape hatch.
 
 - [ ] 📋 **Co-editing without an rbx-native host, and at scale**, only the
   hosted relay (an rbx-native user's own) keeps the op log, so Studio users
-  alone cannot co-edit, and a new host starts with an empty log. Attributes
-  and tags are not sent from Studio, and large places (tens of thousands of
-  instances) are untested.
+  alone cannot co-edit, and a new host starts with an empty log (peers read
+  it from the start, and unsent edits move to it). Attributes and tags go
+  both ways; a 12,000 part place was tested live against Studio (the adds
+  land in about a minute, single edits in under 2 s).
 
 Neither replaces **Team Create**, Roblox's actual real-time multi-user
 editing, that stays proprietary with no public protocol to build against
