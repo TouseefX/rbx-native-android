@@ -307,6 +307,7 @@ impl Shell {
             self.sync_snap_neighbours(cx);
         }
         self.sync_light_guides(cx);
+        self.sync_layers_after(changes, cx);
         // A selected instance that changed class is, to everything built
         // from the selection, another selection: its outline, its gizmo and
         // its Properties rows are all read off its class. Checked here, so a
