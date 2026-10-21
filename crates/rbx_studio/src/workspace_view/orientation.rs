@@ -76,6 +76,9 @@ const AXIS_FACES: [AxisFaces; 3] = [
 pub(super) struct Face {
     pub(super) label: &'static str,
     pub(super) color: Rgba,
+    /// The world axis this face is the side of, pointing the way the
+    /// camera looks when the face is square-on.
+    pub(super) normal: Vec3,
     /// The face's four corners, in cyclic (non-self-intersecting) order, on
     /// a unit-radius screen scale, the caller scales by the widget's
     /// actual on-screen radius. `x` is screen-right, `y` is screen-down
@@ -137,6 +140,7 @@ pub(super) fn visible_faces(pose: Pose) -> [Face; 3] {
         Face {
             label,
             color: (group.color)(),
+            normal,
             corners: [
                 project(normal + group.a + group.b),
                 project(normal + group.a - group.b),
@@ -146,6 +150,40 @@ pub(super) fn visible_faces(pose: Pose) -> [Face; 3] {
             prominence: alignment.abs(),
         }
     })
+}
+
+/// The cube face under `at`, a point on the same unit-radius screen scale
+/// as [`Face::corners`] (screen-right, screen-down from the cube's centre):
+/// what a click on the indicator snaps the camera square-on to.
+pub(super) fn face_at(pose: Pose, at: (f32, f32)) -> Option<Face> {
+    visible_faces(pose)
+        .into_iter()
+        .filter(|face| contains(&face.corners, at))
+        .max_by(|a, b| a.prominence.total_cmp(&b.prominence))
+}
+
+/// Whether `at` is inside the convex quad `corners`: on the same side of
+/// every edge. An edge-on face has no inside.
+fn contains(corners: &[(f32, f32); 4], at: (f32, f32)) -> bool {
+    let side = |i: usize| {
+        let (a, b) = (corners[i], corners[(i + 1) % 4]);
+        (b.0 - a.0) * (at.1 - a.1) - (b.1 - a.1) * (at.0 - a.0)
+    };
+    let sides = [side(0), side(1), side(2), side(3)];
+    sides.iter().all(|&s| s > 0.0) || sides.iter().all(|&s| s < 0.0)
+}
+
+/// The way the camera looks once snapped square-on to the face whose
+/// normal is `normal`. Straight up or down tilts a degree short, the free
+/// camera's own pitch limit, keeping the current heading so the view
+/// doesn't spin.
+pub(crate) fn snapped_forward(pose: Pose, normal: Vec3) -> Vec3 {
+    if normal.y.abs() < 0.5 {
+        return normal;
+    }
+    // `Pose::basis`'s convention: a positive pitch looks down.
+    let pitch = -89f32.to_radians() * normal.y.signum();
+    Pose { pitch, ..pose }.basis().0
 }
 
 /// One world axis's orbital ring, split at the horizon into the half in
@@ -244,6 +282,31 @@ mod tests {
             ortho_scale: 1.0,
         }
     }
+
+    #[test]
+    fn a_click_on_a_face_picks_that_face() {
+        let pose = pose(0.6, 0.4);
+        for face in visible_faces(pose) {
+            if face.prominence < 0.1 {
+                continue;
+            }
+            let at = centre_of(&face);
+            assert_eq!(face_at(pose, at).map(|hit| hit.label), Some(face.label));
+        }
+        assert!(face_at(pose, (5.0, 5.0)).is_none());
+    }
+
+    #[test]
+    fn snapping_to_a_face_looks_along_its_normal() {
+        let pose = pose(0.6, 0.4);
+        assert_eq!(snapped_forward(pose, Vec3::NEG_Z), Vec3::NEG_Z);
+        let down = snapped_forward(pose, Vec3::NEG_Y);
+        assert!(down.y < -0.99, "{down:?}");
+        assert!((down.length() - 1.0).abs() < 1e-4);
+        // The heading survives the tilt: still facing the way yaw points.
+        let level = pose.basis().0 * Vec3::new(1.0, 0.0, 1.0);
+        assert!(down.x * level.x + down.z * level.z > 0.0);
+            }
 
     fn face<'a>(faces: &'a [Face; 3], label: &str) -> &'a Face {
         faces
