@@ -19,7 +19,7 @@ use crate::input::{CameraInput, Input};
 use crate::load::{Loaded, Resident, Toggles};
 use crate::pick::Selected;
 use crate::quality::QualityLevel;
-use crate::renderer::{GuiBox, Segment};
+use crate::renderer::{Fill, GuiBox, Segment};
 use crate::scene::{Bounds, ScrollTarget};
 use crate::view::View;
 
@@ -571,6 +571,14 @@ impl Headless {
     pub fn set_lines(&mut self, layer: usize, segments: Vec<Segment>) {
         self.offscreen.set_lines(layer, &segments);
         self.view.set_lines(layer, segments);
+    }
+
+    /// Fills flat world-space quads under the lines, a heat map's cells.
+    /// Layered, replaced, cleared and kept across a reload exactly like
+    /// [`Headless::set_lines`]; drawn before every layer's lines.
+    pub fn set_fills(&mut self, layer: usize, fills: Vec<Fill>) {
+        self.offscreen.set_fills(layer, &fills);
+        self.view.set_fills(layer, fills);
     }
 
     /// Draws the transform tool's axis draggers over the selected part, or

@@ -40,6 +40,7 @@ pub(super) fn entry(panel: Panel) -> Option<Entry> {
         | Panel::Collaborators
         | Panel::PluginWidgets
         | Panel::InputActions
+        | Panel::Playtests
         | Panel::Tests
         | Panel::Layers
         | Panel::Loren => None,

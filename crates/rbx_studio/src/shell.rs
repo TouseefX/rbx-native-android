@@ -51,6 +51,7 @@ mod perf_view;
 mod pivot;
 mod place_merge;
 mod play;
+mod playtests;
 mod plugins;
 mod property_element;
 mod quality;
@@ -71,6 +72,7 @@ pub(crate) use coedit::BETA_ID as COEDIT_BETA_ID;
 pub(crate) use export::Export;
 pub(crate) use layout::{edge_from_key, edge_key, Edge, Panel, SavedEdge, SavedGroup, SavedLayout};
 pub(crate) use play::copy_name::DEFAULT as PLAY_COPY_NAME_DEFAULT;
+pub(crate) use playtests::DEFAULT_RATE_HZ as PLAYTEST_RATE_DEFAULT;
 pub(crate) use roving::install as install_key_bindings;
 mod tree_keys;
 
@@ -398,6 +400,8 @@ pub(crate) struct Shell {
     wally_ui: wally_dock::WallyDock,
     /// The Viewport dock's own state; see `shell::viewport_dock`.
     viewport_ui: viewport_dock::ViewportDock,
+    /// Recorded playtests and their replay; see `shell::playtests`.
+    playtests: playtests::Playtests,
     /// The address `Settings::argon_address` should hold, a plain `String`
     /// rather than reading `argon_address` above back out, because
     /// `Shell::save_settings` takes no `cx` and an `Entity<InputState>`
@@ -586,6 +590,7 @@ impl Shell {
             team_presence: team_presence_settings,
             play_sandbox,
             play_copy_name,
+            playtest_rate_hz,
             network_presets,
             anim_sheet_height,
             anim_names_width,
@@ -876,6 +881,7 @@ impl Shell {
             argon_ui: argon_dock::ArgonDock::new(&argon_address_setting, window, cx),
             wally_ui: wally_dock::WallyDock::new(cx),
             viewport_ui: viewport_dock::ViewportDock::new(),
+            playtests: playtests::Playtests::new(playtest_rate_hz),
             argon_saved_address: argon_address_setting,
             argon: argon_sync::Sync::default(),
             argon_settings,
@@ -1123,6 +1129,9 @@ impl Shell {
         // `StyleRule` they selected.
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
+        if std::env::var_os(playtests::DEBUG_VARIABLE).is_some() {
+            shell.set_panel_open(layout::Panel::Playtests, true, cx);
+        }
         shell.apply_debug_tests(cx);
         shell.apply_debug_layers(cx);
         shell.apply_debug_loren(cx);
@@ -1855,6 +1864,7 @@ impl Shell {
             team_presence: self.team_presence.settings.clone(),
             play_sandbox: self.play.sandbox,
             play_copy_name: self.play.copy_name.clone(),
+            playtest_rate_hz: self.playtests.rate_hz,
             network_presets: self.play.network.saved.clone(),
             anim_sheet_height: self.anim.sheet_height,
             anim_names_width: Some(self.anim.names_width),

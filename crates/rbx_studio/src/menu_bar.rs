@@ -110,6 +110,7 @@ actions!(
         MenuToggleViewport,
         MenuToggleCollaborators,
         MenuToggleInputActions,
+        MenuTogglePlaytests,
         MenuToggleLayers,
         MenuToggleLoren,
         /// Shared by every item below that has no real handler yet; always
@@ -277,6 +278,7 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 // rbx-native. Shut by default, so it needs a way in.
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
+                MenuItem::action("Playtests", MenuTogglePlaytests),
                 MenuItem::action("Layers", MenuToggleLayers),
                 MenuItem::action("Loren", MenuToggleLoren),
                 MenuItem::separator(),
