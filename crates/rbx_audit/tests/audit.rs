@@ -205,7 +205,7 @@ fn the_fixture_place_is_flagged_exactly_where_marked() {
     let precision = true_positives as f64 / found.len() as f64;
     let recall = true_positives as f64 / expected.len() as f64;
     println!(
-        "fixtures: {} expected, {} found, {true_positives} true positives, {} false positives, {} false negatives — precision {:.1}%, recall {:.1}%",
+        "fixtures: {} expected, {} found, {true_positives} true positives, {} false positives, {} false negatives, precision {:.1}%, recall {:.1}%",
         expected.len(),
         found.len(),
         false_positives.len(),
