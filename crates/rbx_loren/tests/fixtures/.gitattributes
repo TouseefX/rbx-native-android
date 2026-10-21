@@ -1,0 +1,2 @@
+# Tests compare these byte for byte, so keep LF on Windows checkouts too.
+* text eol=lf
