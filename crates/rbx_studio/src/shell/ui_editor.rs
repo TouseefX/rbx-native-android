@@ -244,8 +244,10 @@ pub(super) fn is_gui_object(dom: &WeakDom, database: &ReflectionDatabase, refere
 
 impl Shell {
     /// Switches Row A's document, from a click on its tab, a script
-    /// opening, the View menu. Opening the UI Editor lands on its canvas.
+    /// opening, the View menu. Opening the UI Editor lands on its canvas, and
+    /// opening an editor whose tab was closed gives it the tab back.
     pub(super) fn set_document(&mut self, document: Document, cx: &mut Context<Self>) {
+        self.reopen_document(document);
         if document == Document::UiEditor && self.document != Document::UiEditor {
             self.ui.tab = Tab::Canvas;
             // Only from here, not from startup regardless of which document

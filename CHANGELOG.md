@@ -2,6 +2,14 @@
 
 ## 2026-10-21
 
+- **The editor tabs close.** Script Editor, UI Editor and Animation Editor
+  get a × like Studio's script tabs (middle click and Delete work too).
+  Closing the open one drops you back on the place. The "+" lists the
+  closed ones to bring back, and opening a script, a GUI or a rig brings
+  its editor back by itself. Which ones are closed sticks across
+  restarts. The "+" also sits level with the tab labels again instead of
+  below them. (@chteau)
+
 - **`SurfaceAppearance.Color` tints the colour map only.** Where an
   `Overlay` map is clear, the part's own colour now shows as it is, like in
   Studio, instead of tinted too. An emissive face cut into a tinted pumpkin

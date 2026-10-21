@@ -203,7 +203,7 @@ nothing.
 Shell (v_flex)
 ├─ Topbar          h 31   black       logo · centred title · window buttons  ← the real title bar
 ├─ MenuBar         h 24   menu-bar    File / Edit / Model / View
-├─ ROW A  Tabs     h 42   chrome      w180 document tabs (accent rule on the open one) + a disabled "+"
+├─ ROW A  Tabs     h 42   chrome      w180 document tabs (accent rule on the open one, × on each editor) + "+"
 ├─ ROW B  RibbonTabs h 28 dock        Home · Avatar · UI · Script · Model · Test · Plugins
 ├─ ROW C  Ribbon   h 80   chrome      p5 gap10, groups for Row B's active tab, scrolls at high UI scale
 ├─ ROW D  Workspace flex-1  black
@@ -317,7 +317,8 @@ disabled, which a class icon can't do.
 
 Icon sizes are the frame's and they are small: 20px on a ribbon tile, 12px
 in a document tab and a menu row, 10px on a stack row and a checkbox tick,
-8px on a section chevron, 7px on a tab's close mark.
+8px on a section chevron and a document tab's close mark (in Studio's
+16px square hover box), 7px on a dock tab's.
 
 ## 6. Interaction state matrices
 
@@ -527,8 +528,8 @@ to lie, not a shortcut:
 | A torn-out panel | its own floating window, rendering the same `Shell` | the panel is not copied, see `shell::panel_window`. On X11 a window manager may ignore `WindowKind::Floating`, so the editor raises its own children on its rising edge |
 | Focus ring on menu rows | not present | a menu row has no focus handle |
 | Menu bar: File · Edit · View · Plugins · Test · Window · Help | File · Edit · Model · View | the other three have no commands behind them; an empty menu is worse than an absent one, and the menu bar's own greyed items already carry "not yet" |
-| Close "×" on document and dock tabs | absent on both | a document here is a view of the one open place, not a file that closes independently, and a dock's panel can't close at all. A mark that does nothing is a control that lies |
-| "+" at the end of a tab strip | disabled on the document strip, replaced by the dock's overflow menu on a dock strip | the editor has no notion of a new document, and its docks hold one panel each |
+| Close "×" on document tabs | on the Script, UI and Animation Editor tabs, not on the place tab | the place tab *is* the open place, and File already closes it. An editor's tab closes like a Studio script tab (×, middle click, Delete on the focused tab) and comes back from the "+" or from anything that opens that editor |
+| "+" at the end of a tab strip | New Place, Open… and the closed editors on the document strip, replaced by the dock's overflow menu on a dock strip | the editor has no notion of a new blank document, and its docks hold one panel each |
 | Fixed 228px docks with no handles | 300px by default, draggable 200–560, persisted, with Reset Layout | a place file's instance names are not 228px wide just because the design's were, and the wider label column follows from 14px text. The handle draws nothing until it is pointed at |
 | Half-pixel (0.5px) tab borders | 1px | GPUI draws whole pixels |
 | Centred search placeholder | left-aligned | the toolkit `Input` owns its own text alignment |

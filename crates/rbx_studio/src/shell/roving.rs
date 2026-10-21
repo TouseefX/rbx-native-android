@@ -384,8 +384,15 @@ impl Roving {
         self.current.get()
     }
 
+    /// Makes `index` the current item and focuses it, for when the focused
+    /// item went away under the keyboard (a closed tab).
+    pub(crate) fn focus(&self, index: usize, window: &mut Window, cx: &mut App) {
+        self.current.set(index);
+        self.handle(index, cx).focus(window, cx);
+    }
+
     /// Whether focus is on one of the items the last render built.
-    fn holds_focus(&self, window: &Window) -> bool {
+    pub(crate) fn holds_focus(&self, window: &Window) -> bool {
         self.handles
             .borrow()
             .iter()
