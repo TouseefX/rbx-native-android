@@ -1,10 +1,10 @@
 //! Freeze Rotation: an instance's turn cleared to `0, 0, 0` while it keeps
-//! looking exactly as it did — Blender's Apply › Rotation ("rotation values
+//! looking exactly as it did, Blender's Apply › Rotation ("rotation values
 //! are cleared to zero … the geometry itself is adjusted so that the object
 //! continues to appear unchanged"). Its origin stays where it was, unturned:
 //! the pivot keeps its place in the world and loses its turn, as a Blender
 //! object's origin does. Everything else hanging off the instance's own
-//! frame — child `Attachment`s, the `C0`/`C1` of joints naming it — keeps
+//! frame, child `Attachment`s, the `C0`/`C1` of joints naming it, keeps
 //! its whole world frame, as Blender adjusts children.
 //!
 //! Format-honest: what a place stores after a freeze is only ever what
@@ -13,7 +13,7 @@
 //! - A `Model`: it has no geometry of its own, its turn is its pivot's, and
 //!   clearing that is a pivot write ([`local`]).
 //! - A `Block` part turned by quarter turns, or a `Ball`: the same shape can
-//!   be described unturned — a block by swapping its `Size` axes and moving
+//!   be described unturned, a block by swapping its `Size` axes and moving
 //!   its surfaces and decals to the faces now pointing their way, a ball as
 //!   it is ([`local`]). A block at any other angle, a cylinder or a wedge
 //!   cannot: its shape comes from `Shape` and `Size` alone, axis-aligned.

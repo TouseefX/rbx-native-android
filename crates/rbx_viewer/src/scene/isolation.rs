@@ -1,6 +1,6 @@
-//! Isolation: a scene that draws only what hangs under a few roots — the
+//! Isolation: a scene that draws only what hangs under a few roots, the
 //! Animation Editor's one rig on a plain backdrop, the way Blender's
-//! animation workspace shows a single armature — while every instance keeps
+//! animation workspace shows a single armature, while every instance keeps
 //! its `Ref`, its slot and its GPU record.
 //!
 //! Nothing is taken out of the scene for it. A part outside the roots is
@@ -29,20 +29,42 @@ pub const STAGE_REACH: f32 = 20.0;
 /// found under one of them.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Isolation {
-    roots: HashSet<Ref>,
+    /// What draws is limited to these and what hangs under them; `None`
+    /// leaves every instance eligible (an editor layer filter that only
+    /// hides things).
+    roots: Option<HashSet<Ref>>,
+    /// These and everything beneath them never draw, whatever the roots say.
+    hidden: HashSet<Ref>,
+    /// Whether this is the Animation Editor's isolation, which owns the stage
+    /// floor under the rig, rather than an editor layer filter, which must
+    /// leave the sun's shadow fitted to the whole place.
+    stage: bool,
     /// Kept rather than re-derived from the roots on every sweep: an asset
     /// landing re-resolves the file meshes (see [`Scene::resolve_file_meshes`])
     /// with no DOM in hand to walk, and the sweep after it still has to know
     /// which of the fresh instances stand under a root.
     inside: HashSet<Ref>,
     /// The particle emitters, beams, trails and in-world GUIs that belong to
-    /// the isolated roots and so still draw — see [`Scene::sweep_effects`].
+    /// the isolated roots and so still draw, see [`Scene::sweep_effects`].
     effects: HashSet<Ref>,
 }
 
 impl Isolation {
-    pub(crate) fn roots(&self) -> &HashSet<Ref> {
-        &self.roots
+    pub(crate) fn roots(&self) -> Option<&HashSet<Ref>> {
+        self.roots.as_ref()
+    }
+
+    pub(crate) fn hidden(&self) -> &HashSet<Ref> {
+        &self.hidden
+    }
+
+    /// Whether `referent` draws: under a root (when there are roots) and
+    /// under no hidden instance.
+    fn shows(&self, referent: Ref, parent_of: &impl Fn(Ref) -> Option<Ref>) -> bool {
+        self.roots
+            .as_ref()
+            .is_none_or(|roots| within(roots, referent, parent_of))
+            && !within(&self.hidden, referent, parent_of)
     }
 }
 
@@ -66,7 +88,10 @@ pub(crate) fn within(
 
 impl Scene {
     /// Draws only the parts and meshes under `roots` (and the roots
-    /// themselves) from now on, or everything again with `None`.
+    /// themselves) from now on, or everything again with `None`, leaving out
+    /// whatever is `hidden` or beneath a hidden instance. With neither roots
+    /// nor hidden the whole place draws. `stage` marks the Animation
+    /// Editor's isolation, the only one that fits the shadow to a stage.
     ///
     /// `parent_of` answers the tree as it stands: a caller with the DOM
     /// passes `WeakDom::parent`, and `Headless`, which keeps no DOM, its
@@ -76,11 +101,19 @@ impl Scene {
     pub(crate) fn isolate(
         &mut self,
         roots: Option<&[Ref]>,
+        hidden: &[Ref],
+        stage: bool,
         parent_of: impl Fn(Ref) -> Option<Ref>,
     ) {
-        self.isolation = roots.map(|roots| {
-            let roots: HashSet<Ref> = roots.iter().copied().collect();
-            let inside = self
+        self.isolation = (roots.is_some() || !hidden.is_empty()).then(|| {
+            let mut isolation = Isolation {
+                roots: roots.map(|roots| roots.iter().copied().collect()),
+                hidden: hidden.iter().copied().collect(),
+                stage,
+                inside: HashSet::new(),
+                effects: HashSet::new(),
+            };
+            isolation.inside = self
                 .parts
                 .iter()
                 .map(Part::referent)
@@ -90,13 +123,9 @@ impl Scene {
                         .iter()
                         .map(|instance| instance.referent),
                 )
-                .filter(|&referent| within(&roots, referent, &parent_of))
+                .filter(|&referent| isolation.shows(referent, &parent_of))
                 .collect();
-            Isolation {
-                roots,
-                inside,
-                effects: HashSet::new(),
-            }
+            isolation
         });
         self.flag_isolated();
         self.sweep_effects(&parent_of);
@@ -107,7 +136,7 @@ impl Scene {
     /// beam or trail spans does, or when the part a `BillboardGui`/
     /// `SurfaceGui` hangs off does. A sword's trail is parented to the
     /// sword but stretched between attachments on it; a nametag lives in
-    /// `PlayerGui` but adorns the head — both belong to the rig.
+    /// `PlayerGui` but adorns the head, both belong to the rig.
     ///
     /// Run after [`Scene::isolate`] and after every replan of an effect list
     /// (see `Scene::replan_effect`), which is the only time those lists
@@ -116,8 +145,15 @@ impl Scene {
         let Some(isolation) = &mut self.isolation else {
             return;
         };
-        let roots = &isolation.roots;
-        let belongs = |refs: &[Ref]| refs.iter().any(|&at| within(roots, at, parent_of));
+        let (roots, hidden) = (&isolation.roots, &isolation.hidden);
+        // `refs[0]` is always the effect's own referent: it alone decides
+        // hiding, while any of `refs` may qualify it under a root.
+        let belongs = |refs: &[Ref]| {
+            !within(hidden, refs[0], parent_of)
+                && roots
+                    .as_ref()
+                    .is_none_or(|roots| refs.iter().any(|&at| within(roots, at, parent_of)))
+        };
         isolation.effects = self
             .emitters
             .iter()
@@ -150,7 +186,7 @@ impl Scene {
 
     /// What an isolated view's sun shadow is fitted to: the parts still
     /// drawn, joined with a [`STAGE_REACH`] square of floor around their
-    /// centre at their lowest point — the stage grid the rig stands on.
+    /// centre at their lowest point, the stage grid the rig stands on.
     /// `None` while nothing is isolated, or when no part is left drawn; the
     /// renderer then fits to the whole place as usual.
     ///
@@ -158,7 +194,9 @@ impl Scene {
     /// only the rig is drawn, and a rig in a large place gets a handful of
     /// texels for its whole shadow.
     pub(crate) fn stage_bounds(&self) -> Option<Bounds> {
-        self.isolation.as_ref()?;
+        if !self.isolation.as_ref()?.stage {
+            return None;
+        }
         let rig = bounds::of(
             self.parts
                 .iter()
@@ -181,7 +219,7 @@ impl Scene {
             .is_none_or(|isolation| isolation.effects.contains(&referent))
     }
 
-    /// [`Scene::particle_emitters`] less the ones an isolation hides — what
+    /// [`Scene::particle_emitters`] less the ones an isolation hides, what
     /// the renderer builds from. The full list stays for asset collection.
     pub(crate) fn drawn_particle_emitters(&self) -> Cow<'_, [Emitter]> {
         self.drawn(&self.emitters, |emitter| emitter.referent)
@@ -199,8 +237,8 @@ impl Scene {
 
     /// Every `BillboardGui`/`SurfaceGui` this scene could place, each already
     /// carrying the pixel size of the canvas its tree is painted into, less
-    /// the ones an isolation hides. The renderer owns that canvas — a `Scene`
-    /// has no GPU handle — and finishes a billboard's quad, which only exists
+    /// the ones an isolation hides. The renderer owns that canvas, a `Scene`
+    /// has no GPU handle, and finishes a billboard's quad, which only exists
     /// once an eye does.
     pub(crate) fn drawn_gui_spaces(&self) -> Cow<'_, [SpaceGui]> {
         self.drawn(&self.gui_spaces, |gui| gui.referent)
@@ -225,7 +263,7 @@ impl Scene {
     }
 
     /// Whether `referent` is to be hidden by the isolation as it stands,
-    /// asked of `dom` itself and remembered for the next sweep — what a
+    /// asked of `dom` itself and remembered for the next sweep, what a
     /// single-part edit uses, since the part may have just been moved under
     /// a root or out from under one. Always `false` while nothing is
     /// isolated.
@@ -233,7 +271,7 @@ impl Scene {
         let Some(isolation) = &mut self.isolation else {
             return false;
         };
-        let inside = within(&isolation.roots, referent, |at| dom.parent(at));
+        let inside = isolation.shows(referent, &|at| dom.parent(at));
         match inside {
             true => isolation.inside.insert(referent),
             false => isolation.inside.remove(&referent),
@@ -241,7 +279,7 @@ impl Scene {
         !inside
     }
 
-    /// Writes the isolation onto every part and resolved instance — after
+    /// Writes the isolation onto every part and resolved instance, after
     /// [`Scene::isolate`], and after anything that rebuilt or appended to
     /// either list without a DOM to ask (a streaming landing, a union's
     /// recovered pieces).

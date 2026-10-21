@@ -1,11 +1,11 @@
 //! Instances as plain triangle meshes, written out as Wavefront `.obj` or
 //! glTF 2.0 for another 3D tool to open.
 //!
-//! Every part is exported as the geometry the viewport draws it with — the
+//! Every part is exported as the geometry the viewport draws it with, the
 //! same `scene::shape::resolve` precedence and unit meshes for the procedural
 //! solids, the same fitted `MeshId` triangles for a `MeshPart` or a
 //! `SpecialMesh` FileMesh (see [`crate::pick`], which resolves a click the same
-//! way) — baked into world space. A `UnionOperation` exports the boolean
+//! way), baked into world space. A `UnionOperation` exports the boolean
 //! `scene::union` carved from its original parts, or Roblox's own baked
 //! `MeshData` where no parts survive; where that boolean could not be run,
 //! the additive pieces the viewport draws instead. A file mesh that has not downloaded exports as
@@ -150,7 +150,7 @@ pub fn meshes_of(
 /// uploads each of a page's four maps (colour, normal, metalness-roughness,
 /// and the `.mtl`'s separate pair aside) as RGBA8 with a third more for its
 /// mips: 128 Mtexels is about 2.7 GiB of GPU memory at most, what a 4 GB
-/// card can still hold beside the rest of a scene, and 32 full 2048 pages —
+/// card can still hold beside the rest of a scene, and 32 full 2048 pages,
 /// a few hundred megabytes of PNG. Below it every bake keeps the pack's own
 /// density; above it every bake is coarsened by the same factor, so no part
 /// is singled out.
@@ -282,9 +282,9 @@ struct Textures {
 #[derive(PartialEq, Eq, Hash)]
 enum Key {
     Image(*const Image),
-    /// A colour map baked over a part colour (see `surface::overlay`), by
-    /// the colour's bits.
-    Overlay(*const Image, [u32; 3]),
+    /// A colour map baked, tinted, over a part colour (see
+    /// `surface::overlay`), by the bits of the colour and the tint.
+    Overlay(*const Image, [u32; 6]),
     /// Metalness and roughness packed (see `surface::pack`), null for a map
     /// the set does not carry.
     Packed(*const Image, *const Image),

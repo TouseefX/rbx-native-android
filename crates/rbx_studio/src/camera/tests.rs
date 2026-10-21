@@ -12,7 +12,7 @@ fn pose(position: [f32; 3], yaw: f32, pitch: f32, fov_degrees: f32) -> Pose {
         // Irrelevant here: this module only reads/writes a `Pose`'s
         // position/yaw/pitch/fov_degrees into `Workspace.CurrentCamera`,
         // never its orthographic zoom (an editor-session setting, not a
-        // real Roblox property — see `Shell::orthographic`).
+        // real Roblox property, see `Shell::orthographic`).
         ortho_scale: 20.0,
     }
 }
@@ -158,7 +158,7 @@ fn a_missing_field_of_view_defaults_to_seventy_degrees() {
     assert_eq!(camera.fov_degrees, DEFAULT_FOV_DEGREES);
 }
 
-// Roblox's identity CFrame looks down -Z with the studs' own X/Y axes — this
+// Roblox's identity CFrame looks down -Z with the studs' own X/Y axes, this
 // is the calibration point every other `cframe_from_pose` case is trusted
 // against, since it is the one rotation this module already had a
 // hand-verified expectation for (`an_identity_rotation_looks_down_negative_z`).
@@ -230,7 +230,7 @@ fn a_near_vertical_pose_still_round_trips() {
 }
 
 // Reusing the place's own camera rather than leaving a second one behind
-// every call — the DOM write runs a few times a second while the camera
+// every call, the DOM write runs a few times a second while the camera
 // flies, so `write_pose` must overwrite the same instance, not multiply it.
 #[test]
 fn write_pose_reuses_the_existing_camera_across_calls() {

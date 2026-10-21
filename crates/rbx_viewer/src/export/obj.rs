@@ -1,7 +1,7 @@
 //! Wavefront `.obj`: one `o` object per part, positions, UVs where the part
 //! has an image, and normals, faces indexed 1-based across the whole file.
 //! Its materials go in a companion `.mtl`, one per part: the part's colour,
-//! and its image as a `.png` beside both when it is drawn with one — the
+//! and its image as a `.png` beside both when it is drawn with one, the
 //! three files [`obj_files`] names together. An image several parts share
 //! is one `.png` that each of their materials names.
 

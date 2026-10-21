@@ -24,7 +24,7 @@ fn with(shift: bool, alt: bool) -> Modifiers {
 }
 
 /// An integer field steps through whole units and never lands between them
-/// — dragging a `Vector3int16` walks cells.
+/// dragging a `Vector3int16` walks cells.
 #[test]
 fn an_integer_field_only_ever_lands_on_whole_numbers() {
     let scrub = scrub(FieldKind::Integer, 0.);
@@ -51,7 +51,7 @@ fn a_decimal_field_keeps_only_the_precision_it_displays() {
 }
 
 /// Dragging left goes down, and the value is always measured from where the
-/// drag *started* — never accumulated, or a long drag drifts.
+/// drag *started*, never accumulated, or a long drag drifts.
 #[test]
 fn dragging_back_past_the_origin_returns_to_where_it_began() {
     let scrub = scrub(FieldKind::Decimal, 5.);

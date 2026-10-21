@@ -248,7 +248,7 @@ fn a_scale_padding_between_wrapped_lines_is_a_share_of_the_cross_axis() {
 
     // Along the 800 px line the padding is 80 px; the gap below it is the
     // same scale of the 600 px height, "the parent's size in the current
-    // direction" — 60 px, not 80.
+    // direction", 60 px, not 80.
     let origins: Vec<[f32; 2]> = rects(&dom).iter().map(|rect| [rect.x, rect.y]).collect();
     assert_eq!(origins, [[0.0, 0.0], [380.0, 0.0], [0.0, 100.0]]);
 }
@@ -422,7 +422,7 @@ fn flex_mode_grow_never_shrinks_when_the_line_overflows() {
     }
 
     // "Objects set to Grow never shrink below their basis size, so overflow
-    // may occur" — both keep their 500 and run off the end.
+    // may occur", both keep their 500 and run off the end.
     let widths: Vec<f32> = rects(&dom).iter().map(|rect| rect.width).collect();
     assert_eq!(widths, [500.0, 500.0]);
 }

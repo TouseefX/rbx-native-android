@@ -190,7 +190,7 @@ mod tests {
         }
         // From inside the water column, looking down: through the water,
         // out of it is never reached, so the floor below is not hit either
-        // until air was crossed — here it never is.
+        // until air was crossed, here it never is.
         assert!(raycast(&grid, [2.0, 10.0, 2.0], [0.0, -1.0, 0.0], 1000.0, false).is_none());
         // From inside, looking sideways out into air and onto a wall.
         grid.set([3, 2, 0], Cell::full(Material::Rock));

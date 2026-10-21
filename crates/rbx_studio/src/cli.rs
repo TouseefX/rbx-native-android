@@ -3,7 +3,7 @@
 //!
 //! `--select` and `--run` are the supported spelling of the
 //! `RBX_STUDIO_SELECT`/`RBX_STUDIO_RUN` debugging variables that predate them
-//! — the same two capabilities, reachable from a CI job or a wrapper script
+//! the same two capabilities, reachable from a CI job or a wrapper script
 //! that would rather pass arguments than export an environment it cannot see
 //! the effect of. Both spellings stay: a flag simply wins over its variable
 //! when the two disagree.
@@ -14,9 +14,14 @@ use rbx_viewer::QualityLevel;
 
 pub(crate) const USAGE: &str = "\
 usage: rbxstudio [options] [file.rbxl|.rbxm|.rbxlx|.rbxmx]
+       rbxstudio loren <command> [options]
 
 Without a file, opens the API key setup wizard on first launch and the
 Home screen after that.
+
+`rbxstudio loren <command>` runs the CLI of Loren, the optional built-in
+game framework (by fabi): init, make, inject, add, refresh, serve, migrate,
+update, types and doctor. `rbxstudio loren --help` lists them.
 
 options:
   --select <target>[,<target>...]
@@ -42,13 +47,13 @@ options:
 
 /// A parsed command line.
 pub(crate) struct Arguments {
-    /// `None` starts at the setup wizard or Home — see `home::route`.
+    /// `None` starts at the setup wizard or Home, see `home::route`.
     pub(crate) path: Option<PathBuf>,
     pub(crate) quality: QualityLevel,
     /// `--select`'s comma list, still raw: the names in it can only be looked
     /// up once the place has been read.
     pub(crate) select: Option<String>,
-    /// `--run`'s script, still unopened — reading it is `main`'s job, so that
+    /// `--run`'s script, still unopened, reading it is `main`'s job, so that
     /// a path typo fails at an exit code rather than as a line in the Output
     /// dock on the first frame.
     pub(crate) run: Option<PathBuf>,
@@ -64,7 +69,7 @@ pub(crate) enum Parsed {
 }
 
 /// Reads the command line. `default_quality` is what a bare invocation opens
-/// at when `--quality` is absent — the persisted [`crate::settings::Settings`],
+/// at when `--quality` is absent, the persisted [`crate::settings::Settings`],
 /// so the last pick from the dropdown survives a relaunch; an explicit flag
 /// still overrides it.
 pub(crate) fn parse(arguments: &[String], default_quality: QualityLevel) -> Result<Parsed, String> {

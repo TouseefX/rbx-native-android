@@ -301,7 +301,7 @@ fn the_test_place_fixture_reads_its_own_lighting() {
 }
 
 // `GlobalShadows` is only serialized when a place turns it off, so the default
-// has to be on — and `ShadowSoftness` has to land on Studio's own 0.2 rather
+// has to be on, and `ShadowSoftness` has to land on Studio's own 0.2 rather
 // than on the hard edge a zero would give.
 #[test]
 fn shadows_default_to_on_and_to_studios_own_softness() {

@@ -2,7 +2,7 @@
 //! module and the one render pipeline every trail's ribbon draws through.
 //!
 //! Layout, blend state and shader are identical to `renderer::beam::pipeline`
-//! by design (a trail ribbon and a beam ribbon are shaded the same way — see
+//! by design (a trail ribbon and a beam ribbon are shaded the same way, see
 //! `trail.wgsl`'s doc); kept as its own copy rather than shared because
 //! `renderer::beam::pipeline`'s items are `pub(super)`, scoped to
 //! `renderer::beam` only.
@@ -19,7 +19,7 @@ pub(super) struct CameraRaw {
     pub(super) view_projection: [[f32; 4]; 4],
 }
 
-/// One ribbon vertex, already at its final world position — see
+/// One ribbon vertex, already at its final world position, see
 /// `super::ribbon::vertices`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
@@ -40,7 +40,7 @@ const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 5] = wgpu::vertex_attr_array![
 ];
 
 /// Same premultiplied `(One, OneMinusSrcAlpha)` state beams and particles
-/// use — see `renderer::particles::pipeline::PARTICLE_BLEND`.
+/// use, see `renderer::particles::pipeline::PARTICLE_BLEND`.
 const TRAIL_BLEND: wgpu::BlendState = wgpu::BlendState {
     color: wgpu::BlendComponent {
         src_factor: wgpu::BlendFactor::One,
@@ -102,7 +102,7 @@ pub(super) fn create_pipeline(
             // Both faces: a trail is always seen from either side once
             // `FaceCamera` turns it toward the eye, and the degenerate bridge
             // triangles between texture-grouped trails can flip strip winding
-            // — see `renderer::beam::pipeline`'s identical reasoning.
+            // see `renderer::beam::pipeline`'s identical reasoning.
             cull_mode: None,
             ..Default::default()
         },

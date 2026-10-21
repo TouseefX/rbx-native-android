@@ -3,7 +3,7 @@
 //!
 //! Global rather than an element-tree `on_action`, because
 //! `Context::on_action` may only be registered during an entity's own paint
-//! pass — `build` runs once, from `Shell::new`, well before `Shell` ever
+//! pass, `build` runs once, from `Shell::new`, well before `Shell` ever
 //! renders.
 
 use gpui_kit::{App, Entity, WeakEntity};
@@ -73,6 +73,12 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         let shell = shell.clone();
         move |_: &MenuExportGltf, cx| {
             let _ = shell.update(cx, |shell, cx| shell.export_place(Export::Gltf, cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuExportClean, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.export_place(Export::CleanPlace, cx));
         }
     });
     cx.on_action({
@@ -164,7 +170,7 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         }
     });
     // A dock closed from its own tab has no tab left to reopen it with, so
-    // these are the way back — the same toggles the ribbon's Home tab
+    // these are the way back, the same toggles the ribbon's Home tab
     // carries, going through the same call.
     for (panel, toggle) in [
         (Panel::Explorer, &MenuToggleExplorer as &dyn PanelToggle),
@@ -174,6 +180,8 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         (Panel::Collaborators, &MenuToggleCollaborators),
         (Panel::InputActions, &MenuToggleInputActions),
         (Panel::SecurityAudit, &MenuToggleSecurityAudit),
+        (Panel::Layers, &MenuToggleLayers),
+        (Panel::Loren, &MenuToggleLoren),
     ] {
         toggle.install(panel, shell.clone(), cx);
     }
@@ -353,3 +361,5 @@ panel_toggle!(MenuToggleViewport);
 panel_toggle!(MenuToggleCollaborators);
 panel_toggle!(MenuToggleInputActions);
 panel_toggle!(MenuToggleSecurityAudit);
+panel_toggle!(MenuToggleLayers);
+panel_toggle!(MenuToggleLoren);
