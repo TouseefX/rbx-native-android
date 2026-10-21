@@ -83,7 +83,105 @@ pub(crate) struct Shared {
     pub(crate) displaced: Vec<PluginId>,
 }
 
+/// Where dock widget states live in a plugin's settings.
+const WIDGETS_KEY: &str = "__rbxnative_widgets";
+/// Where floating dock widgets were left, in a plugin's settings.
+const RECTS_KEY: &str = "__rbxnative_widget_rects";
+
 impl Shared {
+    fn settings_file(dir: &std::path::Path, name: &str) -> PathBuf {
+        dir.join(format!("{}.json", name.replace(['/', '\\'], "_")))
+    }
+
+    /// Reads plugin `name`'s settings saved by an earlier session, once.
+    pub(crate) fn load_settings(&mut self, name: &str) {
+        let Some(dir) = &self.settings_dir else {
+            return;
+        };
+        if self.settings.contains_key(name) {
+            return;
+        }
+        let saved = std::fs::read_to_string(Self::settings_file(dir, name))
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok());
+        if let Some(map) = saved {
+            self.settings.insert(name.to_string(), map);
+        }
+    }
+
+    /// Writes plugin `name`'s settings to `settings_dir/<name>.json`.
+    pub(crate) fn save_settings(&mut self, name: &str) {
+        let (Some(dir), Some(map)) = (self.settings_dir.clone(), self.settings.get(name)) else {
+            return;
+        };
+        let file = Self::settings_file(&dir, name);
+        let written = serde_json::to_string_pretty(map)
+            .map_err(|e| e.to_string())
+            .and_then(|text| {
+                std::fs::create_dir_all(&dir)
+                    .and_then(|_| std::fs::write(&file, text))
+                    .map_err(|e| e.to_string())
+            });
+        if let Err(error) = written {
+            self.push_output(
+                name,
+                crate::plugin::api::OutputKind::Warn,
+                format!("could not save settings: {error}"),
+            );
+        }
+    }
+
+    /// The `Enabled` a dock widget had when plugin `name` last ran, kept
+    /// under `__rbxnative_widgets` in its settings: Studio restores it
+    /// unless the widget's info sets `InitialEnabledShouldOverrideRestore`.
+    pub(crate) fn restored_widget(&self, name: &str, key: &str) -> Option<bool> {
+        self.settings
+            .get(name)?
+            .get(WIDGETS_KEY)?
+            .get(key)?
+            .as_bool()
+    }
+
+    pub(crate) fn widget_rect(&self, name: &str, key: &str) -> Option<[f32; 4]> {
+        let rect = self
+            .settings
+            .get(name)?
+            .get(RECTS_KEY)?
+            .get(key)?
+            .as_array()?;
+        let n = |i: usize| rect.get(i)?.as_f64().map(|v| v as f32);
+        Some([n(0)?, n(1)?, n(2)?, n(3)?])
+    }
+
+    pub(crate) fn remember_widget_rect(&mut self, name: &str, key: &str, rect: [f32; 4]) {
+        if self.widget_rect(name, key) == Some(rect) {
+            return;
+        }
+        let map = self.settings.entry(name.to_string()).or_default();
+        let rects = map
+            .entry(RECTS_KEY)
+            .or_insert_with(|| serde_json::Value::Object(Default::default()));
+        if let Some(rects) = rects.as_object_mut() {
+            rects.insert(key.to_string(), serde_json::json!(rect));
+        }
+        self.save_settings(name);
+    }
+
+    /// Remembers a dock widget's `Enabled` for [`Shared::restored_widget`].
+    pub(crate) fn remember_widget(&mut self, name: &str, key: &str, enabled: bool) {
+        if self.restored_widget(name, key) == Some(enabled) {
+            return;
+        }
+        let map = self.settings.entry(name.to_string()).or_default();
+        let widgets = map
+            .entry(WIDGETS_KEY)
+            .or_insert_with(|| serde_json::Value::Object(Default::default()));
+        if let Some(widgets) = widgets.as_object_mut() {
+            widgets.insert(key.to_string(), serde_json::Value::Bool(enabled));
+        }
+        self.save_settings(name);
+    }
+
     pub(crate) fn next_id(&mut self) -> UiId {
         self.next_id += 1;
         self.next_id

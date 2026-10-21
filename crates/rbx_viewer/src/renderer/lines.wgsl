@@ -163,6 +163,34 @@ fn fs_line_on_top(input: LineOutput) -> @location(0) vec4<f32> {
     return encoded(input.color, coverage);
 }
 
+// A filled quad lying in the world, a heat map's cell, hidden by whatever
+// stands in front of it.
+struct FillInput {
+    @location(0) position: vec3<f32>,
+    @location(1) color: vec4<f32>,
+};
+
+struct FillOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+};
+
+@vertex
+fn vs_fill(input: FillInput) -> FillOutput {
+    var out: FillOutput;
+    out.clip_position = frame.view_proj * vec4<f32>(input.position, 1.0);
+    out.color = input.color;
+    return out;
+}
+
+@fragment
+fn fs_fill(input: FillOutput) -> @location(0) vec4<f32> {
+    if behind_scene(input.clip_position, 0.0) {
+        discard;
+    }
+    return encoded(input.color, 1.0);
+}
+
 // A dot: a disc a fixed number of pixels across round a world-space point,
 // whatever its distance, the size Studio's draggers hold their
 // `SphereHandleAdornment` markers at. It arrives as a square pushed out to

@@ -29,6 +29,37 @@ const FLOWS: [(Flow, IconName, &str); 4] = [
     (Flow::Grid, IconName::LayoutGrid, "Grid (UIGridLayout)"),
 ];
 
+/// `UIGradient.Type` items, with the icon and tooltip of each.
+const GRADIENT_TYPES: [(&str, IconName, &str); 4] = [
+    (
+        "Linear",
+        IconName::MoveHorizontal,
+        "Linear (UIGradient.Type)",
+    ),
+    ("Radial", IconName::CircleDot, "Radial (UIGradient.Type)"),
+    ("Elliptical", IconName::Egg, "Elliptical (UIGradient.Type)"),
+    (
+        "Conical",
+        IconName::LoaderPinwheel,
+        "Conical (UIGradient.Type)",
+    ),
+];
+
+/// `UIGradient.TileMode` items, with the icon and tooltip of each.
+const GRADIENT_TILES: [(&str, IconName, &str); 3] = [
+    (
+        "Clamp",
+        IconName::ArrowRightToLine,
+        "Clamp (UIGradient.TileMode)",
+    ),
+    ("Repeat", IconName::Repeat, "Repeat (UIGradient.TileMode)"),
+    (
+        "Mirror",
+        IconName::FlipHorizontal2,
+        "Mirror (UIGradient.TileMode)",
+    ),
+];
+
 /// The constraints the `+` offers: the class, what the menu calls it, and
 /// the captioned rows of fields it shows once it is on.
 type Rows = &'static [(&'static str, &'static [(Key, &'static str)])];
@@ -276,6 +307,41 @@ impl Shell {
                     cx,
                 ),
             ]));
+            let kind = self.gradient_choice("Type", "GradientType");
+            let mut types: Vec<AnyElement> = vec![caption("Type")];
+            types.extend(GRADIENT_TYPES.into_iter().enumerate().map(
+                |(index, (item, icon, label))| {
+                    toggle(
+                        ("ui-inspect-gradient-type", index),
+                        icon,
+                        label,
+                        kind.as_deref() == Some(item),
+                    )
+                    .on_click(cx.listener(move |shell, _, _, cx| {
+                        shell.set_gradient_choice("Type", item, cx)
+                    }))
+                    .into_any_element()
+                },
+            ));
+            rows.push(line(types));
+            let tile = self.gradient_choice("TileMode", "GradientTileMode");
+            let mut tiles: Vec<AnyElement> = vec![caption("Tile")];
+            tiles.extend(GRADIENT_TILES.into_iter().enumerate().map(
+                |(index, (item, icon, label))| {
+                    toggle(
+                        ("ui-inspect-gradient-tile", index),
+                        icon,
+                        label,
+                        tile.as_deref() == Some(item),
+                    )
+                    .on_click(cx.listener(move |shell, _, _, cx| {
+                        shell.set_gradient_choice("TileMode", item, cx)
+                    }))
+                    .into_any_element()
+                },
+            ));
+            tiles.push(self.field(Key::GradientScale, Label::Text("×"), None, window, cx));
+            rows.push(line(tiles));
         }
         section("Fill", actions, rows).into_any_element()
     }

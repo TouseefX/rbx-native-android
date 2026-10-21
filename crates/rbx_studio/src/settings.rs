@@ -115,6 +115,10 @@ pub(crate) struct Settings {
     /// reveal reads as an insert that did nothing.
     pub(crate) increment_names: bool,
     pub(crate) expand_on_select: bool,
+    /// Whether Save/Publish to Roblox uploads a copy without the editor's
+    /// own layers and notes (see `crate::strip`). Defaults on: they mean
+    /// nothing to the engine, and a note is not meant for players.
+    pub(crate) strip_on_publish: bool,
     /// The dragger guides' switches, see [`DraggerSettings`].
     pub(crate) dragger: DraggerSettings,
     /// The camera's feel and the snap increments, see [`Controls`].
@@ -139,6 +143,9 @@ pub(crate) struct Settings {
     /// What Play names the sandbox while it runs a test; see
     /// `shell::play::copy_name`. Empty leaves the sandbox's name alone.
     pub(crate) play_copy_name: String,
+    /// Samples per second Play records playtests at; 0 is off. See
+    /// `shell::playtests`.
+    pub(crate) playtest_rate_hz: f32,
     /// The Network Simulator's saved presets; see `shell::play::network`.
     pub(crate) network_presets: Vec<SavedNetworkPreset>,
     /// The Animation Editor's bottom panel height, once its seam has been
@@ -237,6 +244,7 @@ impl Default for Settings {
             optimize_graph_on_open: false,
             increment_names: true,
             expand_on_select: true,
+            strip_on_publish: true,
             dragger: DraggerSettings::default(),
             controls: Controls::default(),
             discord_presence: false,
@@ -245,6 +253,7 @@ impl Default for Settings {
             team_presence: TeamPresenceSettings::default(),
             play_sandbox: None,
             play_copy_name: crate::shell::PLAY_COPY_NAME_DEFAULT.to_owned(),
+            playtest_rate_hz: crate::shell::PLAYTEST_RATE_DEFAULT,
             network_presets: Vec::new(),
             anim_sheet_height: None,
             anim_names_width: None,
@@ -441,6 +450,10 @@ fn load_from(path: &Path) -> Settings {
             .get("increment_names")
             .and_then(|v| v.as_bool())
             .unwrap_or(true),
+        strip_on_publish: value
+            .get("strip_on_publish")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true),
         expand_on_select: value
             .get("expand_on_select")
             .and_then(|v| v.as_bool())
@@ -472,6 +485,12 @@ fn load_from(path: &Path) -> Settings {
             .and_then(|v| v.as_str())
             .unwrap_or(crate::shell::PLAY_COPY_NAME_DEFAULT)
             .to_owned(),
+        playtest_rate_hz: value
+            .get("playtest_rate_hz")
+            .and_then(|v| v.as_f64())
+            .map_or(crate::shell::PLAYTEST_RATE_DEFAULT, |hz| {
+                hz.clamp(0.0, 60.0) as f32
+            }),
         network_presets: network_presets::read(&value),
         anim_sheet_height: read_extent(&value, "anim_sheet_height"),
         anim_names_width: read_extent(&value, "anim_names_width"),
@@ -748,10 +767,12 @@ fn save_to(settings: &Settings, path: &Path) -> Result<(), SettingsError> {
     });
     // Outside the literal: `json!` hits the macro recursion limit at this size.
     value["play_copy_name"] = settings.play_copy_name.clone().into();
+    value["playtest_rate_hz"] = settings.playtest_rate_hz.into();
     value["network_presets"] = network_presets::json(&settings.network_presets);
     value["device_custom"] = settings.device_custom.json();
     value["device_scaling"] = settings.device_scaling.key().into();
     value["device_keyboard_layout"] = settings.device_keyboard_layout.key().into();
+    value["strip_on_publish"] = settings.strip_on_publish.into();
     // A fixed-shape object always serializes; nothing here can fail.
     let bytes = serde_json::to_vec_pretty(&value).expect("settings JSON always serializes");
     write_atomic(path, &bytes)
@@ -858,18 +879,18 @@ impl PlaySandbox {
     }
 }
 
+/// Guards every test in the crate that mutates `XDG_CONFIG_HOME`/`APPDATA`:
+/// env vars are process-global and `cargo test` runs tests on threads of one
+/// process, so two such tests holding separate locks see each other's value.
+#[cfg(test)]
+pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
-    use std::sync::Mutex;
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    /// Guards every test below that mutates `XDG_CONFIG_HOME`/`APPDATA`: env
-    /// vars are process-global, and `cargo test` runs tests on separate
-    /// threads of the same process, so two such tests running concurrently
-    /// would each observe the other's value.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     /// A settings.json path under a fresh, never-created temp directory: each
     /// test gets its own, so tests never share (or need to clean up) state,

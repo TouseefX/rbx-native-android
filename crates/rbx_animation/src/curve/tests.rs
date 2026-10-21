@@ -81,14 +81,15 @@ fn tangents_are_slopes_per_second() {
 }
 
 #[test]
-fn unset_tangents_mirror_their_opposite_or_read_as_zero() {
+fn unset_tangents_show_mirrored_and_play_as_the_slope_to_the_next_key() {
     assert_eq!(cubic(0., 0., None, None).tangents(), (0., 0.));
     assert_eq!(cubic(0., 0., Some(2.), None).tangents(), (2., 2.));
     assert_eq!(cubic(0., 0., None, Some(-1.)).tangents(), (-1., -1.));
     assert_eq!(cubic(0., 0., Some(1.), Some(4.)).tangents(), (1., 4.));
-    // Two auto keys: zero slopes give smoothstep.
+    // Played, an unset tangent is the slope to the next key (0 on the last),
+    // as Studio's Animator plays it: 1 out of the first key, 0 into the last.
     let curve = FloatCurve::new(vec![cubic(0., 0., None, None), cubic(1., 1., None, None)]);
-    assert!((curve.eval(0.25).unwrap() - 0.15625).abs() < 1e-6);
+    assert!((curve.eval(0.25).unwrap() - 0.296875).abs() < 1e-6);
 }
 
 #[test]

@@ -52,7 +52,7 @@ fn prepare_injects_into_a_copy() {
     );
     let dom = rbx_binary::deserialize(&std::fs::read(path).unwrap()).unwrap();
     assert!(!has_probe(&dom));
-    let prepared = prepare(&dom, &config(), &[]).unwrap();
+    let prepared = prepare(&dom, &config(), &[], 10.0).unwrap();
     let back = rbx_binary::deserialize(prepared.bytes.as_slice()).unwrap();
     assert!(has_probe(&back));
     assert!(!has_probe(&dom));
@@ -188,7 +188,7 @@ fn scripts_with_breakpoints_publish_with_hooks() {
             hooks: vec![hook(1)],
         },
     ];
-    let prepared = prepare(&dom, &config(), &requests).unwrap();
+    let prepared = prepare(&dom, &config(), &requests, 10.0).unwrap();
     assert_eq!(prepared.debug.len(), 1);
     assert_eq!(prepared.debug[0].script, main);
     assert_eq!(prepared.debug[0].lines, vec![1, 2]);
@@ -230,7 +230,7 @@ fn marketplace_scripts_are_rewritten_in_the_copy_only() {
         plain,
         "local x = 1\n"
     ));
-    let prepared = prepare(&dom, &config(), &[]).unwrap();
+    let prepared = prepare(&dom, &config(), &[], 10.0).unwrap();
     let back = rbx_binary::deserialize(prepared.bytes.as_slice()).unwrap();
     assert!(source_named(&back, "Shop")
         .unwrap()
@@ -249,7 +249,7 @@ fn printing_scripts_shadow_print_on_their_first_line_in_the_copy_only() {
     let main = dom.new_instance("Script", "Main", Some(sss));
     let src = "--!strict\nprint({1})\n";
     assert!(crate::script_editor::source::write(&mut dom, main, src));
-    let prepared = prepare(&dom, &config(), &[]).unwrap();
+    let prepared = prepare(&dom, &config(), &[], 10.0).unwrap();
     let back = rbx_binary::deserialize(prepared.bytes.as_slice()).unwrap();
     let published = source_named(&back, "Main").unwrap();
     assert_eq!(
@@ -276,7 +276,7 @@ fn input_scripts_go_through_the_touch_stand_in_except_a_forked_player_module() {
     for script in [controls, keyboard] {
         assert!(crate::script_editor::source::write(&mut dom, script, src));
     }
-    let prepared = prepare(&dom, &config(), &[]).unwrap();
+    let prepared = prepare(&dom, &config(), &[], 10.0).unwrap();
     let back = rbx_binary::deserialize(prepared.bytes.as_slice()).unwrap();
     assert_eq!(
         source_named(&back, "Controls").unwrap(),

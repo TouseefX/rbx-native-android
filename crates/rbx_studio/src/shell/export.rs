@@ -38,17 +38,23 @@ pub(crate) enum Export {
     Model,
     /// The whole place, from the File menu.
     Place,
+    /// The whole place without layers and notes; the open file is untouched.
+    CleanPlace,
     Obj,
     Gltf,
+    /// The whole place as an Argon/Rojo project folder (see
+    /// `shell::project`), from the File menu.
+    Project,
 }
 
 impl Export {
     fn extension(self) -> &'static str {
         match self {
             Export::Model => "rbxm",
-            Export::Place => "rbxl",
+            Export::Place | Export::CleanPlace => "rbxl",
             Export::Obj => "obj",
             Export::Gltf => "gltf",
+            Export::Project => "",
         }
     }
 }
@@ -97,6 +103,10 @@ fn encode(
             Ok(vec![(path.to_path_buf(), bytes)])
         }
         Export::Place => Ok(vec![(path.to_path_buf(), format.encode(dom)?)]),
+        Export::CleanPlace => Ok(vec![(
+            path.to_path_buf(),
+            format.encode(&crate::strip::stripped(dom))?,
+        )]),
         Export::Obj => {
             let stem = path.file_stem().unwrap_or_default().to_string_lossy();
             Ok(export::obj_files(&solids()?, &stem)
@@ -111,6 +121,8 @@ fn encode(
                 .map(|(name, bytes)| (path.with_file_name(name), bytes))
                 .collect())
         }
+        // Written by `export_to` itself: a folder of files, not bytes.
+        Export::Project => Ok(Vec::new()),
     }
 }
 
@@ -145,10 +157,13 @@ impl Shell {
             },
             _ => self.dom.root_refs().to_vec(),
         };
-        let name = self.path.file_stem().map_or_else(
+        let mut name = self.path.file_stem().map_or_else(
             || "Place".to_owned(),
             |stem| stem.to_string_lossy().into_owned(),
         );
+        if kind == Export::CleanPlace {
+            name.push_str(" (clean)");
+        }
         self.ask_and_export(kind, roots, &name, cx);
     }
 
@@ -160,10 +175,13 @@ impl Shell {
         cx: &mut Context<Self>,
     ) {
         let extension = match (kind, self.format) {
-            (Export::Place, Format::Xml) => "rbxlx",
+            (Export::Place | Export::CleanPlace, Format::Xml) => "rbxlx",
             _ => kind.extension(),
         };
-        let suggested = format!("{name}.{extension}");
+        let suggested = match kind {
+            Export::Project => name.to_owned(),
+            _ => format!("{name}.{extension}"),
+        };
         if let Ok(directory) = std::env::var(EXPORT_DIR_VARIABLE) {
             self.export_to(kind, &roots, &Path::new(&directory).join(suggested), cx);
             return;
@@ -192,6 +210,14 @@ impl Shell {
     fn export_to(&mut self, kind: Export, roots: &[Ref], path: &Path, cx: &mut Context<Self>) {
         if kind == Export::Place {
             self.save_as(path, cx);
+            return;
+        }
+        if kind == Export::Project {
+            self.flush_script_edits(cx);
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            let result = super::project::export(&self.dom, path, &name)
+                .map(|project| format!("Exported {}", project.display()));
+            self.report_export(result, cx);
             return;
         }
         // An open script's text reaches the DOM on a debounce; a model file

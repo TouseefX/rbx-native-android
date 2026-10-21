@@ -1,0 +1,17 @@
+[package]
+name = "rbx_audit"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rbx_dom = { path = "../rbx_dom" }
+# Loren's client routes (`graph::remote_surface`) are remote entry points too.
+rbx_loren = { path = "../rbx_loren" }
+# The Luau parser the editor's graph mode and the play sandbox already use;
+# already in Cargo.lock.
+full_moon = { version = "3", features = ["luau"] }
+
+[dev-dependencies]
+# The fixture place is written out as .rbxlx for the CLI and the screenshot.
+rbx_xml = { path = "../rbx_xml" }

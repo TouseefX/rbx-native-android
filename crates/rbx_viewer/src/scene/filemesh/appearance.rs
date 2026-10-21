@@ -38,6 +38,22 @@ pub(crate) struct Appearance {
     pub(crate) alpha_mode: AlphaMode,
     /// `SurfaceAppearance.Color`, linearized: a tint over the colour map.
     pub(crate) tint: [f32; 3],
+    /// `EmissiveMaskContent`: a grayscale mask, black where the surface does
+    /// not glow and white where it does.
+    pub(crate) emissive_mask: Option<AssetRef>,
+    /// `EmissiveTint` (linearized) times `EmissiveStrength`.
+    pub(crate) emissive: [f32; 3],
+}
+
+/// The emissive colour multiplier; a negative or non-finite strength glows
+/// nowhere rather than subtracting light.
+fn emissive_color(tint: [f32; 3], strength: f32) -> [f32; 3] {
+    let strength = if strength.is_finite() && strength > 0.0 {
+        strength
+    } else {
+        0.0
+    };
+    tint.map(|channel| channel * strength)
 }
 
 impl Appearance {
@@ -60,6 +76,11 @@ impl Appearance {
             maps,
             alpha_mode,
             tint: self.tint,
+            emissive_mask: self
+                .emissive_mask
+                .clone()
+                .filter(|reference| images.contains_key(reference)),
+            emissive: self.emissive,
         }
     }
 
@@ -79,7 +100,7 @@ impl Appearance {
 ///
 /// Studio only ever creates one; a file carrying several (the fixture's `Head`
 /// does) is resolved the way the engine resolves it, by keeping the first.
-pub(super) fn of(dom: &WeakDom, part: &Instance) -> Option<Appearance> {
+pub(crate) fn of(dom: &WeakDom, part: &Instance) -> Option<Appearance> {
     let child = part.children().iter().find_map(|&referent| {
         let child = dom.get(referent)?;
         (child.class() == CLASS).then_some(child)
@@ -104,9 +125,46 @@ pub(super) fn of(dom: &WeakDom, part: &Instance) -> Option<Appearance> {
         _ => [1.0; 3],
     };
 
+    let emissive_tint = match properties.get("EmissiveTint") {
+        Some(&Variant::Color3(color)) => {
+            [color.r, color.g, color.b].map(crate::scene::srgb_to_linear)
+        }
+        _ => [1.0; 3],
+    };
+    let strength = match properties.get("EmissiveStrength") {
+        Some(&Variant::Float32(value)) => value,
+        _ => 1.0,
+    };
+
     Some(Appearance {
         maps,
         alpha_mode,
         tint,
+        emissive_mask: properties
+            .get("EmissiveMaskContent")
+            .and_then(super::parsed_asset_ref),
+        emissive: emissive_color(emissive_tint, strength),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strength_scales_the_tint() {
+        assert_eq!(emissive_color([1.0, 0.0, 0.0], 2.0), [2.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn default_emissive_is_white_at_unit_strength() {
+        assert_eq!(emissive_color([1.0; 3], 1.0), [1.0; 3]);
+    }
+
+    #[test]
+    fn negative_or_non_finite_strength_is_no_glow() {
+        assert_eq!(emissive_color([1.0; 3], -3.0), [0.0; 3]);
+        assert_eq!(emissive_color([1.0; 3], f32::NAN), [0.0; 3]);
+        assert_eq!(emissive_color([1.0; 3], f32::INFINITY), [0.0; 3]);
+    }
 }

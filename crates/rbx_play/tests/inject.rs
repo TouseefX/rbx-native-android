@@ -198,6 +198,11 @@ fn market_modules_are_placed_in_replicated_storage() {
         (injected.market_ui, MARKET_UI_NAME, PROBE_MARKET_UI),
         (injected.touch, TOUCH_NAME, PROBE_TOUCH),
         (injected.touch_input, TOUCH_INPUT_NAME, PROBE_TOUCH_INPUT),
+        (
+            injected.record,
+            rbx_play::record::RECORD_NAME,
+            rbx_play::inject::PROBE_RECORD,
+        ),
     ] {
         assert_eq!(dom.parent(r), Some(rs));
         assert_eq!(dom.get(r).unwrap().class(), "ModuleScript");

@@ -20,8 +20,12 @@ use gpui_kit::*;
 
 use crate::tokens;
 
-use super::layout::Panel;
+use super::layout::{Edge, Landing, Panel};
 use super::Shell;
+
+/// How far in from one of the editor's left, right or bottom edges the top
+/// of a torn-out dock's window has to come for it to dock on that edge.
+const DROP_BAND: f32 = 48.;
 
 /// What a torn-out dock starts at. Wide enough for the Explorer's deeper
 /// rows and the Properties name column at the scale the shell is using.
@@ -35,6 +39,7 @@ pub(crate) struct PanelWindow {
     /// Whether the title bar may move the window, which
     /// `shell::chrome::panel_topbar` owns and this only has to hold.
     grab: Rc<Cell<bool>>,
+    _moved: Subscription,
 }
 
 impl PanelWindow {
@@ -65,15 +70,61 @@ impl PanelWindow {
         };
 
         cx.open_window(options, move |window, cx| {
-            let view = cx.new(|_| PanelWindow {
+            let view = cx.new(|cx| PanelWindow {
                 shell,
                 panel,
                 grab: Rc::new(Cell::new(false)),
+                _moved: cx.observe_window_bounds(window, |this: &mut PanelWindow, window, cx| {
+                    this.dock_if_dropped(window, cx)
+                }),
             });
             cx.new(|cx| Root::new(view, window, cx))
         })
         .ok()
     }
+}
+
+impl PanelWindow {
+    /// Drag back: GPUI's drag and drop is per window, so a tab can't be
+    /// dragged from here into the editor. The window itself can be moved,
+    /// though, and once the top of it comes within [`DROP_BAND`] of the
+    /// editor's left, right or bottom edge the dock lands on that edge.
+    /// The middle of the editor is no drop zone, so a dock can still float
+    /// over the viewport.
+    fn dock_if_dropped(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let moved = window.bounds();
+        let top = point(moved.center().x, moved.top() + px(12.));
+        let Some(main) = cx.windows().first().copied() else {
+            return;
+        };
+        let Ok(editor) = main.update(cx, |_, window, _| window.bounds()) else {
+            return;
+        };
+        let Some(edge) = drop_edge(editor, top) else {
+            return;
+        };
+        let panel = self.panel;
+        self.shell.update(cx, |shell, cx| {
+            shell.land_panel(panel, Landing::NewGroup { edge, group: 0 }, cx);
+        });
+    }
+}
+
+/// The editor edge `at` is within [`DROP_BAND`] of, inside the editor, the
+/// nearest one if it is near two.
+fn drop_edge(editor: Bounds<Pixels>, at: Point<Pixels>) -> Option<Edge> {
+    if !editor.contains(&at) {
+        return None;
+    }
+    [
+        (Edge::Left, at.x - editor.left()),
+        (Edge::Right, editor.right() - at.x),
+        (Edge::Bottom, editor.bottom() - at.y),
+    ]
+    .into_iter()
+    .filter(|(_, gap)| *gap < px(DROP_BAND))
+    .min_by(|a, b| f32::from(a.1).total_cmp(&f32::from(b.1)))
+    .map(|(edge, _)| edge)
 }
 
 impl Render for PanelWindow {
@@ -207,5 +258,29 @@ impl Shell {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[::core::prelude::v1::test]
+    fn a_window_brought_to_an_edge_docks_there_and_one_in_the_middle_floats() {
+        let editor = Bounds::new(point(px(0.), px(0.)), size(px(1600.), px(1000.)));
+        assert_eq!(
+            drop_edge(editor, point(px(20.), px(400.))),
+            Some(Edge::Left)
+        );
+        assert_eq!(
+            drop_edge(editor, point(px(1590.), px(400.))),
+            Some(Edge::Right)
+        );
+        assert_eq!(
+            drop_edge(editor, point(px(800.), px(980.))),
+            Some(Edge::Bottom)
+        );
+        assert_eq!(drop_edge(editor, point(px(800.), px(400.))), None);
+        assert_eq!(drop_edge(editor, point(px(1700.), px(400.))), None);
     }
 }

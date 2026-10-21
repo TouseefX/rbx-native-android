@@ -129,6 +129,10 @@ pub(super) struct RobloxPublish {
     /// Bumped when the file is linked or one of its uploads lands, so
     /// Version History knows to re-read the link and the list.
     pub(super) changes: u64,
+    /// Bumped as each upload answers, with that answer: what a game's
+    /// Publish All reports per place.
+    pub(super) outcomes: u64,
+    pub(super) last_outcome: Option<Feedback>,
 }
 
 impl RobloxPublish {
@@ -142,6 +146,8 @@ impl RobloxPublish {
             picks: 0,
             picker: None,
             changes: 0,
+            outcomes: 0,
+            last_outcome: None,
         }
     }
 }
@@ -160,6 +166,21 @@ impl Shell {
             }
             None => self.open_roblox_link(Some(mode), cx),
         }
+    }
+
+    /// Publish All's upload of this place to its link, without the
+    /// confirmation (Publish All asked once for every place).
+    pub(super) fn publish_linked(&mut self, cx: &mut Context<Self>) -> Result<(), String> {
+        let link = home::link_of(&self.path).ok_or("Not linked to a Roblox place")?;
+        if self.roblox.busy {
+            return Err("An upload is already in progress".into());
+        }
+        let target = Target {
+            universe_id: link.universe_id,
+            place_id: link.place_id,
+        };
+        self.start_upload(target, PublishMode::Published, cx);
+        Ok(())
     }
 
     /// File › Link to Roblox Place…, the first step of an unlinked upload,
@@ -265,6 +286,17 @@ impl Shell {
         }
     }
 
+    /// Whether uploads leave out layers and notes; see `crate::strip`.
+    pub(in crate::shell) fn strip_on_publish(&self) -> bool {
+        self.strip_on_publish
+    }
+
+    pub(in crate::shell) fn set_strip_on_publish(&mut self, on: bool, cx: &mut Context<Self>) {
+        self.strip_on_publish = on;
+        self.save_settings();
+        cx.notify();
+    }
+
     pub(super) fn start_upload(
         &mut self,
         target: Target,
@@ -286,7 +318,12 @@ impl Shell {
         self.roblox.dialog = None;
         // What is on screen, not what the DOM held when typing last paused.
         self.flush_script_edits(cx);
-        let bytes = match self.format.encode(&self.dom) {
+        let encoded = if self.strip_on_publish {
+            self.format.encode(&crate::strip::stripped(&self.dom))
+        } else {
+            self.format.encode(&self.dom)
+        };
+        let bytes = match encoded {
             Ok(bytes) => bytes,
             Err(message) => {
                 let failed = Err(Failure::before_sending(message));
@@ -324,6 +361,8 @@ impl Shell {
     ) {
         self.roblox.busy = false;
         let feedback = outcome(target, mode, &result);
+        self.roblox.outcomes += 1;
+        self.roblox.last_outcome = Some(feedback.clone());
         self.output.push(SOURCE, feedback.clone());
         self.command_bar.set_feedback(feedback);
         if let Some(warning) = warning.filter(|_| result.is_ok()) {
@@ -373,6 +412,16 @@ fn confirmed(dialog: &mut Option<Dialog>) -> Option<(Target, PublishMode)> {
 }
 
 /// Stores the link, and moves the file to the top of Recent with it.
+/// Uploads a place file's `bytes` to `link`, for a place no editor has open;
+/// blocking. The answer is the line Output would show.
+pub(super) fn upload_file(link: &home::Link, bytes: &[u8], mode: PublishMode) -> Feedback {
+    let target = Target {
+        universe_id: link.universe_id,
+        place_id: link.place_id,
+    };
+    outcome(target, mode, &upload(target, bytes, mode))
+}
+
 fn link(path: &Path, target: Target, name: Option<String>) -> Result<(), String> {
     home::remember(RecentPlace {
         path: std::fs::canonicalize(path).unwrap_or(path.to_path_buf()),

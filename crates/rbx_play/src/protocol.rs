@@ -213,6 +213,71 @@ pub enum Uplink {
     /// and whenever any of it changes (`probe/client.luau`): the record a
     /// Device Simulator live test is checked against.
     Device(DeviceReport),
+    /// Playtest recording (`probe/record.luau`): every player's character,
+    /// sampled at the recording rate, batched.
+    #[serde(rename = "rec_samples")]
+    RecSamples { samples: Vec<RecSample> },
+    /// Playtest recording: one gameplay event.
+    #[serde(rename = "rec_event")]
+    RecEvent(RecEvent),
+}
+
+/// One player's character at one moment of a recorded playtest.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecSample {
+    /// Seconds since the server probe started (the same clock as a server
+    /// `Uplink::Log`'s `time`).
+    pub t: f64,
+    pub user: u64,
+    /// `HumanoidRootPart.Position`.
+    pub pos: [f32; 3],
+    /// Facing, radians about +Y: `atan2(-look.x, -look.z)`.
+    pub yaw: f32,
+    /// The player's camera as its client last reported it: position, then
+    /// unit look direction.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cam: Option<[f32; 6]>,
+}
+
+/// What a recorded event is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecEventKind {
+    Join,
+    Leave,
+    /// `Humanoid.Died`.
+    Death,
+    /// A character added after the player's first.
+    Respawn,
+    /// `Humanoid.HealthChanged` downwards; `amount` is the health lost.
+    Damage,
+    /// `Player.Chatted`; `label` is the message.
+    Chat,
+    /// `shared.rbxnative.mark(name, data)` from a game script (`crate::record`).
+    Mark,
+}
+
+/// One gameplay event of a recorded playtest.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecEvent {
+    /// Same clock as [`RecSample::t`].
+    pub t: f64,
+    /// The player it happened to; 0 when it is nobody's.
+    #[serde(default)]
+    pub user: u64,
+    pub kind: RecEventKind,
+    /// Where, when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pos: Option<[f32; 3]>,
+    /// Damage: health lost.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<f64>,
+    /// Join: the player's name; Chat: the message; Mark: the mark's name.
+    #[serde(default)]
+    pub label: String,
+    /// Mark: its data argument, as JSON text (empty when there was none).
+    #[serde(default)]
+    pub data: String,
 }
 
 /// The client's view of the device it runs on. Every field is read-only to

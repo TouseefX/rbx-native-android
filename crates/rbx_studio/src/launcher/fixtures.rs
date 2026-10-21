@@ -5,6 +5,7 @@
 //!   answers the key check (see `key_check`); `noinventory` is `ready`
 //!   without the Inventory scope, and Home reads it too.
 //! - `RBX_STUDIO_LAUNCHER_GAMES=list|loading|empty` answers My Games.
+//! - `RBX_STUDIO_LAUNCHER_FOLDER=<dir>` answers the folder picker.
 //!
 //! The data matches the design mock-ups, so a capture diffs against them.
 
@@ -14,6 +15,7 @@ use rbx_cloud::{Experience, Experiences, Group, KeyInfo, Owner, Scope, Visibilit
 
 use super::key_check::{Checked, Status};
 
+pub(super) const FOLDER_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_FOLDER";
 pub(super) const GAMES_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_GAMES";
 
 fn scope(name: &str, operation: &str, universes: &[u64]) -> Scope {

@@ -213,7 +213,7 @@ pub(crate) fn diff_add() -> Rgba {
 }
 
 /// The Output dock's context tag for a message from the tester's client
-/// during Play: green, as Studio's Output labels it.
+/// during Play: blue, as Studio's Output marks it (checked live, 2026-10-21).
 pub(crate) fn output_client() -> Rgba {
     theme::color("output_client")
 }
@@ -223,8 +223,8 @@ pub(crate) fn output_info() -> Rgba {
     theme::color("output_info")
 }
 
-/// The Output dock's context tag for a message from the Play server: blue,
-/// as Studio's Output labels it.
+/// The Output dock's context tag for a message from the Play server: green,
+/// as Studio's Output marks it (checked live, 2026-10-21).
 pub(crate) fn output_server() -> Rgba {
     theme::color("output_server")
 }

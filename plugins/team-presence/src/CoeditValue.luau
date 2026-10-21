@@ -43,6 +43,9 @@ local function encodeInner(value: any, valueType: string?, targetOf: (Instance) 
 		end
 		return wrap("Float64", value)
 	elseif kind == "EnumItem" then
+		if valueType == "Attribute" then
+			return wrap("EnumItem", { tostring(value.EnumType), value.Value })
+		end
 		return wrap("Enum", value.Value)
 	elseif kind == "BrickColor" then
 		return wrap("BrickColor", value.Number)
@@ -149,6 +152,9 @@ local function decodeInner(json: any, current: any, valueType: string?, resolve:
 			return false, nil
 		end
 		local item = enumByValue(enum, v)
+		return item ~= nil, item
+	elseif t == "EnumItem" then
+		local item = if type(v) == "table" then enumByValue((Enum :: any)[v[1]], v[2]) else nil
 		return item ~= nil, item
 	elseif t == "BrickColor" then
 		return true, BrickColor.new(v)

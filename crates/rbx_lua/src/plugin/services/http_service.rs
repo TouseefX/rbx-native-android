@@ -297,7 +297,7 @@ pub(super) fn permission_answered(lua: &Lua, prompt: UiId, answer: &Answer) -> R
         if let Some(map) = hosts.as_object_mut() {
             map.insert(host.clone(), serde_json::Value::Bool(*allow));
         }
-        save_settings(&mut shared, &env.name);
+        shared.save_settings(&env.name);
     }
     for (id, request) in waiting {
         if *allow {
@@ -308,27 +308,6 @@ pub(super) fn permission_answered(lua: &Lua, prompt: UiId, answer: &Answer) -> R
         }
     }
     Ok(())
-}
-
-fn save_settings(shared: &mut crate::plugin::env::Shared, name: &str) {
-    let (Some(dir), Some(map)) = (shared.settings_dir.clone(), shared.settings.get(name)) else {
-        return;
-    };
-    let file = dir.join(format!("{}.json", name.replace(['/', '\\'], "_")));
-    let written = serde_json::to_string_pretty(map)
-        .map_err(|e| e.to_string())
-        .and_then(|text| {
-            std::fs::create_dir_all(&dir)
-                .and_then(|_| std::fs::write(&file, text))
-                .map_err(|e| e.to_string())
-        });
-    if let Err(error) = written {
-        shared.push_output(
-            name,
-            crate::plugin::api::OutputKind::Warn,
-            format!("could not save settings: {error}"),
-        );
-    }
 }
 
 pub(super) fn finished(lua: &Lua, finished: Vec<Finished>) -> Result<()> {

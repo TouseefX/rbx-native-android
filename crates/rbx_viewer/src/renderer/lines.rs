@@ -11,6 +11,8 @@
 //! `SphereHandleAdornment` markers, which its draggers size to stay constant
 //! on screen. The transform handles are stamped into a stencil first and
 //! every guide kept off them, since Studio draws its handles over its guides.
+//! Filled quads (`Fill`) are drawn first, depth-tested, so every guide sits
+//! on top of the heat-map cells they shade the ground with.
 //! Costs nothing until the first segment arrives, the pipelines are built
 //! then, not before, and draws nothing once the list is cleared again.
 
@@ -37,6 +39,17 @@ pub struct Segment {
     pub width: f32,
 }
 
+/// A flat world-space quad an editor overlay fills, a heat map's cell on
+/// the ground. Two triangles, `corners[0..3]` and `corners[0, 2, 3]`;
+/// hidden by whatever stands in front of it, and alpha-blended over the
+/// frame like the lines.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Fill {
+    pub corners: [Vec3; 4],
+    /// Linear RGB, and alpha.
+    pub color: [f32; 4],
+}
+
 /// One corner of a dot's screen-space square: its centre in the world, which
 /// corner (`±1, ±1`), and its radius in pixels.
 #[repr(C)]
@@ -59,6 +72,40 @@ impl DotVertex {
             attributes: &DOT_ATTRIBUTES,
         }
     }
+}
+
+/// One corner of a fill's triangles.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
+struct FillVertex {
+    position: [f32; 3],
+    color: [f32; 4],
+}
+
+const FILL_ATTRIBUTES: [wgpu::VertexAttribute; 2] =
+    wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4];
+
+impl FillVertex {
+    const fn layout() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<FillVertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &FILL_ATTRIBUTES,
+        }
+    }
+}
+
+/// Two triangles per quad: corners 0, 1, 2 then 0, 2, 3.
+fn fill_vertices(fills: &[Fill]) -> Vec<FillVertex> {
+    fills
+        .iter()
+        .flat_map(|fill| {
+            [0, 1, 2, 0, 2, 3].map(|corner| FillVertex {
+                position: fill.corners[corner].to_array(),
+                color: fill.color,
+            })
+        })
+        .collect()
 }
 
 fn dot(centre: Vec3, width: f32, color: [f32; 4], out: &mut Vec<DotVertex>) {
@@ -90,13 +137,14 @@ pub(super) struct Lines {
 
 #[derive(Default)]
 struct Layer {
+    fills: Batch,
     lines: Batch,
     dots: Batch,
 }
 
 impl Layer {
-    fn batches(&self) -> [&Batch; 2] {
-        [&self.lines, &self.dots]
+    fn batches(&self) -> [&Batch; 3] {
+        [&self.fills, &self.lines, &self.dots]
     }
 }
 
@@ -126,6 +174,15 @@ impl Lines {
         self.layers[layer].lines = Batch::build(device, "rbxview lines", &occluded, &on_top);
         let [occluded, on_top] = dots;
         self.layers[layer].dots = Batch::build(device, "rbxview dots", &occluded, &on_top);
+    }
+
+    /// Replaces one layer's filled quads. An empty list clears it.
+    pub(super) fn set_fills(&mut self, device: &wgpu::Device, layer: usize, fills: &[Fill]) {
+        if self.layers.len() <= layer {
+            self.layers.resize_with(layer + 1, Layer::default);
+        }
+        let vertices = fill_vertices(fills);
+        self.layers[layer].fills = Batch::build(device, "rbxview fills", &vertices, &[]);
     }
 
     /// Draws every layer onto `target`, the frame the resolve just finished:
@@ -220,10 +277,17 @@ impl Lines {
             pass.set_vertex_buffer(0, vertices.slice(..));
             pass.draw(0..count, 0..1);
         }
-        for kind in 0..2 {
+        pass.set_pipeline(&gpu.fills);
+        for layer in &self.layers {
+            if let Some((buffer, range)) = layer.fills.range(false) {
+                pass.set_vertex_buffer(0, buffer.slice(..));
+                pass.draw(range, 0..1);
+            }
+        }
+        for (kind, pipelines) in gpu.pipelines.iter().enumerate() {
             for layer in &self.layers {
-                let batch = layer.batches()[kind];
-                for (on_top, pipeline) in [false, true].into_iter().zip(&gpu.pipelines[kind]) {
+                let batch = layer.batches()[kind + 1];
+                for (on_top, pipeline) in [false, true].into_iter().zip(pipelines) {
                     if let Some((buffer, range)) = batch.range(on_top) {
                         pass.set_pipeline(pipeline);
                         pass.set_vertex_buffer(0, buffer.slice(..));
@@ -231,6 +295,23 @@ impl Lines {
                     }
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fill_vertices_are_two_triangles_per_quad() {
+        let corners = [Vec3::X, Vec3::Y, Vec3::Z, Vec3::ONE];
+        let color = [0.1, 0.2, 0.3, 0.4];
+        let vertices = fill_vertices(&[Fill { corners, color }, Fill { corners, color }]);
+        assert_eq!(vertices.len(), 12);
+        for (i, corner) in [0, 1, 2, 0, 2, 3, 0, 1, 2, 0, 2, 3].into_iter().enumerate() {
+            assert_eq!(vertices[i].position, corners[corner].to_array());
+            assert_eq!(vertices[i].color, color);
         }
     }
 }

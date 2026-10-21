@@ -52,6 +52,9 @@ pub struct Meshes {
     /// click has to reach exactly what is on screen, and this handle is the
     /// one thing the host's hit test already takes from the renderer.
     isolation: Option<Arc<HashSet<Ref>>>,
+    /// Instances (and what hangs under them) the editor's layer filter or
+    /// an isolation leaves undrawn.
+    hidden: Arc<HashSet<Ref>>,
 }
 
 /// One recovered piece of a union, as the scene draws it.
@@ -97,23 +100,32 @@ impl Meshes {
             kinds: Arc::default(),
             pieces: Arc::default(),
             isolation: None,
+            hidden: Arc::default(),
         }
     }
 
-    pub(crate) fn with_isolation(mut self, roots: Option<HashSet<Ref>>) -> Self {
+    pub(crate) fn with_isolation(
+        mut self,
+        roots: Option<HashSet<Ref>>,
+        hidden: HashSet<Ref>,
+    ) -> Self {
         self.isolation = roots.map(Arc::new);
+        self.hidden = Arc::new(hidden);
         self
     }
 
     /// Whether `referent` is drawn as far as an isolation goes: always while
     /// nothing is isolated, and otherwise only when it is one of the roots
-    /// or sits beneath one in `dom`. Asked of the host's own DOM rather than
+    /// or sits beneath one in `dom` (if there are roots) and is not hidden.
+    /// Asked of the host's own DOM rather than
     /// of the scene the renderer built, so a part the host has just moved
     /// under a root is reachable on the very next click.
     pub fn shows(&self, dom: &WeakDom, referent: Ref) -> bool {
-        self.isolation.as_ref().is_none_or(|roots| {
-            crate::scene::isolation_within(roots, referent, |at| dom.parent(at))
-        })
+        let parent_of = |at| dom.parent(at);
+        self.isolation
+            .as_ref()
+            .is_none_or(|roots| crate::scene::isolation_within(roots, referent, parent_of))
+            && !crate::scene::isolation_within(&self.hidden, referent, parent_of)
     }
 
     pub(crate) fn with_materials(mut self, materials: HashMap<Ref, Arc<Pack>>) -> Self {
@@ -227,7 +239,15 @@ impl Meshes {
             .with_materials(materials)
             .with_kinds(kinds)
             .with_pieces(pieces)
-            .with_isolation(scene.isolation().map(|isolation| isolation.roots().clone()))
+            .with_isolation(
+                scene
+                    .isolation()
+                    .and_then(|isolation| isolation.roots().cloned()),
+                scene
+                    .isolation()
+                    .map(|isolation| isolation.hidden().clone())
+                    .unwrap_or_default(),
+            )
     }
 
     pub fn get(&self, asset: &AssetRef) -> Option<&Arc<rbx_mesh::SkinnedMesh>> {

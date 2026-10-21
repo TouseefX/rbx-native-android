@@ -30,11 +30,14 @@ pub(super) enum AfterClose {
 impl Shell {
     /// Edits since the last save, including typing still on the script
     /// editor's debounce.
-    fn has_unsaved_changes(&self) -> bool {
+    pub(super) fn has_unsaved_changes(&self) -> bool {
         self.recovery.unsaved() || self.scripts.open.values().any(|open| open.pending)
     }
 
     pub(crate) fn close_place(&mut self, cx: &mut Context<Self>) {
+        if self.leave_game(AfterClose::Home, cx) {
+            return;
+        }
         if self.has_unsaved_changes() {
             self.close_prompt = true;
             cx.notify();
@@ -55,6 +58,9 @@ impl Shell {
     }
 
     fn leave_for(&mut self, after: AfterClose, cx: &mut Context<Self>) {
+        if self.leave_game(after.clone(), cx) {
+            return;
+        }
         self.after_close = after;
         if self.has_unsaved_changes() {
             self.close_prompt = true;
@@ -67,6 +73,9 @@ impl Shell {
     /// Restarts the editor on this place, asking first when there are
     /// unsaved changes.
     pub(crate) fn request_restart(&mut self, cx: &mut Context<Self>) {
+        if self.leave_game(AfterClose::Restart, cx) {
+            return;
+        }
         if self.has_unsaved_changes() {
             self.after_close = AfterClose::Restart;
             self.close_prompt = true;
@@ -81,6 +90,9 @@ impl Shell {
     /// changes; answers whether it may close right now (the window manager's
     /// close asks through `on_window_should_close`).
     pub(crate) fn request_quit(&mut self, cx: &mut Context<Self>) -> bool {
+        if self.leave_game(AfterClose::Quit, cx) {
+            return false;
+        }
         if !self.has_unsaved_changes() {
             return true;
         }
@@ -88,6 +100,16 @@ impl Shell {
         self.close_prompt = true;
         cx.notify();
         false
+    }
+
+    /// Hands a leave to the game this place belongs to, if any: the whole
+    /// window goes, so every place with changes is asked, not just this one.
+    fn leave_game(&mut self, after: AfterClose, cx: &mut Context<Self>) -> bool {
+        let Some(game) = self.game.as_ref().and_then(WeakEntity::upgrade) else {
+            return false;
+        };
+        cx.defer(move |cx| game.update(cx, |game, cx| game.begin_leave(after, cx)));
+        true
     }
 
     /// Escape's half of the prompt; returns whether it was open.
@@ -99,6 +121,14 @@ impl Shell {
     fn leave_place(&mut self, cx: &mut Context<Self>) {
         self.close_prompt = false;
         self.cancel_command_run();
+        // In a game window this place's answer is one of several: the game
+        // asks the next place with changes, and leaves once all have answered.
+        if let Some(game) = self.game.as_ref().and_then(WeakEntity::upgrade) {
+            let after = std::mem::take(&mut self.after_close);
+            let me = cx.entity_id();
+            cx.defer(move |cx| game.update(cx, |game, cx| game.released(me, after, cx)));
+            return;
+        }
         let handle = self.window_handle;
         match std::mem::take(&mut self.after_close) {
             AfterClose::Restart => {
