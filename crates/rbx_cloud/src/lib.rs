@@ -45,7 +45,7 @@ pub use experience_settings::{ExperienceSettings, ExperienceUpdate, PlaceSetting
 pub use experiences::{Experience, Experiences, Group};
 pub use games::{Creator, CreatorKind, GameSummary};
 pub use introspect::{KeyInfo, Scope};
-pub use places::place_id_from_link;
+pub use places::{place_id_from_link, PlaceSummary};
 pub use publish::PublishMode;
 pub use retry::rate_limit_waits;
 pub use scopes::{

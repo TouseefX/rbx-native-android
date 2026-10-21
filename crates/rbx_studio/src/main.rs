@@ -321,14 +321,19 @@ pub(crate) fn open_home_again(cx: &mut App) {
 /// from disk as [`open_home_again`] reads it. The error is the message for
 /// the Output dock; the caller keeps its own window then.
 pub(crate) fn open_place(path: &Path, cx: &mut App) -> Result<(), String> {
+    open_editor(path, fresh_boot(), cx).map_err(|failed| failed.0)
+}
+
+/// The settings and user content as they are on disk now, for an editor
+/// opened after launch.
+fn fresh_boot() -> EditorBoot {
     let user = packs::UserContent::load();
     let settings = themed(Settings::load(), user.theme.palette.mode);
-    let boot = EditorBoot {
+    EditorBoot {
         settings,
         launch: Launch::default(),
         user,
-    };
-    open_editor(path, boot, cx).map_err(|failed| failed.0)
+    }
 }
 
 /// Starts a fresh editor process on `place`, for settings that only take
@@ -367,6 +372,9 @@ pub(crate) fn open_editor(
     boot: EditorBoot,
     cx: &mut App,
 ) -> Result<(), Box<(String, EditorBoot)>> {
+    if shell::game::manifest::is_manifest(path) {
+        return shell::game::open_game(path, boot, cx);
+    }
     let EditorBoot {
         settings,
         launch,
