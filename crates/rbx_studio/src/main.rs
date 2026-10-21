@@ -114,6 +114,7 @@ mod key_store;
 mod launcher;
 mod layers;
 mod luau_lsp;
+mod mcp;
 mod menu_bar;
 mod notes;
 mod pacing;
@@ -185,6 +186,11 @@ fn main() {
     if std::env::args().nth(1).as_deref() == Some(rbx_play::netsim::windivert::HELPER_FLAG) {
         let arguments: Vec<String> = std::env::args().skip(2).collect();
         std::process::exit(rbx_play::netsim::windivert::run_helper(&arguments));
+    }
+    // An MCP client's bridge to an editor already running (see `mcp`): no
+    // window of its own, and stdout belongs to the protocol.
+    if std::env::args().nth(1).as_deref() == Some(mcp::BRIDGE_FLAG) {
+        std::process::exit(mcp::bridge::run());
     }
     // `rbxstudio loren <command>`: the Loren CLI, no window.
     if std::env::args().nth(1).as_deref() == Some("loren") {

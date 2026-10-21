@@ -2709,6 +2709,34 @@ both the plain fetch failure and the silent fall back to a default
   real client, an ignored live round trip (`tests/datastores_live.rs`), and
   the window driven against a real sandbox universe; screenshots in
   `docs/screenshots/datastore-browser/`.
+- [x] **An MCP server over the live editor session: reading, script
+  editing and several editors at once** (Settings › Beta features › MCP
+  server), shaped after Roblox's built-in Studio MCP server (`studio/mcp.md`).
+  Every tool takes the arguments real Studio's `StudioMCP` lists and answers
+  in the shape it answers with, compared side by side against it. An MCP
+  client launches `rbxstudio --mcp`, a stdio bridge that reaches every open
+  editor over loopback; each editor session writes its own id, port and a
+  random token to `<config>/mcp/<studio_id>.json` and closes any connection
+  that does not open with that token. Every request is answered on the UI
+  thread against the DOM as the Explorer shows it: `search_game_tree`
+  (start path, class filter matching subclasses, name keywords, depth and
+  head limits, children summarized past the depth), `inspect_instance`
+  (properties, attributes, tags, children and descendants; the path ignores
+  case and every sibling it names is returned, up to 20), `script_read`
+  (numbered lines, a range), `script_search` (fuzzy by name, 10 results)
+  and `script_grep` (a string or Luau pattern through Luau's own
+  `string.find`, 50 matches). `multi_edit` applies several exact-text
+  replacements to a script's `Source` all or none, as one undo step through
+  the same write a script tab's own edits take, and creates the script
+  (`Script`, `LocalScript` or `ModuleScript`, named by `className`) under an
+  existing parent when nothing is at the path; it is refused while a live
+  playtest is shown. `list_roblox_studios` lists the open editors (place
+  file name, and place ID for a linked place), `get_studio_state` reports
+  the play state, and every other tool takes a `studio_id`, optional when
+  only one editor is open. A file left behind by an editor that was killed
+  is dropped the first time its port refuses. Instances are named
+  `Workspace.Model.Part`, with or without `game.` in front, names with dots
+  included.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):
@@ -3010,17 +3038,17 @@ both the plain fetch failure and the silent fall back to a default
   not a default this project should ship opinionated about.
 
 ### Editor
-- [ ] 📋 **An MCP server exposing the live editor session**, matching the
+- [ ] 📋 **The MCP server's Luau, viewport and Play tools**: the
+  server (see "What's been implemented" → Editor) still lacks what lets
+  an AI client run the session, matching the
   shape (not the exact tool surface) of Roblox's own built-in Studio MCP
   server (checked against `studio/mcp.md` rather than assumed, real,
   current, `stdio`-transport, ships in Studio itself, lets an AI client
   read/write scripts, run Luau, inspect the DataModel, and drive
-  playtesting). Most of what it exposes is a thin protocol wrapper around
-  capabilities this project already has or already plans: `script_read`/
-  `multi_edit`/`script_grep` over the script editor above,
+  playtesting). Most of what is left is a thin protocol wrapper around
+  capabilities this project already has or already plans:
   `execute_luau` over the existing Command Bar's DataModel access,
-  `inspect_instance`/`search_game_tree` over the Explorer/Properties
-  panel's existing DOM access, `screen_capture` over the viewport, and
+  `screen_capture` over the viewport, and
   `start_stop_play`/`get_console_output` over Play (see
   [Play / Test workflow](#play--test-workflow)) and the Output dock. Two sub-capabilities are **not** reachable the same
   way: `search_asset`/`insert_asset` depend on Roblox's Creator Store/
