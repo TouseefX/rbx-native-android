@@ -26,6 +26,7 @@ use super::layout::Panel;
 use super::menu::{self, MenuId};
 use super::Shell;
 
+mod perf;
 mod rows;
 mod toggles;
 
@@ -199,6 +200,7 @@ impl Shell {
         let camera = rows::section("CAMERA", switches(self, camera, cx));
         let overlays = rows::section("OVERLAYS", switches(self, overlays, cx));
         let dragging = rows::section("DRAGGING & SNAPPING", switches(self, dragging, cx));
+        let performance = self.perf_section(cx);
 
         let sections = match columns {
             Columns::Four => h_flex()
@@ -256,7 +258,9 @@ impl Shell {
                     }))
                     .text_size(tokens::text_md())
                     .line_height(tokens::line_md())
-                    .child(sections),
+                    .child(sections)
+                    .child(div().my(px(STACK_GAP)).child(rows::horizontal_rule()))
+                    .child(performance),
             )
             .scrollbar_y(&self.viewport_scroll);
 

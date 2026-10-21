@@ -298,7 +298,13 @@ fn drive(
 }
 
 const VIRTUAL_LIMIT: Duration = Duration::from_secs(900);
-const WALL_LIMIT: Duration = Duration::from_secs(180);
+// Debug builds (the test suite) run the interpreter several times slower, and
+// the full Loren unit suite takes about 90 s there on Linux, more on CI's Windows runners.
+const WALL_LIMIT: Duration = if cfg!(debug_assertions) {
+    Duration::from_secs(900)
+} else {
+    Duration::from_secs(180)
+};
 const FRAME: Duration = Duration::from_micros(16_667);
 
 /// A DataModel laid out like upstream's `test-project` for its unit specs:
