@@ -308,7 +308,7 @@ impl Shell {
                 .explorer
                 .items(self.show_all_services, &self.service_overrides),
         };
-        crate::explorer::search(&items, &self.explorer_query)
+        self.filter_rows(&items)
     }
 
     /// The docks left out of the layout as things stand: the canvas's own

@@ -113,6 +113,7 @@ mod pointer_lock;
 #[cfg(test)]
 mod probe;
 mod properties;
+mod query;
 mod recovery;
 mod render_image;
 mod save;
@@ -173,6 +174,14 @@ fn main() {
     if std::env::args().nth(1).as_deref() == Some(rbx_play::netsim::windivert::HELPER_FLAG) {
         let arguments: Vec<String> = std::env::args().skip(2).collect();
         std::process::exit(rbx_play::netsim::windivert::run_helper(&arguments));
+    }
+    // `rbxstudio loren <command>`: the Loren CLI, no window.
+    if std::env::args().nth(1).as_deref() == Some("loren") {
+        let arguments: Vec<String> = std::env::args().skip(2).collect();
+        std::process::exit(rbx_loren::cli::main(
+            &arguments,
+            rbx_loren::cli::Overrides::default(),
+        ));
     }
     // Before anything can ask whether a beta feature is on.
     beta::init();
