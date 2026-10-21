@@ -1,6 +1,6 @@
 //! Writing templates: every change is a file operation in the layout the
 //! loader reads, checked against the name rules first. Nothing here updates
-//! the in-memory list — the caller reloads the directory afterwards, so what
+//! the in-memory list, the caller reloads the directory afterwards, so what
 //! the editor shows is always what is on disk.
 //!
 //! Deleting is a plain `remove_file`: no Trash crate is in the tree, and the
@@ -85,7 +85,7 @@ impl ScriptTemplates {
         Ok(name)
     }
 
-    /// Replaces the text of `class`'s template `stem` — [`super::DEFAULT_STEM`]
+    /// Replaces the text of `class`'s template `stem`: [`super::DEFAULT_STEM`]
     /// writes the starter's replacement. Atomic: a temp file beside it, then
     /// a rename, so a crash or a full disk leaves the last good file.
     pub(crate) fn write(&self, class: &str, stem: &str, source: &str) -> Result<(), StoreError> {

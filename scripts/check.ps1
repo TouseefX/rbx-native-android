@@ -1,9 +1,9 @@
 # Full quality gate: formatting, lints (warnings fatal), tests. Native Windows
-# equivalent of check.sh — no PowerShell analogue of Linux's ionice/nice CPU/IO
+# equivalent of check.sh, no PowerShell analogue of Linux's ionice/nice CPU/IO
 # priority hint is attempted here; it's a desktop-friendliness nicety on Linux,
 # not a correctness requirement, so it's simply left out on this platform.
 #
-# Untested on a real Windows machine (see README's Platform support table) —
+# Untested on a real Windows machine (see README's Platform support table),
 # report exactly what breaks rather than silently working around it, the same
 # standing invitation the rest of this project's Windows story already makes.
 $ErrorActionPreference = "Stop"

@@ -1,6 +1,6 @@
 //! A part's `BrickColor` row: the colour's swatch and name, opening onto
-//! Studio's own picker — the 128 palette colours in a honeycomb, laid out as
-//! `honeycomb` establishes — where the arrow keys move in the honeycomb's
+//! Studio's own picker, the 128 palette colours in a honeycomb, laid out as
+//! `honeycomb` establishes, where the arrow keys move in the honeycomb's
 //! own geometry, Home and End go to a row's ends (with Ctrl, the picker's),
 //! Enter or Space picks, and Escape closes, handing focus back to the row.
 //! A pick commits the colour's number through the row like any other edit,
@@ -390,7 +390,7 @@ fn paint(
             window.paint_path(path, rgba(color));
         }
         // The row's own colour in white, the cursor in the focus colour on
-        // top of it — both can be one cell.
+        // top of it, both can be one cell.
         let rings = [
             (Some(color.number) == current, tokens::text_full()),
             (index == cursor, tokens::check_on()),

@@ -2,7 +2,7 @@
 //! leave this one (asking about unsaved changes first, see `close_place`)
 //! for a new window on the other place, as Home's New and Open do.
 //!
-//! `RBX_STUDIO_OPEN=<path>` skips the file chooser and opens `<path>` — a
+//! `RBX_STUDIO_OPEN=<path>` skips the file chooser and opens `<path>`: a
 //! debugging aid for driving Open where no chooser portal may answer.
 
 use std::path::{Path, PathBuf};

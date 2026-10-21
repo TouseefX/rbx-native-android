@@ -5,15 +5,15 @@
 //! **hotspots** such as corners, edges, or centers … hotspots display as
 //! small magenta points". It names no exact set, so this is this editor's
 //! reading of it: every corner of the box Scale's balls stand on, the middle
-//! of every edge, the middle of every face, and the box's own centre — the
+//! of every edge, the middle of every face, and the box's own centre, the
 //! 3×3×3 lattice of points at `-1`, `0` and `+1` half-sizes along each of
 //! the box's axes.
 //!
 //! A model's parts get hotspots of their own as well ([`Hotspots`]). The
 //! prose says nothing about them; its "Hotspots on a model" screenshot is
 //! the only source, and shows the model box's lattice plus, on each part,
-//! the middle of every face and its centre — no part corners or edge
-//! middles — all drawn at once, with no cursor in the shot. So that is what
+//! the middle of every face and its centre, no part corners or edge
+//! middles, all drawn at once, with no cursor in the shot. So that is what
 //! is drawn here: always, not only near the cursor.
 
 use glam::Vec3;
@@ -27,12 +27,12 @@ pub const HOTSPOTS: usize = 27;
 /// How many each of a model's parts adds: its six face middles and its
 /// centre.
 pub const PART_HOTSPOTS: usize = 7;
-/// ponytail: at most this many parts get hotspots of their own — the first
-/// in selection order — so a model of hundreds of parts costs a fixed
+/// ponytail: at most this many parts get hotspots of their own, the first
+/// in selection order, so a model of hundreds of parts costs a fixed
 /// buffer and a fixed mesh per frame (each dot is a full ball). Pick the
 /// parts nearest the cursor instead if the cap ever bites in practice.
 pub const HOTSPOT_PARTS: usize = 32;
-/// A hotspot's drawn radius, in arm lengths — a dot, well under a Scale
+/// A hotspot's drawn radius, in arm lengths, a dot, well under a Scale
 /// ball's, so the lattice never reads as handles to grab.
 const HOTSPOT_RADIUS: f32 = 0.035;
 /// How far off a hotspot a ray still lands on it, in arm lengths: the same
@@ -99,7 +99,7 @@ impl Hotspots {
             .chain(self.parts.iter().flat_map(Faces::part_hotspots))
     }
 
-    /// The hotspot `ray` passes nearest, if it passes within reach of any —
+    /// The hotspot `ray` passes nearest, if it passes within reach of any,
     /// measured on screen, so a far corner is as easy to land on as a near
     /// one. Among several in reach, the one nearest the ray's own line wins,
     /// whichever box it belongs to.

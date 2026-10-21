@@ -2,7 +2,7 @@
 //! editor's own, opened from a sequence row's drawing of itself.
 //!
 //! A real window rather than a layer over the docks, because that is what
-//! the thing is — it floats above the editor (`WindowKind::Floating`, which
+//! the thing is, it floats above the editor (`WindowKind::Floating`, which
 //! is `WM_TRANSIENT_FOR` on X11), it moves where you put it, and the
 //! viewport it is steering stays visible behind it. Fixed size, though: the
 //! plot is the content, and there is nothing in here that wants more room
@@ -12,7 +12,7 @@
 //!
 //! **This window holds no copy of the value.** Every frame it rebuilds a
 //! [`Editor`] from whatever the `Shell`'s DOM holds, and every edit leaves
-//! through `Shell::commit_row_step` — the same textual path a typed row
+//! through `Shell::commit_row_step`: the same textual path a typed row
 //! takes. So the viewport repaints on each drag step, an undo or a Command
 //! Bar script shows up in the graph immediately, and a whole drag is still
 //! one undo entry (the discipline `shell::drag` already follows).
@@ -46,7 +46,7 @@ const RAMP_CONTENT_HEIGHT: f32 = 210.0;
 
 /// What the toolkit's client-side window frame takes off every side before
 /// the content gets any (`gpui_component::window_border::SHADOW_SIZE`, 20px
-/// on Linux) — the same rounded shadow the main window has. That constant is
+/// on Linux), the same rounded shadow the main window has. That constant is
 /// not public, so the allowance is spelled here rather than read: a window
 /// sized to its content alone clips its own footer, which is exactly what
 /// the first attempt did.
@@ -60,7 +60,7 @@ const FIELDS: [(Field, &str); 3] = [
     (Field::Envelope, "Envelope"),
 ];
 
-/// One sequence drawn small and inert, for the row that opens this window —
+/// One sequence drawn small and inert, for the row that opens this window,
 /// the same painters the graph uses, with the grid and the handles off, so
 /// a row can never disagree with the graph about the shape of a value.
 pub(crate) fn preview(
@@ -72,7 +72,7 @@ pub(crate) fn preview(
 }
 
 /// Which footer fields a sequence of this kind has. A colour stop carries a
-/// time and a colour and nothing else — a `ColorSequenceKeypoint`'s envelope
+/// time and a colour and nothing else, a `ColorSequenceKeypoint`'s envelope
 /// has no effect in Roblox's engine, so a field for it would be a control
 /// that does nothing.
 pub(crate) fn sequence_fields(kind: Kind) -> &'static [(Field, &'static str)] {
@@ -91,7 +91,7 @@ pub(crate) struct SequenceWindow {
     title: String,
     kind: Kind,
     /// What **Reset** goes back to, as the commit text the row held when
-    /// this window opened — the sequence already in the file, not the type's
+    /// this window opened, the sequence already in the file, not the type's
     /// default, because that is the thing somebody is afraid of losing while
     /// they drag. Committed like any other edit, so Reset is undoable too.
     original: String,
@@ -104,14 +104,14 @@ pub(crate) struct SequenceWindow {
     /// pointer-to-value mapping depend on its own output: a pointer held
     /// still above the plot would read a larger value each frame, which
     /// would grow the axis, which would read a larger value again. Frozen,
-    /// dragging above the top edge is simply a value above the ceiling — the
+    /// dragging above the top edge is simply a value above the ceiling, the
     /// axis refits around it the moment the drag ends.
     drag_ceiling: Option<f32>,
-    /// Whether the press currently in flight began on the title bar — see
+    /// Whether the press currently in flight began on the title bar, see
     /// `shell::panel_topbar`. Cleared by [`Self::begin_drag`], because a
     /// keypoint dragged up out of the plot passes straight over that bar.
     title_grab: Rc<Cell<bool>>,
-    /// Set by the plot's own layout every frame — the only thing that can
+    /// Set by the plot's own layout every frame, the only thing that can
     /// turn a pointer position into a `(time, value)`, and `None` until the
     /// window has been laid out once.
     plot: Rc<Cell<Option<Rect>>>,
@@ -157,8 +157,8 @@ impl SequenceWindow {
             // more room than it was given.
             //
             // `is_resizable` is honoured on macOS and Windows. GPUI's X11
-            // backend does not read it at all — it always writes a
-            // `WM_NORMAL_HINTS` maximum of the GPU's texture limit — so on
+            // backend does not read it at all, it always writes a
+            // `WM_NORMAL_HINTS` maximum of the GPU's texture limit, so on
             // X11 a window manager can still grow this window. The minimum
             // below *is* honoured there, which stops the one direction that
             // would clip the footer, and the plot takes any extra height
@@ -278,7 +278,7 @@ impl SequenceWindow {
     }
 
     /// The value axis this frame: whatever the stops fit, unless a drag is
-    /// in flight — see [`Self::drag_ceiling`].
+    /// in flight, see [`Self::drag_ceiling`].
     fn ceiling(&self, editor: &Editor) -> f32 {
         self.drag_ceiling.unwrap_or_else(|| editor.ceiling())
     }
@@ -381,7 +381,7 @@ impl SequenceWindow {
     }
 
     /// Back to the sequence this window opened on, through the same commit
-    /// path everything else here takes — so Reset is one more undo step
+    /// path everything else here takes, so Reset is one more undo step
     /// rather than a trapdoor out of the history.
     fn reset(&mut self, cx: &mut Context<Self>) {
         self.selected = 0;
@@ -402,7 +402,7 @@ fn field_text(editor: &Editor, field: Field) -> String {
         Field::Value => stop.value,
         Field::Envelope => stop.envelope,
     };
-    // Three decimals, trailing zeros trimmed — the same reading
+    // Three decimals, trailing zeros trimmed, the same reading
     // `shell::scrub::format` gives a dragged number, so a value that arrived
     // by drag and one that was typed look alike.
     crate::shell::format_scrubbed(value)

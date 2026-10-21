@@ -2,9 +2,9 @@
 //! one that names a `TextureID` this session has never decoded.
 //!
 //! Both are the case that used to end in `Ok(false)` and a full reload with a
-//! download in front of it. Each is reported twice — what the edit itself cost
+//! download in front of it. Each is reported twice, what the edit itself cost
 //! (which is what somebody typing waits for) and how long the asset then took
-//! to reach a frame (which is what they watch happen afterwards) — because the
+//! to reach a frame (which is what they watch happen afterwards), because the
 //! whole point of the change is that those are two different numbers.
 //!
 //! # Staging an unseen asset without emptying the cache
@@ -14,7 +14,7 @@
 //! other end: `Headless::forget_asset` drops one reference's decoded copy and
 //! skips the next request for it, the reload after that rebuilds the place as
 //! it stood before the asset was ever seen, and the edit that follows is a
-//! genuine first sight of it — resolved from the disk cache, never downloaded.
+//! genuine first sight of it, resolved from the disk cache, never downloaded.
 
 use std::time::{Duration, Instant};
 

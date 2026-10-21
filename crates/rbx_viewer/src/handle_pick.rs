@@ -12,7 +12,7 @@ use crate::pick::Ray;
 const HANDLE_UNIT: (f32, f32, f32) = (0.4, 1.0, 6.0);
 const GAP: f32 = 0.15;
 const ARC_CLEARANCE: f32 = 1.1;
-/// The ring tube the grab band is measured from — thicker than the line
+/// The ring tube the grab band is measured from, thicker than the line
 /// drawn (Studio's rings are hairlines), so an arc stays easy to catch.
 const ARC_TUBE: f32 = 0.04;
 /// `Enum.HandlesStyle.Movement`.

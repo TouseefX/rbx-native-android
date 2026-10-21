@@ -1,8 +1,8 @@
 //! The oriented-box outline math [`super::selection::Selection`] and
 //! [`super::hover::Hover`] both draw from: a `BasePart`'s unit cube, carried
 //! through its model matrix into 12 edges / 24 `LineList` vertices. Factored
-//! out so the two outlines — Studio-blue for the selection, a dimmer amber for
-//! the hover cue — can never quietly drift apart on what "a box around a
+//! out so the two outlines, Studio-blue for the selection, a dimmer amber for
+//! the hover cue, can never quietly drift apart on what "a box around a
 //! part" actually means; only their GPU state (pipeline, colour, which
 //! referents they track) differs.
 
@@ -51,7 +51,7 @@ const EDGES: [(usize, usize); 12] = [
 
 /// One corner of an edge's screen-space quad: this endpoint, the edge's other
 /// endpoint (so the vertex shader can find the on-screen direction of the
-/// line), and which side of the line to push out to — see `outline.wgsl`,
+/// line), and which side of the line to push out to, see `outline.wgsl`,
 /// concatenated into both `selection.wgsl` and `hover.wgsl`. A `LineList`
 /// would draw at one hairline pixel with no width control at all (wgpu's line
 /// width is fixed at 1 and WebGPU has none); expanding each edge into two
@@ -78,7 +78,7 @@ impl Vertex {
     }
 }
 
-/// The six vertices — two triangles — of one edge's screen-space quad, from
+/// The six vertices, two triangles, of one edge's screen-space quad, from
 /// endpoint `a` to endpoint `b`. Each carries its own end, the far end, and a
 /// side; `outline.wgsl` turns the pair into a ribbon of constant pixel width.
 /// A corner on `a` names `b` as its `other` and vice versa, so the shader
@@ -109,7 +109,7 @@ fn quad(a: Vec3, b: Vec3) -> [Vertex; 6] {
     [al, ar, bl, ar, br, bl]
 }
 
-/// Every edge of the box `model` carries, as screen-space quads — 12 edges,
+/// Every edge of the box `model` carries, as screen-space quads, 12 edges,
 /// six vertices each.
 pub(super) fn edges(model: Mat4) -> [Vertex; 72] {
     let corners = CORNERS.map(|corner| model.transform_point3(corner));
@@ -126,7 +126,7 @@ pub(super) fn edges(model: Mat4) -> [Vertex; 72] {
 }
 
 /// Every model matrix one selected/hovered instance covers, in the order
-/// `crate::pick::parts_of` resolved them — a part the scene never built (one
+/// `crate::pick::parts_of` resolved them, a part the scene never built (one
 /// outside `Workspace`) drops out here.
 pub(super) fn models_of<'a>(
     placements: &'a HashMap<Ref, Placement>,
@@ -143,8 +143,8 @@ pub(super) fn models_of<'a>(
 /// drawn geometry at all.
 ///
 /// A part keeps its own oriented box, which hugs it however it is turned. A
-/// container gets one box round everything beneath it — not one per part,
-/// because that extent is what Studio calls a model's bounding box — squared
+/// container gets one box round everything beneath it, not one per part,
+/// because that extent is what Studio calls a model's bounding box, squared
 /// to its pivot's rotation ([`Selected::axes`]), the world's for a container
 /// with no pivot: `Model:GetBoundingBox` "matches the selection box rendered
 /// in Studio when the model is selected", and its orientation "matches the
@@ -157,13 +157,13 @@ pub(super) fn box_of(placements: &HashMap<Ref, Placement>, entry: &Selected) -> 
     gizmo::bounds_along(models_of(placements, entry), entry.axes())
 }
 
-/// Every *container's* edges, in order — one box each, and nothing at all
+/// Every *container's* edges, in order, one box each, and nothing at all
 /// for one with no drawable geometry under it.
 ///
 /// A part is left out: it has a shape of its own, and both cues trace that
 /// silhouette instead of boxing it (see `renderer::cue`). A container has
 /// no orientation or shape to trace, so the box around everything beneath
-/// it — what Studio calls a model's bounding box — is still the answer.
+/// it, what Studio calls a model's bounding box, is still the answer.
 pub(super) fn box_edges(
     placements: &HashMap<Ref, Placement>,
     selected: &[Selected],

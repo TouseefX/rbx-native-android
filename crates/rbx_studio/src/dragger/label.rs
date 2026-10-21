@@ -7,7 +7,7 @@ use glam::{Vec2, Vec3};
 use super::Line;
 
 /// `conciseNumberFormat`, legacy: the fewest decimals that show `value` to
-/// within a thousandth — `"0"`, `"4"`, `"2.5"`, `"0.125"`.
+/// within a thousandth, `"0"`, `"4"`, `"2.5"`, `"0.125"`.
 pub(crate) fn concise(value: f32) -> String {
     let within = |places: i32| {
         let step = 10f32.powi(places);
@@ -28,8 +28,8 @@ pub(crate) fn concise(value: f32) -> String {
 
 /// A distance typed into the measurement box, read the way Studio reads it
 /// (Luau's `tonumber`): surrounding spaces, a sign, decimals and exponents,
-/// and `0x` hexadecimal. `None` for anything else — `"4 studs"`, `"2+2"`,
-/// `"1,5"` — and for infinities and NaN, which `tonumber` would pass but no
+/// and `0x` hexadecimal. `None` for anything else, `"4 studs"`, `"2+2"`,
+/// `"1,5"`: and for infinities and NaN, which `tonumber` would pass but no
 /// part can be moved by.
 pub(crate) fn typed(text: &str) -> Option<f32> {
     let text = text.trim();
@@ -59,7 +59,7 @@ pub(crate) struct Arrow {
     pub(crate) tip: Vec2,
 }
 
-/// Which of `others` — every arrow but the dragged one and its opposite —
+/// Which of `others`, every arrow but the dragged one and its opposite,
 /// the label leans towards: the one that looks most square to the dragged
 /// arrow on screen, and of two that look equally square (within a
 /// thousandth), the one nearer the middle of the screen.

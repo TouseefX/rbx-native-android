@@ -2,7 +2,7 @@
 //! Properties panel's Attributes/Tags section reads and writes.
 //!
 //! Nothing here renders; `shell::attributes_panel` does that, and this
-//! module is pure DOM in and DOM out so it can be tested without a window —
+//! module is pure DOM in and DOM out so it can be tested without a window,
 //! the same split `style_editor`/`shell::style_panel` already use.
 //!
 //! Both attribute values and tag names round-trip through
@@ -27,14 +27,14 @@ use super::{value_edit_kind, EditKind};
 pub(crate) const ATTRIBUTES_PROPERTY: &str = "AttributesSerialize";
 pub(crate) const TAGS_PROPERTY: &str = "Tags";
 
-/// `Variant::Unknown`'s wire type id for a string-shaped blob — the one id
+/// `Variant::Unknown`'s wire type id for a string-shaped blob, the one id
 /// XML's `BinaryString` round-trips (see `rbx_xml::value::STRING_TYPE_ID`
 /// and `style_editor`'s identical constant), so a blob written back under it
 /// survives a save in either format. A `Variant::String` would work for the
 /// binary writer too (see `rbx_binary::serialize::prop::scalar`), but the
 /// raw bytes of an encoded attribute blob are essentially never valid UTF-8
-/// (they're packed floats), so `Variant::String` — which can only hold valid
-/// UTF-8 — is not a safe choice here the way it would be for an actual
+/// (they're packed floats), so `Variant::String`: which can only hold valid
+/// UTF-8, is not a safe choice here the way it would be for an actual
 /// string property.
 const STRING_TYPE_ID: u8 = 0x01;
 
@@ -45,7 +45,7 @@ const MAX_ATTRIBUTE_NAME_LEN: usize = 100;
 /// Every `PropertyRow::name` this module hands out is prefixed with this so
 /// `shell::edit::apply_edit` can tell an attribute's value apart from a real
 /// property of the same spelling and route it here instead of to
-/// `WeakDom::set_property` — the same trick `properties::edit::FOLDER_COLOR_PROPERTY`
+/// `WeakDom::set_property`: the same trick `properties::edit::FOLDER_COLOR_PROPERTY`
 /// already uses for a row backed by something other than a DOM property.
 const ROW_PREFIX: &str = "Attribute:";
 
@@ -67,7 +67,7 @@ pub(crate) fn attribute_of_row(row: &str) -> Option<&str> {
 ///
 /// Neither is in the reflection dump (`rbx_reflection`'s own tests assert
 /// `Tags` resolves to nothing), so `properties::Catalog::is_hidden` cannot
-/// tag them `Hidden` the way the dump does for `BasePart.Position` — without
+/// tag them `Hidden` the way the dump does for `BasePart.Position`, without
 /// this they list as ordinary rows showing the encoded bytes, a second and
 /// far worse editor for the data the Attributes/Tags section below already
 /// edits properly. Real Studio lists neither.
@@ -78,7 +78,7 @@ pub(crate) fn is_backing_store(name: &str) -> bool {
 /// The Roblox attribute types this editor can create: every type
 /// `Instance:SetAttribute` accepts (`studio/properties.md#instance-attributes`),
 /// none left out. Each one's value then edits through the Properties panel's
-/// own widget for that type — see [`edit_kind`] — so this list can only ever
+/// own widget for that type, see [`edit_kind`], so this list can only ever
 /// grow as far as `properties::edit::edit_text` has an arm.
 pub(crate) const ATTRIBUTE_TYPES: &[&str] = &[
     "String",
@@ -98,7 +98,7 @@ pub(crate) const ATTRIBUTE_TYPES: &[&str] = &[
     "Font",
 ];
 
-/// What every freshly created colour-shaped attribute starts at — a plain
+/// What every freshly created colour-shaped attribute starts at, a plain
 /// `Color3` and both ends of a `ColorSequence`. White rather than black so a
 /// new value is visible against this panel's own dark surface the moment it
 /// appears.
@@ -108,7 +108,7 @@ const WHITE: Color3Data = Color3Data {
     b: 1.0,
 };
 
-/// The value a freshly created attribute of `type_name` starts with —
+/// The value a freshly created attribute of `type_name` starts with,
 /// `type_name` must be one of [`ATTRIBUTE_TYPES`]'s own spellings.
 pub(crate) fn default_value(type_name: &str) -> Option<Variant> {
     Some(match type_name {
@@ -149,7 +149,7 @@ pub(crate) fn default_value(type_name: &str) -> Option<Variant> {
         }),
         // Both start flat, with exactly the two keypoints Roblox's own
         // `NumberSequence.new`/`ColorSequence.new` require as a minimum, at
-        // the times 0 and 1 they require at the ends — so the value a fresh
+        // the times 0 and 1 they require at the ends, so the value a fresh
         // attribute holds is one the editor itself would accept back (see
         // `properties::edit::sequence`'s own bounds check). What Studio's
         // "+" picks for these was not checked against a real client.
@@ -197,7 +197,7 @@ pub(crate) fn default_value(type_name: &str) -> Option<Variant> {
     })
 }
 
-/// Every attribute on `reference`, decoded from its blob — empty for a
+/// Every attribute on `reference`, decoded from its blob, empty for a
 /// reference the DOM no longer holds.
 pub(crate) fn attributes(dom: &WeakDom, reference: Ref) -> BTreeMap<String, Variant> {
     dom.get(reference)
@@ -205,7 +205,7 @@ pub(crate) fn attributes(dom: &WeakDom, reference: Ref) -> BTreeMap<String, Vari
         .unwrap_or_default()
 }
 
-/// Every tag on `reference` — empty for a reference the DOM no longer holds.
+/// Every tag on `reference`: empty for a reference the DOM no longer holds.
 pub(crate) fn tags(dom: &WeakDom, reference: Ref) -> Vec<String> {
     dom.get(reference)
         .map(|instance| {
@@ -219,7 +219,7 @@ pub(crate) fn tags(dom: &WeakDom, reference: Ref) -> Vec<String> {
 
 /// [`attributes`] narrowed to the names the Properties panel's filter box
 /// matches, through the very same [`crate::properties::matches`] every
-/// ordinary property row is narrowed by — the box searches one list, not two
+/// ordinary property row is narrowed by, the box searches one list, not two
 /// that can drift apart.
 pub(crate) fn attributes_matching(
     dom: &WeakDom,
@@ -241,7 +241,7 @@ pub(crate) fn tags_matching(dom: &WeakDom, reference: Ref, filter: &str) -> Vec<
         .collect()
 }
 
-/// The `EditKind` an attribute's current value should edit through — the
+/// The `EditKind` an attribute's current value should edit through, the
 /// exact same mapping an ordinary property of that type gets (see
 /// `properties::value_edit_kind`), so the value routes through the
 /// Properties panel's existing per-type widgets rather than a parallel set.
@@ -261,7 +261,7 @@ pub(crate) fn edit_kind(value: &Variant) -> Option<EditKind> {
 /// `RBX`, which Roblox reserves for its own core scripts. Whether that
 /// prefix check is case-sensitive, and whether "alphanumeric" means ASCII or
 /// any Unicode letter/digit, is not stated by the docs beyond their own
-/// literal spelling — this allows any Unicode alphanumeric rather than
+/// literal spelling, this allows any Unicode alphanumeric rather than
 /// silently rejecting something a real client might accept.
 pub(crate) fn validate_attribute_name(name: &str) -> Result<(), String> {
     if name.is_empty() {
@@ -292,7 +292,7 @@ fn gone() -> String {
 
 /// A new attribute named `name` holding `value`. Refused when the name fails
 /// [`validate_attribute_name`] or already names an attribute on this
-/// instance — `SetAttribute` itself would just overwrite, but this panel's
+/// instance, `SetAttribute` itself would just overwrite, but this panel's
 /// "add" is a distinct action from editing an existing row's value, and
 /// silently repointing an existing attribute from an "add" click would be a
 /// surprising way to lose a value.
@@ -354,9 +354,9 @@ pub(crate) fn rename_attribute(
     write_attributes(dom, reference, &current)
 }
 
-/// Parses `text` into a value shaped like attribute `name`'s current one —
+/// Parses `text` into a value shaped like attribute `name`'s current one,
 /// the same textual commit path an ordinary property row takes
-/// (`properties::edit::parse`) — and writes it back. Attributes are never
+/// (`properties::edit::parse`), and writes it back. Attributes are never
 /// `Variant::Enum` (not one of the types `Instance:SetAttribute` accepts),
 /// so `parse`'s reflection lookup is never exercised here; the empty
 /// class/property-name arguments are inert placeholders for the one arm that
@@ -403,7 +403,7 @@ pub(crate) fn write_attributes(
 
 /// Applies a tag, matching `CollectionService:AddTag`'s own documented
 /// behaviour: doing nothing if the tag is already applied. An empty tag is
-/// refused — this crate's own wire format (`rbx_dom::attributes::tags`)
+/// refused, this crate's own wire format (`rbx_dom::attributes::tags`)
 /// cannot tell an empty tag apart from no tag at all, so one would silently
 /// vanish the next time the blob round-trips through a save/reload, which is
 /// worse than refusing it up front. Whether the real client itself refuses

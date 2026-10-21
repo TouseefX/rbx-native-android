@@ -36,7 +36,7 @@ impl Source {
     /// answers that path on every later run, CDN reachable or not. A local
     /// install is searched newest version first but falls through to older
     /// ones (see [`LocalInstall::read`]), so its copy can be years behind the
-    /// CDN's — fine as a stopgap for one offline session, wrong as the
+    /// CDN's, fine as a stopgap for one offline session, wrong as the
     /// permanent answer.
     pub(crate) fn is_cacheable(self) -> bool {
         self != Source::LocalInstall
@@ -449,7 +449,7 @@ mod tests {
     }
 
     // The asset cache is keyed by path alone and outlives the session, so a
-    // local copy — possibly from an old version — must not be kept in it.
+    // local copy, possibly from an old version, must not be kept in it.
     #[test]
     fn a_file_read_from_a_local_install_is_not_cacheable() {
         let native = NativeContent::with_local_install(

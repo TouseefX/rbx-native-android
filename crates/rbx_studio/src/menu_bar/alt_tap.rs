@@ -1,4 +1,4 @@
-//! A bare Alt tap — Alt pressed and released with nothing in between — is
+//! A bare Alt tap, Alt pressed and released with nothing in between, is
 //! the other half of the desktop convention for reaching a menu bar, next to
 //! F10. Recognising it needs a little state, because the *same* Alt press is
 //! also a live modifier in this editor: Alt-drag locks a Ball's Scale handle
@@ -7,7 +7,7 @@
 //!
 //! So this is not "Alt went up" but "Alt went down alone, and nothing at all
 //! happened before it came back up". Anything else arriving while Alt is
-//! held — a keystroke, a mouse button, a second modifier — cancels the tap,
+//! held, a keystroke, a mouse button, a second modifier, cancels the tap,
 //! and only the next fresh Alt *press* can arm it again. Arming on the press
 //! edge rather than on any Alt-alone state is what keeps the tail of a chord
 //! (releasing Shift while still holding Alt) from re-arming a tap the chord
@@ -102,7 +102,7 @@ mod tests {
     }
 
     /// Letting go of the *other* half of a chord leaves Alt alone again, but
-    /// the chord already spent this press — only a fresh one re-arms.
+    /// the chord already spent this press, only a fresh one re-arms.
     #[test]
     fn releasing_the_other_modifier_does_not_re_arm_the_same_press() {
         let mut tap = AltTap::default();

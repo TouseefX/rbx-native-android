@@ -6,7 +6,7 @@ fn ctrl() -> Modifiers {
 }
 
 /// The scale is this app's whole answer to WCAG 1.4.4, so it has to be
-/// reachable from the keyboard on the layouts people actually type on —
+/// reachable from the keyboard on the layouts people actually type on,
 /// GPUI reports the unshifted key, so "Ctrl and the plus key" arrives as
 /// `ctrl-=` on US and as something else elsewhere.
 #[test]
@@ -40,7 +40,7 @@ fn an_unmodified_key_is_not_a_zoom_command() {
 }
 
 /// Holding the key down must stop at the end of the range rather than
-/// running off it — and must still be *at* the end, not one step short.
+/// running off it, and must still be *at* the end, not one step short.
 #[test]
 fn zooming_saturates_at_both_ends_of_the_supported_range() {
     let mut scale = 1.;

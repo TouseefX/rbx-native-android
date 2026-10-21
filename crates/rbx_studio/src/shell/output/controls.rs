@@ -14,7 +14,7 @@ use super::{ContextFilter, OutputFilter, Shell, SEARCH_MIN_WIDTH};
 
 impl Shell {
     /// The Output dock's strip controls (see `shell::workspace`): the run
-    /// count, then — at the strip's far end — the search box, the level
+    /// count, then, at the strip's far end, the search box, the level
     /// filter and the Clear button.
     pub(in crate::shell) fn output_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let current = self.output_filter;

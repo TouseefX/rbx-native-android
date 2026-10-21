@@ -3,8 +3,8 @@
 //! `SoftSnapper`), found once at the press, and the white axis line and dots
 //! Studio draws while dragging.
 //!
-//! Studio finds them by sweeping a flat slab — the selection's cross-section
-//! square to the drag axis, a tenth of a stud wider on every side — along the
+//! Studio finds them by sweeping a flat slab, the selection's cross-section
+//! square to the drag axis, a tenth of a stud wider on every side, along the
 //! axis with repeated `Blockcast`s: forward to collect the near face of each
 //! part it runs into, then back to collect their far faces. Only parts the
 //! slab actually sweeps into count, and a part the slab already overlaps
@@ -42,7 +42,7 @@ const REACH: f32 = 0.4;
 /// The dots' radii, in handle scales at the dot.
 const DOT_RADIUS: f32 = 0.15;
 const CURRENT_RADIUS: f32 = 0.2;
-/// How far a guide line runs, both ways — Studio's stand-in for forever.
+/// How far a guide line runs, both ways, Studio's stand-in for forever.
 const FOREVER: f32 = 10000.0;
 
 /// The slab a search sweeps: centred on `origin`, square to `axis`, with the
@@ -306,8 +306,8 @@ fn entry_exit(slab: &Slab, model: Mat4) -> Option<Span> {
 
 /// Which snap, if any, a drag that has travelled `raw` along its axis takes
 /// (`SoftSnapper:updateCurrentSnap`), given the grid in force (`0.0` for
-/// none). The nearest snap, when it is within reach — half a grid step with a
-/// grid, its own screen-constant reach without — and, with a grid, no further
+/// none). The nearest snap, when it is within reach, half a grid step with a
+/// grid, its own screen-constant reach without, and, with a grid, no further
 /// than the grid's own correction (a hundredth of a stud's grace, so a snap
 /// the grid happens to agree with wins).
 pub(crate) fn choose(snaps: &[SoftSnap], raw: f32, grid: f32) -> Option<usize> {
@@ -351,7 +351,7 @@ pub(crate) fn dots(
 
 /// The Move tool's axis line while an arrow is dragged: white, depth-tested,
 /// through `base` (where the handles stand now) along the dragged arrow's
-/// `direction` as far as the eye can see, broken over the arrow itself —
+/// `direction` as far as the eye can see, broken over the arrow itself,
 /// from `base` out to `tip` studs along it.
 pub(crate) fn axis_line(base: Vec3, direction: Vec3, tip: f32) -> [Line; 2] {
     [

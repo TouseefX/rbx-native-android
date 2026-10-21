@@ -1,9 +1,9 @@
 //! The resolver: a BFS over the dependency graph, matching Wally's own
-//! `resolution.rs` shape — reuse an already-activated version of a
+//! `resolution.rs` shape, reuse an already-activated version of a
 //! `scope/name` if it satisfies the new requirement, else fetch the
 //! highest published version that does, and queue *its* dependencies too.
 //! Every version discovery goes through [`super::search::versions_of`]
-//! (an HTTP search, not a git-cloned registry index — see this crate's
+//! (an HTTP search, not a git-cloned registry index, see this crate's
 //! module doc comment), and every fetch doubles as the install content
 //! (`content::fetch` returns the unzipped tree alongside the manifest, so
 //! nothing here is thrown away once installation begins).
@@ -12,7 +12,7 @@
 //! version per `scope/name` across the whole graph: two requirers wanting
 //! genuinely incompatible majors of the same package both get satisfied,
 //! each in its own version-qualified `_Index` slot at install time (see
-//! `shell::wally_sync`) — simpler than conflict resolution, and safe,
+//! `shell::wally_sync`), simpler than conflict resolution, and safe,
 //! since the install layout already keys by exact version.
 
 use std::collections::{HashMap, VecDeque};
@@ -21,7 +21,7 @@ use super::content::{self, Package};
 use super::search;
 
 /// One resolved package, and which exact (scope, name, version) each of
-/// its own dependency aliases landed on — the sibling alias files its own
+/// its own dependency aliases landed on, the sibling alias files its own
 /// `_Index` entry needs at install time.
 pub(crate) struct ResolvedPackage {
     pub(crate) scope: String,
@@ -57,13 +57,13 @@ impl std::fmt::Display for ResolveError {
     }
 }
 
-/// Resolution can't run past this many activated packages — a real
+/// Resolution can't run past this many activated packages, a real
 /// dependency graph never gets close; this only guards against a
 /// pathological/misbehaving registry response looping the queue forever.
 const MAX_PACKAGES: usize = 200;
 
 /// One package's identity: `scope`, `name` and the exact resolved
-/// `version` — the key every map in this module is keyed by, and (nested
+/// `version`: the key every map in this module is keyed by, and (nested
 /// one level, as the target half of a dependency edge) what
 /// `ResolvedPackage::dependency_edges` points at.
 type PackageKey = (String, String, semver::Version);
@@ -127,7 +127,7 @@ pub(crate) fn resolve(
     }
 
     // Every dependency edge is resolved first, against the *whole*
-    // `activated` map still intact — a diamond graph (two different
+    // `activated` map still intact, a diamond graph (two different
     // packages both depending on the same third one) needs every other
     // entry still present no matter which order `order` visits them in,
     // so nothing here may remove from `activated` until every edge has

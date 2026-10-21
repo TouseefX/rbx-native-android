@@ -1,13 +1,13 @@
 //! `Highlight` support: reading the effect out of a DOM and working out which
 //! parts each one covers.
 //!
-//! Pure data, like every other module beside [`Scene`](super::Scene) — the
+//! Pure data, like every other module beside [`Scene`](super::Scene), the
 //! silhouette itself is drawn in `renderer::highlight`, which takes nothing
 //! from here but the list below.
 //!
 //! A `Highlight` is an `Instance`, not a `BasePart`, so it has no placement of
-//! its own: it covers whatever its `Adornee` names, or — when that is unset,
-//! which is the ordinary case — whatever it is parented to, and every
+//! its own: it covers whatever its `Adornee` names, or, when that is unset,
+//! which is the ordinary case, whatever it is parented to, and every
 //! drawable descendant of that. Resolving those referents here rather than in
 //! the renderer is the same split `renderer::selection` already relies on: the
 //! GPU side only ever sees parts.
@@ -24,12 +24,12 @@ const CLASS: &str = "Highlight";
 /// Roblox's own ceiling, documented under "Limitations" in
 /// `reference/engine/classes/Highlight`: a client displays 255 highlights at
 /// once and silently ignores the rest. Disabled ones are documented to take a
-/// slot too, but this list only ever holds enabled ones — a disabled
+/// slot too, but this list only ever holds enabled ones, a disabled
 /// highlight draws nothing either way, so spending a slot on one here would
 /// cost a visible highlight for no observable gain.
 pub(crate) const MAX_HIGHLIGHTS: usize = 255;
 
-/// Which side of the scene's depth a highlight is allowed to show on —
+/// Which side of the scene's depth a highlight is allowed to show on,
 /// `Enum.HighlightDepthMode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DepthMode {
@@ -47,7 +47,7 @@ pub(crate) enum DepthMode {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Highlight {
     /// Every `BasePart` under the adornee, in [`descendants_of`]'s own walk
-    /// order — which is a set as far as anything downstream is concerned, so
+    /// order, which is a set as far as anything downstream is concerned, so
     /// the order is not part of what this promises. Never empty: a highlight
     /// covering nothing drawable is dropped by [`plan`], since there is no
     /// silhouette to trace.
@@ -65,7 +65,7 @@ pub(crate) struct Highlight {
 ///
 /// The whole DOM rather than `workspace_descendants`: unlike a `Beam` or a
 /// `ParticleEmitter`, a `Highlight` is routinely parented somewhere else
-/// entirely — a `Tool`, `ReplicatedStorage`, the player's own `PlayerGui` —
+/// entirely, a `Tool`, `ReplicatedStorage`, the player's own `PlayerGui`,
 /// and points at its target through `Adornee`. What has to be in the
 /// Workspace is the *adornee*, which [`parts_under`] enforces by only keeping
 /// referents the scene actually draws.
@@ -88,7 +88,7 @@ fn build(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> Option<
     }
 
     // `Adornee` is documented as the way to apply the effect "outside of a
-    // child/parent relationship", so an unset one falls back to the parent —
+    // child/parent relationship", so an unset one falls back to the parent,
     // which is how all but a handful of real highlights are written.
     let adornee = match ref_or(properties, "Adornee") {
         Some(adornee) if dom.get(adornee).is_some() => adornee,
@@ -133,8 +133,8 @@ fn parts_under(dom: &WeakDom, database: &ReflectionDatabase, adornee: Ref) -> Ve
 const WHITE: [f32; 3] = [1.0, 1.0, 1.0];
 
 /// `Enum.HighlightDepthMode`: `AlwaysOnTop` is 0 and `Occluded` is 1 (see
-/// `assets/API-Dump.json`). Anything else — including a property stored as
-/// something other than an enum — keeps the documented default, which is the
+/// `assets/API-Dump.json`). Anything else, including a property stored as
+/// something other than an enum, keeps the documented default, which is the
 /// mode every illustration of the effect is drawn in.
 fn depth_mode(properties: &BTreeMap<String, Variant>) -> DepthMode {
     match properties.get("DepthMode") {

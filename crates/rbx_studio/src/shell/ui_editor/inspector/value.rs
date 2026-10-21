@@ -72,7 +72,7 @@ pub(super) fn show(form: Form, value: &[f32]) -> String {
     }
 }
 
-/// A field's typed text as a value, or `None` where it is not one — a hex
+/// A field's typed text as a value, or `None` where it is not one, a hex
 /// colour with or without its `#`, a number with or without its unit.
 pub(super) fn parse(form: Form, text: &str) -> Option<Vec<f32>> {
     let text = text.trim();

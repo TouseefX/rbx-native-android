@@ -7,7 +7,7 @@ use crate::gizmo::{Axis, Faces, Handles, ORIGIN_RADIUS};
 
 /// The free-drag ball's colour: a light neutral grey, already linearized
 /// (from sRGB `0.92`), so it reads as no axis's own. A colour of this
-/// editor's choosing — the ball is its own addition, not Studio's.
+/// editor's choosing, the ball is its own addition, not Studio's.
 pub(super) const ORIGIN_COLOR: [f32; 3] = [0.83, 0.83, 0.83];
 
 /// The free-drag ball at the gizmo's origin (see `crate::gizmo::origin`).
@@ -47,9 +47,9 @@ pub(super) fn balls(faces: &Faces, eye: Vec3, shown: impl Fn(Axis, f32) -> bool)
 
 /// One Scale handle: a ball centred on the middle of the face it resizes.
 ///
-/// `creator-docs` states the shape for the engine's own resize handles —
+/// `creator-docs` states the shape for the engine's own resize handles,
 /// `Enum.HandlesStyle.Resize` "renders `Class.Handles` as sphere shapes for
-/// resizing an adornee along its face axes" — but publishes no proportions for
+/// resizing an adornee along its face axes", but publishes no proportions for
 /// the Studio tool's, so the size ([`crate::gizmo::Faces::radius`]) is chosen
 /// to read at the weight of a Move arrowhead rather than measured from
 /// anything.
@@ -72,7 +72,7 @@ pub(super) fn ball(vertices: &mut Vec<Vertex>, centre: Vec3, radius: f32, color:
             // Walking round the sphere and then down it comes out wound
             // outwards. At each pole one of the two rings has collapsed to a
             // point, and the triangle that would be built from it is
-            // degenerate — so the band there is the other triangle alone.
+            // degenerate, so the band there is the other triangle alone.
             if band > 0 {
                 for corner in [a, b, c] {
                     push(vertices, corner, color);

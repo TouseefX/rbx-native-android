@@ -134,7 +134,7 @@ pub(crate) fn get(lua: &Lua, ctx: &Ctx, referent: Ref, name: &str) -> Result<Opt
 
 /// Where a part's `BrickColor` really lives: `Color`, under whichever name
 /// the instance stores it (or its default), since Roblox derives the one
-/// from the other — the closest colour in the table — and saves only
+/// from the other, the closest colour in the table, and saves only
 /// `Color`. `None` for a class with no `BrickColor`.
 fn brick_color_target(ctx: &Ctx, referent: Ref) -> Result<Option<(String, Variant)>> {
     let dom = ctx.dom();

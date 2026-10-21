@@ -1,6 +1,6 @@
 //! Text quads: one rectangle per glyph out of the glyph atlas, each line
 //! aligned inside the element's box the way `TextXAlignment`/`TextYAlignment`
-//! say, every glyph origin snapped to a whole pixel — Roblox text is crisp,
+//! say, every glyph origin snapped to a whole pixel, Roblox text is crisp,
 //! and a bitmap sampled off the pixel grid is not.
 
 use cosmic_text::{CacheKey, Color, Ellipsize, EllipsizeHeightLimit, LayoutRun, PhysicalGlyph};
@@ -286,7 +286,7 @@ fn snapped(glyph: &cosmic_text::LayoutGlyph, origin: (f32, f32)) -> PhysicalGlyp
 /// Roblox's docs say: "the layout will be calculated as if all graphemes
 /// are visible".
 ///
-/// ponytail: counts `char`s, not grapheme clusters — a combining mark or a
+/// ponytail: counts `char`s, not grapheme clusters, a combining mark or a
 /// ZWJ sequence counts as several; swap in `unicode-segmentation` (already in
 /// the lock) if a typewriter effect over such text ever matters.
 fn visible_cuts(text: &GuiText, lines: &[LayoutRun]) -> Vec<usize> {
@@ -330,7 +330,7 @@ fn ring(thickness: f32) -> [[f32; 2]; 8] {
     ]
 }
 
-/// Where a run of `length` starts inside `extent` for one alignment — the
+/// Where a run of `length` starts inside `extent` for one alignment, the
 /// same rule the layout applies to a `UIListLayout`.
 fn offset(align: GuiAlign, extent: f32, length: f32) -> f32 {
     match align {

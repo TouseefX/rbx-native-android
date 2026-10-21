@@ -56,7 +56,7 @@ pub(super) struct Particles {
     image_layout: wgpu::BindGroupLayout,
     textures: Vec<Slot>,
     live: Vec<Live>,
-    /// Whether the quality profile draws particles at all — `false` keeps
+    /// Whether the quality profile draws particles at all, `false` keeps
     /// `live` empty, [`Particles::replace`] included. Re-read from the
     /// profile by every [`Particles::rebuild`], so a level switched between
     /// two scenes takes.
@@ -79,12 +79,12 @@ pub(super) struct Particles {
 
 impl Particles {
     /// Builds the GPU pipeline, uploads every emitter's texture the loader
-    /// has decoded and pre-warms each emitter to a steady state — see
+    /// has decoded and pre-warms each emitter to a steady state, see
     /// [`Particles::rebuild`], which is the whole of the second half.
     ///
     /// An emitter whose texture failed to resolve is dropped outright: there is
     /// no bare fallback for a particle, unlike a `Decal` with no image. One
-    /// whose texture has not arrived *yet* is not dropped for good — see
+    /// whose texture has not arrived *yet* is not dropped for good, see
     /// [`Particles::rebuild`].
     pub(super) fn new(
         device: &wgpu::Device,
@@ -137,7 +137,7 @@ impl Particles {
         particles
     }
 
-    /// Starts every emitter of `emitters` afresh — pre-warmed, as at load —
+    /// Starts every emitter of `emitters` afresh, pre-warmed, as at load,
     /// keeping the pipeline and every texture this pass ever uploaded: only a
     /// texture no emitter named before is uploaded, and one that was tried
     /// and failed keeps dropping its emitter rather than being asked for again
@@ -170,7 +170,7 @@ impl Particles {
                 // reference out of `slots` is what brings the emitter back for
                 // it on the rebuild that follows its landing (see
                 // `renderer::rebuild::untried`). `Some(None)` is the other
-                // thing entirely — tried and failed for good.
+                // thing entirely, tried and failed for good.
                 let Some(answer) = images.get(&reference) else {
                     continue;
                 };
@@ -207,14 +207,14 @@ impl Particles {
             .collect();
     }
 
-    /// Rebuilds the pipeline for a new sample count — the one thing about the
+    /// Rebuilds the pipeline for a new sample count, the one thing about the
     /// target a quality change can alter.
     pub(super) fn set_target(&mut self, device: &wgpu::Device, target: Target) {
         self.pipeline =
             pipeline::create_pipeline(device, target, &self.camera_layout, &self.image_layout);
     }
 
-    /// Whether anything is drawn at all — every live one moves with the
+    /// Whether anything is drawn at all, every live one moves with the
     /// clock, so a host that only draws on change has to keep drawing.
     pub(super) fn is_live(&self) -> bool {
         !self.live.is_empty()
@@ -348,7 +348,7 @@ impl Particles {
                                 position: position.to_array(),
                                 size: particle.size,
                                 // The emitter's own gain, which is 1 for
-                                // everything but a `Fire` — see
+                                // everything but a `Fire`: see
                                 // `Emitter::gain`.
                                 color: particle.color.map(|channel| channel * gain),
                                 alpha: particle.alpha,
@@ -385,7 +385,7 @@ impl Particles {
     }
 }
 
-/// Every distinct texture the given emitters need, in first-seen order — kept
+/// Every distinct texture the given emitters need, in first-seen order, kept
 /// stable so re-running the same file draws the same texture-to-slot mapping.
 fn texture_refs(emitters: &[Emitter]) -> Vec<AssetRef> {
     let mut seen = Vec::new();

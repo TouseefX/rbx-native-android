@@ -1,5 +1,5 @@
-//! Bringing one `BasePart` of a built scene in line with the DOM — added,
-//! edited, moved or gone — see [`Scene::resync_part`].
+//! Bringing one `BasePart` of a built scene in line with the DOM, added,
+//! edited, moved or gone, see [`Scene::resync_part`].
 
 mod pieces;
 
@@ -15,7 +15,7 @@ use super::{
 use crate::changes::Rebuild;
 
 /// What the renderer now has to show for one referent after
-/// [`Scene::resync_part`] — every pass either rewrites its record for it or
+/// [`Scene::resync_part`], every pass either rewrites its record for it or
 /// takes it out, whichever [`Drawn`] says, plus the piece slots the referent
 /// has stopped filling.
 #[derive(Debug, Clone)]
@@ -36,8 +36,8 @@ pub(crate) enum Drawn {
     Box(Part),
     /// A resolved file mesh or computed union mesh:
     /// `Scene::resolved_file_meshes`'s `instances[index]`. Its box is
-    /// suppressed from the shaded passes, but `placement` is kept — its own
-    /// oriented bounding box — so the selection and hover outlines and the
+    /// suppressed from the shaded passes, but `placement` is kept, its own
+    /// oriented bounding box, so the selection and hover outlines and the
     /// transform gizmo still have a placement for a mesh part, exactly as
     /// Studio outlines a mesh by its bounding box and sits the gizmo on its
     /// `CFrame`/`Size`.
@@ -45,7 +45,7 @@ pub(crate) enum Drawn {
     /// The additive pieces recovered from a union whose boolean failed (see
     /// `scene::union`), each its own instance in every box pass. `placement`
     /// is the union's own box, which is not drawn but is still what an
-    /// outline is drawn around and what a decal is projected on — see
+    /// outline is drawn around and what a decal is projected on, see
     /// [`Scene::placements`].
     Pieces {
         placement: Placement,
@@ -59,7 +59,7 @@ pub(crate) enum Drawn {
 
 impl PartSync {
     /// Nothing drawn for `referent`, and `dropped` pieces to take out with
-    /// it — what a removal hands the renderer.
+    /// it, what a removal hands the renderer.
     pub(crate) fn gone(dropped: Range<u32>) -> Self {
         PartSync {
             drawn: Drawn::Gone,
@@ -69,13 +69,13 @@ impl PartSync {
 }
 
 /// Where a referent stands in `Scene::parts`, so an edit finds it without a
-/// pass over the place — see [`Scene::standing_of`].
+/// pass over the place, see [`Scene::standing_of`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(super) struct Standing {
     /// Its own box. `None` only while a union being inserted has had its
     /// recovered pieces placed and its own box not yet.
     pub(super) whole: Option<usize>,
-    /// How many of those pieces stand under it (see `union::tree`) — zero
+    /// How many of those pieces stand under it (see `union::tree`), zero
     /// for everything but a union whose boolean failed. They are counted
     /// rather than indexed one by one: a handful of parts under one
     /// referent, and only an edit of that very union ever walks them.
@@ -95,7 +95,7 @@ impl Standing {
 impl Scene {
     /// Recomputes one part from `dom`, exactly as [`Scene::from_dom`] and
     /// the resolutions after it would build it, and puts the result in
-    /// place of whatever this scene held for `referent` — which may be
+    /// place of whatever this scene held for `referent`: which may be
     /// nothing at all (an insert, a `Model` moved into `Workspace`), a box,
     /// a resolved mesh or a union's recovered pieces, and may become any of
     /// the four.
@@ -105,7 +105,7 @@ impl Scene {
     /// the log, is the truth about what the referent is now.
     ///
     /// `known_layers` is the material catalog's layer count as of the last
-    /// full build — how many texture-array layers the renderer holds. An
+    /// full build, how many texture-array layers the renderer holds. An
     /// edit that lands on a material past that count needs its maps
     /// uploaded, which only a reload does (see [`Rebuild::Asset`]).
     ///
@@ -114,8 +114,8 @@ impl Scene {
     /// draws as its box, exactly as a full build with that asset withheld
     /// leaves it, the asset is asked for in the background (see
     /// `Headless::apply_changes`), and the box gives way to the resolved
-    /// instance — or, for a union whose boolean failed, its recovered
-    /// pieces — in place whenever it lands; otherwise every later edit of a
+    /// instance, or, for a union whose boolean failed, its recovered
+    /// pieces, in place whenever it lands; otherwise every later edit of a
     /// `MeshPart`/union whose asset had not arrived yet would be a reload
     /// for the rest of the session. `unions` is every boolean this place
     /// has already carved, which is what lets a union be re-derived here
@@ -236,7 +236,7 @@ impl Scene {
             _ => 0,
         };
         // Dropping a piece moves whichever part fills its slot, so the box's
-        // own slot has to be read again — and only then, which is next to
+        // own slot has to be read again, and only then, which is next to
         // never.
         let held = if kept < held_pieces {
             self.drop_pieces_from(referent, kept);
@@ -282,7 +282,7 @@ impl Scene {
     }
 
     /// The mesh, union and image assets a fresh re-plan of `referent` would
-    /// need, whether or not this session already has them — what
+    /// need, whether or not this session already has them, what
     /// `Headless::apply_changes` asks the background loader for right after
     /// [`Scene::resync_part`], so an asset that just took the box-fallback
     /// path is asked for rather than left missing for good. Empty for a
@@ -323,7 +323,7 @@ impl Scene {
     }
 
     /// Takes every box and resolved instance standing for `referent` out of
-    /// the scene — all of them, so a deleted union goes with its pieces —
+    /// the scene, all of them, so a deleted union goes with its pieces,
     /// and names the piece slots the renderer must now let go of too.
     pub(crate) fn remove_part(&mut self, referent: Ref) -> Range<u32> {
         self.resolved_file_meshes.drop_rig(referent);
@@ -363,7 +363,7 @@ impl Scene {
         }
     }
 
-    /// How many recovered pieces this scene draws `referent` as — zero for
+    /// How many recovered pieces this scene draws `referent` as, zero for
     /// everything but a union whose boolean failed.
     pub(crate) fn piece_count(&self, referent: Ref) -> u32 {
         self.standing_of(referent).1
@@ -433,7 +433,7 @@ impl Scene {
         }
     }
 
-    /// Where `referent`'s box is drawn, if this scene draws one for it — the
+    /// Where `referent`'s box is drawn, if this scene draws one for it, the
     /// entry [`Scene::placements`] would hold for it, without building the
     /// whole map to look up one part. A union drawn as its recovered pieces
     /// keeps its own box's placement, for the same reason `placements` does.
@@ -464,7 +464,7 @@ impl Scene {
     /// Keeps the extent in step with one part going from `old` to `new`
     /// (either absent): grown on the spot by the new corners, which is all a
     /// move outward or an insert needs, and marked for a recount only when
-    /// the old part may have been holding an edge — nothing short of every
+    /// the old part may have been holding an edge, nothing short of every
     /// part says where that edge is now. A part strictly inside the box
     /// therefore moves for free, however many parts the place has.
     fn note_extent(&mut self, old: Option<&Part>, new: Option<&Part>) {
@@ -517,7 +517,7 @@ impl Scene {
     }
 
     /// Re-plans the GUI trees `roots` alone, each where it stands in the
-    /// list. `false` — leaving the list to be re-planned whole — when one
+    /// list. `false`, leaving the list to be re-planned whole, when one
     /// of them is not in it yet: a new tree's place is tree order, which
     /// only the whole walk knows.
     pub(crate) fn replan_gui_roots(
@@ -541,7 +541,7 @@ impl Scene {
     }
 
     /// Re-reads every placeable `BillboardGui`/`SurfaceGui` from `dom`,
-    /// measured against the parts as this scene now draws them — the way
+    /// measured against the parts as this scene now draws them, the way
     /// [`Scene::from_dom`] did. The whole list, for the same reason
     /// [`Scene::replan_effect`] re-reads a whole effect list: paint order is
     /// tree order, and a canvas re-placed on its own would lose its place in
@@ -553,7 +553,7 @@ impl Scene {
     }
 
     /// Whether any `BillboardGui`/`SurfaceGui` canvas this scene placed hangs
-    /// off `referent` — through `Adornee`, which can name a part anywhere,
+    /// off `referent`: through `Adornee`, which can name a part anywhere,
     /// not only the container's parent.
     pub(crate) fn adorns(&self, referent: Ref) -> bool {
         self.gui_spaces.iter().any(|gui| gui.adornee == referent)
@@ -562,13 +562,13 @@ impl Scene {
 
 /// The same box [`Scene::from_dom`] computes: every instance's own box as
 /// the DOM lists it, suppressed or not, but not a failed union's recovered
-/// pieces, which `from_dom` never saw either — it took its bounds before
+/// pieces, which `from_dom` never saw either, it took its bounds before
 /// `resolve_unions` appended them.
 fn counts_towards_extent(part: &Part) -> bool {
     part.id.is_whole()
 }
 
-/// Whether `referent` hangs under the DOM's `Workspace` service — the only
+/// Whether `referent` hangs under the DOM's `Workspace` service, the only
 /// subtree the scene draws from (see [`super::workspace_descendants`]).
 /// Walks up the parent chain rather than down from `Workspace`, so it costs
 /// the instance's depth instead of the size of the place.

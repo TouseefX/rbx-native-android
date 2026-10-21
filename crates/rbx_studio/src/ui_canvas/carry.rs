@@ -1,6 +1,6 @@
 //! Resizing and turning a whole selection at once, the way a Figma
 //! selection box does: a frame round everything selected is what the
-//! handles move, and each element follows it — its centre carried where
+//! handles move, and each element follows it, its centre carried where
 //! the frame takes that point, its own size stretched by however much the
 //! frame stretched along the element's own axes.
 //!
@@ -18,7 +18,7 @@ pub(crate) struct Carried {
     pub(crate) rotation: f32,
 }
 
-/// What resizing `frame` — turned `turn` degrees about its centre — by
+/// What resizing `frame`, turned `turn` degrees about its centre, by
 /// `step` does to each of `carried`: how far its centre travels on screen,
 /// and how much it grows along its own axes.
 ///

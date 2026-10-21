@@ -1,5 +1,5 @@
 //! What the Collaborators dock, the viewport and the Explorer show about
-//! other people, worked out from the relay's snapshot and the open place —
+//! other people, worked out from the relay's snapshot and the open place,
 //! no GPUI here, so all of it is unit-tested.
 
 use std::collections::VecDeque;
