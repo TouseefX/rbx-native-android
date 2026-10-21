@@ -175,7 +175,7 @@ fn a_landed_mesh_draws_what_a_resident_one_draws() {
 }
 
 /// The fallback itself: before the asset lands, the edited part draws the same
-/// box a `MeshPart` whose mesh never resolved draws — which is what the viewer
+/// box a `MeshPart` whose mesh never resolved draws, which is what the viewer
 /// showed for this case before any of it streamed.
 #[test]
 #[ignore = "needs a GPU and RBX_STREAMING_FIXTURE"]

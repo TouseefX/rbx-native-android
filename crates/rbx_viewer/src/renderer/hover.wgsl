@@ -1,6 +1,6 @@
 // The "about to click" cue: box edges around whatever a click would select
 // under the cursor, tested against the depth buffer the rest of the scene pass
-// already wrote — the same screen-space thick-edge approach `selection.wgsl`
+// already wrote, the same screen-space thick-edge approach `selection.wgsl`
 // draws the Explorer selection with, but deliberately not the same colour: an
 // amber, alpha-blended line reads as a distinct, dimmer cue rather than a
 // second selection box.
@@ -25,7 +25,7 @@ struct Frame {
 @group(0) @binding(0)
 var<uniform> frame: Frame;
 
-// Half the outline's on-screen width, in pixels — a touch thinner than the
+// Half the outline's on-screen width, in pixels, a touch thinner than the
 // selection box, so the two read as different cues where they overlap.
 const HALF_WIDTH: f32 = 1.25;
 
@@ -52,7 +52,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 // The outline colour, linear RGB plus alpha, set per pipeline from
 // `renderer::cue::OverlayColors`. The default is a warm amber, sRGB
 // (0.98, 0.65, 0.15) linearized the same way `scene::srgb_to_linear`
-// linearizes every other part color — chosen for contrast against the
+// linearizes every other part color, chosen for contrast against the
 // selection's blue rather than to match any particular Studio convention
 // (Studio itself has no separate hover outline). Drawn at less than full alpha
 // by default, through this pipeline's own blend state (see

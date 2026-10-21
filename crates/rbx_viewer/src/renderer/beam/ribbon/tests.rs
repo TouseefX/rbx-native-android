@@ -108,7 +108,7 @@ fn colour_and_transparency_are_sampled_from_the_sequences_at_each_cross_sections
 #[test]
 fn width_maps_to_u_unwrapped_and_length_maps_to_v_tiled() {
     // Roblox samples a beam's length along the texture's row axis (`v`), not
-    // its column axis (`u`) — see `ribbon::vertices`'s doc comment. `u` is
+    // its column axis (`u`), see `ribbon::vertices`'s doc comment. `u` is
     // therefore always 0.0/1.0 (one side of the ribbon each), never scaled by
     // `TextureLength`.
     let beam = straight_beam(4, 1.0, 1.0);
@@ -211,7 +211,7 @@ fn fixed_width_matches_secondary_axis_when_it_is_already_perpendicular_to_the_ta
 #[test]
 fn fixed_width_drops_the_component_of_secondary_axis_along_the_tangent() {
     // `SecondaryAxis` is only guaranteed orthogonal to its own attachment's
-    // `Axis`, never to the chord between two attachments — see `fixed_width`'s
+    // `Axis`, never to the chord between two attachments, see `fixed_width`'s
     // doc comment. An axis with a component *along* the beam's own direction
     // must not leak into the width vector, which has to stay perpendicular to
     // the ribbon's own length to read as a proper (non-sheared) width.
@@ -291,7 +291,7 @@ fn appended_strips_bridge_with_two_degenerate_vertices() {
 #[test]
 fn a_one_segment_curved_beam_does_not_twist() {
     let mut beam = straight_beam(1, 2.0, 2.0);
-    // A far-end curve handle pulling sideways — what CurveSize1 does — with
+    // A far-end curve handle pulling sideways, what CurveSize1 does, with
     // only one segment, so the centreline is the straight chord regardless.
     beam.curve = Curve::new(
         Vec3::ZERO,

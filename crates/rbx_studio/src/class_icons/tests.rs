@@ -2,7 +2,7 @@ use super::*;
 
 /// Every slug this module names must actually be a file both
 /// `DefaultIcons` and `LightIcons` embed, and every embedded file must
-/// parse and rasterize — a build-time invariant on the (gitignored,
+/// parse and rasterize, a build-time invariant on the (gitignored,
 /// hand-authored) icon kit, checked here so a bad SVG fails `cargo test`
 /// rather than silently blanking an icon.
 #[test]
@@ -19,9 +19,9 @@ fn every_mapped_slug_rasterizes_in_both_packs() {
 
 /// The whole point of `IconPack`: the same class looks up a different
 /// file, and thus different pixels, depending on which pack is asked
-/// for — `part.svg` deliberately uses different fill colours between the
+/// for, `part.svg` deliberately uses different fill colours between the
 /// `dark` and `light` folders (see `assets/icons/default/*/part.svg`).
-/// The slug a class draws, or `None` when the kit does not cover it —
+/// The slug a class draws, or `None` when the kit does not cover it,
 /// the table lookup on its own, without rasterizing anything.
 fn slug_of(class: &str) -> Option<&'static str> {
     CLASS_ICON_SLUGS
@@ -102,8 +102,8 @@ fn clearing_the_cache_forgets_both_variants() {
 
 #[test]
 fn a_class_the_kit_does_not_cover_is_remembered_as_a_miss() {
-    // The misses are the common case in the picker — every row for a
-    // class outside the kit — so re-walking the table for each one is
+    // The misses are the common case in the picker, every row for a
+    // class outside the kit, so re-walking the table for each one is
     // exactly what the cache is there to stop.
     let mut cache = TileCache::new();
     assert!(cache.get(IconPack::Dark, "NotARealClass").is_none());

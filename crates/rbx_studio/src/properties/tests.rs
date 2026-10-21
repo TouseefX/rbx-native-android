@@ -210,7 +210,7 @@ fn scalars_print_plainly_and_strings_quoted() {
     assert_eq!(formatted("Big", Variant::Int64(1 << 40)), "1099511627776");
     assert_eq!(formatted("Reflectance", Variant::Float32(0.0)), "0");
     // Not `BackParamA`: that name is real on `BasePart` and, as of the
-    // Hidden/read-only filtering below, tagged `Hidden` in the dump — this
+    // Hidden/read-only filtering below, tagged `Hidden` in the dump, this
     // assertion only cares about plain `Float32` formatting.
     assert_eq!(formatted("BevelAmount", Variant::Float32(-0.5)), "-0.5");
     assert_eq!(formatted("Precise", Variant::Float64(2.5)), "2.5");
@@ -523,7 +523,7 @@ fn ui_dimensions_use_roblox_brace_notation() {
     );
     assert_eq!(
         // Not `Position`: that name is real on `BasePart` and tagged
-        // `Hidden` in the dump, so the row wouldn't exist to format — this
+        // `Hidden` in the dump, so the row wouldn't exist to format, this
         // assertion only cares about plain `UDim2` formatting.
         formatted(
             "GuiPosition",
@@ -674,7 +674,7 @@ fn color3_edits_as_0_255_channels_matching_the_read_only_display() {
     };
     assert_eq!(
         // Not `Color`: that name is real on `BasePart` and, per the dump's
-        // Serialization, not saveable — read-only there now, which this
+        // Serialization, not saveable, read-only there now, which this
         // assertion isn't testing.
         edit_kind("TintColor", Variant::Color3(color)),
         Some(EditKind::Color {
@@ -742,13 +742,13 @@ fn vector3_and_cframe_edit_as_three_labeled_fields() {
     });
 
     // Not `Size`: that name is real on `BasePart` and, per the dump's
-    // Serialization, not saveable — read-only there now, which this
+    // Serialization, not saveable, read-only there now, which this
     // assertion isn't testing (see `a_non_hidden_non_serializable_property_
     // still_shows_but_has_no_edit_affordance` for that behaviour).
     assert_eq!(edit_kind("Extents", Variant::Vector3(vector)), expected);
 }
 
-/// A `CFrame` is two captioned lines, not one — its rotation is as editable
+/// A `CFrame` is two captioned lines, not one, its rotation is as editable
 /// as its position (see `edit::orientation`).
 #[test]
 fn cframe_edits_as_a_position_and_an_orientation() {
@@ -784,7 +784,7 @@ fn an_absent_optional_cframe_edits_as_an_unchecked_box_over_a_cframe() {
     };
 
     assert!(!present, "an absent optional reads as unchecked");
-    // Seeded even while absent — this is the value the box turns on to.
+    // Seeded even while absent, this is the value the box turns on to.
     assert_eq!(
         *inner,
         EditKind::Groups {
@@ -819,7 +819,7 @@ fn a_present_optional_cframe_keeps_the_cframe_editor_under_a_checked_box() {
 }
 
 /// `PhysicalProperties` was the last of the three types the roadmap listed
-/// as "still read-only text" — and the one that needed a shape, not just a
+/// as "still read-only text", and the one that needed a shape, not just a
 /// field list, because it is an enum rather than a struct.
 #[test]
 fn default_physical_properties_edit_as_an_unticked_custom_box() {
@@ -837,7 +837,7 @@ fn default_physical_properties_edit_as_an_unticked_custom_box() {
 
     assert!(!present, "a Default reads as unticked");
     assert_eq!(label, "Custom");
-    // Seeded even while unticked — this is what the box turns on to.
+    // Seeded even while unticked, this is what the box turns on to.
     assert_eq!(
         *inner,
         EditKind::Fields {
@@ -959,7 +959,7 @@ fn udim2_edits_as_four_labeled_fields() {
     };
     assert_eq!(
         // Not `Position`: that name is real on `BasePart` and tagged
-        // `Hidden` in the dump, so the row wouldn't exist at all — this
+        // `Hidden` in the dump, so the row wouldn't exist at all, this
         // assertion only cares about plain `UDim2` field-splitting.
         edit_kind("GuiPosition", Variant::UDim2(position)),
         Some(EditKind::Fields {
@@ -1098,7 +1098,7 @@ fn a_non_script_string_property_is_still_editable_here() {
 fn hidden_properties_never_appear_as_rows_at_all() {
     // Position/Orientation are tagged Hidden in the real dump: Studio only
     // exposes them through the dedicated Position/Orientation UI, never as
-    // a raw property row — not even a read-only one.
+    // a raw property row, not even a read-only one.
     let rows = instance_of(
         "Part",
         &[
@@ -1245,8 +1245,8 @@ fn a_numeric_rows_components_rejoin_into_the_text_they_were_split_from() {
 /// Walks every property the live API dump (`assets/API-Dump.json`, via
 /// [`ReflectionDatabase::embedded`]) declares and checks that its default
 /// value, where the dump records one, never lands in `value_edit_kind`'s
-/// catch-all `Text` arm — the "generic fallback" the roadmap's type-coverage
-/// pass asked to go check for — unless it is one of the handful of types
+/// catch-all `Text` arm, the "generic fallback" the roadmap's type-coverage
+/// pass asked to go check for, unless it is one of the handful of types
 /// that genuinely are just typed text by design (a plain string or number,
 /// or a `Content` URI field). `Enum` and `BrickColor` pick their widget
 /// through `Properties::edit_kind` instead, which needs a database for enum

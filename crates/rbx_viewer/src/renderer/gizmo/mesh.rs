@@ -1,7 +1,7 @@
 //! The triangles one transform gizmo is made of.
 //!
-//! Where [`crate::gizmo`] says where the handles *are* — the half the editor's
-//! UI thread hit-tests the cursor against — this is the half that turns that
+//! Where [`crate::gizmo`] says where the handles *are*, the half the editor's
+//! UI thread hit-tests the cursor against, this is the half that turns that
 //! same [`Shape`] into a mesh: Move's arrows, Scale's balls, Rotate's rings.
 //! Rebuilt every frame because everything here is scaled to keep a constant
 //! size on screen and so changes with every camera move.
@@ -28,7 +28,7 @@ use balls::{ball, balls, origin_ball};
 
 /// How many segments go round a shaft or an arrowhead. Eight already reads as
 /// round at the size a dragger occupies on screen, and the whole gizmo is one
-/// small vertex buffer rewritten every frame — there is nothing to gain from
+/// small vertex buffer rewritten every frame, there is nothing to gain from
 /// more.
 const SEGMENTS: usize = 8;
 /// Three axes, each with a dragger in both directions: an arm each way for
@@ -62,12 +62,12 @@ const RING_VERTICES: usize = Axis::ALL.len() * RING_SEGMENTS * VERTICES_PER_SLIC
 
 /// The buffer has to hold whichever tool draws the most, since the tool
 /// changes without the renderer being rebuilt. Transform draws all three at
-/// once, so it alone decides this — the other tools each need less.
+/// once, so it alone decides this, the other tools each need less.
 /// The one extra ball is the free-drag handle at the Move gizmo's origin.
 pub(super) const TRANSFORM_VERTICES: usize =
     ARROW_VERTICES + BALL_VERTICES + RING_VERTICES + VERTICES_PER_BALL;
 /// Edit Pivot draws Transform's arms, rings and free-drag ball without its
-/// Scale balls, and a dot per snap hotspot instead — the box's, and up to
+/// Scale balls, and a dot per snap hotspot instead, the box's, and up to
 /// `HOTSPOT_PARTS` parts' own.
 pub(super) const PIVOT_VERTICES: usize = ARROW_VERTICES
     + RING_VERTICES
@@ -108,7 +108,7 @@ impl Vertex {
     }
 }
 
-/// This tool's handles as one triangle list, painted back to front — only
+/// This tool's handles as one triangle list, painted back to front, only
 /// the `held` one, while a drag holds a Move arrow or a Scale ball.
 pub(super) fn mesh(shape: &Shape, held: Option<End>, eye: Vec3) -> Vec<Vertex> {
     let shown = |axis: Axis, sign: f32| held.is_none_or(|end| end.is(axis, sign));
@@ -188,7 +188,7 @@ enum Piece {
 ///
 /// [`arms`], [`balls`] and [`rings`] each already paint their own six (or,
 /// for a ring, `RING_SEGMENTS`) pieces furthest-from-`eye` first, but that
-/// sort never looked outside its own kind — which was fine while only one
+/// sort never looked outside its own kind, which was fine while only one
 /// kind was ever on screen at once. Transform is the first shape where that
 /// stops being true: a ball nearer the eye than some arm has to be painted
 /// after it regardless of which kind either belongs to, or the depth-test-off
@@ -321,7 +321,7 @@ fn arrow(vertices: &mut Vec<Vertex>, origin: Vec3, direction: Vec3, arm: f32, co
     let base = origin + direction * neck;
     for segment in 0..SEGMENTS {
         let (a, b) = (ring(segment), ring(segment + 1));
-        // The cone's side, then the disc it stands on — which faces back down
+        // The cone's side, then the disc it stands on, which faces back down
         // the shaft, hence the reversed winding.
         for point in [a, b, apex, base, b, a] {
             push(vertices, point, color);
@@ -346,7 +346,7 @@ fn shaft(vertices: &mut Vec<Vertex>, origin: Vec3, direction: Vec3, arm: f32, co
         let (a, b) = (ring(SHAFT_START, segment), ring(SHAFT_START, segment + 1));
         let (c, d) = (ring(HEAD_START, segment), ring(HEAD_START, segment + 1));
         // The side, as two triangles of one quad, then the open end facing
-        // back towards the gizmo's centre — hence the reversed winding.
+        // back towards the gizmo's centre, hence the reversed winding.
         for point in [a, b, d, a, d, c, base, b, a] {
             push(vertices, point, color);
         }
@@ -358,7 +358,7 @@ fn shaft(vertices: &mut Vec<Vertex>, origin: Vec3, direction: Vec3, arm: f32, co
 /// Sorted per slice rather than per ring: three rings of the same radius about
 /// one centre pass through each other's planes, so no order over whole rings
 /// can be right. Each slice is a small convex piece, and the rings only ever
-/// touch — never interpenetrate — so an order over slices is exact.
+/// touch, never interpenetrate, so an order over slices is exact.
 fn rings(handles: &Handles, eye: Vec3) -> Vec<Vertex> {
     let radius = RING_RADIUS * handles.arm();
     let mut slices: Vec<(f32, Axis, usize)> = Vec::with_capacity(Axis::ALL.len() * RING_SEGMENTS);

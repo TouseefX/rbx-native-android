@@ -1,7 +1,7 @@
 //! The measurements, taken through `Headless`'s public API and nothing else,
 //! so the same harness runs unchanged against a branch that rewrites what is
 //! underneath it: a cold load, a full reload, the edits in [`edits`], the
-//! steady-state frame, and — in `streaming` — the two edits that name an
+//! steady-state frame, and, in `streaming`, the two edits that name an
 //! asset nobody has fetched.
 
 mod edits;
@@ -35,7 +35,7 @@ pub(crate) struct Phase {
     /// the cost.
     pub(crate) call: Samples,
     /// The same operation measured from the same instant through to the first
-    /// frame whose pixels are back in system memory — what someone waiting for
+    /// frame whose pixels are back in system memory, what someone waiting for
     /// the viewport to redraw actually waits for.
     pub(crate) frame: Samples,
 }
@@ -58,7 +58,7 @@ pub(crate) struct Measured {
     pub(crate) phases: Vec<Phase>,
     pub(crate) frames: Vec<Frames>,
     /// Why a phase is missing, for a place that offered nothing to measure it
-    /// with — an empty list means everything asked for was measured.
+    /// with, an empty list means everything asked for was measured.
     pub(crate) notes: Vec<String>,
 }
 
@@ -139,7 +139,7 @@ fn cold_load(path: &Path, args: &Args) -> Result<Phase, String> {
 }
 
 /// `Headless::load` through to the frame after the last of the place's assets
-/// has landed and been swapped in — the picture somebody opening a file
+/// has landed and been swapped in, the picture somebody opening a file
 /// actually waits for, as against the first drawable frame [`cold_load`]
 /// times.
 fn loaded(path: &Path, args: &Args) -> Result<Phase, String> {
@@ -218,7 +218,7 @@ fn frames(path: &Path, args: &Args) -> Result<Vec<Frames>, String> {
             let rendered = headless.render_frame(args.size.0, args.size.1)?;
             let elapsed = started.elapsed();
             // `None` only before the pipeline is full, which the warmup above
-            // has already seen to — `--frame-warmup` will not take a zero.
+            // has already seen to, `--frame-warmup` will not take a zero.
             if let Some(rendered) = rendered {
                 wall.push(elapsed);
                 render.push(rendered.render);
@@ -282,7 +282,7 @@ pub(crate) fn settle(headless: &mut Headless, args: &Args) -> Result<(), String>
 /// Draws one frame and waits until its pixels are in system memory.
 ///
 /// `render_frame` only *queues* the draw and hands back the frame before it, so
-/// nothing may be in flight when this is called — that is what makes the
+/// nothing may be in flight when this is called, that is what makes the
 /// following `take_frame` wait on the frame just queued and on nothing else.
 /// Every phase here upholds that by draining through this same function.
 pub(crate) fn wait_for_frame(headless: &mut Headless, size: (u32, u32)) -> Result<(), String> {
@@ -299,8 +299,8 @@ pub(crate) fn wait_for_frame(headless: &mut Headless, size: (u32, u32)) -> Resul
 /// each with its `CFrame` as it stands.
 ///
 /// Tries candidates instead of trusting the first: `apply_changes` rebuilds
-/// for anything the scene cannot patch as one part — a union drawn as its
-/// fallback pieces, a material never uploaded — and timing that rebuild as
+/// for anything the scene cannot patch as one part, a union drawn as its
+/// fallback pieces, a material never uploaded, and timing that rebuild as
 /// though it were a patch would report a lie. The trial is a `CFrame` write
 /// the DOM has not actually changed for, so it re-reads the same placement.
 fn patchables(

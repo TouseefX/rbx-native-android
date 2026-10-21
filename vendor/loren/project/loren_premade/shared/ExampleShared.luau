@@ -1,0 +1,3 @@
+local ExampleShared = {}
+
+return ExampleShared

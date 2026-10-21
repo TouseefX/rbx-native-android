@@ -8,13 +8,13 @@
 // of as the box around them.
 
 // One highlight's two colours, each with its own alpha (`1 - Transparency`).
-// Indexed by the mask value minus one — see `highlight.wgsl`.
+// Indexed by the mask value minus one, see `highlight.wgsl`.
 struct Paint {
     fill: vec4<f32>,
     outline: vec4<f32>,
 };
 
-// This declaration is rewritten for a multisampled mask — see
+// This declaration is rewritten for a multisampled mask, see
 // `renderer::highlight::pipelines::MASK_BINDING`. WGSL types the two as
 // different texture types entirely, but `textureLoad` takes the same three
 // arguments for both (the third being the mip level in one case and the
@@ -34,7 +34,7 @@ fn load_mask(coord: vec2<i32>) -> u32 {
 // Half the outline's width in pixels, so the drawn line is `2 * RADIUS + 1`
 // across. Roblox's own `Highlight.LineThickness` is tagged `Hidden` in the API
 // dump and is documented nowhere, so this is chosen to sit beside this
-// renderer's existing cues (a ~3px selection box — see `selection.wgsl`)
+// renderer's existing cues (a ~3px selection box, see `selection.wgsl`)
 // rather than to match a published number.
 //
 // ponytail: an O(RADIUS²) neighbourhood scan, 9 taps at RADIUS 1. A separable
@@ -45,7 +45,7 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
 };
 
-// One oversized triangle rather than two — it covers the viewport with three
+// One oversized triangle rather than two, it covers the viewport with three
 // vertices and no vertex buffer at all.
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32) -> VertexOutput {
@@ -72,7 +72,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let here = load_mask(coord);
 
     // The boundary this pixel sits on, if any: the first-listed highlight
-    // among it and its neighbours, wherever the two disagree — the same one
+    // among it and its neighbours, wherever the two disagree, the same one
     // that wins a pixel both reach (see `renderer::highlight::draw_order`).
     // Two highlights meeting at a pixel is a tie Roblox does not define an
     // answer for; a stable choice at least draws one unbroken line instead

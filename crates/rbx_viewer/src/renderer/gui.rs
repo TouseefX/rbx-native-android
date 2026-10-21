@@ -6,7 +6,7 @@
 //! `Renderer::draw`), straight onto the caller's own display target. That is
 //! deliberate: a `ScreenGui` is not part of the scene, so bloom, depth of
 //! field and the tone map must not touch it, and drawing it last is what keeps
-//! it crisp. The in-world canvases are the opposite — they *are* scene
+//! it crisp. The in-world canvases are the opposite, they *are* scene
 //! content, so [`space`] draws them before the resolve, depth-tested against
 //! the geometry around them.
 //!
@@ -47,7 +47,7 @@ pub(crate) use viewport::Look as FrameLook;
 use viewport::Viewports;
 
 /// One laid-out `GuiObject`: where it came to on screen and how far it is
-/// turned — `AbsolutePosition`/`AbsoluteSize`/`AbsoluteRotation`, as an
+/// turned, `AbsolutePosition`/`AbsoluteSize`/`AbsoluteRotation`, as an
 /// editor hit-tests and draws handles against them.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GuiBox {
@@ -56,8 +56,8 @@ pub struct GuiBox {
     /// the box is rotated by `rotation` degrees clockwise about its centre.
     pub rect: [f32; 4],
     pub rotation: f32,
-    /// The box this element's children resolve against — its rect less
-    /// `UIPadding`, in the same frame — or `None` for a `ScrollingFrame`,
+    /// The box this element's children resolve against, its rect less
+    /// `UIPadding`, in the same frame, or `None` for a `ScrollingFrame`,
     /// whose children resolve against its scrolled canvas instead.
     pub content: Option<[f32; 4]>,
     /// `UIScale`: what the element's resolved `Size` is multiplied by, so
@@ -73,12 +73,12 @@ pub(super) struct Gui {
     /// quad, on screen or on a canvas.
     text: Typesetter,
     screen: Painter,
-    /// The display format the overlay paints in — and so the format every
+    /// The display format the overlay paints in, and so the format every
     /// `CanvasGroup` is flattened in, since the same painter does both.
     format: wgpu::TextureFormat,
     screens: Vec<GuiScreen>,
     /// The viewport the overlay was laid out for, and which screen it holds
-    /// — every enabled one, or the one [`Gui::draw_canvas`] asked for; a
+    /// every enabled one, or the one [`Gui::draw_canvas`] asked for; a
     /// different answer to either rebuilds it.
     built: Option<((u32, u32), Option<Ref>)>,
     /// The screen the overlay is laid out as, when it is not the frame: a
@@ -89,7 +89,7 @@ pub(super) struct Gui {
     /// The frame the overlay last drew onto, for taking a point on it back
     /// into the layout's pixels.
     drawn: (u32, u32),
-    /// Every element of the last layout, in paint order — see [`GuiBox`] —
+    /// Every element of the last layout, in paint order, see [`GuiBox`],
     /// after, for a canvas, the screen's own box.
     boxes: Vec<GuiBox>,
     /// The pixel size the scene gave each `BillboardGui`/`SurfaceGui` it
@@ -106,7 +106,7 @@ pub(super) struct Gui {
     /// Bind group 0's layout for both painters, kept for the canvas painter a
     /// rebuild may still have to build (see `Space::rebuild`).
     viewport_layout: wgpu::BindGroupLayout,
-    /// Whether the quality profile draws GUIs at all — `false` keeps every
+    /// Whether the quality profile draws GUIs at all, `false` keeps every
     /// tree out. Re-read from the profile by every [`Gui::rebuild`], so a
     /// level switched between two scenes takes.
     enabled: bool,
@@ -240,7 +240,7 @@ impl Gui {
         // windows is far better than none. A scroll writes `CanvasPosition`
         // and comes straight back here as a change, so clearing it would
         // drop every notch of a fast scroll that arrived in the same batch
-        // — and a dropped notch is not nothing, it is the camera zooming.
+        // and a dropped notch is not nothing, it is the camera zooming.
         self.space.rebuild(
             device,
             queue,
@@ -251,7 +251,7 @@ impl Gui {
         );
     }
 
-    /// Rebuilds the in-world pipelines for a new sample count — see
+    /// Rebuilds the in-world pipelines for a new sample count, see
     /// `renderer::switch`. The overlay's own pipeline draws after the resolve
     /// and so never multisamples.
     pub(super) fn set_target(&mut self, device: &wgpu::Device, target: Target) {
@@ -273,9 +273,9 @@ impl Gui {
             .draw(device, queue, encoder, targets, eye, view_projection);
     }
 
-    /// Lays the screens out for `size` if that is new — baking every
+    /// Lays the screens out for `size` if that is new, baking every
     /// `ViewportFrame` at the pixel size it came to, which is why
-    /// `materials` is needed here — then paints every rectangle over
+    /// `materials` is needed here, then paints every rectangle over
     /// `target` in one load-preserving pass.
     ///
     /// The texture, not a view of it: the overlay composites in encoded space
@@ -308,7 +308,7 @@ impl Gui {
     }
 
     /// Lays the overlay out as a `screen`-pixel screen whatever size the
-    /// frame is, then draws it scaled to the frame — what a GUI designed
+    /// frame is, then draws it scaled to the frame, what a GUI designed
     /// for one device looks like on it, in a view that is not that size.
     /// `None` lays it out at the frame's own size.
     pub(super) fn set_screen(&mut self, screen: Option<(u32, u32)>) {
@@ -329,7 +329,7 @@ impl Gui {
 
     /// The pixel size [`Gui::draw_canvas`] draws `only` at: `requested` for
     /// a `ScreenGui`, whose size is the device's to choose; a
-    /// `BillboardGui`/`SurfaceGui`'s own canvas otherwise — the one the scene
+    /// `BillboardGui`/`SurfaceGui`'s own canvas otherwise, the one the scene
     /// placed it in the world with, or the one its properties give without a
     /// part.
     pub(super) fn canvas_size(&self, only: Ref, requested: (u32, u32)) -> (u32, u32) {
@@ -349,7 +349,7 @@ impl Gui {
         ((w.round() as u32).max(1), (h.round() as u32).max(1))
     }
 
-    /// One `ScreenGui` — or a `BillboardGui`/`SurfaceGui`'s tree — on its own
+    /// One `ScreenGui`, or a `BillboardGui`/`SurfaceGui`'s tree, on its own
     /// over a flat `backdrop`: an editor's canvas, enabled or not, laid out
     /// against `size` as if that were the whole screen, with nothing of the
     /// scene under it. The same layout
@@ -379,7 +379,7 @@ impl Gui {
     /// One `ViewportFrame` drawn on its own at `size`: the very bake the
     /// overlay paints it from, and how the overlay lays it over the frame's
     /// background. `None` when no planned tree holds `frame`; no texture
-    /// where the bake has nothing to draw — no camera, no parts.
+    /// where the bake has nothing to draw, no camera, no parts.
     pub(super) fn viewport_frame(
         &mut self,
         device: &wgpu::Device,
@@ -419,7 +419,7 @@ impl Gui {
         &self.boxes
     }
 
-    /// Lays out the enabled screens — or `only` that one, enabled or not —
+    /// Lays out the enabled screens, or `only` that one, enabled or not,
     /// for `size` if that is not what is already built.
     fn lay_out(
         &mut self,
@@ -514,7 +514,7 @@ impl Gui {
     }
 
     /// The `ScrollingFrame` the wheel over `point` would scroll along `axis`,
-    /// against the overlay as last laid out — `None` before the first draw,
+    /// against the overlay as last laid out, `None` before the first draw,
     /// and until the draw after a rebuild.
     pub(super) fn scroll_target(&self, point: [f32; 2], axis: usize) -> Option<ScrollTarget> {
         // From the frame's pixels to the layout's, which differ while a
@@ -581,7 +581,7 @@ mod tests {
     }
 
     // The wheel's hit list is a by-product of the overlay's own layout: it
-    // exists once the overlay has been drawn, and follows a rebuild — a
+    // exists once the overlay has been drawn, and follows a rebuild, a
     // canvas that has since come to fit its window is no longer a target.
     #[test]
     fn the_scroll_targets_follow_the_overlay_as_drawn() {
@@ -797,7 +797,7 @@ mod tests {
     }
 
     // A `SurfaceGui` on no part is still a canvas an editor can draw, at the
-    // size its own properties give — and a padded, scaled frame on it says
+    // size its own properties give, and a padded, scaled frame on it says
     // what its children resolve against and what its `Size` is multiplied
     // by, so an editor never has to lay it out again to write it back.
     #[test]

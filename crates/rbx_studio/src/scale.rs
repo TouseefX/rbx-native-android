@@ -1,4 +1,4 @@
-//! The UI scale and the reduce-motion preference — the two accessibility
+//! The UI scale and the reduce-motion preference, the two accessibility
 //! settings that have to be resolved before the first frame, and that the
 //! rest of the editor reads through [`crate::tokens`].
 //!
@@ -11,7 +11,7 @@ use gpui_kit::{App, HoverTransition, Keystroke, Modifiers};
 use crate::tokens;
 
 /// `RBX_STUDIO_REDUCE_MOTION=1` forces the preference on, `=0` forces it
-/// off. Without it the desktop is asked (see [`detect_reduced_motion`]) —
+/// off. Without it the desktop is asked (see [`detect_reduced_motion`]),
 /// the variable exists so a screenshot run can exercise both branches,
 /// which is otherwise impossible without changing the tester's own desktop.
 pub(crate) const REDUCE_MOTION_VARIABLE: &str = "RBX_STUDIO_REDUCE_MOTION";
@@ -79,10 +79,10 @@ pub(crate) fn action_for_keystroke(keystroke: &Keystroke) -> Option<Scale> {
 /// sets both copies of it: GPUI's own (which `with_animation` already
 /// honours) and `tokens`' mirror (which the hover styles read).
 ///
-/// GPUI never learns this by itself — no backend calls `set_reduce_motion`
-/// — so somebody has to ask, and this is that somebody.
+/// GPUI never learns this by itself, no backend calls `set_reduce_motion`
+/// so somebody has to ask, and this is that somebody.
 /// Runs before the window exists, so a `Settings::reduce_motion` of `None`
-/// simply leaves this answer standing — the desktop is the default, and an
+/// simply leaves this answer standing, the desktop is the default, and an
 /// explicit choice in the View menu overrides it.
 pub(crate) fn install(cx: &mut App) {
     let reduced = detect_reduced_motion();
@@ -102,7 +102,7 @@ pub(crate) fn install(cx: &mut App) {
 /// `org.gnome.desktop.interface.enable-animations`, which GTK, GNOME and
 /// (through the XDG settings portal) most other desktops read. A machine
 /// without `gsettings`, or a desktop that doesn't publish the key, answers
-/// "no preference" rather than failing — which is the right default: a
+/// "no preference" rather than failing, which is the right default: a
 /// wrongly-suppressed animation is a smaller harm than a wrongly-played
 /// one only in the other direction, and guessing "reduce" for everybody
 /// would be its own accessibility problem.

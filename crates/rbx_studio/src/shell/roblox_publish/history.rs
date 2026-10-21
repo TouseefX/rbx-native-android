@@ -5,7 +5,7 @@
 //!
 //! - **Open** downloads it as an unlinked local copy and opens that in a new
 //!   editor, Studio's "Open Local Copy".
-//! - **Restore** uploads it as a new version of the place — Open Cloud has
+//! - **Restore** uploads it as a new version of the place, Open Cloud has
 //!   no revert call, and Roblox's own restore is exactly that. Roblox's
 //!   restore only saves; publishing it too is offered beside it. Both are
 //!   asked first, like every upload (see the parent module).
@@ -72,7 +72,7 @@ pub(crate) struct HistoryWindow {
     listing: Listing,
     loading_more: bool,
     dialog: Option<Dialog>,
-    /// What is running — an Open or a Restore. One at a time: a second
+    /// What is running, an Open or a Restore. One at a time: a second
     /// Restore while the first uploads would make two versions.
     busy: Option<String>,
     notice: Option<Notice>,

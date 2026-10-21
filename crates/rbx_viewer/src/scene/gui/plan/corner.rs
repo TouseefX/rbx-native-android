@@ -26,7 +26,7 @@ pub(in crate::scene::gui) struct Corner {
 /// The per-corner properties are the source of truth: `CornerRadius` is
 /// documented as a `NotReplicated` shorthand that merely reads back
 /// `TopLeftRadius`. It is still honoured where the individual radii are all
-/// absent or zero — a place saved before they existed, or a tree built in
+/// absent or zero, a place saved before they existed, or a tree built in
 /// code, where a serializer filling in a class default it does not know
 /// leaves the four at zero beside a real `CornerRadius`; Roblox itself never
 /// writes the two disagreeing. A `UICorner` carrying neither rounds nothing,

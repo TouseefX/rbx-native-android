@@ -1,4 +1,4 @@
-//! The canvas's own property sidebar — Figma's Design panel, in Roblox's
+//! The canvas's own property sidebar, Figma's Design panel, in Roblox's
 //! terms. While the canvas is up it stands in for the Properties dock (see
 //! `Shell::hidden_panels`), and it is built from the very same rows: the
 //! same `properties::Properties` model, each row the widget
@@ -231,7 +231,7 @@ impl Shell {
 }
 
 /// The sidebar's column: the dock's own surface and hairline, a title,
-/// and — with nothing to show — a line saying so.
+/// and, with nothing to show, a line saying so.
 pub(super) fn sidebar(title: Option<SharedString>, empty: &'static str) -> Div {
     v_flex()
         .flex_none()

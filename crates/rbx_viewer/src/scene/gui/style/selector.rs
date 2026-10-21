@@ -22,7 +22,7 @@ pub(super) enum Combinator {
 pub(super) struct Compound {
     /// A bare class name. The docs do not say whether a class selector also
     /// matches subclasses, so this matches the class exactly, as CSS element
-    /// selectors do — a `Frame` rule then cannot leak onto a `ScrollingFrame`.
+    /// selectors do, a `Frame` rule then cannot leak onto a `ScrollingFrame`.
     pub(super) class: Option<String>,
     /// `#Name`. Roblox does not require these to be unique (css-comparisons).
     pub(super) name: Option<String>,
@@ -98,8 +98,8 @@ fn parse_one(selector: &str) -> Option<Selector> {
         match character {
             ':' => {
                 chars.next();
-                // `::` is a modifier, and everything after it — including a
-                // `#Alias` past a space — belongs to the phantom instance.
+                // `::` is a modifier, and everything after it, including a
+                // `#Alias` past a space, belongs to the phantom instance.
                 if chars.peek() == Some(&':') {
                     inactive = true;
                     break;
@@ -155,7 +155,7 @@ fn parse_one(selector: &str) -> Option<Selector> {
 ///
 /// Roblox allows any string as an `Instance.Name`, and the docs do not say how
 /// a `#Name` selector spells one that needs escaping, so this takes the
-/// conservative set — an empty identifier is a syntax error.
+/// conservative set, an empty identifier is a syntax error.
 fn word(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<String> {
     let mut word = String::new();
     while let Some(&character) = chars.peek() {

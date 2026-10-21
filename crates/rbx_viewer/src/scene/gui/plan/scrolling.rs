@@ -34,8 +34,8 @@ impl Inset {
     }
 }
 
-/// The three images a scroll bar is built from — `TopImage`, `MidImage`,
-/// `BottomImage` — the first and last "rotated 90° counterclockwise for a
+/// The three images a scroll bar is built from, `TopImage`, `MidImage`,
+/// `BottomImage`: the first and last "rotated 90° counterclockwise for a
 /// horizontal scroll bar" (docs), so one set serves both axes.
 #[derive(Debug, Clone, PartialEq)]
 pub(in crate::scene::gui) struct BarImages {
@@ -59,7 +59,7 @@ pub(in crate::scene::gui) struct Scrolling {
     /// the frame by wheel: a bar of thickness zero is hidden, not disabled.
     pub(in crate::scene::gui) enabled: bool,
     /// `ScrollBarThickness` in pixels, already zero where `ScrollingEnabled`
-    /// is off — the docs give both the same effect, "no scroll bars will be
+    /// is off, the docs give both the same effect, "no scroll bars will be
     /// rendered".
     pub(in crate::scene::gui) thickness: f32,
     pub(in crate::scene::gui) bar_color: [f32; 3],
@@ -71,7 +71,7 @@ pub(in crate::scene::gui) struct Scrolling {
     pub(in crate::scene::gui) horizontal_inset: Inset,
 }
 
-/// `Enum.ScrollingDirection` ordinals: `X` 1, `Y` 2, `XY` 4 — not a bit
+/// `Enum.ScrollingDirection` ordinals: `X` 1, `Y` 2, `XY` 4, not a bit
 /// mask, unlike `AutomaticSize`.
 const DIRECTION_X: u32 = 1;
 const DIRECTION_Y: u32 = 2;
@@ -124,7 +124,7 @@ pub(in crate::scene::gui) fn scrolling(properties: &BTreeMap<String, Variant>) -
 }
 
 /// One bar image, the built-in one where the property is missing or does
-/// not parse — an empty string too, since a bar with no image is not a thing
+/// not parse, an empty string too, since a bar with no image is not a thing
 /// the docs describe.
 fn image(properties: &BTreeMap<String, Variant>, name: &str, default: &str) -> AssetRef {
     let parsed = properties

@@ -1,8 +1,8 @@
 //! Installing a resolved graph into the DOM as one undo step. See the
 //! parent module's doc comment for the on-disk layout this reproduces.
-//! The whole graph lands under the realm the user picked — `wally install`
+//! The whole graph lands under the realm the user picked, `wally install`
 //! files a dependency under the realm of the section that asked for it,
-//! not the dependency's own — and installing a package the place already
+//! not the dependency's own, and installing a package the place already
 //! has replaces its old `_Index` slot and re-points its alias, which is
 //! what an update is.
 
@@ -89,7 +89,7 @@ impl Shell {
             };
             for (alias, target) in &package.dependency_edges {
                 // The target's own slot must have been realized in pass 1
-                // for this edge to mean anything — `resolve` only ever
+                // for this edge to mean anything, `resolve` only ever
                 // produces edges pointing at packages it also resolved.
                 if !slots.contains_key(target) {
                     continue;
@@ -103,7 +103,7 @@ impl Shell {
             }
         }
 
-        // The root pick alone gets a top-level alias — a transitively
+        // The root pick alone gets a top-level alias, a transitively
         // pulled dependency is reachable only through the alias chain
         // above, exactly like a real `wally install`.
         let root_package = &graph.packages[0];
@@ -155,7 +155,7 @@ fn slot_name_from_key(key: &PackageKey) -> String {
     format!("{}_{}@{}", key.0, key.1, key.2)
 }
 
-/// `return require(script.Parent.Parent["<slot>"]["<name>"])` — one
+/// `return require(script.Parent.Parent["<slot>"]["<name>"])`: one
 /// package's own alias file, reaching a sibling `_Index` slot.
 fn require_sibling(slot: &str, name: &str) -> String {
     format!(
@@ -165,7 +165,7 @@ fn require_sibling(slot: &str, name: &str) -> String {
     )
 }
 
-/// `return require(script.Parent._Index["<slot>"]["<name>"])` — the
+/// `return require(script.Parent._Index["<slot>"]["<name>"])`: the
 /// top-level alias a package's direct consumer actually requires.
 fn require_index(slot: &str, name: &str) -> String {
     format!(
@@ -175,7 +175,7 @@ fn require_index(slot: &str, name: &str) -> String {
     )
 }
 
-/// A Luau double-quoted string literal — package/scope names never carry
+/// A Luau double-quoted string literal, package/scope names never carry
 /// a quote or backslash in practice, but escaping them costs nothing and
 /// means a hostile registry entry can't break out of the literal.
 fn lua_string(text: &str) -> String {
@@ -185,7 +185,7 @@ fn lua_string(text: &str) -> String {
 /// The `Packages`/`ServerPackages`/`DevPackages` container for one realm:
 /// an existing root by class, else a folder of that name anywhere in the
 /// place (a Rojo project keeps `Packages` under `ReplicatedStorage`), else
-/// a fresh root — the same "match an existing root by class, else make
+/// a fresh root, the same "match an existing root by class, else make
 /// one" pattern `shell::argon_sync::apply_snapshot_node` already uses for
 /// Argon's own root services.
 fn find_or_create_root(dom: &mut WeakDom, realm: Realm) -> Ref {
@@ -252,7 +252,7 @@ fn find_or_create_alias(dom: &mut WeakDom, root: Ref, name: &str) -> Ref {
     existing.unwrap_or_else(|| dom.new_instance("ModuleScript", name, Some(root)))
 }
 
-/// A named child of `parent`, found by exact name (not class — `_Index`
+/// A named child of `parent`, found by exact name (not class, `_Index`
 /// and a package's own slot are both plain `Folder`s distinguished only by
 /// name) or created as a fresh `Folder`.
 fn find_or_create_child(dom: &mut WeakDom, parent: Ref, name: &str) -> Ref {

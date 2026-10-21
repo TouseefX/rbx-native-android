@@ -5,7 +5,7 @@
 //! *types*, from the API dump). Without them a new `Part` has no `size` or
 //! `CFrame`, so the viewer cannot draw it and a save sees a near-empty
 //! instance. This is a small, hand-picked approximation of Studio's
-//! defaults for the classes editing relies on today — not a full
+//! defaults for the classes editing relies on today, not a full
 //! reproduction of every default Studio would set.
 //!
 //! Keys match the file's own storage spelling (`size`, not `Size`) so they

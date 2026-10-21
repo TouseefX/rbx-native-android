@@ -30,7 +30,7 @@ fn feed(manager: &mut FrameRateManager, span: Duration, share: f32) -> Vec<u8> {
     trail
 }
 
-/// Feeds frames whose cost depends on the level they were drawn at — a machine
+/// Feeds frames whose cost depends on the level they were drawn at, a machine
 /// that gets faster as the level comes down, which is the point of the manager.
 fn drive(manager: &mut FrameRateManager, span: Duration, cost: impl Fn(u8) -> f32) -> Vec<u8> {
     let mut trail = Vec::new();
@@ -97,7 +97,7 @@ fn a_machine_that_never_catches_up_stops_at_the_bottom_level() {
 #[test]
 fn a_machine_settles_at_the_level_it_can_hold_and_stays_there() {
     // Everything above 12 costs it 40 % more than it has; 12 and below leaves it
-    // 15 % of the budget spare — not enough headroom to climb back.
+    // 15 % of the budget spare, not enough headroom to climb back.
     let cost = |level: u8| if level > 12 { 1.4 } else { 0.85 };
 
     let mut manager = FrameRateManager::new(TARGET_HZ);

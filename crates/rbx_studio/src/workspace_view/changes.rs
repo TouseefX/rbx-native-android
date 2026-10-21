@@ -27,7 +27,7 @@ impl WorkspaceView {
         self.pump.select(selected.to_vec());
     }
 
-    /// The same selection outlined again after an edit — a selected model's
+    /// The same selection outlined again after an edit, a selected model's
     /// pivot turned, so its box turns with it (see `Shell::reflect_changes`).
     /// Sent only when it differs from what was, and the measurement box,
     /// which belongs to the selection rather than to its box, stays open.
@@ -39,7 +39,7 @@ impl WorkspaceView {
     }
 
     /// Forwards the instances a hover covers (empty to clear it), forcing one
-    /// frame even at rest — the same reason `set_selection` above does.
+    /// frame even at rest, the same reason `set_selection` above does.
     pub(crate) fn set_hover(&mut self, selected: Vec<Selected>) {
         self.pump.hover(selected);
     }
@@ -54,7 +54,7 @@ impl WorkspaceView {
         }
     }
 
-    /// Forwards where a tool being configured would put the selection —
+    /// Forwards where a tool being configured would put the selection,
     /// the Align popover's live preview. An empty list clears it.
     pub(crate) fn set_preview(&mut self, boxes: Vec<glam::Mat4>) {
         self.pump.preview(boxes);
@@ -92,7 +92,7 @@ impl WorkspaceView {
 
     /// Reflects one edit's `Change` log in the render thread's scene, every
     /// instance it names patched in place there, between two frames (see
-    /// `rbx_viewer::Headless::apply_changes`) — the render thread owns the
+    /// `rbx_viewer::Headless::apply_changes`), the render thread owns the
     /// viewer, so that is where the patch happens. `snapshots` is what the
     /// log is read against: the instances it names as they stand after the
     /// edit, whichever way the edit went (an undo hands over the mutation's

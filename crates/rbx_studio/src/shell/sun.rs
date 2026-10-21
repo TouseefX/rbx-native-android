@@ -24,7 +24,7 @@ use super::Shell;
 const NO_LIGHTING: &str = "this place has no Lighting service";
 
 impl Shell {
-    /// One step of the Sun tool's gesture — see `ViewportAction::Sun`.
+    /// One step of the Sun tool's gesture, see `ViewportAction::Sun`.
     pub(super) fn sun_step(&mut self, ray: Ray, first: bool, cx: &mut Context<Self>) {
         let Some(lighting) = sun::lighting(&self.dom) else {
             return;
@@ -95,8 +95,8 @@ impl Shell {
         self.transform_action(Action::Use(Tool::Sun), cx);
     }
 
-    /// A tile each for the sun and the moon — either one enters the tool,
-    /// placing that body — and the four gestures beside them. Picking a
+    /// A tile each for the sun and the moon, either one enters the tool,
+    /// placing that body, and the four gestures beside them. Picking a
     /// gesture enters the tool too: nobody picks one to leave it unused.
     pub(super) fn sun_tiles(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let nav = &self.ribbon_nav;

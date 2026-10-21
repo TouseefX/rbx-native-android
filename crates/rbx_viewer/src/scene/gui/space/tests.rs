@@ -189,7 +189,7 @@ fn the_top_face_quad_spans_the_parts_own_width_and_depth() {
 // The remaining four faces, pinned to exact corners like the Front/Top cases
 // above: `face_corners` shares one code path (`NormalId::axes`) for all six,
 // but that path is also what a bug report of "the wrong face renders, or the
-// right face renders mirrored" would hide in — Front and Top alone can't rule
+// right face renders mirrored" would hide in, Front and Top alone can't rule
 // out a swapped axis or an inverted sign on Right/Left/Back/Bottom.
 #[test]
 fn the_right_face_quad_is_the_rectangle_a_stretched_decal_covers() {
@@ -232,7 +232,7 @@ fn the_bottom_face_quad_is_the_rectangle_a_stretched_decal_covers() {
 }
 
 /// `Enum.NormalId`'s real ordinals (Roblox's `creator-docs`): Right=0, Top=1,
-/// Back=2, Left=3, Bottom=4, Front=5 — not alphabetical and not declaration
+/// Back=2, Left=3, Bottom=4, Front=5, not alphabetical and not declaration
 /// order, so this is the one guard against `from_ordinal` drifting from the
 /// wire format if the variants above it are ever reordered.
 #[test]
@@ -566,7 +566,7 @@ fn a_canvas_reaches_the_elements_under_a_folder() {
 }
 
 /// "Determines whether the contents of `StarterGui` is visible in Studio"
-/// (`StarterGui.ShowDevelopmentGui`) — its contents being the canvases too,
+/// (`StarterGui.ShowDevelopmentGui`), its contents being the canvases too,
 /// not just the screens, and nothing outside the service.
 #[test]
 fn a_hidden_starter_gui_takes_only_its_own_canvases_out() {

@@ -55,7 +55,7 @@ impl Offscreen {
     /// `view` is not optional on purpose: the state that does not come from
     /// the place has to be said out loud wherever a renderer is built or
     /// rebuilt (see [`Offscreen::reload`]), which is what stops one from
-    /// silently starting blank — see [`View`].
+    /// silently starting blank, see [`View`].
     pub(crate) fn new(
         world: World<'_>,
         quality: &QualityProfile,
@@ -68,7 +68,7 @@ impl Offscreen {
     }
 
     /// Same as [`Offscreen::new`], but on a device/queue the caller already
-    /// has open rather than acquiring its own — what a batch run shares
+    /// has open rather than acquiring its own, what a batch run shares
     /// across every file instead of paying `gpu::adapter`/`gpu::device` (and
     /// the driver work behind them) once per file. `wgpu::Device`/`Queue` are
     /// themselves cheap `Arc` handles, so cloning one into each file's
@@ -106,8 +106,8 @@ impl Offscreen {
         offscreen
     }
 
-    /// Rebuilds the renderer around `world` on the device it already has —
-    /// see [`Renderer::rebuild`] for what that keeps — and puts it back into
+    /// Rebuilds the renderer around `world` on the device it already has,
+    /// see [`Renderer::rebuild`] for what that keeps, and puts it back into
     /// `view`, for the same reason [`Offscreen::new`] takes one. The frame
     /// still in flight, if any, is left to be collected as usual: it is a
     /// finished picture of the previous scene, not a stale one.
@@ -132,7 +132,7 @@ impl Offscreen {
         self.renderer.set_stage(stage);
     }
 
-    /// Draws an isolated view or the whole place — see
+    /// Draws an isolated view or the whole place, see
     /// [`Renderer::set_isolated`].
     pub(crate) fn set_isolated(&mut self, isolated: bool) {
         self.renderer.set_isolated(isolated);
@@ -183,7 +183,7 @@ impl Offscreen {
             .set_hover(&self.device, &self.queue, selected, scene);
     }
 
-    /// Recolours the editor cues — see [`Renderer::set_overlay_colors`].
+    /// Recolours the editor cues, see [`Renderer::set_overlay_colors`].
     pub(crate) fn set_overlay_colors(&mut self, colors: crate::OverlayColors, scene: &Scene) {
         self.renderer
             .set_overlay_colors(&self.device, &self.queue, colors, scene);
@@ -221,7 +221,7 @@ impl Offscreen {
         f(&mut self.renderer, &self.device, &self.queue)
     }
 
-    /// Forwards to [`Renderer::finish_loading`] — for [`write_png`], which
+    /// Forwards to [`Renderer::finish_loading`], for [`write_png`], which
     /// draws exactly one frame and so has no later frame to finish the load
     /// spread across (see [`Renderer::draw`]'s own texture-upload budget).
     pub(crate) fn finish_loading(&mut self) {
@@ -349,8 +349,8 @@ impl Offscreen {
     }
 
     /// One `ViewportFrame` alone at `size`, composited over its background
-    /// (when `background`) and `backdrop` (encoded sRGB) as the GUI would — see
-    /// `Renderer::viewport_frame` — and waited for, like a canvas.
+    /// (when `background`) and `backdrop` (encoded sRGB) as the GUI would, see
+    /// `Renderer::viewport_frame`: and waited for, like a canvas.
     pub(crate) fn viewport_frame(
         &mut self,
         size: (u32, u32),
@@ -403,7 +403,7 @@ impl Offscreen {
     }
 }
 
-/// How `write_png` frames its single offscreen frame — every `--yaw`/
+/// How `write_png` frames its single offscreen frame, every `--yaw`/
 /// `--pitch`/`--eye`/`--look-at`/`--orthographic` option `rbxview`'s CLI
 /// takes, bundled together so the function they configure stays under
 /// clippy's argument-count lint rather than growing a ninth positional `bool`.
@@ -416,8 +416,8 @@ pub(crate) struct Framing {
     /// already says exactly how far away it is.
     pub(crate) zoom: Option<f32>,
     /// When given, places the camera directly instead of framing the scene's
-    /// bounds — the only way to get close enough to examine a small prop in a
-    /// huge map — and takes over from `yaw`/`pitch` entirely, matching how
+    /// bounds, the only way to get close enough to examine a small prop in a
+    /// huge map, and takes over from `yaw`/`pitch` entirely, matching how
     /// the free camera's pose already overrides the orbit camera in the
     /// windowed path.
     pub(crate) eye_look_at: Option<(Vec3, Vec3)>,
@@ -441,7 +441,7 @@ pub(crate) fn write_png(
     write_png_on(&device, &queue, world, quality, output, size, framing)
 }
 
-/// Same as [`write_png`], but on a device/queue the caller already has open —
+/// Same as [`write_png`], but on a device/queue the caller already has open,
 /// what a `--batch` run shares across every file. See
 /// [`Offscreen::on_device`].
 pub(crate) fn write_png_on(
@@ -462,7 +462,7 @@ pub(crate) fn write_png_on(
     let mut offscreen = Offscreen::on_device(device.clone(), queue.clone(), world, quality, &view);
     // A single offscreen frame is drawn below and nothing after it, so there
     // is no later frame for `Renderer::draw`'s own texture-upload budget to
-    // spread the rest of the load across — finish it now instead of writing
+    // spread the rest of the load across, finish it now instead of writing
     // out a PNG with some textures still on their placeholder.
     offscreen.finish_loading();
     offscreen.set_elapsed(framing.elapsed);

@@ -1,11 +1,11 @@
-//! "Make responsive": the selection — or, with none on the canvas, the
-//! whole screen — rewritten so it scales with the screen instead of
+//! "Make responsive": the selection, or, with none on the canvas, the
+//! whole screen, rewritten so it scales with the screen instead of
 //! staying the same number of pixels on every device.
 //!
 //! Every `Position` and `Size` offset is folded into its scale against the
-//! parent's content box as laid out right now — `UIPadding` taken off, a
+//! parent's content box as laid out right now, `UIPadding` taken off, a
 //! `Size` measured along the axes its `SizeConstraint` names; `UIScale`
-//! multiplies both halves alike and so cancels — using
+//! multiplies both halves alike and so cancels, using
 //! `ui_canvas::arrange::to_scale`, so nothing moves at the resolution on the
 //! canvas; and every element that was pixels alone on both axes, and is not
 //! already shaped by one, gets a `UIAspectRatioConstraint` at the shape it
@@ -39,7 +39,7 @@ impl Shell {
         }
 
         // Every laid-out `GuiObject` at or under the roots whose parent's
-        // box is known — not one inside a `ScrollingFrame`, which resolves
+        // box is known, not one inside a `ScrollingFrame`, which resolves
         // against a canvas the editor is not shown.
         let mut targets: Vec<(Held, Rect)> = Vec::new();
         let mut pending = roots;

@@ -1,6 +1,6 @@
 //! The UI Editor document: a Figma-style 2D canvas for one `ScreenGui` at a
 //! time (the default sub-tab), beside the style sheet editor that used to be
-//! this whole document (the Stylesheet sub-tab — `shell::style_panel`,
+//! this whole document (the Stylesheet sub-tab, `shell::style_panel`,
 //! moved in unchanged).
 //!
 //! The canvas keeps no copy of what it edits:
@@ -9,14 +9,14 @@
 //!   `extend_selection`/`reselect` exactly as an Explorer click sets it, so
 //!   the Explorer and the Properties panel follow the canvas and the canvas
 //!   follows them.
-//! - **Edits** are property text written through `Shell::write_drag` —
+//! - **Edits** are property text written through `Shell::write_drag`:
 //!   the Properties panel's own commit, one undo step per gesture on the
-//!   one history every other edit uses — or, where they add or take away
+//!   one history every other edit uses, or, where they add or take away
 //!   instances (a drawn element, a group, a stroke), `Shell::edit_gui_tree`,
 //!   which logs the tree change and its first values as that one step.
 //! - **The picture** is the 3D view's own GUI renderer drawing the chosen
 //!   `ScreenGui` alone at the simulated resolution, on the same render
-//!   thread (see `workspace_view::canvas`) — with no scene pass: the 3D view
+//!   thread (see `workspace_view::canvas`), with no scene pass: the 3D view
 //!   is not on screen while this is, so it stops drawing.
 //!
 //! While the canvas sub-tab is up, the Explorer lists only the place's UI
@@ -110,17 +110,17 @@ impl Tab {
 pub(super) struct UiEditor {
     pub(super) tab: Tab,
     /// The `ScreenGui` on the canvas. Follows the selection into whichever
-    /// screen it lands in, and stays put while the selection is elsewhere —
+    /// screen it lands in, and stays put while the selection is elsewhere,
     /// a click on a `Workspace` part must not blank the canvas.
     screen: Option<Ref>,
     /// The simulated screen, in pixels.
     resolution: (u32, u32),
     view: View,
-    /// Whether `view` still follows the panel — true until the user pans or
+    /// Whether `view` still follows the panel, true until the user pans or
     /// zooms, and again whenever the screen or the resolution changes.
     fitted: bool,
     gesture: Option<gesture::Gesture>,
-    /// Which half of a `UDim` canvas edits write — the insert bar's switch.
+    /// Which half of a `UDim` canvas edits write, the insert bar's switch.
     unit: Unit,
     /// The class the next press on the canvas draws, when a tool is armed.
     tool: Option<&'static str>,
@@ -146,7 +146,7 @@ pub(super) struct UiEditor {
     /// Whether the Explorer was last given the UI-only rows.
     filtered: bool,
     /// Docks the canvas would set aside that were asked back by name this
-    /// visit — see `Shell::hidden_panels`.
+    /// visit, see `Shell::hidden_panels`.
     unhidden: Vec<Panel>,
     /// The `ViewportFrame` sheet, while one is open over the canvas.
     sheet: Option<frame_sheet::FrameSheet>,
@@ -205,7 +205,7 @@ impl UiEditor {
 }
 
 /// The `ScreenGui`, `BillboardGui` or `SurfaceGui` `referent` is, or sits
-/// in — the nearest, since that is the one that draws it — or `None`
+/// in, the nearest, since that is the one that draws it, or `None`
 /// outside every one.
 pub(super) fn root_of(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> Option<Ref> {
     let mut current = Some(referent);
@@ -234,7 +234,7 @@ pub(super) fn takes_resolution(dom: &WeakDom, database: &ReflectionDatabase, roo
         .is_none_or(|instance| database.is_subclass_of(instance.class(), SCREEN_CLASS))
 }
 
-/// Whether `referent` is a `GuiObject` — something with a `Position` and a
+/// Whether `referent` is a `GuiObject`: something with a `Position` and a
 /// `Size` for the canvas to move.
 pub(super) fn is_gui_object(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> bool {
     dom.get(referent)
@@ -242,7 +242,7 @@ pub(super) fn is_gui_object(dom: &WeakDom, database: &ReflectionDatabase, refere
 }
 
 impl Shell {
-    /// Switches Row A's document — from a click on its tab, a script
+    /// Switches Row A's document, from a click on its tab, a script
     /// opening, the View menu. Opening the UI Editor lands on its canvas.
     pub(super) fn set_document(&mut self, document: Document, cx: &mut Context<Self>) {
         if document == Document::UiEditor && self.document != Document::UiEditor {
@@ -308,14 +308,14 @@ impl Shell {
                 .explorer
                 .items(self.show_all_services, &self.service_overrides),
         };
-        crate::explorer::search(&items, &self.explorer_query)
+        self.filter_rows(&items)
     }
 
     /// The docks left out of the layout as things stand: the canvas's own
     /// set-aside list while it is up, plus Viewport while the Script Editor
     /// is the document (the 3D view is not on screen either way) or Argon
     /// and Wally the rest of the time (neither means anything outside it).
-    /// Nothing in the layout itself changes — coming back shows exactly
+    /// Nothing in the layout itself changes, coming back shows exactly
     /// what was there, and a dock that was shut stays shut.
     pub(super) fn hidden_panels(&self) -> Vec<Panel> {
         let mut hidden = match self.ui_canvas_active() {
@@ -341,7 +341,7 @@ impl Shell {
         window.focus(&self.ui.focus, cx);
     }
 
-    /// The docks the current document leaves out whatever is asked —
+    /// The docks the current document leaves out whatever is asked,
     /// unlike the canvas's set-asides, which asking for one by name undoes.
     pub(super) fn document_hides(&self) -> Vec<Panel> {
         match self.document {
@@ -359,7 +359,7 @@ impl Shell {
         }
     }
 
-    /// Swaps the Explorer's rows when the canvas has just come up or gone —
+    /// Swaps the Explorer's rows when the canvas has just come up or gone,
     /// keeping the selected row, as `Shell::set_show_all_services` does.
     fn sync_explorer_filter(&mut self, cx: &mut Context<Self>) {
         let filtered = self.ui_canvas_active();
@@ -379,8 +379,8 @@ impl Shell {
         });
     }
 
-    /// Puts the screen the selection is in on the canvas — a
-    /// `BillboardGui`/`SurfaceGui` as much as a `ScreenGui` — called on
+    /// Puts the screen the selection is in on the canvas, a
+    /// `BillboardGui`/`SurfaceGui` as much as a `ScreenGui`: called on
     /// every selection change, from wherever it came.
     pub(super) fn ui_follow_selection(&mut self) {
         self.ui.inspector.clear();
@@ -410,8 +410,8 @@ impl Shell {
     }
 
     /// The size the canvas's root is laid out at: the frame on hand when it
-    /// is the one asked for — the only word on a `BillboardGui`/
-    /// `SurfaceGui`'s own size — or the resolution picked.
+    /// is the one asked for, the only word on a `BillboardGui`/
+    /// `SurfaceGui`'s own size, or the resolution picked.
     pub(super) fn canvas_size(&self, cx: &App) -> (u32, u32) {
         let request = self.canvas_request();
         self.viewport
@@ -469,7 +469,7 @@ impl Shell {
     }
 
     /// The width and height fields, shared by the canvas's toolbar and the
-    /// Viewport dock's Screen row — never on screen together, since the
+    /// Viewport dock's Screen row, never on screen together, since the
     /// canvas sets the dock aside.
     /// The resolution the canvas and the 3D view's emulated screen share.
     pub(super) fn ui_resolution(&self) -> (u32, u32) {
@@ -485,7 +485,7 @@ impl Shell {
     /// only once a size is actually picked in it. The Viewport dock's
     /// "Viewport size" still lets it go.
     ///
-    /// Called from `set_document` rather than once at startup — the
+    /// Called from `set_document` rather than once at startup, the
     /// ordinary Viewport document has no GUI open to match, and emulating a
     /// phone's screen there by default was exactly the "gap" a real 3D
     /// scene has no reason to have.

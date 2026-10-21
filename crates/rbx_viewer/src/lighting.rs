@@ -163,7 +163,7 @@ impl Default for Lighting {
     }
 }
 
-/// The raw properties, before the lamps are mixed — kept apart so the mixing is
+/// The raw properties, before the lamps are mixed, kept apart so the mixing is
 /// one function with one set of inputs whether they came from a file or not.
 struct Defaults {
     ambient: Vec3,
@@ -205,7 +205,7 @@ impl Default for Defaults {
 
 impl Lighting {
     /// Reads the `Lighting` service, falling back to Studio's own defaults for
-    /// anything the file leaves out — including the service itself, which a bare
+    /// anything the file leaves out, including the service itself, which a bare
     /// `.rbxm` model never has.
     ///
     /// `clock_override` is `--clock-time`, which beats both `ClockTime` and
@@ -233,7 +233,7 @@ impl Lighting {
         let fallback = Defaults::default();
         let read = Defaults {
             // "The effective OutdoorAmbient value is clamped to be greater
-            // than or equal to Ambient in all channels" — Lighting.OutdoorAmbient
+            // than or equal to Ambient in all channels", Lighting.OutdoorAmbient
             // docs. A place that lifts Ambient above it lifts the outdoors too.
             ambient: match (
                 color(properties.get("OutdoorAmbient")),
@@ -274,7 +274,7 @@ impl Lighting {
     /// fill opposite, Studio's default ambient, no fog, no atmosphere, no
     /// clouds, no post effects and an exposure of one. An animator judging a
     /// pose wants to see the same rig the same way in a night-time horror
-    /// place as on a sunny baseplate — Blender's viewport lighting, not the
+    /// place as on a sunny baseplate, Blender's viewport lighting, not the
     /// game's.
     ///
     /// Shadows stay on: a rig's own limbs shading its torso is part of
@@ -388,7 +388,7 @@ fn parse_clock(text: &str) -> Option<f32> {
 }
 
 /// An `Atmosphere` child replaces the classic fog outright, which is what
-/// Roblox does too — the two never composite.
+/// Roblox does too, the two never composite.
 fn atmosphere(dom: &WeakDom, database: &ReflectionDatabase, lighting: rbx_dom::Ref) -> Option<Fog> {
     let children = dom.get(lighting)?.children();
     let referent = *children.iter().find(|&&child| {

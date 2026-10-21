@@ -1,10 +1,10 @@
 //! Wires the `Folder`-only "Explorer Colour" pseudo-property (see
 //! `crate::folder_colors` and `properties::edit::FOLDER_COLOR_PROPERTY`)
 //! into `Shell`: seeding its row's current value, routing a commit to the
-//! local colour store instead of the DOM — the same idea
+//! local colour store instead of the DOM, the same idea
 //! `properties::edit::commit`'s `NAME_PROPERTY` branch applies to `Name`,
 //! just routed here rather than there, since the store (and the place path
-//! that keys it) lives on `Shell`, not on a bare `WeakDom` — and collecting
+//! that keys it) lives on `Shell`, not on a bare `WeakDom`, and collecting
 //! every tagged `Folder`'s current tint for the Explorer tree's hover/
 //! selected row painting (`shell::rows::row`). The row's *icon* is a
 //! separate, cheaper path: `explorer::items` bakes the recolored bitmap in
@@ -22,7 +22,7 @@ use super::Shell;
 
 impl Shell {
     /// The colour tagged on `reference`, if it is a `Folder` and the store
-    /// has one for its current Explorer path — what `Properties::rows` seeds
+    /// has one for its current Explorer path, what `Properties::rows` seeds
     /// the synthetic row's `EditKind::Color` widget with (see
     /// `shell::panels::properties`).
     pub(super) fn folder_color(&self, reference: Ref) -> Option<Rgb> {
@@ -35,7 +35,7 @@ impl Shell {
     }
 
     /// Every tagged `Folder`'s current tint, keyed the way `explorer::item_id`
-    /// keys a tree row — what `shell::panels::instance_tree` looks a row's
+    /// keys a tree row, what `shell::panels::instance_tree` looks a row's
     /// tint up by, to paint that row's hover/selected state with it instead
     /// of the theme's default (see `shell::rows::row`; the row's *icon* is
     /// recolored separately, baked in at `explorer::items` build time).
@@ -44,7 +44,7 @@ impl Shell {
     }
 
     /// Routes an "Explorer Colour" row's commit to the local colour store
-    /// instead of `WeakDom::set_property` — see this module's doc comment.
+    /// instead of `WeakDom::set_property`: see this module's doc comment.
     /// The DOM, and so undo history, is left untouched; only the Explorer's
     /// rows are rebuilt afterwards, to repaint the tint.
     pub(super) fn commit_folder_color(
@@ -57,8 +57,8 @@ impl Shell {
             .ok_or_else(|| "the instance no longer exists".to_string())?;
         let color = parse_rgb(text)?;
         self.folder_colors.set(&self.path, &path, color);
-        // A lost write here is not fatal — the tag simply reverts to
-        // whatever was last saved next launch — so this mirrors
+        // A lost write here is not fatal, the tag simply reverts to
+        // whatever was last saved next launch, so this mirrors
         // `Shell::save_settings`'s own "don't interrupt the editor over it".
         let _ = self.folder_colors.save();
         self.rebuild_explorer(cx);
@@ -67,7 +67,7 @@ impl Shell {
 }
 
 /// Parses the `"r, g, b"` text an `EditKind::Color` row commits (see
-/// `shell::edit::build_row_widget`) — the same shape
+/// `shell::edit::build_row_widget`), the same shape
 /// `properties::edit::parse`'s `Color3uint8` arm accepts, duplicated in
 /// miniature here since that parser type-checks against a DOM `Variant` this
 /// pseudo-property has none of.

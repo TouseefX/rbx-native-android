@@ -148,7 +148,7 @@ pub(crate) fn tangents(mesh: &rbx_mesh::Mesh) -> Vec<[f32; 4]> {
 
 /// Orthonormalizes one vertex's accumulated frame.
 ///
-/// A vertex no triangle contributed to — or whose contributions cancelled —
+/// A vertex no triangle contributed to, or whose contributions cancelled,
 /// falls back to any tangent perpendicular to its normal: the normal map still
 /// reads flat there, so which one it is does not matter.
 fn frame(normal: Vec3, along_u: Vec3, along_v: Vec3) -> [f32; 4] {
@@ -172,7 +172,7 @@ mod tests {
     use glam::Vec4;
 
     /// A unit quad in the XY plane facing +Z, textured so that +U runs along +X
-    /// and image-down (+V) runs along -Y — the layout a texture painted on a
+    /// and image-down (+V) runs along -Y, the layout a texture painted on a
     /// wall has.
     fn quad() -> rbx_mesh::Mesh {
         let corner = |x: f32, y: f32, u: f32, v: f32| rbx_mesh::Vertex {

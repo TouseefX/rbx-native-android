@@ -1,6 +1,6 @@
 //! GPU presentation of `crate::scene::beam`: every `Beam`'s ribbon is rebuilt
 //! from scratch each frame (`FaceCamera` needs the eye, `TextureSpeed` needs
-//! wall-clock time — see [`ribbon`]) and drawn in its own pass, after opaque
+//! wall-clock time, see [`ribbon`]) and drawn in its own pass, after opaque
 //! geometry and before particles (see `Renderer::draw`), depth-tested against
 //! the scene but writing no depth of its own.
 //!
@@ -51,21 +51,21 @@ pub(super) struct Beams {
     image_layout: wgpu::BindGroupLayout,
     /// Index 0 is always the flat-white fallback both `AssetRef::Empty` and a
     /// texture that failed to download draw through (see [`Beams::rebuild`])
-    /// — Roblox itself falls back to a solid line in both cases. Empty until
+    /// Roblox itself falls back to a solid line in both cases. Empty until
     /// the first scene with a beam in it, since a place without one never
     /// needs the fallback either.
     textures: Vec<Slot>,
     live: Vec<(Beam, usize)>,
-    /// Whether the quality profile draws beams at all — `false` keeps `live`
+    /// Whether the quality profile draws beams at all, `false` keeps `live`
     /// empty, [`Beams::replace`] included. Re-read from the profile by every
     /// [`Beams::rebuild`], so a level switched between two scenes takes.
     enabled: bool,
     /// The slot in `textures` every reference [`Beams::rebuild`] tried
     /// resolved to (0 where the download failed); a reference missing here
-    /// was never attempted — see [`Beams::replace`].
+    /// was never attempted, see [`Beams::replace`].
     slots: HashMap<AssetRef, usize>,
     vertices: Option<wgpu::Buffer>,
-    /// Grown, never shrunk — same reasoning as `renderer::particles::Particles::instances`.
+    /// Grown, never shrunk, same reasoning as `renderer::particles::Particles::instances`.
     vertex_capacity: usize,
     last_tick: Option<Instant>,
     /// Wall-clock seconds since the first [`Beams::draw`]; what `TextureSpeed`
@@ -207,13 +207,13 @@ impl Beams {
             .collect();
     }
 
-    /// Rebuilds the pipeline for a new sample count — see `renderer::switch`.
+    /// Rebuilds the pipeline for a new sample count, see `renderer::switch`.
     pub(super) fn set_target(&mut self, device: &wgpu::Device, target: Target) {
         self.pipeline =
             pipeline::create_pipeline(device, target, &self.camera_layout, &self.image_layout);
     }
 
-    /// Whether anything is drawn at all — every live one moves with the
+    /// Whether anything is drawn at all, every live one moves with the
     /// clock, so a host that only draws on change has to keep drawing.
     pub(super) fn is_live(&self) -> bool {
         !self.live.is_empty()
@@ -221,7 +221,7 @@ impl Beams {
 
     /// Rebuilds every ribbon from `eye`/wall-clock time, uploads them and
     /// draws one run per texture group over `targets`'s existing colour and
-    /// depth attachments (loaded, not cleared — see `renderer::particles`,
+    /// depth attachments (loaded, not cleared, see `renderer::particles`,
     /// whose pass this one runs just before).
     #[allow(clippy::too_many_arguments)]
     pub(super) fn draw(
@@ -377,7 +377,7 @@ fn white_slot(
 }
 
 /// Every distinct non-empty texture the given beams need, in first-seen
-/// order — kept stable so re-running the same file draws the same
+/// order, kept stable so re-running the same file draws the same
 /// texture-to-slot mapping.
 fn texture_refs(beams: &[Beam]) -> Vec<AssetRef> {
     let mut seen = Vec::new();

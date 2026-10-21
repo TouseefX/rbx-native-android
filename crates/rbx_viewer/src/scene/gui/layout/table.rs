@@ -32,7 +32,7 @@ pub(super) fn table(
         .collect();
 
     // "Each cell within a row has the same height, and each cell within a
-    // column has the same width" — so a column is as wide as its widest cell
+    // column has the same width", so a column is as wide as its widest cell
     // and a row as tall as its tallest.
     let columns = order.iter().map(|&i| cells[i].len()).max().unwrap_or(0);
     let mut minors = vec![0.0f32; columns];

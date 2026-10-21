@@ -20,7 +20,7 @@ use super::{selection, Shell};
 impl Shell {
     /// Selects what `target` names in the current DOM (see
     /// [`explorer::resolve`]) the way clicking its row would, expanding
-    /// whatever ancestors were collapsed — the only way a screenshot can show
+    /// whatever ancestors were collapsed, the only way a screenshot can show
     /// an instance `--run` just created, since nothing else can click the
     /// tree on the editor's behalf. `false` when nothing resolves.
     fn select_target(&mut self, target: &str, cx: &mut Context<Self>) -> bool {
@@ -43,7 +43,7 @@ impl Shell {
     }
 
     /// `--select <target>[,<target>...]`: selects the first target, then adds
-    /// each further one the way `Shift`/`Ctrl`/`Cmd`-click would — documented
+    /// each further one the way `Shift`/`Ctrl`/`Cmd`-click would, documented
     /// on its call sites in `Shell::new`.
     ///
     /// Returns the targets that matched nothing, rather than reporting them
@@ -89,7 +89,7 @@ impl Shell {
         };
         // `set_selected_item` notifies the tree-change observer that mirrors
         // it into `self.selection` (`Shell::sync_selection`), but only once
-        // GPUI gets around to flushing it — soon enough after a real click,
+        // GPUI gets around to flushing it, soon enough after a real click,
         // but never before this same call chain returns when it runs here,
         // synchronously, from a debug var applied during `Shell::new`.
         // Setting `self.selection` directly below, rather than waiting for
@@ -115,7 +115,7 @@ impl Shell {
     }
 
     /// Clears the whole selection, synchronously (see [`Shell::select`]'s doc
-    /// comment) — `shell::keys`' delete key, once the row it removed was the
+    /// comment), `shell::keys`' delete key, once the row it removed was the
     /// whole selection, leaves nothing behind to keep selected.
     pub(super) fn deselect(&mut self, cx: &mut Context<Self>) {
         let tree = self.tree.clone();
@@ -131,13 +131,13 @@ impl Shell {
     /// [`Shell::select`] does. The Explorer's `TreeState` can track only one
     /// selected row, so rather than fight it this points that one row at
     /// whatever the toggle leaves as the anchor (see `shell::selection`) and
-    /// leaves the rest of the set for `self.selection` alone to remember —
+    /// leaves the rest of the set for `self.selection` alone to remember,
     /// the outline, the gizmo and the Explorer's own highlight (see
     /// `shell::panels::instance_tree`) all read that directly rather than the
     /// tree's idea of "selected".
-    /// Sets the selection to `kept` as a whole — every entry of a
+    /// Sets the selection to `kept` as a whole, every entry of a
     /// multi-selection that an undo, redo or rebuild left standing, in its
-    /// order, with the first as the Explorer's row — rather than collapsing
+    /// order, with the first as the Explorer's row, rather than collapsing
     /// it to its anchor the way [`Shell::select`] would.
     pub(super) fn reselect(&mut self, kept: Vec<Ref>, cx: &mut Context<Self>) {
         let anchor = kept.first().and_then(|&r| self.explorer.item(r));
@@ -184,7 +184,7 @@ impl Shell {
 
     /// `Shift`-click on an Explorer row: selects every row from the range
     /// anchor to `clicked`, in the tree's visible order (so collapsed and
-    /// filtered-out rows are skipped), replacing the selection — or, with
+    /// filtered-out rows are skipped), replacing the selection, or, with
     /// `add` (`Ctrl`+`Shift`), adding to it. The anchor stays where it was.
     pub(super) fn select_range(&mut self, clicked: Ref, add: bool, cx: &mut Context<Self>) {
         let visible = self.visible_rows(cx);
@@ -222,8 +222,8 @@ impl Shell {
     /// DOM: the Explorer's rows and the viewport's scene. The Properties panel
     /// reads `self.dom` itself, so the re-render is all it needs.
     ///
-    /// Whatever the script did — one property, a hundred parts moved, a
-    /// model built or destroyed — reaches the viewport as the change log it
+    /// Whatever the script did, one property, a hundred parts moved, a
+    /// model built or destroyed, reaches the viewport as the change log it
     /// produced, patched instance by instance (see
     /// [`Shell::reflect_changes`]); there is no script-shaped fallback.
     pub(super) fn rebuild_after_script(&mut self, cx: &mut Context<Self>) {
@@ -243,14 +243,14 @@ impl Shell {
     /// refreshed as the log warrants (see [`refresh_for`]): the draggers'
     /// copy of the selected parts' transforms (`transform::Targets`) when a
     /// selected part or the tree itself changed, and the boxes a free drag
-    /// soft-snaps onto when anything *other* than the selection did — a drag
+    /// soft-snaps onto when anything *other* than the selection did, a drag
     /// moves nothing but the selection, and re-reading those per mouse move
     /// would walk the whole workspace every frame. The selected lights'
     /// guides are re-read every time: they cost only the selection.
     ///
-    /// The one path every mutation takes — a Command Bar script, a
+    /// The one path every mutation takes, a Command Bar script, a
     /// Properties row, a viewport drag, the Explorer's insert, delete and
-    /// drag-drop, and undo/redo of each — so no two of them can disagree
+    /// drag-drop, and undo/redo of each, so no two of them can disagree
     /// about what an edit costs to show.
     pub(super) fn reflect_changes(&mut self, changes: &[Change], cx: &mut Context<Self>) {
         if changes.is_empty() {
@@ -267,8 +267,8 @@ impl Shell {
         self.presence_changes(changes, cx);
         self.properties.dom_changed(changes);
         let mut refresh = refresh_for(changes, &self.covered);
-        // A selected model's own properties — its `WorldPivot`, its
-        // `PrimaryPart` — say where its pivot, and so its handles, stand.
+        // A selected model's own properties, its `WorldPivot`, its
+        // `PrimaryPart`: say where its pivot, and so its handles, stand.
         refresh.targets |= changes.iter().any(|change| {
             matches!(change, Change::Property { referent, .. }
                 if self.selected_all().contains(referent))
@@ -307,6 +307,7 @@ impl Shell {
             self.sync_snap_neighbours(cx);
         }
         self.sync_light_guides(cx);
+        self.sync_layers_after(changes, cx);
         // A selected instance that changed class is, to everything built
         // from the selection, another selection: its outline, its gizmo and
         // its Properties rows are all read off its class. Checked here, so a
@@ -382,18 +383,18 @@ pub(super) struct Refresh {
     pub(super) neighbours: bool,
 }
 
-/// Which of the two mirrors a log invalidates. A structural change — an
-/// instance added, removed, moved or given another class — invalidates
+/// Which of the two mirrors a log invalidates. A structural change, an
+/// instance added, removed, moved or given another class, invalidates
 /// both: the selection may have lost a part or gained one, and so may the
 /// neighbours. A property
 /// write invalidates only the side it landed on: the targets if it touched
 /// a part the selection *covers* (a typed coordinate, an undo of one), the
 /// neighbours if it moved or resized anything else (a script moving parts
-/// the user has not selected) — a neighbour is only a `CFrame` and a `size`,
+/// the user has not selected), a neighbour is only a `CFrame` and a `size`,
 /// so any other write, `Lighting`'s under a Sun drag every frame, walks
-/// nothing. `covered` is every part the draggers carry — the
+/// nothing. `covered` is every part the draggers carry, the
 /// selected parts themselves and every part beneath a selected `Model`
-/// (see `Shell::covered`) — not the selection's own referents: a drag of a
+/// (see `Shell::covered`), not the selection's own referents: a drag of a
 /// Model writes its parts, never the Model, and judged against the Model's
 /// referent alone every one of those writes read as "something else
 /// moved", walking the whole workspace for the neighbours once per mouse
@@ -467,8 +468,8 @@ mod tests {
         );
     }
 
-    // A write that moves nothing — the Sun tool's `Lighting`, every frame of
-    // its drag — leaves both mirrors alone.
+    // A write that moves nothing, the Sun tool's `Lighting`, every frame of
+    // its drag, leaves both mirrors alone.
     #[test]
     fn writes_that_move_no_part_refresh_nothing() {
         assert_eq!(

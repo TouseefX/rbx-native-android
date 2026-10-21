@@ -165,7 +165,7 @@ pub(super) fn reference_key(reference: Ref) -> SharedString {
 }
 
 /// Frames the whole graph once, the first time the canvas has a size to
-/// frame it in — never past 100%, where text is drawn at its size. Only
+/// frame it in, never past 100%, where text is drawn at its size. Only
 /// once: refitting as nodes are added would move the canvas under the
 /// pointer that is placing them. An empty graph keeps the plain 100% view.
 fn fit(editor: &mut GraphEditor) -> bool {

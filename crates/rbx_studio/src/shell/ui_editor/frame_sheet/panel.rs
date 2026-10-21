@@ -1,4 +1,4 @@
-//! The sheet's side panel — Contents, Lighting, Camera, Image — and the
+//! The sheet's side panel, Contents, Lighting, Camera, Image, and the
 //! stage's empty state.
 
 use gpui_kit::assets::IconName;

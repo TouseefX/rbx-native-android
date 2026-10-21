@@ -121,7 +121,7 @@ impl Runtime {
         engine::install(&lua, Engine::new(ctx, host.clone()))?;
         host::install_require(&lua)?;
         // Globals must be installed first: sandboxing freezes them, which is the
-        // point — one command-bar script cannot reshape the next one's environment.
+        // point, one command-bar script cannot reshape the next one's environment.
         lua.sandbox(true)?;
 
         Ok(Runtime {

@@ -15,7 +15,7 @@ const SOURCE_OBJECT: i32 = 2;
 const NULL_REFERENT: i32 = -1;
 
 /// Stands in for an object that is not in the file being written, so the
-/// encoder writes [`NULL_REFERENT`] for it — what rbx-dom's writer does for a
+/// encoder writes [`NULL_REFERENT`] for it, what rbx-dom's writer does for a
 /// target it has no referent for, and what both readers turn back into an
 /// empty Content. No instance can hold it: a file's referents are
 /// non-negative `i32`s.
@@ -116,7 +116,7 @@ mod tests {
 
     // The object pool is in instance order: the first Object instance's
     // referent comes first. rbx-dom's writer agrees; its reader pops the
-    // pool from the back, which would swap these two — see
+    // pool from the back, which would swap these two, see
     // `chunks::prop::content::contents` for why that is not followed.
     #[test]
     fn two_objects_keep_their_instances_order() {

@@ -1,6 +1,6 @@
 //! The view's half of the Terrain Editor (see `crate::terrain`): every press,
 //! drag step, release and hover goes to `Shell` as a ray, and `Shell`'s
-//! answer — the brush or region outline — comes back to be drawn on a line
+//! answer, the brush or region outline, comes back to be drawn on a line
 //! layer of its own.
 //!
 //! `B` held turns the wheel into the brush's size, `Ctrl`+`B` its height and
@@ -173,7 +173,7 @@ impl WorkspaceView {
         true
     }
 
-    /// A terrain edit in progress, straight to the renderer — see
+    /// A terrain edit in progress, straight to the renderer, see
     /// `Headless::preview_terrain`.
     pub(crate) fn preview_terrain(&self, chunks: super::pump::TerrainChunks) {
         if !chunks.is_empty() {

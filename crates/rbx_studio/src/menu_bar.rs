@@ -6,7 +6,7 @@
 //! activate, Escape to close.
 //!
 //! What this module owns, rather than the toolkit's ready-made `AppMenuBar`,
-//! is the **bar** — see [`bar::MenuBar`]. That component keeps which title is
+//! is the **bar**: see [`bar::MenuBar`]. That component keeps which title is
 //! current behind a private field with no way in from outside, so the desktop
 //! way *into* a menu bar (F10, or a bare Alt tap) could not be wired to it at
 //! all, and a menu bar no keyboard can reach is a WCAG 2.1.1 failure however
@@ -14,10 +14,10 @@
 //!
 //! Every item that maps to something the editor can already do dispatches
 //! the same [`gpui::Action`] its keyboard shortcut resolves to, straight into
-//! `Shell`'s existing, already-tested handler — Save (`shell::save`),
+//! `Shell`'s existing, already-tested handler, Save (`shell::save`),
 //! Undo/Redo (`shell::history`), Insert Part/Folder/Script/LocalScript/
 //! ModuleScript and Delete (`shell::keys`), Copy/Paste/Duplicate
-//! (`shell::clipboard`), Group/Ungroup (`shell::group`) — through one global
+//! (`shell::clipboard`), Group/Ungroup (`shell::group`), through one global
 //! `App::on_action` registration per action (see [`actions::install`]). A
 //! menu click never focuses anything first, so these are global rather than
 //! wired into the element tree: the same requirement `Shell::handle_shell_key`
@@ -55,6 +55,7 @@ actions!(
         MenuSaveToFile,
         MenuClosePlace,
         MenuExportGltf,
+        MenuExportClean,
         MenuSaveToRoblox,
         MenuPublishToRoblox,
         MenuLinkRobloxPlace,
@@ -94,7 +95,7 @@ actions!(
         MenuCommandPalette,
         MenuQuickOpen,
         /// One per dock, so the View menu can put back one that has been
-        /// closed — the only way back, which is why they are real actions
+        /// closed, the only way back, which is why they are real actions
         /// rather than the placeholders they used to be.
         MenuToggleExplorer,
         MenuToggleProperties,
@@ -103,9 +104,11 @@ actions!(
         MenuToggleCollaborators,
         MenuToggleInputActions,
         MenuToggleSecurityAudit,
+        MenuToggleLayers,
+        MenuToggleLoren,
         /// Shared by every item below that has no real handler yet; always
         /// paired with `.disabled(true)` (see `menus`), so `PopupMenu` never
-        /// lets a click reach it — `actions::install` still gives it a no-op
+        /// lets a click reach it, `actions::install` still gives it a no-op
         /// handler as a defensive backstop, never a crash.
         MenuPlaceholder,
     ]
@@ -139,9 +142,9 @@ pub(crate) fn refresh(bar: &Entity<MenuBar>, templates: &[Template], cx: &mut Ap
 /// The menu structure itself. File and Edit hold this editor's real
 /// commands (see this module's doc comment); Model holds the two quick
 /// inserts `shell::keys` already binds to Ctrl+Shift+P/F, plus the three
-/// script classes and the OOP `ModuleScript` variant — Roblox itself offers
+/// script classes and the OOP `ModuleScript` variant, Roblox itself offers
 /// `Script`/`LocalScript`/`ModuleScript` as distinct inserts, so this matches
-/// that rather than collapsing them into one generic "Insert Script" — and
+/// that rather than collapsing them into one generic "Insert Script", and
 /// Group/Ungroup (`shell::group`, Ctrl+G/Ctrl+Shift+G). View's Explorer,
 /// Properties and Command Bar items show and hide their panels, and Style
 /// Editor brings its own
@@ -197,6 +200,8 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Save to File", MenuSave),
                 MenuItem::action("Save to File As…", MenuSaveToFile),
                 MenuItem::action("Export as glTF…", MenuExportGltf),
+                // A copy without layers and 3D notes (`crate::strip`).
+                MenuItem::action("Export Clean Copy…", MenuExportClean),
                 MenuItem::separator(),
                 // Uploads, not local saves: see `shell::roblox_publish`. An
                 // unlinked file asks for its place on first use.
@@ -253,6 +258,8 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
                 MenuItem::action("Security Audit", MenuToggleSecurityAudit),
+                MenuItem::action("Layers", MenuToggleLayers),
+                MenuItem::action("Loren", MenuToggleLoren),
                 MenuItem::separator(),
                 // The accessibility settings the reference guidance calls
                 // for a native app to expose itself rather than inherit

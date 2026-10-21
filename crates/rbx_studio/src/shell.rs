@@ -1,6 +1,6 @@
 //! Window layout: a Studio-style `DockArea` (see `shell::dock`) whose default
 //! arrangement is the tabbed 3D view over the Output log on the left, the
-//! Explorer and Properties stacked on the right — but any of the four can be
+//! Explorer and Properties stacked on the right, but any of the four can be
 //! dragged to another edge or stacked as tabs.
 
 mod align;
@@ -34,8 +34,11 @@ mod history;
 pub(crate) mod import3d;
 mod input_panel;
 mod keys;
+mod layers;
+mod layers_panel;
 mod layout;
 mod light_guides;
+mod loren_panel;
 mod luau_lsp;
 mod menu;
 mod open_place;
@@ -49,6 +52,7 @@ mod play;
 mod plugins;
 mod property_element;
 mod quality;
+mod query_select;
 mod recovery;
 mod ref_pick;
 mod reparent;
@@ -145,7 +149,7 @@ type QualityOptions = SearchableVec<SharedString>;
 pub(crate) struct Shell {
     /// The top menu bar (File/Edit/Model/View); see `crate::menu_bar`. Kept
     /// as a field so `Render for Shell` has an entity to mount, and so the
-    /// window-level F10/Alt handlers below have something to reach into —
+    /// window-level F10/Alt handlers below have something to reach into,
     /// which title is current and which menu is open lives entirely inside it.
     menu_bar: Entity<MenuBar>,
     title: SharedString,
@@ -178,23 +182,23 @@ pub(crate) struct Shell {
     /// Whether the viewport draws its `ScreenGui`s: the ribbon's Show UI.
     /// Per session, not persisted, as Studio's View > UI is.
     show_screen_gui: bool,
-    /// Whether a selected light draws its guide — Studio's `Show Light
+    /// Whether a selected light draws its guide, Studio's `Show Light
     /// Guides`. Persisted the same way `orthographic` is (see `settings`).
     light_guides: bool,
     /// The guide segments last sent to the viewport, so an edit that leaves
-    /// them as they were sends nothing — see `shell::light_guides`.
+    /// them as they were sends nothing, see `shell::light_guides`.
     light_guides_sent: Vec<rbx_viewer::Segment>,
     /// Which of the class icon kit's two variants the Explorer draws.
     /// Persisted (see `settings`); every write goes through
     /// [`Shell::save_settings`].
     icon_pack: IconPack,
     /// Which installed icon pack (see `crate::packs`) is drawn over the kit,
-    /// and every pack found at startup for the Explorer menu to list —
+    /// and every pack found at startup for the Explorer menu to list,
     /// listed once because the menu is rebuilt every frame.
     appearance: crate::packs::Appearance,
     installed_icon_packs: Vec<String>,
-    /// The theme on screen — for its icons, which the Explorer's own icon
-    /// pack choice is layered over — and what tells the editor it changed
+    /// The theme on screen, for its icons, which the Explorer's own icon
+    /// pack choice is layered over, and what tells the editor it changed
     /// (see `shell::theme_live`).
     theme: crate::theme::ThemePack,
     theme_watch: crate::theme::Watch,
@@ -216,16 +220,16 @@ pub(crate) struct Shell {
     ribbon_tabs_nav: roving::Roving,
     ribbon_nav: roving::Roving,
     /// The Properties panel's own group. Without it every section header
-    /// and every checkbox is its own Tab stop — measured at 32 presses to
+    /// and every checkbox is its own Tab stop, measured at 32 presses to
     /// get from the panel back to the ribbon, which defeats the entire
     /// point of Tab moving between regions.
     properties_nav: roving::Roving,
-    /// The Viewport dock's settings, one Tab stop for the lot — see
+    /// The Viewport dock's settings, one Tab stop for the lot, see
     /// `shell::viewport_dock`.
     viewport_nav: roving::Roving,
-    /// The Script Editor's Code | Graph pills — see `shell::script_panel`.
+    /// The Script Editor's Code | Graph pills, see `shell::script_panel`.
     script_view_nav: roving::Roving,
-    /// The window's Tab order, handed out afresh every render — see
+    /// The window's Tab order, handed out afresh every render, see
     /// `shell::roving::TabOrder`.
     tab_order: roving::TabOrder,
     /// The Explorer tree's keyboard door: the wrapper that holds the
@@ -234,48 +238,55 @@ pub(crate) struct Shell {
     tree_focus_handle: FocusHandle,
     /// An explicit reduce-motion choice, or `None` to follow the desktop.
     reduce_motion: Option<bool>,
-    /// A numeric field being dragged — see `shell::scrub`.
+    /// A numeric field being dragged, see `shell::scrub`.
     scrub: Option<scrub::Scrub>,
     /// The open `NumberSequence`/`ColorSequence` graph, if any: a window of
     /// its own (see `crate::sequence_window`, which owns everything about
     /// it), kept only so opening a second one replaces the first.
     sequence: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// The open Argon review Diff window, if any — see
+    /// The open Argon review Diff window, if any, see
     /// `shell::argon_diff_window`, the same one-window-of-its-own shape as
     /// [`Self::sequence`] above.
     argon_diff: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// Studio Settings, while open — see `settings_window`.
+    /// Studio Settings, while open, see `settings_window`.
     settings_window: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// Script Templates, while open — see `templates_window`.
+    /// Script Templates, while open, see `templates_window`.
     templates_window: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// Customize Shortcuts, while open — see `shortcuts_window`.
+    /// Customize Shortcuts, while open, see `shortcuts_window`.
     shortcuts_window: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// The Controller Emulator, while open — see `controller_emulator`.
+    /// The Controller Emulator, while open, see `controller_emulator`.
     controller_window: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// Version History, while open — see `roblox_publish::history`.
+    /// Version History, while open, see `roblox_publish::history`.
     version_history: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// Game Settings, while open — see `game_settings`.
+    /// Game Settings, while open, see `game_settings`.
     game_settings: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// Data Stores, while open — see `datastores`.
+    /// Data Stores, while open, see `datastores`.
     data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
-    /// The Explorer's type-ahead buffer — see `shell::tree_keys`.
+    /// The Explorer's type-ahead buffer, see `shell::tree_keys`.
     typeahead: tree_keys::Typeahead,
-    /// The Explorer's own editing affordances — the `+` picker, the
+    /// The Explorer's own editing affordances, the `+` picker, the
     /// right-click menu and the in-place name box. See
     /// `shell::explorer_edit`.
     explorer_edit: explorer_edit::ExplorerEdit,
     /// Whether a new instance whose name a sibling already carries is
     /// numbered, and whether inserting or selecting expands the tree to
     /// reveal the instance. Real Studio's two insertion preferences, both
-    /// persisted — see `shell::explorer_edit::picker`.
+    /// persisted, see `shell::explorer_edit::picker`.
     increment_names: bool,
     expand_on_select: bool,
+    /// See `Settings::strip_on_publish`.
+    strip_on_publish: bool,
+    /// Editor layers and 3D notes; see `shell::layers`.
+    layers: layers::LayerState,
     search: Entity<InputState>,
     /// What the Explorer's search field holds, trimmed; see
     /// `explorer::search`.
     explorer_query: String,
+    /// The search field's query mode and what its query last matched; see
+    /// `shell::query_select`.
+    query: query_select::QuerySearch,
     filter: Entity<InputState>,
     properties: Properties,
     /// One open `Input` per Properties row currently being edited, keyed by
@@ -290,22 +301,22 @@ pub(crate) struct Shell {
     /// clicked plainly or with `Ctrl`/`Cmd` (see [`Shell::select_range`]).
     range_anchor: Option<Ref>,
     /// This window's own copy/paste clipboard, replaced whole by every
-    /// `Ctrl+C` — see `shell::clipboard`.
+    /// `Ctrl+C`: see `shell::clipboard`.
     clipboard: Vec<clipboard::Clipped>,
-    /// The user's starter scripts, reloaded whenever their folder changes —
+    /// The user's starter scripts, reloaded whenever their folder changes,
     /// see `crate::script_templates` and `shell::templates_live`.
     script_templates: crate::script_templates::ScriptTemplates,
     /// The templates folder's fingerprint as of the last load.
     templates_stamp: u64,
     /// The command palette, and what it has run this session.
     palette: palette::Palette,
-    /// The `BasePart` the cursor was last resolved to be over, if any — see
+    /// The `BasePart` the cursor was last resolved to be over, if any, see
     /// `shell::drag::hover_in_viewport`. Kept here, alongside `selection`
     /// above, purely to dedupe: the viewport reports cursor motion on every
     /// pixel, and only an actual change is worth a command down to the
     /// render thread.
     hovered: Vec<Selected>,
-    /// Every part the selection covers — the selected parts and every part
+    /// Every part the selection covers, the selected parts and every part
     /// beneath a selected `Model`: exactly the referents a drag writes, kept
     /// so `shell::command::refresh_for` can tell a drag's own writes from
     /// an edit to something else without walking the tree per mouse move.
@@ -314,9 +325,9 @@ pub(crate) struct Shell {
     covered: HashSet<Ref>,
     /// Every script open in the Script Editor panel; see `shell::scripts`.
     scripts: ScriptEditor,
-    /// Each open tab's Graph side, once shown — see `shell::script_graph`.
+    /// Each open tab's Graph side, once shown, see `shell::script_graph`.
     graphs: std::collections::HashMap<Ref, script_graph::GraphEditor>,
-    /// Breakpoints and the debug run, if any — see `shell::debugging`.
+    /// Breakpoints and the debug run, if any, see `shell::debugging`.
     debug: debugging::Debugging,
     /// `luau-lsp` behind the script editor and Script Analysis; see
     /// `shell::luau_lsp`.
@@ -328,8 +339,9 @@ pub(crate) struct Shell {
     input_edits: input_panel::InputEdits,
     /// The Security Audit dock's cached findings; see `shell::security_audit`.
     audit: security_audit::AuditState,
+    loren: loren_panel::LorenState,
     style_scroll: ScrollHandle,
-    /// The UI Editor document's own state — its sub-tab, the screen on the
+    /// The UI Editor document's own state, its sub-tab, the screen on the
     /// canvas, the pan and zoom, the gesture in flight. See
     /// `shell::ui_editor`.
     ui: ui_editor::UiEditor,
@@ -366,40 +378,40 @@ pub(crate) struct Shell {
     script_font_size: f32,
     output_scroll: ScrollHandle,
     /// The Viewport dock's own, for when it is docked somewhere too short
-    /// for its settings — see `shell::viewport_dock`.
+    /// for its settings, see `shell::viewport_dock`.
     viewport_scroll: ScrollHandle,
     /// Where each of the dock's settings was laid out last frame, so a
     /// keyboard move can scroll the one it lands on into view.
     viewport_rows: Rc<std::cell::RefCell<Vec<Bounds<Pixels>>>>,
     /// The Output tab's free-text search box. Session-only and unpersisted,
-    /// like `output_filter` beside it — a log you are still reading is not a
+    /// like `output_filter` beside it, a log you are still reading is not a
     /// setting.
     output_search: Entity<InputState>,
     /// The Argon dock's own state: its fields, the level it edits, the
-    /// bounds its last frame had — see `shell::argon_dock`.
+    /// bounds its last frame had, see `shell::argon_dock`.
     argon_ui: argon_dock::ArgonDock,
     /// The Wally dock's own state; see `shell::wally_dock`.
     wally_ui: wally_dock::WallyDock,
     /// The Viewport dock's own state; see `shell::viewport_dock`.
     viewport_ui: viewport_dock::ViewportDock,
-    /// The address `Settings::argon_address` should hold — a plain `String`
+    /// The address `Settings::argon_address` should hold, a plain `String`
     /// rather than reading `argon_address` above back out, because
     /// `Shell::save_settings` takes no `cx` and an `Entity<InputState>`
     /// can't be read without one. Updated only on a successful connect
     /// (see `Shell::drain_argon_events`), not on every keystroke of a
     /// draft still being typed.
     argon_saved_address: String,
-    /// The live connection to an `argon serve` instance, if any — see
+    /// The live connection to an `argon serve` instance, if any, see
     /// `shell::argon_sync`.
     argon: argon_sync::Sync,
-    /// Argon's plugin settings, per level — see `settings::argon`. Written
+    /// Argon's plugin settings, per level, see `settings::argon`. Written
     /// back through `Shell::save_settings` like every other preference.
     argon_settings: crate::settings::argon::ArgonSettings,
-    /// The search field on the Wally dock (`shell::scripting_tools`) —
+    /// The search field on the Wally dock (`shell::scripting_tools`),
     /// real, editable, local to this window; read by
     /// `Shell::wally_query_changed`.
     wally_query: Entity<InputState>,
-    /// The Wally dock's search results and install state — see
+    /// The Wally dock's search results and install state, see
     /// `shell::wally_sync`.
     wally: wally_sync::Search,
     /// The file `self.dom` was opened from and its on-disk format; see
@@ -413,7 +425,7 @@ pub(crate) struct Shell {
     /// File › Close Place's unsaved-changes prompt is up; see
     /// `shell::close_place`.
     close_prompt: bool,
-    /// Where the close prompt above leads once answered — see
+    /// Where the close prompt above leads once answered, see
     /// `close_place`.
     after_close: close_place::AfterClose,
     /// Held by the prompt while it is up, so Escape reaches the window's
@@ -432,22 +444,22 @@ pub(crate) struct Shell {
     /// This place's `Folder` colour tags; see `shell::folder_color`.
     folder_colors: FolderColors,
     /// Which transform tool the toolbar has active, and whether its draggers
-    /// follow the part's own axes — see `crate::transform`. Owned here because
+    /// follow the part's own axes, see `crate::transform`. Owned here because
     /// the toolbar renders from it; pushed down to the viewport, which
     /// hit-tests against it, whenever it changes.
     transform: Transform,
     /// The model pivots a viewport drag carries with its parts, read once at
-    /// the drag's first step — see `Shell::write_drag_after`.
+    /// the drag's first step, see `Shell::write_drag_after`.
     drag_followers: Vec<rbx_lua::pivot::Follower>,
-    /// The two snap increment fields' live text — see `shell::toolbar::snap`.
+    /// The two snap increment fields' live text, see `shell::toolbar::snap`.
     snap_fields: SnapFields,
     /// The Align tool's current toggles (axes, Min/Center/Max, World/Local,
-    /// Selection Bounds/Active Object) — see `crate::align`/`shell::align`.
+    /// Selection Bounds/Active Object), see `crate::align`/`shell::align`.
     align: AlignOptions,
     /// Whether the Align popover is open, and so whether its live preview
-    /// is being drawn — see `shell::align::Shell::refresh_align_preview`.
+    /// is being drawn, see `shell::align::Shell::refresh_align_preview`.
     align_open: bool,
-    /// The Sun tool's body and gesture, and the drag under way — see
+    /// The Sun tool's body and gesture, and the drag under way, see
     /// `crate::sun`. Whether the tool is active at all is `transform.tool`.
     sun: crate::sun::SunTool,
     /// The Terrain Editor's tool, settings and gesture in progress.
@@ -455,13 +467,13 @@ pub(crate) struct Shell {
     /// Its panel's sliders and fields, built the first time it draws.
     terrain_fields: Option<terrain::TerrainFields>,
     terrain_scroll: ScrollHandle,
-    /// Which of the ribbon's own category tabs is showing — see
+    /// Which of the ribbon's own category tabs is showing, see
     /// `shell::ribbon`. Session-only: real Studio's own ribbon always opens
     /// back on Home too, and there's nothing here worth writing to
     /// `settings` over.
     ribbon_tab: ribbon::Tab,
     /// Which editor the centre column shows (Row A). Switching it swaps
-    /// *only* that column's contents — see `shell::workspace`.
+    /// *only* that column's contents, see `shell::workspace`.
     document: Document,
     /// Which dropdown is open, if any. Held here rather than inside each
     /// popover so that opening one closes the last, and so a menu item can
@@ -471,7 +483,7 @@ pub(crate) struct Shell {
     recovery: recovery::Recovery,
     /// The open menu's keyboard focus and highlighted row (see `shell::menu`).
     menu_nav: menu::MenuNav,
-    /// Which panel is on which edge and how big each edge is — the data
+    /// Which panel is on which edge and how big each edge is, the data
     /// that used to be the order of three `.child()` calls (see
     /// `shell::layout`). Persisted, along with the drag in progress if
     /// there is one.
@@ -484,24 +496,24 @@ pub(crate) struct Shell {
     output_collapsed: bool,
     discord: Option<crate::discord_presence::Presence>,
     discord_hide_names: bool,
-    /// The Unix timestamp presence was started — keeps Discord's elapsed
+    /// The Unix timestamp presence was started, keeps Discord's elapsed
     /// time stable across activity updates.
     discord_started: u64,
     /// No editor window has had focus for a while, shown as idling.
     discord_idle: bool,
     /// Polls for idleness while the main window is in the background.
     discord_idle_check: Option<Task<()>>,
-    /// Play/Test without Studio — see `shell::play`.
+    /// Play/Test without Studio, see `shell::play`.
     play: play::Play,
-    /// Roblox Studio plugins and rbx-native's own — see `shell::plugins`.
+    /// Roblox Studio plugins and rbx-native's own, see `shell::plugins`.
     plugins: plugins::Plugins,
-    /// "In Studio" on Roblox — see `shell::studio_presence`.
+    /// "In Studio" on Roblox, see `shell::studio_presence`.
     studio_presence: studio_presence::StudioPresence,
-    /// Collaborators through the presence relay — see `shell::team_presence`.
+    /// Collaborators through the presence relay, see `shell::team_presence`.
     team_presence: team_presence::TeamPresence,
-    /// The Test ribbon's Device menu — see `shell::device_sim`.
+    /// The Test ribbon's Device menu, see `shell::device_sim`.
     device_sim: device_sim::DeviceSim,
-    /// The code sign-in window, while open — see `shell::roblox_login`.
+    /// The code sign-in window, while open, see `shell::roblox_login`.
     roblox_login: Option<WindowHandle<gpui_kit::component::Root>>,
     /// The page the next Settings window opens on; see `open_settings_on`.
     settings_open_on: Option<&'static str>,
@@ -556,6 +568,7 @@ impl Shell {
             optimize_graph_on_open,
             increment_names,
             expand_on_select,
+            strip_on_publish,
             dragger,
             controls,
             argon_address: argon_address_setting,
@@ -614,7 +627,7 @@ impl Shell {
             tree.update(cx, |tree, cx| {
                 tree.focus(window, cx);
                 // The APG's "on focus" rule for a multi-select tree: with
-                // nothing selected, focus goes to the first node — focus,
+                // nothing selected, focus goes to the first node, focus,
                 // not selection, so arriving by Tab changes nothing the
                 // Properties panel or the viewport show. Without it the
                 // keys work but there is nothing to see them working on.
@@ -642,13 +655,19 @@ impl Shell {
             }
         });
 
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
-        let searched = cx.subscribe(&search, |shell, input, event: &InputEvent, cx| {
-            if matches!(event, InputEvent::Change) {
-                let query = input.read(cx).value().trim().to_owned();
-                shell.search_explorer(query, cx);
-            }
-        });
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(query_select::placeholder(false)));
+        let searched = cx.subscribe(
+            &search,
+            |shell, input, event: &InputEvent, cx| match event {
+                InputEvent::Change => {
+                    let query = input.read(cx).value().trim().to_owned();
+                    shell.search_explorer(query, cx);
+                }
+                InputEvent::PressEnter { .. } => shell.select_query_matches(cx),
+                _ => {}
+            },
+        );
 
         let wally_query = cx.new(|cx| InputState::new(window, cx).placeholder("Search Wally"));
         let wally_query_changed = cx.subscribe(&wally_query, |shell, _, event: &InputEvent, cx| {
@@ -727,7 +746,7 @@ impl Shell {
         let canvas_drawn = cx.subscribe(&viewport, |_, _, _: &CanvasUpdated, cx| cx.notify());
 
         // Built last of Shell::new's entities: its `Action` handlers close
-        // over `cx.entity()`, so `Shell` must already be constructible —
+        // over `cx.entity()`, so `Shell` must already be constructible,
         // valid as soon as `cx.new` starts building it.
         let menu_bar = crate::menu_bar::build(cx.entity(), user.script_templates.extras(), cx);
 
@@ -790,8 +809,10 @@ impl Shell {
             explorer_edit: explorer_edit::ExplorerEdit::default(),
             increment_names,
             expand_on_select,
+            strip_on_publish,
             search,
             explorer_query: String::new(),
+            query: query_select::QuerySearch::default(),
             filter,
             properties,
             edits: edit::Edits::default(),
@@ -812,6 +833,8 @@ impl Shell {
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
             audit: Default::default(),
+            layers: layers::LayerState::load(&path),
+            loren: loren_panel::LorenState::default(),
             style_scroll: ScrollHandle::new(),
             ui,
             anim: animation::Animation::new(cx).with_seams(anim_sheet_height, anim_names_width),
@@ -927,6 +950,7 @@ impl Shell {
         shell.sync_snap_neighbours(cx);
         // Its light guides, for the same reason.
         shell.sync_light_guides(cx);
+        shell.sync_layers(cx);
         // And the screen it sits in, for the UI editor's canvas.
         shell.ui_follow_selection();
 
@@ -952,9 +976,9 @@ impl Shell {
 
         // `--select` / `RBX_STUDIO_SELECT`: `main::load` already resolved a
         // single target into the initial `Place.selected` before the window
-        // opened (too early for a comma list — it looks up one literal
+        // opened (too early for a comma list, it looks up one literal
         // target and finds nothing for one containing a comma), so this is
-        // what actually applies a multi-instance selection — the only way to
+        // what actually applies a multi-instance selection, the only way to
         // put the outline/gizmo over more than one part, since nothing else
         // can send the viewport a `Shift`/`Ctrl`/`Cmd`-click on the editor's
         // behalf.
@@ -970,14 +994,14 @@ impl Shell {
 
         // `RBX_STUDIO_ALIGN` (see `shell::align`): applied right after
         // selection, so it aligns whatever the file itself or
-        // `RBX_STUDIO_SELECT` just selected — a screenshot aid for the Align
+        // `RBX_STUDIO_SELECT` just selected, a screenshot aid for the Align
         // tool, since nothing else can click its popover on the editor's
         // behalf.
         shell.apply_debug_align(cx);
 
         // `RBX_STUDIO_DRAG` (see `shell::drag::debug`): applied right after
         // selection, so it moves whatever the file itself or
-        // `RBX_STUDIO_SELECT` just selected — a screenshot aid for a group
+        // `RBX_STUDIO_SELECT` just selected, a screenshot aid for a group
         // drag.
         shell.apply_debug_drag(cx);
 
@@ -997,8 +1021,8 @@ impl Shell {
         }
 
         // `--run` / `RBX_STUDIO_RUN`: runs exactly the pipeline Enter would,
-        // once, before the first frame — the way a scripted launch changes a
-        // place without synthetic input (see `AGENTS.md`'s safety rules).
+        // once, before the first frame, the way a scripted launch changes a
+        // place without synthetic input.
         if let Some(source) = launch.run.as_deref() {
             shell.run_command(source, cx);
             launch.say(format!("--run: {}", shell.command_bar.feedback().label()));
@@ -1050,7 +1074,7 @@ impl Shell {
         shell.apply_debug_open_script(window, cx);
 
         // `RBX_STUDIO_UNDO` (see `shell::history`): applied after every debug
-        // mutation above, through the exact undo path a keypress would use —
+        // mutation above, through the exact undo path a keypress would use,
         // a screenshot aid proving a just-applied mutation was reverted.
         shell.apply_debug_undo(cx);
 
@@ -1081,11 +1105,13 @@ impl Shell {
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
         shell.apply_debug_security_audit(cx);
+        shell.apply_debug_layers(cx);
+        shell.apply_debug_loren(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.
         // `set_document` inside it is what starts the 3D view following the
-        // canvas's screen — see its own doc comment for why that no longer
+        // canvas's screen, see its own doc comment for why that no longer
         // happens unconditionally at startup.
         shell.apply_debug_ui_editor(cx);
         shell.apply_debug_figma(cx);
@@ -1098,12 +1124,12 @@ impl Shell {
 
         // `RBX_STUDIO_ARGON_CONNECT` (see `shell::argon_sync`): Connect is a
         // click, and nothing else can send one to the window on the
-        // editor's behalf — the same reason every other debug var here
+        // editor's behalf, the same reason every other debug var here
         // exists.
         shell.apply_argon_auto_connect(window, cx);
 
         // `RBX_STUDIO_ARGON_DIFF` (see `shell::argon_sync`): after Connect
-        // above, so a real connection can still send a genuine batch — but
+        // above, so a real connection can still send a genuine batch, but
         // this seeds its own synthetic one either way, the only
         // deterministic way to screenshot the Diff window.
         shell.apply_debug_argon_diff(cx);
@@ -1133,14 +1159,14 @@ impl Shell {
         shell
     }
 
-    /// The selection's anchor — see `shell::selection::Selection`'s own doc
-    /// comment — for whatever still only understands one instance at a time
+    /// The selection's anchor, see `shell::selection::Selection`'s own doc
+    /// comment, for whatever still only understands one instance at a time
     /// (the Properties panel, a typed Command Bar `select`).
     pub(crate) fn selected(&self) -> Option<Ref> {
         self.selection.get()
     }
 
-    /// Every selected instance, anchor first — what the Explorer highlights
+    /// Every selected instance, anchor first, what the Explorer highlights
     /// and the viewport outlines.
     pub(super) fn selected_all(&self) -> &[Ref] {
         self.selection.all()
@@ -1148,7 +1174,7 @@ impl Shell {
 
     /// Mirrors the render thread's latest free-camera pose into
     /// `Workspace.CurrentCamera.CFrame` (see `crate::camera::write_pose`) so
-    /// Ctrl+S picks it up and a selected Camera's CFrame row stays live —
+    /// Ctrl+S picks it up and a selected Camera's CFrame row stays live,
     /// subscribed to `WorkspaceView`'s throttled (≤5/s) `PoseSynced` event,
     /// never through [`Shell::push_history`]: flying the camera is not an
     /// edit, and a mouse-look frame landing on the undo stack every time this
@@ -1156,14 +1182,14 @@ impl Shell {
     /// more than a re-render: this runs on the UI thread five times a second
     /// for as long as the camera moves, and every millisecond it takes is one
     /// the viewport's own frames wait behind (the Properties panel reads
-    /// `self.dom` directly for that reason — no copy of the tree is kept). An
+    /// `self.dom` directly for that reason, no copy of the tree is kept). An
     /// open row editor is unaffected by the `cx.notify()` (see
     /// `shell::edit::edit_row`, which reuses its widget regardless of what a
     /// render recomputes), so a keystroke in Properties never gets clobbered
     /// by a pose update landing mid-edit.
     fn sync_camera_pose(&mut self, pose: rbx_viewer::Pose, cx: &mut Context<Self>) {
         crate::camera::write_pose(&mut self.dom, pose);
-        // Not a `reflect_changes`, so the Properties cache is told here —
+        // Not a `reflect_changes`, so the Properties cache is told here,
         // only when a camera is among the selection, or a flight would
         // rebuild a large selection's rows five times a second for nothing.
         let camera_shown = self.selected_all().iter().any(|&reference| {
@@ -1178,7 +1204,7 @@ impl Shell {
     }
 
     /// Reads the tree's selected row back into DOM terms. Called whenever the
-    /// tree redraws, so it must stay quiet when nothing actually changed —
+    /// tree redraws, so it must stay quiet when nothing actually changed,
     /// including a redraw that leaves the anchor exactly where it was (a
     /// Command Bar script's own rebuild re-asserting the same row, say),
     /// which must not collapse a `Shift`/`Ctrl`/`Cmd`-click multi-selection
@@ -1191,7 +1217,7 @@ impl Shell {
         }
         // A search, or a parent collapsed from its chevron, can leave the
         // selected instance without a row; the tree then has nothing
-        // selected, which is the view's doing and not a deselect — a
+        // selected, which is the view's doing and not a deselect, a
         // multi-selection survives it whole. One that no longer exists (a
         // script destroyed it) is still let go.
         let hidden = selected.is_none()
@@ -1220,7 +1246,7 @@ impl Shell {
         self.sync_viewport_selection(cx);
         // A click on the very part the cursor was already hovering would
         // otherwise leave its hover box drawn right under the new selection
-        // outline until the cursor happens to move again — `hover_in_viewport`
+        // outline until the cursor happens to move again, `hover_in_viewport`
         // suppresses a hover on an already-selected referent, but only
         // resolves on the next mouse move, so the same suppression has to
         // apply here too, immediately.
@@ -1330,8 +1356,8 @@ impl Shell {
     }
 
     /// Escape in the Explorer's search field: empties a typed search, as the
-    /// Settings window's does, and leaves the field focused. Returns false —
-    /// so the key goes on to the window — when there is nothing to clear or
+    /// Settings window's does, and leaves the field focused. Returns false,
+    /// so the key goes on to the window, when there is nothing to clear or
     /// a menu is open and should be the one to close.
     pub(super) fn clear_explorer_search(
         &mut self,
@@ -1378,6 +1404,7 @@ impl Shell {
     /// Pushes the root rows the visibility settings and the search now call
     /// for into the tree.
     fn push_root_rows(&mut self, cx: &mut Context<Self>) {
+        self.refresh_query();
         let items = self.explorer_items();
         // Replacing the rows drops the tree's selection; putting it back in the
         // same update keeps the observer from ever seeing the gap. A selected
@@ -1402,8 +1429,8 @@ impl Shell {
         self.set_reduce_motion(Some(!tokens::reduced_motion()), cx);
     }
 
-    /// Suppresses or restores motion — `None` hands the choice back to the
-    /// desktop — and remembers it.
+    /// Suppresses or restores motion, `None` hands the choice back to the
+    /// desktop, and remembers it.
     fn set_reduce_motion(&mut self, choice: Option<bool>, cx: &mut Context<Self>) {
         let reduced = choice.unwrap_or_else(crate::scale::detect_reduced_motion);
         self.reduce_motion = choice;
@@ -1507,7 +1534,7 @@ impl Shell {
         cx.notify();
     }
 
-    /// Docks one panel on one edge — from a drop, or from the dock menu's
+    /// Docks one panel on one edge, from a drop, or from the dock menu's
     /// "Move to" entry.
     ///
     /// Both go through here rather than each transforming the layout
@@ -1535,7 +1562,7 @@ impl Shell {
     }
 
     /// Opens (or brings forward) or shuts one, from the View menu or the
-    /// ribbon's Home tab — the only two ways back, which is why both exist.
+    /// ribbon's Home tab, the only two ways back, which is why both exist.
     pub(crate) fn set_panel_open(
         &mut self,
         panel: layout::Panel,
@@ -1555,7 +1582,7 @@ impl Shell {
         cx.notify();
     }
 
-    /// Whether a panel is on screen — what a View menu toggle and a ribbon
+    /// Whether a panel is on screen, what a View menu toggle and a ribbon
     /// tile read, so one hidden behind another tab is brought forward by
     /// them rather than shut.
     pub(crate) fn is_panel_showing(&self, panel: layout::Panel) -> bool {
@@ -1569,7 +1596,7 @@ impl Shell {
         cx.notify();
     }
 
-    /// Tears one panel out into a window of its own — from a tab dragged
+    /// Tears one panel out into a window of its own, from a tab dragged
     /// past the window's edge, or from the dock menu's "Float".
     pub(super) fn float_panel(&mut self, panel: layout::Panel, cx: &mut Context<Self>) {
         self.layout.float(panel);
@@ -1580,7 +1607,7 @@ impl Shell {
     /// Applies a new UI scale and persists it.
     ///
     /// Every size token is read through `tokens::font_scale`, so this one
-    /// call re-lays-out the whole window — which is the point: WCAG 1.4.4
+    /// call re-lays-out the whole window, which is the point: WCAG 1.4.4
     /// asks for text at 200% *without loss of content or functionality*,
     /// and text that grew while its row didn't would lose exactly that.
     pub(super) fn set_font_scale(&mut self, scale: f32, cx: &mut Context<Self>) {
@@ -1626,7 +1653,7 @@ impl Shell {
     }
 
     /// Flips the viewport's main camera between perspective and orthographic
-    /// projection — see `WorkspaceView::set_orthographic`.
+    /// projection, see `WorkspaceView::set_orthographic`.
     fn set_orthographic(&mut self, orthographic: bool, cx: &mut Context<Self>) {
         if orthographic == self.orthographic {
             return;
@@ -1640,7 +1667,7 @@ impl Shell {
         cx.notify();
     }
 
-    /// Shows or hides the top-right orientation indicator — see
+    /// Shows or hides the top-right orientation indicator, see
     /// `WorkspaceView::set_axis_indicator`.
     fn set_axis_indicator(&mut self, shown: bool, cx: &mut Context<Self>) {
         if shown == self.axis_indicator {
@@ -1667,7 +1694,7 @@ impl Shell {
     }
 
     /// Switches the selection outline between drawing through everything
-    /// (off, the default) and being depth-tested against the scene — see
+    /// (off, the default) and being depth-tested against the scene, see
     /// `WorkspaceView::set_selection_occluded`.
     fn set_selection_occluded(&mut self, occluded: bool, cx: &mut Context<Self>) {
         if occluded == self.selection_occluded {
@@ -1688,7 +1715,7 @@ impl Shell {
         self.icon_pack
     }
 
-    /// Re-resolves every Explorer row's icon for `pack` in place — the tree's
+    /// Re-resolves every Explorer row's icon for `pack` in place, the tree's
     /// rows and their expansion state are untouched, only which sprite each
     /// one points at changes (see `Explorer::set_icon_pack`).
     fn set_icon_pack(&mut self, pack: IconPack, cx: &mut Context<Self>) {
@@ -1706,7 +1733,7 @@ impl Shell {
     }
 
     /// The installed icon pack in use, if any, and every installed pack's
-    /// name — for the Explorer menu (see `shell::workspace`).
+    /// name, for the Explorer menu (see `shell::workspace`).
     pub(super) fn installed_icon_packs(&self) -> (&[String], Option<&str>) {
         (
             &self.installed_icon_packs,
@@ -1716,7 +1743,7 @@ impl Shell {
 
     /// Switches the user's icon pack over the kit (`None` for the kit alone)
     /// and re-resolves every Explorer row's icon. A pack that no longer
-    /// loads — deleted since startup, say — is reported in the Output dock
+    /// loads, deleted since startup, say, is reported in the Output dock
     /// and changes nothing, rather than silently reverting to the kit.
     fn set_user_icon_pack(&mut self, name: Option<String>, cx: &mut Context<Self>) {
         let overlay = match &name {
@@ -1745,7 +1772,7 @@ impl Shell {
         cx.notify();
     }
 
-    /// Switches the unfocused frame rate preset — see
+    /// Switches the unfocused frame rate preset, see
     /// `WorkspaceView::set_unfocused_fps`.
     fn set_unfocused_fps(&mut self, unfocused_fps: UnfocusedFps, cx: &mut Context<Self>) {
         if unfocused_fps == self.unfocused_fps {
@@ -1764,7 +1791,7 @@ impl Shell {
     /// preset to disk. Also saves the current dock layout. A settings file
     /// is tiny, so this runs synchronously on every change rather than
     /// debouncing; a write failure (e.g. no writable config directory) is
-    /// not fatal and is silently dropped — losing a preference write is
+    /// not fatal and is silently dropped, losing a preference write is
     /// better than interrupting the editor over it.
     fn save_settings(&self) {
         let settings = Settings {
@@ -1792,6 +1819,7 @@ impl Shell {
             output_display: self.output_display,
             optimize_graph_on_open: self.optimize_graph_on_open,
             increment_names: self.increment_names,
+            strip_on_publish: self.strip_on_publish,
             expand_on_select: self.expand_on_select,
             dragger: self.dragger,
             controls: crate::settings::Controls {
@@ -1838,7 +1866,7 @@ impl Shell {
 }
 
 impl Shell {
-    /// Tab and Shift+Tab, walking this window's own order — see
+    /// Tab and Shift+Tab, walking this window's own order, see
     /// `roving::TabOrder::step` for why GPUI's cannot be used.
     fn step_focus(&self, backwards: bool, window: &mut Window, cx: &mut App) {
         self.tab_order.step(backwards, window, cx);
@@ -1873,14 +1901,14 @@ impl Render for Shell {
         // `focus_visible` only paints for keyboard-driven focus, so a
         // seeded one is invisible by construction and the first Tab becomes
         // a guess. With every stop numbered in reading order, the first Tab
-        // is already predictable on its own — which is all the APG's
+        // is already predictable on its own, which is all the APG's
         // entry-point rule actually asks for.
         self.tab_order.restart();
         if std::mem::take(&mut self.retitle) {
             window.set_window_title(&self.title);
         }
         // Before the tree is built, so the box this focuses is in the very
-        // frame that hands it the caret — see `Shell::focus_explorer_edit`.
+        // frame that hands it the caret, see `Shell::focus_explorer_edit`.
         self.focus_explorer_edit(window, cx);
         self.focus_roblox_dialog(window, cx);
         if self.close_prompt && !self.close_focus.is_focused(window) {
@@ -1905,13 +1933,13 @@ impl Render for Shell {
             .text_color(tokens::text_strong())
             // Ctrl+S here rather than on one panel (contrast `instance_tree`'s
             // own `on_key_down`): a key event bubbles up from whatever holds
-            // focus, and every panel — Explorer, Properties, viewport,
-            // Command Bar — sits below this container, so a save works no
+            // focus, and every panel, Explorer, Properties, viewport,
+            // Command Bar, sits below this container, so a save works no
             // matter which one is focused.
             // Tab and Shift+Tab, in the *capture* phase, before anything
             // else can eat them.
             //
-            // The toolkit binds them on its own `Root` — but a focused text
+            // The toolkit binds them on its own `Root`: but a focused text
             // input consumes Tab first, so focus starting in the Command
             // Bar (which is where it starts) could never leave it with the
             // keyboard. That is a keyboard trap (WCAG 2.1.2), not a
@@ -1936,7 +1964,7 @@ impl Render for Shell {
             // A bare Alt tap is one of the two ways into the menu bar, so
             // the window has to see Alt going down and coming back up. Both
             // of the listeners below only exist to tell a tap apart from Alt
-            // being used as the live modifier it also is here — see
+            // being used as the live modifier it also is here, see
             // `menu_bar::alt_tap`.
             .on_modifiers_changed(cx.listener(
                 |shell, event: &ModifiersChangedEvent, window, cx| {
@@ -2051,7 +2079,7 @@ impl Shell {
 
         // Deferred, because this runs inside the click handler's own `Shell`
         // update: opening a window renders it, and the first render reads
-        // the very entity that borrow is holding — which is a panic rather
+        // the very entity that borrow is holding, which is a panic rather
         // than something the compiler would have caught. `App::defer` puts
         // both the close and the open after that update ends.
         cx.defer(move |cx| {
@@ -2097,7 +2125,7 @@ impl Shell {
         }
     }
 
-    /// `ParticleEmitter.Size` — the instance's class and the property, the
+    /// `ParticleEmitter.Size`: the instance's class and the property, the
     /// way Studio titles the same window. An attribute row drops its
     /// `Attribute:` prefix and reads as the attribute's name.
     pub(crate) fn sequence_title(&self, row: &str) -> String {
@@ -2113,7 +2141,7 @@ impl Shell {
     }
 }
 
-/// Whether `reference` has a row in the tree as it stands — not inside a
+/// Whether `reference` has a row in the tree as it stands, not inside a
 /// collapsed parent, and not filtered out by a search.
 fn has_row(tree: &TreeState, reference: Ref) -> bool {
     (0..)

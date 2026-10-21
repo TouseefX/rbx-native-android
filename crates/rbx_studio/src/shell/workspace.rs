@@ -1,4 +1,4 @@
-//! **Row D** — the document, and whichever panels are parked around it.
+//! **Row D**: the document, and whichever panels are parked around it.
 //!
 //! Which panel is on which edge is [`super::layout::Layout`]'s to say, not
 //! this module's: Row D used to be three hardcoded `.child()` calls, so
@@ -13,8 +13,8 @@
 //! unrendered and a scroll position has nowhere to get lost.
 //!
 //! The frame fixes both side docks at 228px. They are draggable here
-//! anyway — a place file's instance names are not 228px wide just because
-//! the design's were — but they start there, and the handle that widens
+//! anyway, a place file's instance names are not 228px wide just because
+//! the design's were, but they start there, and the handle that widens
 //! them draws nothing until it is pointed at.
 
 use gpui_kit::assets::IconName;
@@ -75,7 +75,7 @@ impl Shell {
             .bg(tokens::black())
             .child(
                 h_flex()
-                    // Positioned, so the drop strips can be laid over it —
+                    // Positioned, so the drop strips can be laid over it,
                     // an edge holding nothing has no column of its own to
                     // aim at.
                     .relative()
@@ -120,7 +120,7 @@ impl Shell {
     }
 
     /// One panel's trailing controls and its content, with the tab strip
-    /// left to `shell::docks` — the strip belongs to the *dock* now, since
+    /// left to `shell::docks`: the strip belongs to the *dock* now, since
     /// several panels share one.
     pub(super) fn panel_parts(
         &mut self,
@@ -144,11 +144,13 @@ impl Shell {
             Panel::PluginWidgets => self.plugin_widgets_dock(window, cx),
             Panel::InputActions => self.input_actions_dock(window, cx),
             Panel::SecurityAudit => self.security_audit_dock(cx),
+            Panel::Layers => self.layers_dock(window, cx),
+            Panel::Loren => self.loren_dock(window, cx),
         }
     }
 
     /// Whichever editor Row A has open. This is the *only* thing Row A
-    /// switches — see this module's own doc comment.
+    /// switches, see this module's own doc comment.
     fn document_content(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         // Every frame, whichever document is up: the render thread draws the
         // UI editor's canvas only while it is asked for, and stops the frame
@@ -220,8 +222,18 @@ impl Shell {
                                 cx.stop_propagation();
                             }
                         }))
-                        .child(search_field(&self.tab_order, &self.search, cx)),
+                        .child(
+                            h_flex()
+                                .gap(px(4.))
+                                .child(div().flex_1().child(search_field(
+                                    &self.tab_order,
+                                    &self.search,
+                                    cx,
+                                )))
+                                .child(self.query_toggle(cx)),
+                        ),
                 )
+                .children(self.query_status(cx))
                 .child(
                     div()
                         .flex_1()
@@ -290,7 +302,7 @@ impl Shell {
     }
 
     /// Output keeps its filter/Clear strip and its own settings menu, and
-    /// collapses to exactly its own tab strip — enough to find and re-open,
+    /// collapses to exactly its own tab strip, enough to find and re-open,
     /// and nothing else.
     fn output_dock(
         &self,
@@ -401,7 +413,7 @@ impl Shell {
         .into_any_element()
     }
 
-    /// Applies an in-progress drag. Sizes follow the pointer exactly — the
+    /// Applies an in-progress drag. Sizes follow the pointer exactly, the
     /// delta is measured from where the drag started, not from the previous
     /// frame, so a drag that leaves the window and comes back doesn't
     /// accumulate error.
@@ -434,7 +446,7 @@ impl Shell {
 }
 
 /// A dock's search field: `field_select`, a hairline `border`, radius
-/// `RADIUS` — the reference's own field look.
+/// `RADIUS`: the reference's own field look.
 ///
 /// The toolkit `Input` keeps the caret, selection and IME handling; its own
 /// chrome is switched off so this container can be the frame's.
@@ -448,7 +460,7 @@ pub(super) fn search_field(
 
 /// A search box's place in the window's Tab order: an index for the
 /// toolkit, and its handle in the walk `TabOrder::step` takes. Without the
-/// handle, Tab out of the box resumed from wherever the walk last was —
+/// handle, Tab out of the box resumed from wherever the walk last was,
 /// out of the Explorer's search it skipped the tree and left the dock.
 fn stop(
     order: &super::roving::TabOrder,
@@ -507,7 +519,7 @@ fn search_field_sized(
                 .with_size(tokens::field_size())
                 .h(tokens::input_height())
                 // Without this the field sits at the toolkit's default
-                // index 0 and sorts ahead of every region — a search box
+                // index 0 and sorts ahead of every region, a search box
                 // reached before the menu bar.
                 .tab_index(tab_index),
         )

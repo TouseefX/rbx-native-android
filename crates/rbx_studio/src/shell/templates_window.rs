@@ -4,7 +4,7 @@
 //!
 //! **This window holds no copy of the templates.** It reads the list off
 //! [`Shell`] every frame, writes through `script_templates`' store, and has
-//! `Shell` reload the folder right after — the same reload a hand edit gets
+//! `Shell` reload the folder right after, the same reload a hand edit gets
 //! from the poll (see `shell::templates_live`). What it keeps is only its
 //! own view state: the filter and which row is selected.
 
@@ -173,7 +173,7 @@ impl TemplatesWindow {
     fn new(shell: Entity<Shell>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let filter = cx.new(|cx| InputState::new(window, cx).placeholder("Filter"));
         let subscriptions = vec![
-            // A reload — the poll, or this window's own write — notifies
+            // A reload, the poll, or this window's own write, notifies
             // the shell; the list is drawn from it.
             cx.observe_in(&shell, window, |this, _, window, cx| {
                 this.keep_selection(cx);

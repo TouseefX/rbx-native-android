@@ -7,7 +7,7 @@
 //! The bake carries the part's `Size` too, not only its turn: a stretched
 //! mesh that is then turned cannot be stretched back along the new axes, so
 //! the new mesh holds the shape as drawn and its `InitialSize` is read off
-//! the uploaded mesh itself — Blender's Apply › Rotation & Scale, Roblox
+//! the uploaded mesh itself, Blender's Apply › Rotation & Scale, Roblox
 //! having no scale channel apart from `Size`.
 
 use std::collections::BTreeMap;
@@ -146,7 +146,7 @@ pub(crate) fn plan(
 }
 
 /// Whether the uploaded mesh, whose own extent is `native`, has the bake's
-/// proportions — anything but a uniform rescale is refused.
+/// proportions, anything but a uniform rescale is refused.
 pub(crate) fn same_shape(baked: Vec3, native: Vec3) -> bool {
     if baked.min_element() <= f32::EPSILON || native.min_element() <= f32::EPSILON {
         // A flat mesh: compare only the axes that have extent.

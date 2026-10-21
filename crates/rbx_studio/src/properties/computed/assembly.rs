@@ -1,4 +1,4 @@
-//! A part's assembly — the parts rigidly joined to it — and the three values
+//! A part's assembly, the parts rigidly joined to it, and the three values
 //! Studio shows for it, worked out only as far as Roblox documents them:
 //!
 //! - An assembly is the parts connected by joints (`physics/assemblies.md`):
@@ -16,7 +16,7 @@
 //!   that are not the root, and the root is the first part left by: not
 //!   massless, then the highest `RootPriority`. The last rule, by size with
 //!   undocumented multipliers, is not reproduced: where it would decide,
-//!   the root — and whatever depends on it — is not shown.
+//!   the root, and whatever depends on it, is not shown.
 //! - A `WeldConstraint` saves whether it is enabled in an undocumented
 //!   `State`; one whose `State` is not the default leaves its assembly
 //!   unknown.
@@ -186,7 +186,7 @@ impl Properties {
     }
 
     /// `AssemblyMass`, `AssemblyCenterOfMass` or `AssemblyRootPart` for
-    /// `part` — see this module's doc for when each is left out.
+    /// `part`: see this module's doc for when each is left out.
     pub(super) fn assembly(&self, dom: &WeakDom, part: Ref, name: &str) -> Option<Variant> {
         let assembly = self.assembly_of(dom, part)?;
         match name {
@@ -269,7 +269,7 @@ impl Properties {
             });
 
         // Whatever counts towards the assembly's mass: every part with mass,
-        // or — when all of them are massless — the root alone.
+        // or, when all of them are massless, the root alone.
         let counted: Vec<(Ref, &Instance)> = if massive.is_empty() {
             root.into_iter().collect()
         } else {
