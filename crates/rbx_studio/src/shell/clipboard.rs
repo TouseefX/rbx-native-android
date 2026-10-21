@@ -118,7 +118,7 @@ pub(super) struct Clipped {
 /// descendants** can be cloned"). Checked once per child, before recursing,
 /// so a skipped subtree is never walked at all rather than walked and
 /// discarded.
-fn snapshot(dom: &WeakDom, reference: Ref) -> Option<Clipped> {
+pub(super) fn snapshot(dom: &WeakDom, reference: Ref) -> Option<Clipped> {
     let instance = dom.get(reference)?;
     Some(Clipped {
         origin: reference,
@@ -189,7 +189,17 @@ pub(super) fn has_copyable(dom: &WeakDom, database: &ReflectionDatabase, selecte
 /// By leaving the key out rather than writing `true`: absent is the
 /// default, and a value nothing else of its class stores is a column the
 /// binary writer has to fill for every other instance.
-fn materialize(dom: &mut WeakDom, node: &Clipped, parent: Option<Ref>) -> Ref {
+pub(super) fn materialize(dom: &mut WeakDom, node: &Clipped, parent: Option<Ref>) -> Ref {
+    materialize_mapped(dom, node, parent).0
+}
+
+/// [`materialize`], also returning which fresh instance each referent the
+/// entry was copied from became.
+pub(super) fn materialize_mapped(
+    dom: &mut WeakDom,
+    node: &Clipped,
+    parent: Option<Ref>,
+) -> (Ref, HashMap<Ref, Ref>) {
     let mut map = HashMap::new();
     let root = create(dom, node, parent, &mut map);
     write_properties(dom, node, &map);
@@ -198,7 +208,7 @@ fn materialize(dom: &mut WeakDom, node: &Clipped, parent: Option<Ref>) -> Ref {
     if let Some(instance) = dom.get_mut(root) {
         instance.properties_mut().remove(ARCHIVABLE);
     }
-    root
+    (root, map)
 }
 
 /// `roots`' subtrees copied into a DOM of their own, as top-level instances:

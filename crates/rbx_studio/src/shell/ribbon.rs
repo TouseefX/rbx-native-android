@@ -494,6 +494,8 @@ impl Shell {
             (Panel::Output, IconName::Terminal, "Output"),
             (Panel::Viewport, IconName::MonitorCog, "Viewport"),
             (Panel::InputActions, IconName::Gamepad2, "Input Actions"),
+            (Panel::Layers, IconName::Layers, "Layers"),
+            (Panel::Loren, IconName::Layers, "Loren"),
         ];
         // Argon and Wally have no tab of their own to reopen from outside
         // the Script Editor, because they're nowhere to be seen outside it
@@ -508,6 +510,7 @@ impl Shell {
             ));
             tiles.push((Panel::Watch, IconName::Eye, "Watch"));
             tiles.push((Panel::CallStack, IconName::Layers, "Call Stack"));
+            tiles.push((Panel::Tests, IconName::CircleCheck, "Tests"));
         }
         tiles
             .into_iter()

@@ -70,7 +70,7 @@ pub use gizmo::Gizmo;
 // produced them; nothing in the render path itself asks for this.
 pub use gpu::describe_adapter;
 #[cfg(not(target_arch = "wasm32"))]
-pub use headless::{GuiCanvas, Headless};
+pub use headless::{GuiCanvas, Headless, Parked};
 pub use input::{CameraInput, CameraKey};
 pub use joints::JointSolver;
 pub use lighting::light_guides;
@@ -81,6 +81,7 @@ pub use lighting::Calibration;
 pub use load::{parse_place, read_place};
 pub use quality::{valid_band_ends, FrameRateManager, QualityLevel, TUNED_BAND_ENDS};
 pub use renderer::{GuiBox, OverlayColors, Segment, ISOLATION_BACKDROP};
+pub use scene::perf;
 pub use scene::{resolved_shape_label, shows_screen, SafeInsets, ScrollTarget, STAGE_REACH};
 #[cfg(not(target_arch = "wasm32"))]
 pub use serve::{serve, DEFAULT_PORT};

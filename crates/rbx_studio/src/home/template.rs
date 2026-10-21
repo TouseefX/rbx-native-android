@@ -55,7 +55,7 @@ impl Template {
         save::save(&self.dom(), Format::Binary, path)
     }
 
-    fn dom(self) -> WeakDom {
+    pub(crate) fn dom(self) -> WeakDom {
         let mut dom = WeakDom::new();
         // The services a fresh Studio place shows in the Explorer; a place
         // file's roots are its services, with no DataModel above them.

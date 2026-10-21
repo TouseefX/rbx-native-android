@@ -130,13 +130,22 @@ pub(crate) enum Panel {
     /// The place's `InputContext`s, actions and bindings as one table
     /// (`shell::input_panel`). Shut until asked for.
     InputActions,
+    /// The place's specs and their last results (`shell::tests_dock`).
+    /// Script Editor only; shut until asked for.
+    Tests,
+    /// The place's editor layers and 3D notes (`shell::layers_panel`). Shut
+    /// until asked for.
+    Layers,
+    /// The place's Loren Services and Controllers as a boot graph
+    /// (`shell::loren_panel`). Shut until asked for.
+    Loren,
 }
 
 impl Panel {
     /// In the order a fresh layout seats them, which is what makes the
     /// Viewport, Argon and Wally docks tabs beside Output rather than
     /// docks of their own.
-    pub(crate) const ALL: [Panel; 13] = [
+    pub(crate) const ALL: [Panel; 16] = [
         Panel::Explorer,
         Panel::Properties,
         Panel::Output,
@@ -150,6 +159,9 @@ impl Panel {
         Panel::Collaborators,
         Panel::PluginWidgets,
         Panel::InputActions,
+        Panel::Tests,
+        Panel::Layers,
+        Panel::Loren,
     ];
 
     /// Where this panel lives in a layout nobody has rearranged, also
@@ -157,7 +169,9 @@ impl Panel {
     /// closing its torn-out window puts it back.
     pub(crate) fn home(self) -> Edge {
         match self {
-            Panel::Explorer | Panel::Collaborators | Panel::PluginWidgets => Edge::Right,
+            Panel::Explorer | Panel::Collaborators | Panel::PluginWidgets | Panel::Layers => {
+                Edge::Right
+            }
             Panel::Properties | Panel::TerrainEditor => Edge::Left,
             Panel::Output
             | Panel::Viewport
@@ -166,7 +180,9 @@ impl Panel {
             | Panel::ScriptAnalysis
             | Panel::Watch
             | Panel::CallStack
-            | Panel::InputActions => Edge::Bottom,
+            | Panel::InputActions
+            | Panel::Tests
+            | Panel::Loren => Edge::Bottom,
         }
     }
 
@@ -187,6 +203,9 @@ impl Panel {
             Panel::Collaborators => "Collaborators",
             Panel::PluginWidgets => "Plugin Widgets",
             Panel::InputActions => "Input Actions",
+            Panel::Tests => "Tests",
+            Panel::Layers => "Layers",
+            Panel::Loren => "Loren",
         }
     }
 
@@ -200,6 +219,9 @@ impl Panel {
                 | Panel::Collaborators
                 | Panel::PluginWidgets
                 | Panel::InputActions
+                | Panel::Tests
+                | Panel::Layers
+                | Panel::Loren
         )
     }
 

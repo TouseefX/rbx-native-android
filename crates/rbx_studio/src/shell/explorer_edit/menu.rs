@@ -329,6 +329,27 @@ impl Shell {
                 |shell, _, cx| shell.ungroup_selected(cx),
             ),
             row(
+                "move-to-layer",
+                IconName::Layers,
+                "Move to Active Layer",
+                true,
+                |shell, _, cx| shell.assign_selection_to_active_layer(cx),
+            ),
+            row(
+                "remove-from-layer",
+                IconName::Layers,
+                "Remove from Layer",
+                true,
+                |shell, _, cx| shell.assign_selection_to_layer(None, cx),
+            ),
+            row(
+                "pin-note",
+                IconName::Pencil,
+                "Pin Note",
+                true,
+                |shell, window, cx| shell.pin_note(window, cx),
+            ),
+            row(
                 "delete",
                 IconName::Trash,
                 "Delete",

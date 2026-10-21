@@ -219,6 +219,26 @@ mod tests {
     }
 
     #[test]
+    fn a_string_xml_cannot_hold_goes_out_as_binary_and_reads_back_the_same() {
+        let mut dom = WeakDom::new();
+        let terrain = dom.new_instance("Terrain", "Terrain", None);
+        let grid = Variant::String("\u{2}\u{3}grid\tok".into());
+        dom.set_property(terrain, "PhysicsGrid", grid.clone())
+            .unwrap();
+
+        let xml = serialize(&dom).unwrap();
+        assert!(xml.contains("<BinaryString name=\"PhysicsGrid\">"));
+        assert!(!xml.contains('\u{2}'));
+
+        let back = crate::deserialize(&xml).unwrap();
+        let root = back.root_refs()[0];
+        assert_eq!(
+            back.get(root).unwrap().properties().get("PhysicsGrid"),
+            Some(&grid)
+        );
+    }
+
+    #[test]
     fn shared_strings_round_trip_through_one_deduplicated_table() {
         let mut dom = WeakDom::new();
         let mesh = Variant::Unknown {

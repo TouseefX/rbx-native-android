@@ -23,6 +23,7 @@ pub mod plugin;
 mod printed;
 mod property;
 mod runtime;
+pub mod test_runner;
 
 pub use debugger::{Breakpoint, Frame, Paused, Resume, Variable, STOPPED};
 pub use mlua::Error as LuaError;

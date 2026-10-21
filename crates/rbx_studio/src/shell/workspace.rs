@@ -143,6 +143,9 @@ impl Shell {
             Panel::Collaborators => self.collaborators_dock(window, cx),
             Panel::PluginWidgets => self.plugin_widgets_dock(window, cx),
             Panel::InputActions => self.input_actions_dock(window, cx),
+            Panel::Tests => self.tests_dock(cx),
+            Panel::Layers => self.layers_dock(window, cx),
+            Panel::Loren => self.loren_dock(window, cx),
         }
     }
 
@@ -219,8 +222,18 @@ impl Shell {
                                 cx.stop_propagation();
                             }
                         }))
-                        .child(search_field(&self.tab_order, &self.search, cx)),
+                        .child(
+                            h_flex()
+                                .gap(px(4.))
+                                .child(div().flex_1().child(search_field(
+                                    &self.tab_order,
+                                    &self.search,
+                                    cx,
+                                )))
+                                .child(self.query_toggle(cx)),
+                        ),
                 )
+                .children(self.query_status(cx))
                 .child(
                     div()
                         .flex_1()
