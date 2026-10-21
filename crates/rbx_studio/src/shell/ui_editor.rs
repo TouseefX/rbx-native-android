@@ -66,12 +66,13 @@ const CANVAS_HIDES: [Panel; 3] = [Panel::Properties, Panel::Output, Panel::Viewp
 /// Argon and Wally (`shell::scripting_tools`) have nothing to sync or
 /// resolve outside the Script Editor, so they're seated on the same dock
 /// as Output/Viewport but only ever shown alongside scripts.
-const SCRIPT_TOOLS: [Panel; 5] = [
+const SCRIPT_TOOLS: [Panel; 6] = [
     Panel::Argon,
     Panel::Wally,
     Panel::ScriptAnalysis,
     Panel::Watch,
     Panel::CallStack,
+    Panel::Tests,
 ];
 
 const SCREEN_CLASS: &str = "ScreenGui";
@@ -308,7 +309,7 @@ impl Shell {
                 .explorer
                 .items(self.show_all_services, &self.service_overrides),
         };
-        crate::explorer::search(&items, &self.explorer_query)
+        self.filter_rows(&items)
     }
 
     /// The docks left out of the layout as things stand: the canvas's own

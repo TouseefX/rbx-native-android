@@ -28,7 +28,7 @@ use crate::dragger::surface::SurfaceFrame;
 use crate::dragger::sweep::{self, SoftSnap};
 use crate::dragger::{free, tilt};
 use crate::settle::{Settle, Settled};
-use crate::transform::{Target, Targets, Tool};
+use crate::transform::{Slope, Target, Targets, Tool};
 
 use super::{readout, ViewportAction, WorkspaceView};
 
@@ -108,6 +108,10 @@ pub(super) enum Drag {
         /// its length axis (X, `component == 0`) is unaffected either way,
         /// nothing else is meant to grow together with the length.
         cylinder: bool,
+        /// The same freeze for a wedge or corner wedge with `Alt` held: the
+        /// axes its slope spans scale by the factor `component` did, so the
+        /// slope keeps its angle. `Slope::None` without `Alt`.
+        slope: Slope,
         /// Whether `Ctrl` holds the part's middle still, both faces moving
         /// (see [`scale::from_pivot`]); re-read on every move.
         centred: bool,

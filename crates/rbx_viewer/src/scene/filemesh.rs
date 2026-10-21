@@ -22,8 +22,10 @@ use rbx_reflection::ReflectionDatabase;
 use crate::assets::Image;
 use crate::textures::asset_uri;
 
-pub(crate) use appearance::{AlphaMode, Appearance};
-pub(crate) use fit::{of as fit_of, Fit};
+pub(crate) use appearance::{of as appearance_of, AlphaMode, Appearance};
+pub(crate) use fit::{
+    mesh_part as mesh_part_asset, of as fit_of, special_mesh as special_mesh_asset, Fit,
+};
 
 use super::material::{Catalog, Slot};
 
@@ -191,11 +193,13 @@ impl Entry {
         let images = self
             .texture
             .iter()
-            .chain(
-                self.appearance
+            .chain(self.appearance.iter().flat_map(|appearance| {
+                appearance
+                    .maps
                     .iter()
-                    .flat_map(|appearance| appearance.maps.iter().flatten()),
-            )
+                    .flatten()
+                    .chain(appearance.emissive_mask.iter())
+            }))
             .chain(self.dressing.iter().flat_map(|dressing| dressing.images()))
             .chain(makeup::images(&self.makeup))
             .cloned()

@@ -15,6 +15,7 @@ fn part_at(referent: u32, position: Vec3, size: Vec3) -> Target {
         model: Mat4::from_translation(position) * Mat4::from_scale(size),
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
     }
 }
 
@@ -33,6 +34,7 @@ fn turned_part_at(referent: u32, position: Vec3, size: Vec3) -> Target {
         ),
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
     }
 }
 

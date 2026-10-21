@@ -15,7 +15,7 @@ use crate::engine::signal::{self, Owner, SignalKey};
 use crate::engine::{changes, scheduler};
 use crate::plugin::api::{
     Arg, Context, DebuggerView, Input, LayoutBox, MouseInput, Origin, Outcome, OutputKind,
-    Permission, SourceBody,
+    Permission, SourceBody, WidgetKind,
 };
 use crate::plugin::env::{engine_for, Env};
 use crate::plugin::{debugger_api, events, loader, plugin_object, services, vm};
@@ -336,6 +336,7 @@ fn start(host: &mut PluginHost, index: usize) {
             )));
         }
     }
+    host.shared.borrow_mut().load_settings(&source.name);
     let roots = Rc::new(RefCell::new(vec![folder, core_gui, plugin_gui_service]));
     let env = Rc::new(Env {
         plugin: id,
@@ -417,37 +418,55 @@ fn tick(host: &mut PluginHost) {
     }
 }
 
+/// The close button: a `BindToClose` callback runs first, then the widget
+/// closes anyway. Studio 0.743 does the same (its docs say the callback
+/// replaces the close, but the widget's `Enabled` still goes false).
 fn close_widget(host: &mut PluginHost, id: u32) {
-    let root = {
-        let mut shared = host.shared.borrow_mut();
-        let Some(widget) = shared.ui.widgets.iter_mut().find(|w| w.id == id) else {
-            return;
-        };
-        widget.enabled = false;
-        let root = widget.root;
-        shared.ui_changed = true;
-        root
+    let Some((root, key)) = host
+        .shared
+        .borrow()
+        .ui
+        .widgets
+        .iter()
+        .find(|w| w.id == id)
+        .map(|w| {
+            (
+                w.root,
+                matches!(w.kind, WidgetKind::Dock { .. }).then(|| w.key.clone()),
+            )
+        })
+    else {
+        return;
     };
+    let owner = owner_of(host, root);
+    let callback = owner.as_ref().and_then(|(lua, _)| {
+        lua.named_registry_value::<Option<Table>>(BIND_TO_CLOSE_KEY)
+            .ok()
+            .flatten()
+            .and_then(|table| {
+                table
+                    .get::<Option<Function>>(format!("{root:?}"))
+                    .ok()
+                    .flatten()
+            })
+    });
+    if let (Some(callback), Some((lua, env))) = (callback, &owner) {
+        report(env, scheduler::spawn(lua, callback, MultiValue::new()));
+    }
+    {
+        let mut shared = host.shared.borrow_mut();
+        if let Some(widget) = shared.ui.widgets.iter_mut().find(|w| w.id == id) {
+            widget.enabled = false;
+        }
+        shared.ui_changed = true;
+        if let (Some((_, env)), Some(key)) = (&owner, key) {
+            shared.remember_widget(&env.name, &key, false);
+        }
+    }
     let _ = host
         .dom
         .borrow_mut()
         .set_property(root, "Enabled", Variant::Bool(false));
-    let Some((lua, env)) = owner_of(host, root) else {
-        return;
-    };
-    let callback = lua
-        .named_registry_value::<Option<Table>>(BIND_TO_CLOSE_KEY)
-        .ok()
-        .flatten()
-        .and_then(|table| {
-            table
-                .get::<Option<Function>>(format!("{root:?}"))
-                .ok()
-                .flatten()
-        });
-    if let Some(callback) = callback {
-        report(&env, scheduler::spawn(&lua, callback, MultiValue::new()));
-    }
 }
 
 fn unload(host: &mut PluginHost, id: u32) {

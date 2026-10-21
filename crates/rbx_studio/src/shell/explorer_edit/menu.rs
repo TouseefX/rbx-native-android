@@ -266,6 +266,13 @@ impl Shell {
                 |shell, _, cx| shell.paste_into_selected(cx),
             ),
             row(
+                "paste-into-original",
+                IconName::ClipboardPaste,
+                "Paste into at Original Location",
+                live.paste,
+                |shell, _, cx| shell.paste_into_at_original(cx),
+            ),
+            row(
                 "rename",
                 IconName::Pencil,
                 "Rename",
@@ -320,6 +327,27 @@ impl Shell {
                 "Ungroup",
                 live.ungroup,
                 |shell, _, cx| shell.ungroup_selected(cx),
+            ),
+            row(
+                "move-to-layer",
+                IconName::Layers,
+                "Move to Active Layer",
+                true,
+                |shell, _, cx| shell.assign_selection_to_active_layer(cx),
+            ),
+            row(
+                "remove-from-layer",
+                IconName::Layers,
+                "Remove from Layer",
+                true,
+                |shell, _, cx| shell.assign_selection_to_layer(None, cx),
+            ),
+            row(
+                "pin-note",
+                IconName::Pencil,
+                "Pin Note",
+                true,
+                |shell, window, cx| shell.pin_note(window, cx),
             ),
             row(
                 "delete",

@@ -79,6 +79,7 @@ commands! {
     Duplicate, "duplicate", "Duplicate", Edit, ["secondary-d"];
     Group, "group", "Group", Edit, ["secondary-g"];
     Ungroup, "ungroup", "Ungroup", Edit, ["secondary-shift-g"];
+    MoveToLayer, "move_to_layer", "Move to Active Layer", Edit, ["secondary-alt-l"];
     UiScaleIn, "ui_scale_in", "Zoom In (UI scale)", View, ["secondary-="];
     UiScaleOut, "ui_scale_out", "Zoom Out (UI scale)", View, ["secondary--"];
     UiScaleReset, "ui_scale_reset", "Reset UI Scale", View, ["secondary-0"];

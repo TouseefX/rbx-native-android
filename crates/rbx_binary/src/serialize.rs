@@ -217,17 +217,42 @@ fn prop_header(class_id: i32, name: &str, type_id: u8, payload: &[u8]) -> Vec<u8
     writer.into_bytes()
 }
 
+// Properties old Studio builds wrote that current Studio refuses to load: a place
+// still holding one doesn't open at all. `SolidMeshHolder` is a pre-2019 CSG
+// string on unions (always empty in the files we've seen), so it's dropped.
+const RETIRED_PROPERTIES: &[&str] = &["SolidMeshHolder"];
+
 // Alphabetical union of every property key set on any instance of `class`, plus the
-// synthetic "Name" property every class carries.
+// synthetic "Name" property every class carries, minus the retired ones.
 fn property_names(dom: &WeakDom, class: &plan::ClassPlan) -> BTreeSet<String> {
     let mut names: BTreeSet<String> = class
         .referents
         .iter()
         .filter_map(|&referent| dom.get(referent))
-        .flat_map(|instance| instance.properties().keys().cloned())
+        .flat_map(|instance| instance.properties().keys())
+        .filter(|name| !RETIRED_PROPERTIES.contains(&name.as_str()))
+        .cloned()
         .collect();
+    names.retain(|name| !is_legacy_brick_color(dom, class, name));
     names.insert(NAME_PROPERTY.to_owned());
     names
+}
+
+// An old model saved `BasePart.BrickColor` (and the GUI and `BodyColors`
+// BrickColors) as `<int>`, which reads back as an Int32. Studio never saves
+// these (the API dump's `CanSave` is false; the Color3 twin is what it
+// writes), and current Studio refuses the whole file when one arrives as an
+// Int32 column ("Unexpected format 3 (expected 11) << BrickColor"). So such a
+// column is left out, as Studio's own save would.
+fn is_legacy_brick_color(dom: &WeakDom, class: &plan::ClassPlan, name: &str) -> bool {
+    let load_only = rbx_reflection::ReflectionDatabase::shared()
+        .resolve_property(&class.class_name, name)
+        .is_some_and(|p| p.value_type == "BrickColor" && !p.can_save);
+    load_only
+        && class.referents.iter().any(|&referent| {
+            dom.get(referent)
+                .is_some_and(|i| matches!(i.properties().get(name), Some(Variant::Int32(_))))
+        })
 }
 
 fn collect_values(
@@ -486,6 +511,27 @@ mod tests {
     }
 
     #[test]
+    fn a_retired_union_property_is_not_written() {
+        // marked.rbxl's unions carry an empty `SolidMeshHolder` string, and current
+        // Studio won't open a file that still has that chunk.
+        let mut dom = WeakDom::new();
+        let union = dom.new_instance("UnionOperation", "Rock", None);
+        dom.set_property(union, "SolidMeshHolder", Variant::String(String::new()))
+            .unwrap();
+        dom.set_property(union, "Anchored", Variant::Bool(true))
+            .unwrap();
+
+        let round_tripped = deserialize(&serialize(&dom).unwrap()).unwrap();
+
+        let props = round_tripped
+            .get(Ref::new(union.value()))
+            .unwrap()
+            .properties();
+        assert!(!props.contains_key("SolidMeshHolder"));
+        assert_eq!(props.get("Anchored"), Some(&Variant::Bool(true)));
+    }
+
+    #[test]
     fn a_property_missing_on_some_instances_is_filled_with_its_neutral_value() {
         // Simulates a file-loaded Part (several properties set) alongside a bare
         // `Instance.new("Part", workspace)` (none set): the binary format needs a
@@ -512,6 +558,29 @@ mod tests {
         assert_eq!(
             bare.properties().get("Anchored"),
             Some(&Variant::Bool(false))
+        );
+    }
+
+    #[test]
+    fn a_legacy_int_brick_color_is_left_out_as_studio_would() {
+        let mut dom = WeakDom::new();
+        let hat = dom.new_instance("Part", "Handle", None);
+        dom.set_property(hat, "BrickColor", Variant::Int32(194))
+            .unwrap();
+        let team = dom.new_instance("SpawnLocation", "Spawn", None);
+        dom.set_property(team, "TeamColor", Variant::BrickColor(23))
+            .unwrap();
+        dom.new_instance("Part", "Baseplate", None);
+
+        let round_tripped = deserialize(&serialize(&dom).unwrap()).unwrap();
+
+        let hat = round_tripped.get(Ref::new(hat.value())).unwrap();
+        assert_eq!(hat.properties().get("BrickColor"), None);
+        let team = round_tripped.get(Ref::new(team.value())).unwrap();
+        assert_eq!(
+            team.properties().get("TeamColor"),
+            Some(&Variant::BrickColor(23)),
+            "a BrickColor Studio does save is kept"
         );
     }
 

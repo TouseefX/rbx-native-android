@@ -150,6 +150,29 @@ impl PluginHost {
         self.shared.borrow().ui.clone()
     }
 
+    fn widget_owner(&self, widget: UiId) -> Option<(String, String)> {
+        let shared = self.shared.borrow();
+        let w = shared.ui.widgets.iter().find(|w| w.id == widget)?;
+        let plugin = self.plugins.iter().find(|p| p.info.id == w.plugin)?;
+        Some((plugin.info.name.clone(), w.key.clone()))
+    }
+
+    /// Where a floating dock widget was last left (`[x, y, width, height]`
+    /// in window pixels), kept in its plugin's settings like Studio keeps
+    /// its layout between sessions.
+    pub fn widget_rect(&self, widget: UiId) -> Option<[f32; 4]> {
+        let (name, key) = self.widget_owner(widget)?;
+        self.shared.borrow().widget_rect(&name, &key)
+    }
+
+    pub fn set_widget_rect(&mut self, widget: UiId, rect: [f32; 4]) {
+        if let Some((name, key)) = self.widget_owner(widget) {
+            self.shared
+                .borrow_mut()
+                .remember_widget_rect(&name, &key, rect);
+        }
+    }
+
     /// A DOM to render one widget with `rbx_viewer`: a `ScreenGui` carrying
     /// the widget root's referent, holding copies of the root's children
     /// with their referents unchanged (so hit boxes map back).

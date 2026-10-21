@@ -111,6 +111,24 @@ impl Renderer {
         );
     }
 
+    /// Tints every part in `bins` its bin's colour, the Performance view,
+    /// or no part at all with an empty list.
+    pub(crate) fn set_heat(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        bins: &[crate::scene::perf::HeatBin],
+        scene: &Scene,
+    ) {
+        self.cues.set_heat(
+            device,
+            queue,
+            &self.frame_layout,
+            bins,
+            Self::cue_source(scene),
+        );
+    }
+
     /// Replaces the ghost boxes a tool is previewing, see
     /// `renderer::preview`. An empty list clears them.
     pub(crate) fn set_preview(&mut self, device: &wgpu::Device, boxes: &[glam::Mat4]) {
@@ -126,6 +144,12 @@ impl Renderer {
         segments: &[super::Segment],
     ) {
         self.lines.set(device, layer, segments);
+    }
+
+    /// Replaces one layer of the editor's filled quads, see
+    /// `renderer::lines`. An empty list clears it.
+    pub(crate) fn set_fills(&mut self, device: &wgpu::Device, layer: usize, fills: &[super::Fill]) {
+        self.lines.set_fills(device, layer, fills);
     }
 
     /// Shows or hides the transform tool's draggers over whatever is

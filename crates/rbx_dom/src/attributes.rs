@@ -483,6 +483,74 @@ pub(crate) fn split_entries(value: &Variant) -> Option<Vec<(String, Variant, Vec
     cursor.0.is_empty().then_some(entries)
 }
 
+/// The enum name each `EnumItem` attribute of `value` is written with, by
+/// attribute name ([`decode`] keeps only the ordinal).
+pub fn enum_types(value: Option<&Variant>) -> BTreeMap<String, String> {
+    let entries = value.and_then(split_entries).unwrap_or_default();
+    entries
+        .into_iter()
+        .filter(|(_, v, _)| matches!(v, Variant::Enum(_)))
+        .filter_map(|(name, _, raw)| {
+            let mut cursor = Cursor(&raw);
+            cursor.string()?;
+            cursor.u8()?;
+            Some((name, cursor.string()?))
+        })
+        .collect()
+}
+
+/// The blob `value` with attribute `name` set to `new`, or removed when
+/// `new` is `None`; every other entry is kept byte for byte. `enum_type`
+/// names the enum when `new` is a [`Variant::Enum`]. `None` when `value`
+/// cannot be read whole or `new` has no type id here. A blob that is no
+/// longer valid UTF-8 comes back as `Unknown` like [`remap_refs`] does.
+pub fn set_attribute(
+    value: Option<&Variant>,
+    name: &str,
+    new: Option<&Variant>,
+    enum_type: Option<&str>,
+) -> Option<Variant> {
+    let entries = match value {
+        Some(v) => split_entries(v)?,
+        None => Vec::new(),
+    };
+    let mut body = Vec::new();
+    let mut count = 0u32;
+    let mut placed = false;
+    for (entry, _, raw) in &entries {
+        if entry == name {
+            placed = true;
+            let Some(new) = new else { continue };
+            string(&mut body, name);
+            write(&mut body, new, || enum_type.map(str::to_string))?;
+        } else {
+            body.extend(raw);
+        }
+        count += 1;
+    }
+    if let (false, Some(new)) = (placed, new) {
+        string(&mut body, name);
+        write(&mut body, new, || enum_type.map(str::to_string))?;
+        count += 1;
+    }
+    let mut out = Vec::new();
+    if count > 0 {
+        out.extend(count.to_le_bytes());
+        out.extend(body);
+    }
+    Some(match String::from_utf8(out) {
+        Ok(text) if !matches!(value, Some(Variant::Unknown { .. })) => Variant::String(text),
+        Ok(text) => Variant::Unknown {
+            type_id: 0x01,
+            raw: text.into_bytes(),
+        },
+        Err(err) => Variant::Unknown {
+            type_id: 0x01,
+            raw: err.into_bytes(),
+        },
+    })
+}
+
 /// The `CollectionService` tags of an instance: the `Tags` property is the tag
 /// names run together, separated by NUL bytes.
 pub fn tags(value: Option<&Variant>) -> Vec<&str> {
@@ -962,5 +1030,32 @@ mod tests {
     #[test]
     fn remapping_a_blob_without_instance_attributes_changes_nothing() {
         assert_eq!(remap_refs(&blob(REAL_STYLE_RULE), Some), None);
+    }
+
+    #[test]
+    fn setting_one_attribute_keeps_the_others_and_their_enum_names() {
+        let start = set_attribute(None, "Kind", Some(&Variant::Enum(3)), Some("Material")).unwrap();
+        let both =
+            set_attribute(Some(&start), "Speed", Some(&Variant::Float64(16.0)), None).unwrap();
+        let attrs = decode(Some(&both));
+        assert_eq!(attrs.get("Kind"), Some(&Variant::Enum(3)));
+        assert_eq!(attrs.get("Speed"), Some(&Variant::Float64(16.0)));
+        assert_eq!(
+            enum_types(Some(&both)).get("Kind").map(String::as_str),
+            Some("Material")
+        );
+
+        let changed =
+            set_attribute(Some(&both), "Speed", Some(&Variant::Bool(true)), None).unwrap();
+        assert_eq!(
+            decode(Some(&changed)).get("Speed"),
+            Some(&Variant::Bool(true))
+        );
+        let removed = set_attribute(Some(&changed), "Speed", None, None).unwrap();
+        assert_eq!(removed, start);
+        assert_eq!(
+            set_attribute(Some(&removed), "Kind", None, None),
+            Some(Variant::String(String::new()))
+        );
     }
 }

@@ -116,6 +116,9 @@ impl Shell {
                 // them, and their fields are the bulk of what this
                 // panel lays out and paints every frame.
                 if let Some(summary) = widget.summary().cloned() {
+                    // Before its components, so Tab reaches the whole value
+                    // first and then each field under it.
+                    self.tab_order.register(&summary.read(cx).focus_handle(cx));
                     let expanded = expand || self.is_row_expanded(&row.name);
                     let fields = expanded.then(|| {
                         render_editor(

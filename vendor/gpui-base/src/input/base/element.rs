@@ -2511,6 +2511,10 @@ impl<M: InputModeKind> Element for TextElement<M> {
             state.scroll_size = prepaint.scroll_size;
             state.update_scroll_offset(Some(prepaint.cursor_scroll_offset), cx);
             state.deferred_scroll_offset = None;
+            // rbx-native addition: see `InputBaseState::reveal_range`.
+            if let Some(offset) = state.pending_reveal.take() {
+                state.scroll_to_with_padding(offset, None, super::state::ScrollPadding::SurroundingLines, cx);
+            }
 
             // Layout consumers need changed geometry, not another notification
             // for every paint of an unchanged input.

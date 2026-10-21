@@ -5,6 +5,7 @@
 //! - `channel`: the loopback HTTP server the probe talks to (through a tunnel).
 //! - `tunnel`: starts a public tunnel to that server and scrapes its URL.
 //! - `inject`: adds the probe and the flags it needs to the DOM before publish.
+//! - `record`: playtest recording, and game code's `shared.rbxnative.mark`.
 //! - `instrument`: rewrites a script with debugger hooks for Play.
 //! - `market`: rewrites a script's `MarketplaceService` lookups to the mock.
 //! - `touch`: rewrites a script's `UserInputService` lookups to the touch stand-in.
@@ -30,6 +31,7 @@ pub mod market;
 pub mod netsim;
 pub mod print;
 pub mod protocol;
+pub mod record;
 pub mod service_wrap;
 pub mod sober_config;
 pub mod touch;

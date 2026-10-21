@@ -3,9 +3,10 @@
 //! backoff) and long-polls `GET /v1/rooms/<room>/ops?since=N` from 0, so a
 //! late joiner replays the whole log.
 
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
-use std::sync::Arc;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -47,9 +48,13 @@ pub enum Event {
     Error(String),
 }
 
+/// Batches waiting to be posted, oldest first; one leaves only once all its
+/// chunks are in the log.
+type Unsent = Arc<Mutex<VecDeque<Batch>>>;
+
 /// The handle; dropping it stops both threads.
 pub struct Channel {
-    batches: std::sync::mpsc::Sender<Batch>,
+    unsent: Unsent,
     stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -147,22 +152,23 @@ fn batch_id() -> String {
     hex::encode(bytes)
 }
 
-fn send_loop(
-    config: Config,
-    batches: Receiver<Batch>,
-    events: Sender<Event>,
-    stop: Arc<AtomicBool>,
-) {
+fn pop(unsent: &Unsent) {
+    if let Ok(mut queue) = unsent.lock() {
+        queue.pop_front();
+    }
+}
+
+fn send_loop(config: Config, unsent: Unsent, events: Sender<Event>, stop: Arc<AtomicBool>) {
     let agent = agent();
     let mut failing = false;
     let mut backoff = BACKOFF_START;
     while !stop.load(Ordering::SeqCst) {
-        let batch = match batches.recv_timeout(Duration::from_millis(250)) {
-            Ok(batch) => batch,
-            Err(RecvTimeoutError::Timeout) => continue,
-            Err(RecvTimeoutError::Disconnected) => return,
+        let Some(batch) = unsent.lock().ok().and_then(|q| q.front().cloned()) else {
+            nap(&stop, Duration::from_millis(50));
+            continue;
         };
         let Ok(json) = serde_json::to_string(&batch) else {
+            pop(&unsent);
             continue;
         };
         for piece in chunk::split(&batch_id(), &json) {
@@ -187,6 +193,7 @@ fn send_loop(
                 }
             }
         }
+        pop(&unsent);
     }
 }
 
@@ -262,38 +269,72 @@ fn poll_loop(config: Config, events: Sender<Event>, stop: Arc<AtomicBool>) {
 
 impl Channel {
     pub fn start(config: Config) -> (Channel, Receiver<Event>) {
-        let (batch_tx, batch_rx) = channel();
+        let unsent: Unsent = Arc::default();
         let (event_tx, event_rx) = channel();
         let stop = Arc::new(AtomicBool::new(false));
 
         let sender_config = config.clone();
         let sender_events = event_tx.clone();
         let sender_stop = Arc::clone(&stop);
+        let sender_unsent = Arc::clone(&unsent);
         let _ = thread::Builder::new()
             .name("coedit-send".into())
-            .spawn(move || send_loop(sender_config, batch_rx, sender_events, sender_stop));
+            .spawn(move || send_loop(sender_config, sender_unsent, sender_events, sender_stop));
 
         let poll_stop = Arc::clone(&stop);
         let _ = thread::Builder::new()
             .name("coedit-poll".into())
             .spawn(move || poll_loop(config, event_tx, poll_stop));
 
-        (
-            Channel {
-                batches: batch_tx,
-                stop,
-            },
-            event_rx,
-        )
+        (Channel { unsent, stop }, event_rx)
     }
 
     pub fn send(&self, batch: Batch) {
-        let _ = self.batches.send(batch);
+        if let Ok(mut queue) = self.unsent.lock() {
+            queue.push_back(batch);
+        }
+    }
+
+    /// Stops the threads and hands back what never fully reached the log,
+    /// for an editor that moves to another relay (its batches would be lost
+    /// with this one otherwise).
+    pub fn close(self) -> Vec<Batch> {
+        self.stop.store(true, Ordering::SeqCst);
+        match self.unsent.lock() {
+            Ok(mut queue) => queue.drain(..).collect(),
+            Err(_) => Vec::new(),
+        }
     }
 }
 
 impl Drop for Channel {
     fn drop(&mut self) {
         self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A relay that never answers keeps the batch; closing the channel hands
+    /// it back for the next relay.
+    #[test]
+    fn closing_hands_back_what_never_reached_the_log() {
+        let (channel, _events) = Channel::start(Config {
+            relay_url: "http://127.0.0.1:1".into(),
+            room: "room".into(),
+            key: "key".into(),
+            enc_key: [7; 32],
+            user_id: 1,
+            client: Editor::RbxNative,
+        });
+        let batch = Batch {
+            a: "1:rbx-native:x".into(),
+            ops: Vec::new(),
+        };
+        channel.send(batch.clone());
+        thread::sleep(Duration::from_millis(300));
+        assert_eq!(channel.close(), vec![batch]);
     }
 }

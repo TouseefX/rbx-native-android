@@ -6479,6 +6479,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rbx_audit"
+version = "0.1.0"
+dependencies = [
+ "full_moon",
+ "rbx_dom",
+ "rbx_loren",
+ "rbx_xml",
+]
+
+[[package]]
 name = "rbx_autorig"
 version = "0.1.0"
 dependencies = [
@@ -6566,6 +6576,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rbx_loren"
+version = "0.1.0"
+dependencies = [
+ "rbx_dom",
+ "rbx_lua",
+ "rbx_reflection",
+ "regex",
+ "tempfile",
+ "ureq",
+ "zip",
+]
+
+[[package]]
 name = "rbx_lua"
 version = "0.1.0"
 dependencies = [
@@ -6601,8 +6624,10 @@ name = "rbx_parser_cli"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "rbx_audit",
  "rbx_binary",
  "rbx_dom",
+ "rbx_loren",
  "rbx_lua",
  "rbx_reflection",
  "rbx_xml",
@@ -6679,10 +6704,12 @@ dependencies = [
  "gpui-base",
  "gpui-kit",
  "image",
+ "libc",
  "lsp-types",
  "raw-window-handle",
  "rbx_animation",
  "rbx_assets",
+ "rbx_audit",
  "rbx_autorig",
  "rbx_binary",
  "rbx_cloud",
@@ -6690,6 +6717,7 @@ dependencies = [
  "rbx_eyedropper",
  "rbx_figma",
  "rbx_import",
+ "rbx_loren",
  "rbx_lua",
  "rbx_mesh",
  "rbx_play",

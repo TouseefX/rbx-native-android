@@ -7,7 +7,9 @@ use mlua::{Function, Lua, MultiValue, Result, Value};
 use rbx_dom::{Ref, Vector2Data};
 use rbx_reflection::ReflectionDatabase;
 
-use super::api::{Arg, GuiEvent, GuiEventKind, HandleEvent, HandleEventKind, OutputKind};
+use super::api::{
+    Arg, GuiEvent, GuiEventKind, HandleEvent, HandleEventKind, OutputKind, WidgetKind,
+};
 use super::arg;
 use super::env::env;
 use crate::ctx::Ctx;
@@ -329,6 +331,11 @@ fn class_function(
             }
             Ok(())
         })?,
+        // Plugins play UI sounds from their widgets; the editor has no
+        // audio, so these only keep the plugin's script going.
+        "Play" | "Stop" | "Pause" | "Resume" if is("Sound") => {
+            lua.create_function(|_, _this: Value| Ok(()))?
+        }
         "IsFocused" if is("TextBox") => lua.create_function(move |lua, _this: Value| {
             Ok(with_state(lua, |s| s.focused == Some(referent)))
         })?,
@@ -444,6 +451,15 @@ impl Hooks for PluginHooks {
                     }
                     _ => {}
                 }
+            }
+            let dock = shared
+                .ui
+                .widgets
+                .iter()
+                .find(|w| w.root == referent && matches!(w.kind, WidgetKind::Dock { .. }))
+                .map(|w| (w.key.clone(), w.enabled));
+            if let Some((key, enabled)) = dock {
+                shared.remember_widget(&env.name, &key, enabled);
             }
             if changed {
                 shared.ui_changed = true;

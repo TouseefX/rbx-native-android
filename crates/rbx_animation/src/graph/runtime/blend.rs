@@ -58,9 +58,10 @@ impl Player {
     /// more and that events come from "the highest-weight active input"
     /// (`AnimationNodeType.yaml`); the editor's code in Client Tracker
     /// (`AnimationEditor` `Blend2DMap`) only draws the pins.
-    /// UNVERIFIED: Roblox documents no algorithm for
-    /// Blend2D; this is the scheme Unity's freeform blend trees use, chosen
-    /// because Roblox's editor draws no triangulation.
+    /// Roblox documents no algorithm for Blend2D; this is the scheme Unity's
+    /// freeform blend trees use, and in Cartesian mode it gives exactly real
+    /// Studio's weights on four corner inputs at seven points, inside and
+    /// outside the square (`tests/studio_graph.rs`). UNVERIFIED: Polar mode.
     fn weights_2d(&self, n: usize, inputs: &[usize]) -> Vec<(usize, f32)> {
         let polar = self.text(n, "InputMode") == "Polar";
         let target = (self.number(n, "X", 0.), self.number(n, "Y", 0.));

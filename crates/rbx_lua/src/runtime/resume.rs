@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 
-use mlua::{MultiValue, Value, VmState};
+use mlua::{Function, MultiValue, Value, VmState};
 use rbx_dom::WeakDom;
 
 use super::{RunState, Runtime, Step};
@@ -23,29 +23,39 @@ impl Runtime {
     /// waiting keep going, as in Studio's command bar. A chunk that does not
     /// compile fails that resume. Each run starts with no module loaded.
     pub fn start(&mut self, source: &str) {
-        engine(&self.lua).modules.borrow_mut().clear();
-        let thread = self
+        let chunk = self
             .lua
             .load(source)
             .set_name("=Command bar")
-            .into_function()
-            .and_then(|chunk| {
-                // The chunk runs under a wrapper, so a chunk that returns
-                // `false, x` is not taken for a failed callback (see
-                // `scheduler::resume`).
-                let main = self.lua.load("(...)()").set_name("=Command bar");
-                let thread = self.lua.create_thread(main.into_function()?)?;
-                Ok((thread, chunk))
-            });
+            .into_function();
+        self.start_call(chunk, MultiValue::new());
+    }
+
+    /// [`Runtime::start`] for a function already built in this VM, called
+    /// with `args` (the test runner's harness).
+    pub(crate) fn start_call(&mut self, chunk: mlua::Result<Function>, args: MultiValue) {
+        engine(&self.lua).modules.borrow_mut().clear();
+        let thread = chunk.and_then(|chunk| {
+            // The chunk runs under a wrapper, so a chunk that returns
+            // `false, x` is not taken for a failed callback (see
+            // `scheduler::resume`).
+            let main = self
+                .lua
+                .load("local f = ...; f(select(2, ...))")
+                .set_name("=Command bar");
+            let thread = self.lua.create_thread(main.into_function()?)?;
+            Ok((thread, chunk))
+        });
         match thread {
             Ok((thread, chunk)) => {
                 self.host.mains.borrow_mut().push(thread.clone());
-                let args = MultiValue::from_vec(vec![Value::Function(chunk)]);
+                let mut call = args;
+                call.push_front(Value::Function(chunk));
                 engine(&self.lua)
                     .scheduler
                     .borrow_mut()
                     .deferred
-                    .push_back((thread, args));
+                    .push_back((thread, call));
             }
             Err(error) => self.host.fail(error),
         }

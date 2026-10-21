@@ -20,7 +20,9 @@ pub(crate) mod input;
 pub(crate) mod joints;
 mod label;
 mod measure;
+mod notes;
 mod orientation;
+pub(crate) use orientation::snapped_forward;
 mod pivot;
 mod plugin_handles;
 mod plugin_mouse;
@@ -56,6 +58,7 @@ use frame::{device_pixels, render_image, Viewport};
 use gizmo::Drag;
 use input::{camera_key, chorded, tool_key, Layout};
 pub(crate) use joints::JointPhase;
+pub(crate) use notes::NoteMark;
 pub(crate) use pump::canvas::{FrameRequest, Request as CanvasRequest};
 use pump::Pump;
 pub(crate) use pump::TerrainChunks;
@@ -168,6 +171,9 @@ pub(crate) enum ViewportAction {
     /// [`WorkspaceView::show_sun`]. `first` is what starts a new gesture,
     /// so a release needs no message of its own.
     Sun { ray: Ray, first: bool },
+    /// A click on the orientation indicator's cube: turn the camera to look
+    /// this way, around whatever it is looking at (see `Shell::snap_view`).
+    SnapView(Vec3),
     /// A transform-toolbar shortcut typed over the view.
     Tool(transform::Action),
     /// Cursor motion with nothing held: `Shell` resolves what is under the
@@ -288,6 +294,9 @@ pub(crate) struct WorkspaceView {
     /// The whole panel, in physical pixels: `viewport` less the letterbox
     /// while a screen is emulated, and what the frame is placed against.
     panel: Rc<Cell<Viewport>>,
+    /// Where the orientation indicator's sphere was last painted, in window
+    /// pixels, for a click on it to find the face under the pointer.
+    indicator: Rc<Cell<Bounds<Pixels>>>,
     /// Set by `render` each time GPUI actually paints this view, and cleared by
     /// `advance`, which runs on a plain timer of its own and keeps firing
     /// whether or not the dock currently mounts this panel. The dock renders
@@ -354,6 +363,8 @@ pub(crate) struct WorkspaceView {
     /// Everything screen-to-world unprojects against this, so a click resolves
     /// against the view it was aimed at.
     view: Option<Pose>,
+    /// The 3D notes' billboards (see `notes`).
+    notes: Vec<NoteMark>,
     /// The file meshes resident on the render thread, as of the last scene it
     /// built, see `pump::Ready::meshes`. What `Shell` picks a `MeshPart`
     /// against, so a click resolves against the triangles on screen rather
@@ -395,6 +406,9 @@ pub(crate) struct WorkspaceView {
     /// gesture; `render` only ever shows it while `dragging()` is true, so a
     /// value left over from the drag just released is simply never painted.
     drag_readout: Option<(Point<Pixels>, SharedString)>,
+    /// What the Performance view says about the part under the cursor,
+    /// shown beside it while nothing is held, see `Shell::perf_readout`.
+    heat_readout: Option<SharedString>,
     /// Studio's dragger guides: what they show now, and what they keep
     /// between one event and the next (see [`guides`]).
     guides: guides::State,
@@ -503,6 +517,7 @@ impl WorkspaceView {
             sized: (0, 0),
             screen: None,
             panel: Rc::default(),
+            indicator: Rc::default(),
             device: None,
             playing: false,
             keyboard_page: device::KeyboardPage::default(),
@@ -529,6 +544,7 @@ impl WorkspaceView {
             targets: Targets::default(),
             neighbours: Vec::new(),
             view: None,
+            notes: Vec::new(),
             meshes: Meshes::default(),
             drag: None,
             terrain_b: false,
@@ -541,6 +557,7 @@ impl WorkspaceView {
             held: Targets::default(),
             dragged: false,
             drag_readout: None,
+            heat_readout: None,
             guides: guides::State::default(),
             summon: summon::Summon::default(),
             snapped: None,
@@ -562,6 +579,32 @@ impl WorkspaceView {
 
     pub(crate) fn meshes(&self) -> &Meshes {
         &self.meshes
+    }
+
+    /// The camera as of the last frame, `None` before the first one.
+    pub(crate) fn pose(&self) -> Option<Pose> {
+        self.view
+    }
+
+    /// A press on the orientation indicator: snaps the view square-on to
+    /// the cube face under it. A press between the faces does nothing.
+    fn snap_to_face(&mut self, at: Point<Pixels>, cx: &mut Context<Self>) {
+        let Some(pose) = self.view else {
+            return;
+        };
+        let bounds = self.indicator.get();
+        let radius = CUBE_RADIUS * crate::tokens::viewport_scale();
+        let centre = bounds.center();
+        let unit = (
+            f32::from(at.x - centre.x) / radius,
+            f32::from(at.y - centre.y) / radius,
+        );
+        if let Some(face) = orientation::face_at(pose, unit) {
+            cx.emit(ViewportAction::SnapView(orientation::snapped_forward(
+                pose,
+                face.normal,
+            )));
+        }
     }
 
     /// Puts whatever the render thread has finished on screen, resolves a
@@ -888,10 +931,18 @@ impl WorkspaceView {
         self.pump.camera_feel(feel);
     }
 
-    /// Moves the free camera to `eye`, looking at `target`: the Animation
-    /// Editor framing the rig it binds.
+    /// Drops the viewer while the place is off screen, or brings it back;
+    /// see `Pump::park`.
+    pub(crate) fn park(&self, parked: bool) {
+        self.pump.park(parked);
+    }
+
+    /// Moves the free camera to `eye`, looking at `target`, keeping its
+    /// field of view: the Animation Editor framing the rig it binds, and a
+    /// snapped view.
     pub(crate) fn look_at(&self, eye: [f32; 3], target: [f32; 3]) {
-        self.pump.look_at(eye, target);
+        let fov = self.view.map_or(70.0, |pose| pose.fov_degrees);
+        self.pump.look_at(eye, target, fov);
     }
 
     /// The renderer's tuned constants, taken between two frames like the
@@ -922,6 +973,20 @@ impl WorkspaceView {
     pub(crate) fn set_screen_gui_shown(&self, shown: bool, cx: &mut Context<Self>) {
         self.pump.screen_gui_shown(shown);
         cx.notify();
+    }
+
+    /// The Performance view's heat tint, see `rbx_viewer::perf`. An empty
+    /// list clears it.
+    pub(crate) fn set_heat(&mut self, bins: Vec<rbx_viewer::perf::HeatBin>) {
+        self.pump.heat(bins);
+    }
+
+    /// The Performance view's line about the hovered part, `None` to hide it.
+    pub(crate) fn set_heat_readout(&mut self, text: Option<SharedString>, cx: &mut Context<Self>) {
+        if self.heat_readout != text {
+            self.heat_readout = text;
+            cx.notify();
+        }
     }
 
     pub(crate) fn set_selection_occluded(&mut self, occluded: bool, cx: &mut Context<Self>) {
@@ -1291,6 +1356,7 @@ impl Render for WorkspaceView {
                 .size_full(),
             )
             .children(self.device_overlay(scale, cx))
+            .children(self.note_elements(window, cx))
             // Only for the moment after the wheel changes the speed: anything
             // that stays belongs in the Viewport dock, not over the scene.
             .when_some(
@@ -1335,6 +1401,27 @@ impl Render for WorkspaceView {
                 },
             )
             .when_some(
+                self.heat_readout
+                    .clone()
+                    .filter(|_| !self.dragging())
+                    .zip(self.cursor),
+                |this, (text, cursor)| {
+                    let at = readout::position(cursor, self.viewport.get().origin, scale);
+                    this.child(
+                        div()
+                            .absolute()
+                            .left(at.x)
+                            .top(at.y)
+                            .px_2()
+                            .py_0p5()
+                            .bg(tokens::viewport_badge())
+                            .text_size(crate::tokens::viewport_text(12.))
+                            .text_color(tokens::viewport_badge_text())
+                            .child(text),
+                    )
+                },
+            )
+            .when_some(
                 self.dragging().then(|| self.guides.label.clone()).flatten(),
                 |this, (at, text)| this.child(guides::label_element(at, text)),
             )
@@ -1345,7 +1432,15 @@ impl Render for WorkspaceView {
             // thread's first `Ready` lands, see `self.view`'s own doc) draws
             // nothing rather than a widget with no orientation to show.
             .when_some(self.view.filter(|_| self.axis_indicator), |this, pose| {
-                this.child(orientation_indicator(pose))
+                this.child(
+                    orientation_indicator(pose, self.indicator.clone()).on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|view, event: &MouseDownEvent, _, cx| {
+                            cx.stop_propagation();
+                            view.snap_to_face(event.position, cx);
+                        }),
+                    ),
+                )
             })
     }
 }
@@ -1380,7 +1475,7 @@ const LABEL_RADIUS: f32 = 39.0;
 /// Drawn at the viewport text size (`tokens::viewport_scale`) as a whole:
 /// its letters are the part that has to be read, and letters grown on a
 /// sphere that did not would land on top of it.
-fn orientation_indicator(pose: Pose) -> impl IntoElement {
+fn orientation_indicator(pose: Pose, painted: Rc<Cell<Bounds<Pixels>>>) -> Stateful<Div> {
     let k = crate::tokens::viewport_scale();
     let faces = orientation::visible_faces(pose);
     let rings = orientation::axis_rings(pose);
@@ -1406,7 +1501,7 @@ fn orientation_indicator(pose: Pose) -> impl IntoElement {
         .tooltip(move |window, cx| {
             gpui_kit::component::tooltip::Tooltip::new(facing.clone()).build(window, cx)
         })
-        .child(orientation_sphere(rings, faces, k))
+        .child(orientation_sphere(rings, faces, k, painted))
         .children(labels.map(|label| axis_label(label, k)))
 }
 
@@ -1416,10 +1511,12 @@ fn orientation_sphere(
     rings: [orientation::Ring; 3],
     faces: [orientation::Face; 3],
     k: f32,
+    painted: Rc<Cell<Bounds<Pixels>>>,
 ) -> impl IntoElement {
     canvas(
         |_, _, _| (),
         move |bounds, _, window, _| {
+            painted.set(bounds);
             let center = bounds.center();
             let at = |(x, y): (f32, f32), radius: f32| {
                 point(center.x + px(x * radius), center.y + px(y * radius))

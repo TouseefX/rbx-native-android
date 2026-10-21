@@ -504,7 +504,7 @@ impl Shell {
             open.state.update(cx, |state, cx| {
                 let text = state.value().to_string();
                 let start = line_start(&text, line);
-                state.set_selected_range(start..start, cx);
+                state.reveal_range(start..start, cx);
             });
         }
     }

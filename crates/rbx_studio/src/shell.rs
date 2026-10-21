@@ -28,14 +28,18 @@ mod explorer_edit;
 mod export;
 mod folder_color;
 mod freeze;
+pub(crate) mod game;
 mod group;
 mod guides;
 mod history;
 pub(crate) mod import3d;
 mod input_panel;
 mod keys;
+mod layers;
+mod layers_panel;
 mod layout;
 mod light_guides;
+mod loren_panel;
 mod luau_lsp;
 mod mcp;
 mod menu;
@@ -44,15 +48,20 @@ mod output;
 mod palette;
 mod panel_window;
 mod panels;
+mod perf_view;
 mod pivot;
 mod place_merge;
 mod play;
+mod playtests;
 mod plugins;
+pub(crate) mod project;
 mod property_element;
 mod quality;
+mod query_select;
 mod recovery;
 mod ref_pick;
 mod reparent;
+mod reveal;
 mod ribbon;
 mod rig;
 mod roblox_login;
@@ -67,7 +76,9 @@ pub(crate) use export::Export;
 pub(crate) use layout::{edge_from_key, edge_key, Edge, Panel, SavedEdge, SavedGroup, SavedLayout};
 pub(crate) use mcp::BETA_ID as MCP_BETA_ID;
 pub(crate) use play::copy_name::DEFAULT as PLAY_COPY_NAME_DEFAULT;
+pub(crate) use playtests::DEFAULT_RATE_HZ as PLAYTEST_RATE_DEFAULT;
 pub(crate) use roving::install as install_key_bindings;
+pub(crate) use view_snap::PresetView;
 mod tree_keys;
 
 mod argon_dock;
@@ -83,6 +94,7 @@ mod script_toolbar;
 mod scripts;
 mod scroll;
 mod scrub;
+mod security_audit;
 mod selection;
 mod settings_window;
 mod shortcuts_window;
@@ -91,10 +103,12 @@ mod sun;
 mod templates_live;
 mod templates_window;
 mod terrain;
+mod tests_dock;
 mod theme_live;
 mod toolbar;
 pub(crate) mod tooltip;
 mod ui_editor;
+mod view_snap;
 mod viewport_dock;
 mod wally_dock;
 mod wally_sync;
@@ -176,6 +190,8 @@ pub(crate) struct Shell {
     /// Whether a part in front of the selection hides its outline box.
     /// Persisted the same way `orthographic` is (see `settings`).
     selection_occluded: bool,
+    /// The Performance view, while it is on, see [`perf_view`].
+    perf: Option<perf_view::PerfView>,
     /// Whether the viewport draws its `ScreenGui`s: the ribbon's Show UI.
     /// Per session, not persisted, as Studio's View > UI is.
     show_screen_gui: bool,
@@ -273,10 +289,17 @@ pub(crate) struct Shell {
     /// persisted, see `shell::explorer_edit::picker`.
     increment_names: bool,
     expand_on_select: bool,
+    /// See `Settings::strip_on_publish`.
+    strip_on_publish: bool,
+    /// Editor layers and 3D notes; see `shell::layers`.
+    layers: layers::LayerState,
     search: Entity<InputState>,
     /// What the Explorer's search field holds, trimmed; see
     /// `explorer::search`.
     explorer_query: String,
+    /// The search field's query mode and what its query last matched; see
+    /// `shell::query_select`.
+    query: query_select::QuerySearch,
     filter: Entity<InputState>,
     properties: Properties,
     /// One open `Input` per Properties row currently being edited, keyed by
@@ -322,11 +345,16 @@ pub(crate) struct Shell {
     /// `luau-lsp` behind the script editor and Script Analysis; see
     /// `shell::luau_lsp`.
     lsp: luau_lsp::Session,
+    /// The Tests dock's specs and last results; see `shell::tests_dock`.
+    tests: tests_dock::TestsDock,
     properties_scroll: ScrollHandle,
     /// The Style Editor panel's open fields and last error; see
     /// `shell::style_panel`.
     style_edits: style_panel::StyleEdits,
     input_edits: input_panel::InputEdits,
+    /// The Security Audit dock's cached findings; see `shell::security_audit`.
+    audit: security_audit::AuditState,
+    loren: loren_panel::LorenState,
     style_scroll: ScrollHandle,
     /// The UI Editor document's own state, its sub-tab, the screen on the
     /// canvas, the pan and zoom, the gesture in flight. See
@@ -381,6 +409,8 @@ pub(crate) struct Shell {
     wally_ui: wally_dock::WallyDock,
     /// The Viewport dock's own state; see `shell::viewport_dock`.
     viewport_ui: viewport_dock::ViewportDock,
+    /// Recorded playtests and their replay; see `shell::playtests`.
+    playtests: playtests::Playtests,
     /// The address `Settings::argon_address` should hold, a plain `String`
     /// rather than reading `argon_address` above back out, because
     /// `Shell::save_settings` takes no `cx` and an `Entity<InputState>`
@@ -428,6 +458,9 @@ pub(crate) struct Shell {
     rig_user_focus: bool,
     /// This editor's window, which Close Place removes from outside it.
     window_handle: AnyWindowHandle,
+    /// The game this place belongs to, when its window holds several (see
+    /// `shell::game`): leaving and the Places bar go through it.
+    game: Option<WeakEntity<game::GameWorkspace>>,
     /// This place's `Folder` colour tags; see `shell::folder_color`.
     folder_colors: FolderColors,
     /// Which transform tool the toolbar has active, and whether its draggers
@@ -518,7 +551,7 @@ pub(crate) struct Shell {
     /// is raised with it once rather than fought over every frame.
     window_was_active: bool,
     /// Kept only to stay subscribed: dropping these unregisters the listeners.
-    _subscriptions: [Subscription; 17],
+    _subscriptions: [Subscription; 18],
 }
 
 impl Shell {
@@ -557,6 +590,7 @@ impl Shell {
             optimize_graph_on_open,
             increment_names,
             expand_on_select,
+            strip_on_publish,
             dragger,
             controls,
             argon_address: argon_address_setting,
@@ -567,6 +601,7 @@ impl Shell {
             team_presence: team_presence_settings,
             play_sandbox,
             play_copy_name,
+            playtest_rate_hz,
             network_presets,
             anim_sheet_height,
             anim_names_width,
@@ -643,13 +678,19 @@ impl Shell {
             }
         });
 
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
-        let searched = cx.subscribe(&search, |shell, input, event: &InputEvent, cx| {
-            if matches!(event, InputEvent::Change) {
-                let query = input.read(cx).value().trim().to_owned();
-                shell.search_explorer(query, cx);
-            }
-        });
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(query_select::placeholder(false)));
+        let searched = cx.subscribe(
+            &search,
+            |shell, input, event: &InputEvent, cx| match event {
+                InputEvent::Change => {
+                    let query = input.read(cx).value().trim().to_owned();
+                    shell.search_explorer(query, cx);
+                }
+                InputEvent::PressEnter { .. } => shell.select_query_matches(cx),
+                _ => {}
+            },
+        );
 
         let wally_query = cx.new(|cx| InputState::new(window, cx).placeholder("Search Wally"));
         let wally_query_changed = cx.subscribe(&wally_query, |shell, _, event: &InputEvent, cx| {
@@ -741,6 +782,16 @@ impl Shell {
         let window_activated = cx.observe_window_activation(window, |shell, window, cx| {
             shell.discord_window_activation(window.is_window_active(), cx);
         });
+        // Every keystroke cancels a bare Alt tap, a bound one too: Alt+S runs
+        // its action before any key listener sees the S, and without this
+        // the Alt coming back up read as a tap and left the menu bar focused
+        // behind the Settings window it had just opened.
+        let alt_chorded = {
+            let menu_bar = menu_bar.downgrade();
+            cx.intercept_keystrokes(move |_, _, cx| {
+                let _ = menu_bar.update(cx, |bar, _| bar.interrupt_alt_tap());
+            })
+        };
 
         let mut shell = Shell {
             menu_bar,
@@ -755,6 +806,7 @@ impl Shell {
             orthographic,
             axis_indicator,
             selection_occluded,
+            perf: None,
             show_screen_gui: true,
             light_guides,
             light_guides_sent: Vec::new(),
@@ -791,8 +843,10 @@ impl Shell {
             explorer_edit: explorer_edit::ExplorerEdit::default(),
             increment_names,
             expand_on_select,
+            strip_on_publish,
             search,
             explorer_query: String::new(),
+            query: query_select::QuerySearch::default(),
             filter,
             properties,
             edits: edit::Edits::default(),
@@ -809,9 +863,13 @@ impl Shell {
             graphs: std::collections::HashMap::new(),
             debug: debugging::Debugging::default(),
             lsp: luau_lsp::Session::default(),
+            tests: tests_dock::TestsDock::default(),
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
+            audit: Default::default(),
+            layers: layers::LayerState::load(&path),
+            loren: loren_panel::LorenState::default(),
             style_scroll: ScrollHandle::new(),
             ui,
             anim: animation::Animation::new(cx).with_seams(anim_sheet_height, anim_names_width),
@@ -841,9 +899,11 @@ impl Shell {
             rig_user,
             rig_user_focus: false,
             window_handle: window.window_handle(),
+            game: None,
             argon_ui: argon_dock::ArgonDock::new(&argon_address_setting, window, cx),
             wally_ui: wally_dock::WallyDock::new(cx),
             viewport_ui: viewport_dock::ViewportDock::new(),
+            playtests: playtests::Playtests::new(playtest_rate_hz),
             argon_saved_address: argon_address_setting,
             argon: argon_sync::Sync::default(),
             argon_settings,
@@ -911,6 +971,7 @@ impl Shell {
                 searched,
                 rig_user_entered,
                 window_activated,
+                alt_chorded,
             ],
         };
 
@@ -928,6 +989,7 @@ impl Shell {
         shell.sync_snap_neighbours(cx);
         // Its light guides, for the same reason.
         shell.sync_light_guides(cx);
+        shell.sync_layers(cx);
         // And the screen it sits in, for the UI editor's canvas.
         shell.ui_follow_selection();
 
@@ -987,6 +1049,16 @@ impl Shell {
         // `RBX_STUDIO_RESIZE` (same module): the same, for a Scale drag of
         // the selected part.
         shell.apply_debug_resize(cx);
+
+        // `RBX_STUDIO_PERF=<density|triangles|textures|collision|draw>` (see
+        // `shell::perf_view`): turns the Performance view on, a screenshot
+        // aid, since its dropdown can't be clicked from outside.
+        if let Ok(name) = std::env::var("RBX_STUDIO_PERF") {
+            let metric = rbx_viewer::perf::Metric::ALL
+                .into_iter()
+                .find(|metric| metric.label().to_lowercase().contains(&name.to_lowercase()));
+            shell.set_perf_metric(metric, cx);
+        }
 
         // `RBX_STUDIO_IMPORT=<file>` (see `shell::import3d`): the Import 3D
         // Model path for a screenshot, since a drop or file picker can't be
@@ -1083,6 +1155,13 @@ impl Shell {
         // `StyleRule` they selected.
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
+        shell.apply_debug_security_audit(cx);
+        if std::env::var_os(playtests::DEBUG_VARIABLE).is_some() {
+            shell.set_panel_open(layout::Panel::Playtests, true, cx);
+        }
+        shell.apply_debug_tests(cx);
+        shell.apply_debug_layers(cx);
+        shell.apply_debug_loren(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.
@@ -1380,6 +1459,7 @@ impl Shell {
     /// Pushes the root rows the visibility settings and the search now call
     /// for into the tree.
     fn push_root_rows(&mut self, cx: &mut Context<Self>) {
+        self.refresh_query();
         let items = self.explorer_items();
         // Replacing the rows drops the tree's selection; putting it back in the
         // same update keeps the observer from ever seeing the gap. A selected
@@ -1794,6 +1874,7 @@ impl Shell {
             output_display: self.output_display,
             optimize_graph_on_open: self.optimize_graph_on_open,
             increment_names: self.increment_names,
+            strip_on_publish: self.strip_on_publish,
             expand_on_select: self.expand_on_select,
             dragger: self.dragger,
             controls: crate::settings::Controls {
@@ -1810,6 +1891,7 @@ impl Shell {
             team_presence: self.team_presence.settings.clone(),
             play_sandbox: self.play.sandbox,
             play_copy_name: self.play.copy_name.clone(),
+            playtest_rate_hz: self.playtests.rate_hz,
             network_presets: self.play.network.saved.clone(),
             anim_sheet_height: self.anim.sheet_height,
             anim_names_width: Some(self.anim.names_width),
@@ -1985,6 +2067,7 @@ impl Render for Shell {
             .children(self.theme_background(false))
             .child(self.topbar(cx))
             .child(crate::menu_bar::bar(&self.menu_bar))
+            .children(self.places_bar(cx))
             .child(self.document_tabs(cx))
             .child(self.ribbon_tabs(cx))
             .child(self.ribbon(cx))
