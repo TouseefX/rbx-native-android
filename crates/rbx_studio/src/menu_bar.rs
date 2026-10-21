@@ -84,6 +84,8 @@ actions!(
         MenuCopyInstance,
         MenuPasteInstance,
         MenuPasteIntoInstance,
+        MenuPasteAtOriginal,
+        MenuPasteIntoAtOriginal,
         MenuDuplicateInstance,
         MenuGroup,
         MenuUngroup,
@@ -235,6 +237,10 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Copy", MenuCopyInstance),
                 MenuItem::action("Paste", MenuPasteInstance),
                 MenuItem::action("Paste Into", MenuPasteIntoInstance),
+                // Studio's own pair: the same pastes without lifting the
+                // copy off whatever it lands inside.
+                MenuItem::action("Paste at Original Location", MenuPasteAtOriginal),
+                MenuItem::action("Paste into at Original Location", MenuPasteIntoAtOriginal),
                 MenuItem::action("Duplicate", MenuDuplicateInstance),
                 MenuItem::separator(),
                 MenuItem::action("Delete", MenuDeleteInstance),
