@@ -25,10 +25,14 @@ fn test_place_yields_the_baseplate_and_the_spawn_but_not_the_terrain() {
 }
 
 #[test]
-fn an_empty_dom_is_an_error_rather_than_an_empty_window() {
-    let error = Scene::from_dom(&WeakDom::new(), &ReflectionDatabase::embedded());
+fn an_empty_dom_opens_on_an_empty_world_round_the_origin() {
+    // Studio opens a place with nothing in it; a scripts-only Argon project
+    // is one.
+    let scene = Scene::from_dom(&WeakDom::new(), &ReflectionDatabase::embedded()).unwrap();
 
-    assert!(error.is_err());
+    assert!(scene.parts().is_empty());
+    assert!(scene.bounds().center().abs_diff_eq(Vec3::ZERO, 1e-6));
+    assert!(scene.bounds().radius() > 0.0);
 }
 
 // A quarter turn around +Y: the rotation's first column (right) must land on -Z.
