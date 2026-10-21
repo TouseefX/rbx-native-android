@@ -230,6 +230,7 @@ pub(super) fn install(shell: &Entity<Shell>, cx: &mut App) {
         (Panel::Collaborators, &MenuToggleCollaborators),
         (Panel::InputActions, &MenuToggleInputActions),
         (Panel::SecurityAudit, &MenuToggleSecurityAudit),
+        (Panel::Playtests, &MenuTogglePlaytests),
         (Panel::Layers, &MenuToggleLayers),
         (Panel::Loren, &MenuToggleLoren),
     ] {
@@ -388,5 +389,6 @@ panel_toggle!(MenuToggleViewport);
 panel_toggle!(MenuToggleCollaborators);
 panel_toggle!(MenuToggleInputActions);
 panel_toggle!(MenuToggleSecurityAudit);
+panel_toggle!(MenuTogglePlaytests);
 panel_toggle!(MenuToggleLayers);
 panel_toggle!(MenuToggleLoren);

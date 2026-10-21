@@ -85,7 +85,7 @@ pub use cue::OverlayColors;
 pub use gui::GuiBox;
 use isolation::Surroundings;
 pub use isolation::ISOLATION_BACKDROP;
-pub use lines::Segment;
+pub use lines::{Fill, Segment};
 
 /// Only ever seen where a scene has no `Sky`, or where one of its six panels
 /// would not resolve.

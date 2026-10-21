@@ -111,6 +111,7 @@ actions!(
         MenuToggleCollaborators,
         MenuToggleInputActions,
         MenuToggleSecurityAudit,
+        MenuTogglePlaytests,
         MenuToggleLayers,
         MenuToggleLoren,
         /// Shared by every item below that has no real handler yet; always
@@ -279,6 +280,7 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
                 MenuItem::action("Security Audit", MenuToggleSecurityAudit),
+                MenuItem::action("Playtests", MenuTogglePlaytests),
                 MenuItem::action("Layers", MenuToggleLayers),
                 MenuItem::action("Loren", MenuToggleLoren),
                 MenuItem::separator(),

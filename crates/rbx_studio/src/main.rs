@@ -118,6 +118,7 @@ mod menu_bar;
 mod notes;
 mod pacing;
 mod packs;
+mod playtests;
 mod pointer_lock;
 #[cfg(test)]
 mod probe;
