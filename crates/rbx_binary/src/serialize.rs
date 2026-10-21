@@ -226,8 +226,26 @@ fn property_names(dom: &WeakDom, class: &plan::ClassPlan) -> BTreeSet<String> {
         .filter_map(|&referent| dom.get(referent))
         .flat_map(|instance| instance.properties().keys().cloned())
         .collect();
+    names.retain(|name| !is_legacy_brick_color(dom, class, name));
     names.insert(NAME_PROPERTY.to_owned());
     names
+}
+
+// An old model saved `BasePart.BrickColor` (and the GUI and `BodyColors`
+// BrickColors) as `<int>`, which reads back as an Int32. Studio never saves
+// these (the API dump's `CanSave` is false; the Color3 twin is what it
+// writes), and current Studio refuses the whole file when one arrives as an
+// Int32 column ("Unexpected format 3 (expected 11) << BrickColor"). So such a
+// column is left out, as Studio's own save would.
+fn is_legacy_brick_color(dom: &WeakDom, class: &plan::ClassPlan, name: &str) -> bool {
+    let load_only = rbx_reflection::ReflectionDatabase::shared()
+        .resolve_property(&class.class_name, name)
+        .is_some_and(|p| p.value_type == "BrickColor" && !p.can_save);
+    load_only
+        && class.referents.iter().any(|&referent| {
+            dom.get(referent)
+                .is_some_and(|i| matches!(i.properties().get(name), Some(Variant::Int32(_))))
+        })
 }
 
 fn collect_values(
@@ -512,6 +530,29 @@ mod tests {
         assert_eq!(
             bare.properties().get("Anchored"),
             Some(&Variant::Bool(false))
+        );
+    }
+
+    #[test]
+    fn a_legacy_int_brick_color_is_left_out_as_studio_would() {
+        let mut dom = WeakDom::new();
+        let hat = dom.new_instance("Part", "Handle", None);
+        dom.set_property(hat, "BrickColor", Variant::Int32(194))
+            .unwrap();
+        let team = dom.new_instance("SpawnLocation", "Spawn", None);
+        dom.set_property(team, "TeamColor", Variant::BrickColor(23))
+            .unwrap();
+        dom.new_instance("Part", "Baseplate", None);
+
+        let round_tripped = deserialize(&serialize(&dom).unwrap()).unwrap();
+
+        let hat = round_tripped.get(Ref::new(hat.value())).unwrap();
+        assert_eq!(hat.properties().get("BrickColor"), None);
+        let team = round_tripped.get(Ref::new(team.value())).unwrap();
+        assert_eq!(
+            team.properties().get("TeamColor"),
+            Some(&Variant::BrickColor(23)),
+            "a BrickColor Studio does save is kept"
         );
     }
 
