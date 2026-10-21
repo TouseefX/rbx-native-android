@@ -293,6 +293,7 @@ impl Shell {
                     .overflow_y_scroll()
                     .track_scroll(&self.properties_scroll)
                     .pr(super::chrome::SCROLLBAR_GUTTER)
+                    .child(super::reveal::follow(&self.properties_scroll))
                     .child(
                         v_flex()
                             .w_full()

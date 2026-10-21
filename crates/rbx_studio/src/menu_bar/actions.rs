@@ -274,6 +274,18 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
     });
     cx.on_action({
         let shell = shell.clone();
+        move |_: &MenuPasteAtOriginal, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.paste_at_original(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuPasteIntoAtOriginal, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.paste_into_at_original(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
         move |_: &MenuCutInstance, cx| {
             let _ = shell.update(cx, |shell, cx| shell.cut_selected(cx));
         }
