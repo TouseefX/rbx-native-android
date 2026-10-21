@@ -56,16 +56,28 @@ fn a_rojo_style_project_imports_with_its_file_conventions() {
     assert_eq!(dom.get(main).unwrap().class(), "Script");
     let util = child(&dom, server, "Util");
     assert_eq!(dom.get(util).unwrap().class(), "ModuleScript");
-    assert_eq!(dom.get(child(&dom, util, "Child")).unwrap().class(), "ModuleScript");
-    let shared = root(&dom, "ReplicatedStorage");
-    assert_eq!(dom.get(child(&dom, shared, "hello")).unwrap().class(), "LocalScript");
     assert_eq!(
-        dom.get(child(&dom, shared, "Note")).unwrap().properties().get("Value"),
+        dom.get(child(&dom, util, "Child")).unwrap().class(),
+        "ModuleScript"
+    );
+    let shared = root(&dom, "ReplicatedStorage");
+    assert_eq!(
+        dom.get(child(&dom, shared, "hello")).unwrap().class(),
+        "LocalScript"
+    );
+    assert_eq!(
+        dom.get(child(&dom, shared, "Note"))
+            .unwrap()
+            .properties()
+            .get("Value"),
         Some(&Variant::String("hi".into()))
     );
     let part = dom.get(child(&dom, shared, "Box")).unwrap();
     assert_eq!(part.class(), "Part");
-    assert_eq!(part.properties().get("Anchored"), Some(&Variant::Bool(true)));
+    assert_eq!(
+        part.properties().get("Anchored"),
+        Some(&Variant::Bool(true))
+    );
     let lighting = dom.get(root(&dom, "Lighting")).unwrap().properties();
     assert_eq!(lighting.get("Brightness"), Some(&Variant::Float32(3.0)));
     assert_eq!(lighting.get("Technology"), Some(&Variant::Enum(3)));
@@ -76,33 +88,46 @@ fn an_exported_place_imports_back_to_the_same_tree() {
     let mut dom = WeakDom::new();
     let sss = dom.new_instance("ServerScriptService", "ServerScriptService", None);
     let script = dom.new_instance("Script", "Main", Some(sss));
-    dom.set_property(script, "Source", Variant::String("print('x')".into())).unwrap();
+    dom.set_property(script, "Source", Variant::String("print('x')".into()))
+        .unwrap();
     let module = dom.new_instance("ModuleScript", "Lib", Some(sss));
     dom.new_instance("ModuleScript", "Inner", Some(module));
     let workspace = dom.new_instance("Workspace", "Workspace", None);
     let part = dom.new_instance("Part", "Wall/1", Some(workspace));
-    dom.set_property(part, "Anchored", Variant::Bool(true)).unwrap();
+    dom.set_property(part, "Anchored", Variant::Bool(true))
+        .unwrap();
     dom.new_instance("Folder", "Empty", Some(workspace));
     dom.new_instance("Folder", "empty", Some(workspace));
 
     let dir = scratch("export");
     let project = export(&dom, &dir, "Round").unwrap();
-    assert!(dir.join("src/ServerScriptService/Main.server.luau").exists());
+    assert!(dir
+        .join("src/ServerScriptService/Main.server.luau")
+        .exists());
     assert!(dir.join("src/ServerScriptService/Lib/init.luau").exists());
     assert!(dir.join("src/Workspace/Wall_1.rbxm").exists());
 
     let back = import(&project).unwrap();
     let sss = root(&back, "ServerScriptService");
     assert_eq!(
-        back.get(child(&back, sss, "Main")).unwrap().properties().get("Source"),
+        back.get(child(&back, sss, "Main"))
+            .unwrap()
+            .properties()
+            .get("Source"),
         Some(&Variant::String("print('x')".into()))
     );
     let lib = child(&back, sss, "Lib");
-    assert_eq!(back.get(child(&back, lib, "Inner")).unwrap().class(), "ModuleScript");
+    assert_eq!(
+        back.get(child(&back, lib, "Inner")).unwrap().class(),
+        "ModuleScript"
+    );
     let workspace = root(&back, "Workspace");
     // The file name is the name, as in Rojo: `/` can't be in one.
     let wall = back.get(child(&back, workspace, "Wall_1")).unwrap();
-    assert_eq!(wall.properties().get("Anchored"), Some(&Variant::Bool(true)));
+    assert_eq!(
+        wall.properties().get("Anchored"),
+        Some(&Variant::Bool(true))
+    );
     // Two folders whose names differ only in case both survive.
     assert_eq!(back.get(workspace).unwrap().children().len(), 3);
 }
@@ -126,7 +151,12 @@ fn exported_models_carry_tags_as_a_string_argon_can_read() {
     export(&dom, &dir, "Tags").unwrap();
     let bytes = std::fs::read(dir.join("src/Workspace/Tagged.rbxm")).unwrap();
     let model = rbx_binary::deserialize(&bytes).unwrap();
-    let tags = model.get(model.root_refs()[0]).unwrap().properties().get("Tags").cloned();
+    let tags = model
+        .get(model.root_refs()[0])
+        .unwrap()
+        .properties()
+        .get("Tags")
+        .cloned();
 
     assert!(
         !matches!(tags, Some(Variant::Unknown { type_id: 0x1C, .. })),

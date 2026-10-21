@@ -300,7 +300,15 @@ pub(super) fn dropdown_at(
                 cx.notify();
             });
         })
-        .child(popover(shell, menu, trigger, items, anchor, Some(stop.clone()), cx))
+        .child(popover(
+            shell,
+            menu,
+            trigger,
+            items,
+            anchor,
+            Some(stop.clone()),
+            cx,
+        ))
 }
 
 fn popover(

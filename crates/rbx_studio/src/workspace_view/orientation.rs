@@ -306,7 +306,7 @@ mod tests {
         // The heading survives the tilt: still facing the way yaw points.
         let level = pose.basis().0 * Vec3::new(1.0, 0.0, 1.0);
         assert!(down.x * level.x + down.z * level.z > 0.0);
-            }
+    }
 
     fn face<'a>(faces: &'a [Face; 3], label: &str) -> &'a Face {
         faces

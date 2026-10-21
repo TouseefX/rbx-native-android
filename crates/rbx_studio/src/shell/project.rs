@@ -33,8 +33,14 @@ const SCRIPTS: [(&str, &str); 3] = [
 /// (`default.project.json` gives `default.project.rbxl`), rewritten on every
 /// open, since the project is the truth. `None` for any other file.
 pub(crate) fn place_for(path: &Path) -> Result<Option<PathBuf>, String> {
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-    let Some(stem) = name.strip_suffix(".json").filter(|s| s.ends_with(".project")) else {
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    let Some(stem) = name
+        .strip_suffix(".json")
+        .filter(|s| s.ends_with(".project"))
+    else {
         return Ok(None);
     };
     let dom = import(path)?;
@@ -46,15 +52,18 @@ pub(crate) fn place_for(path: &Path) -> Result<Option<PathBuf>, String> {
 /// Reads `project` (a `*.project.json`) into a DOM: a `DataModel` tree's
 /// services become the roots, any other tree is the one root.
 pub(crate) fn import(project: &Path) -> Result<WeakDom, String> {
-    let text = std::fs::read_to_string(project)
-        .map_err(|err| format!("{}: {err}", project.display()))?;
+    let text =
+        std::fs::read_to_string(project).map_err(|err| format!("{}: {err}", project.display()))?;
     let json: Value =
         serde_json::from_str(&text).map_err(|err| format!("{}: {err}", project.display()))?;
     let tree = json
         .get("tree")
         .ok_or_else(|| format!("{}: no \"tree\"", project.display()))?;
     let base = project.parent().unwrap_or(Path::new("."));
-    let name = json.get("name").and_then(Value::as_str).unwrap_or("Project");
+    let name = json
+        .get("name")
+        .and_then(Value::as_str)
+        .unwrap_or("Project");
     let mut importer = Importer {
         dom: WeakDom::new(),
         database: ReflectionDatabase::shared(),
@@ -86,7 +95,13 @@ fn children_of(node: &Value) -> impl Iterator<Item = (&str, &Value)> {
 impl Importer {
     /// One project node: its `$path` (if any) read from disk, then its
     /// `$className`, `$properties` and child nodes on top.
-    fn node(&mut self, base: &Path, name: &str, node: &Value, parent: Option<Ref>) -> Result<(), String> {
+    fn node(
+        &mut self,
+        base: &Path,
+        name: &str,
+        node: &Value,
+        parent: Option<Ref>,
+    ) -> Result<(), String> {
         let explicit = node.get("$className").and_then(Value::as_str);
         // As in Rojo and Argon, a node named after a class is that class
         // unless it says otherwise: `"ReplicatedStorage": { "$path": … }`.
@@ -125,16 +140,26 @@ impl Importer {
     }
 
     /// A file or folder on disk, named `name` when the project gives it one.
-    fn path(&mut self, path: &Path, name: Option<&str>, parent: Option<Ref>) -> Result<Option<Ref>, String> {
+    fn path(
+        &mut self,
+        path: &Path,
+        name: Option<&str>,
+        parent: Option<Ref>,
+    ) -> Result<Option<Ref>, String> {
         if path.is_dir() {
             return self.folder(path, name, parent).map(Some);
         }
-        let file = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+        let file = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
         let read = || std::fs::read(path).map_err(|err| format!("{}: {err}", path.display()));
         let text = || String::from_utf8_lossy(&read().unwrap_or_default()).into_owned();
         if let Some((class, stem)) = script_of(file) {
             let made = self.dom.new_instance(class, name.unwrap_or(stem), parent);
-            let _ = self.dom.set_property(made, "Source", Variant::String(text()));
+            let _ = self
+                .dom
+                .set_property(made, "Source", Variant::String(text()));
             return Ok(Some(made));
         }
         if let Some(stem) = file.strip_suffix(".model.json") {
@@ -142,7 +167,10 @@ impl Importer {
                 .map_err(|err| format!("{}: {err}", path.display()))?;
             return Ok(Some(self.model_json(&json, name.unwrap_or(stem), parent)));
         }
-        if let Some(stem) = file.strip_suffix(".rbxm").or_else(|| file.strip_suffix(".rbxmx")) {
+        if let Some(stem) = file
+            .strip_suffix(".rbxm")
+            .or_else(|| file.strip_suffix(".rbxmx"))
+        {
             let model = rbx_viewer::parse_place(&read()?, path)?;
             let mut first = None;
             for &root in model.root_refs() {
@@ -167,8 +195,12 @@ impl Importer {
             return Ok(first);
         }
         if let Some(stem) = file.strip_suffix(".txt") {
-            let made = self.dom.new_instance("StringValue", name.unwrap_or(stem), parent);
-            let _ = self.dom.set_property(made, "Value", Variant::String(text()));
+            let made = self
+                .dom
+                .new_instance("StringValue", name.unwrap_or(stem), parent);
+            let _ = self
+                .dom
+                .set_property(made, "Value", Variant::String(text()));
             return Ok(Some(made));
         }
         // Anything else (`.json` modules, `.csv` tables, editor files) has no
@@ -176,10 +208,18 @@ impl Importer {
         Ok(None)
     }
 
-    fn folder(&mut self, dir: &Path, name: Option<&str>, parent: Option<Ref>) -> Result<Ref, String> {
-        let name = name
-            .map(str::to_owned)
-            .unwrap_or_else(|| dir.file_name().unwrap_or_default().to_string_lossy().into_owned());
+    fn folder(
+        &mut self,
+        dir: &Path,
+        name: Option<&str>,
+        parent: Option<Ref>,
+    ) -> Result<Ref, String> {
+        let name = name.map(str::to_owned).unwrap_or_else(|| {
+            dir.file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned()
+        });
         let mut entries: Vec<PathBuf> = std::fs::read_dir(dir)
             .map_err(|err| format!("{}: {err}", dir.display()))?
             .flatten()
@@ -201,7 +241,9 @@ impl Importer {
             Some((class, path)) => {
                 let made = self.dom.new_instance(class, &name, parent);
                 let source = std::fs::read_to_string(path).unwrap_or_default();
-                let _ = self.dom.set_property(made, "Source", Variant::String(source));
+                let _ = self
+                    .dom
+                    .set_property(made, "Source", Variant::String(source));
                 made
             }
             None => self.dom.new_instance("Folder", &name, parent),
@@ -251,20 +293,32 @@ impl Importer {
     /// A Rojo JSON model: `ClassName`, `Properties`, `Children` (either case).
     fn model_json(&mut self, json: &Value, name: &str, parent: Option<Ref>) -> Ref {
         let field = |upper: &str, lower: &str| json.get(upper).or_else(|| json.get(lower));
-        let class = field("ClassName", "className").and_then(Value::as_str).unwrap_or("Folder");
-        let name = field("Name", "name").and_then(Value::as_str).unwrap_or(name);
+        let class = field("ClassName", "className")
+            .and_then(Value::as_str)
+            .unwrap_or("Folder");
+        let name = field("Name", "name")
+            .and_then(Value::as_str)
+            .unwrap_or(name);
         let made = self.dom.new_instance(class, name, parent);
         if let Some(properties) = field("Properties", "properties").and_then(Value::as_object) {
             self.properties(made, properties);
         }
-        for child in field("Children", "children").and_then(Value::as_array).into_iter().flatten() {
+        for child in field("Children", "children")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
             self.model_json(child, "Instance", Some(made));
         }
         made
     }
 
     fn properties(&mut self, made: Ref, properties: &Map<String, Value>) {
-        let class = self.dom.get(made).map(|i| i.class().to_owned()).unwrap_or_default();
+        let class = self
+            .dom
+            .get(made)
+            .map(|i| i.class().to_owned())
+            .unwrap_or_default();
         for (key, value) in properties {
             if let Some(variant) = to_variant(self.database, &class, key, value) {
                 let _ = self.dom.set_property(made, key, variant);
@@ -302,12 +356,21 @@ fn stem_of(file: &str) -> &str {
 /// A project-file property value as a `Variant` of the type the class's
 /// property has: the implicit forms (a bool, a number, a string, an enum
 /// item's name, an array for a vector or colour).
-fn to_variant(database: &ReflectionDatabase, class: &str, key: &str, value: &Value) -> Option<Variant> {
+fn to_variant(
+    database: &ReflectionDatabase,
+    class: &str,
+    key: &str,
+    value: &Value,
+) -> Option<Variant> {
     let kind = property_type(database, class, key).unwrap_or_default();
     let numbers = || {
-        value
-            .as_array()
-            .map(|items| items.iter().filter_map(Value::as_f64).map(|n| n as f32).collect::<Vec<_>>())
+        value.as_array().map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_f64)
+                .map(|n| n as f32)
+                .collect::<Vec<_>>()
+        })
     };
     Some(match (kind.as_str(), value) {
         ("bool", Value::Bool(b)) | (_, Value::Bool(b)) => Variant::Bool(*b),
@@ -317,11 +380,19 @@ fn to_variant(database: &ReflectionDatabase, class: &str, key: &str, value: &Val
         (_, Value::Number(n)) => Variant::Float32(n.as_f64()? as f32),
         ("Vector3", _) => {
             let v = numbers()?;
-            Variant::Vector3(rbx_dom::Vector3Data { x: *v.first()?, y: *v.get(1)?, z: *v.get(2)? })
+            Variant::Vector3(rbx_dom::Vector3Data {
+                x: *v.first()?,
+                y: *v.get(1)?,
+                z: *v.get(2)?,
+            })
         }
         ("Color3", _) => {
             let v = numbers()?;
-            Variant::Color3(rbx_dom::Color3Data { r: *v.first()?, g: *v.get(1)?, b: *v.get(2)? })
+            Variant::Color3(rbx_dom::Color3Data {
+                r: *v.first()?,
+                g: *v.get(1)?,
+                b: *v.get(2)?,
+            })
         }
         (kind, Value::String(text)) => {
             let item = database
@@ -412,7 +483,12 @@ fn write_children(dom: &WeakDom, parent: Ref, dir: &Path) -> Result<(), String> 
 /// a model file. As in Rojo and Argon the file name is the instance's name,
 /// so a name a file can't hold comes back with `_` for the bad characters,
 /// and siblings whose names differ only in case get a ` (2)` suffix.
-fn write_instance(dom: &WeakDom, reference: Ref, dir: &Path, used: &mut BTreeMap<String, ()>) -> Result<(), String> {
+fn write_instance(
+    dom: &WeakDom,
+    reference: Ref,
+    dir: &Path,
+    used: &mut BTreeMap<String, ()>,
+) -> Result<(), String> {
     let Some(instance) = dom.get(reference) else {
         return Ok(());
     };
@@ -423,7 +499,9 @@ fn write_instance(dom: &WeakDom, reference: Ref, dir: &Path, used: &mut BTreeMap
         _ => String::new(),
     };
     match (instance.class(), script) {
-        ("Folder", _) | (_, Some(_)) if !instance.children().is_empty() || instance.class() == "Folder" => {
+        ("Folder", _) | (_, Some(_))
+            if !instance.children().is_empty() || instance.class() == "Folder" =>
+        {
             let folder = dir.join(&key);
             std::fs::create_dir_all(&folder).map_err(io(&folder))?;
             if let Some((_, extension)) = script {
@@ -473,9 +551,19 @@ fn io(path: &Path) -> impl Fn(std::io::Error) -> String + '_ {
 fn unique(used: &mut BTreeMap<String, ()>, name: &str) -> String {
     let safe: String = name
         .chars()
-        .map(|c| if c.is_control() || "/\\:*?\"<>|".contains(c) { '_' } else { c })
+        .map(|c| {
+            if c.is_control() || "/\\:*?\"<>|".contains(c) {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect();
-    let safe = if safe.is_empty() || safe == "." || safe == ".." { "_".to_owned() } else { safe };
+    let safe = if safe.is_empty() || safe == "." || safe == ".." {
+        "_".to_owned()
+    } else {
+        safe
+    };
     let mut key = safe.clone();
     let mut n = 1;
     while used.contains_key(&key.to_lowercase()) {
@@ -501,10 +589,14 @@ fn json_properties(dom: &WeakDom, reference: Ref) -> Map<String, Value> {
         // spellings (`AttributesSerialize`, `UniqueId`) are not property
         // names a project file can carry.
         .filter(|(key, _)| {
-            database.resolve_property(instance.class(), key).is_some_and(|property| {
-                property.can_save
-                    && !property.tags.iter().any(|tag| tag == "Hidden" || tag == "ReadOnly" || tag == "NotScriptable")
-            })
+            database
+                .resolve_property(instance.class(), key)
+                .is_some_and(|property| {
+                    property.can_save
+                        && !property.tags.iter().any(|tag| {
+                            tag == "Hidden" || tag == "ReadOnly" || tag == "NotScriptable"
+                        })
+                })
         })
         .filter_map(|(key, value)| {
             let json = match value {
