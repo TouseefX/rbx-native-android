@@ -28,7 +28,7 @@ fn a_box_is_six_quads_inside_its_own_extent() {
     }
 }
 
-/// Every shape with a length runs along its frame's own -Z — see
+/// Every shape with a length runs along its frame's own -Z, see
 /// `scene::adornment::Mesh`.
 #[test]
 fn a_cone_points_along_the_frames_negative_z() {
@@ -154,7 +154,7 @@ fn a_line_is_one_quad_with_both_ends_named_from_each_corner() {
 }
 
 /// However thin an adornment asks for, a line still has to land on at least
-/// one pixel — a zero-width quad would draw nothing at all.
+/// one pixel, a zero-width quad would draw nothing at all.
 #[test]
 fn a_hairline_still_covers_a_pixel() {
     let mut out = Vec::new();

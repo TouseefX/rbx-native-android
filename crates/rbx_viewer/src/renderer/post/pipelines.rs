@@ -73,7 +73,7 @@ pub(super) fn sample_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 /// bloom. The depth has no sampler of its own: it is read with `textureLoad` at
 /// the exact pixel (a depth filtered across a silhouette is a depth no surface is
 /// at), and above one sample there is no `textureSample` for a multisampled
-/// texture in WGSL at all — which is what `multisampled` switches between, in
+/// texture in WGSL at all, which is what `multisampled` switches between, in
 /// step with the scene pass's own sample count.
 pub(super) fn blur_layout(device: &wgpu::Device, multisampled: bool) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -120,7 +120,7 @@ pub(super) fn attachment(
         .create_view(&wgpu::TextureViewDescriptor::default())
 }
 
-/// [`attachment`] where the caller needs the texture itself — one that is
+/// [`attachment`] where the caller needs the texture itself, one that is
 /// copied out of, rather than only drawn into and sampled (see
 /// `post::Targets`' refraction source).
 pub(super) fn attachment_texture(

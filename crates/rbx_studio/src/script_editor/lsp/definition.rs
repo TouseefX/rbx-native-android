@@ -1,5 +1,5 @@
 //! Go to Definition through `luau-lsp`, which follows a name across scripts
-//! — into the `ModuleScript` a `require` returned, say — where the lexer
+//! into the `ModuleScript` a `require` returned, say, where the lexer
 //! lookup in `script_editor::goto` stays within one.
 //!
 //! A target in the same script is converted to the editor's columns here

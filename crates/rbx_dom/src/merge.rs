@@ -12,9 +12,9 @@
 //! by `UniqueId`: two people each adding a `Part` to `Workspace` added two
 //! parts.
 //!
-//! Every value is merged on its own — the name, the class, each property,
+//! Every value is merged on its own, the name, the class, each property,
 //! each attribute, the tag set, the parent, and a script's `Source` line by
-//! line — with the usual rule: a side that left a value as the base had it
+//! line, with the usual rule: a side that left a value as the base had it
 //! takes the other side's, two equal values are no conflict, and two
 //! different edits are one [`Conflict`]. `Ref` values are compared by the
 //! instance they name, not by referent. An unresolved conflict takes ours.

@@ -1,7 +1,7 @@
 //! The texture packs behind `Enum.Material`, as Roblox publishes them.
 //!
 //! Roblox ships every built-in material as four public assets (colour, normal,
-//! metalness, roughness maps); this crate is that table and nothing else — no
+//! metalness, roughness maps); this crate is that table and nothing else, no
 //! network, no GPU, no DOM. Start at [`material`], which answers what one
 //! `Enum.Material` name is made of in a given [`Set`].
 //!
@@ -26,7 +26,7 @@ pub enum Set {
 pub enum Flavor {
     /// Lit normally. Covers every material with a texture pack, and the
     /// untextured ones (`SmoothPlastic`, `Air`, `Water`) that are simply the
-    /// part's own colour — as is `Plastic`, whose lone normal map adds relief
+    /// part's own colour, as is `Plastic`, whose lone normal map adds relief
     /// to that colour without replacing it.
     Solid,
     /// Unlit and emissive.
@@ -92,7 +92,7 @@ impl Material {
         self.studs_per_tile
     }
 
-    /// The asset id of one map, or `None` where this material has no such map —
+    /// The asset id of one map, or `None` where this material has no such map,
     /// which is most of them for [`MapKind::Metalness`]: only `Metal`,
     /// `DiamondPlate`, `CorrodedMetal`, `Foil`, `CeramicTiles` and `Rubber` are
     /// metals in the 2022 set, everything else being a dielectric.

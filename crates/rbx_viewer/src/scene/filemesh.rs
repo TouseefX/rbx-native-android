@@ -1,6 +1,6 @@
 //! Pure DOM extraction for `MeshPart` and `Part`-with-`SpecialMesh`(FileMesh)
 //! instances: which mesh/texture assets they need, and how to place the
-//! downloaded geometry once it exists. No network or GPU access happens here —
+//! downloaded geometry once it exists. No network or GPU access happens here,
 //! see `crate::assets` for downloading and `crate::renderer::filemesh` for the
 //! GPU side.
 
@@ -36,7 +36,7 @@ pub(super) struct Entry {
     material: Slot,
     /// The drawn `Part` this entry stands in for: the `MeshPart` itself, or
     /// the parent of a `SpecialMesh` child. Used to find and hide that part's
-    /// fallback box once real geometry resolves — see `Scene::resolve_file_meshes`.
+    /// fallback box once real geometry resolves, see `Scene::resolve_file_meshes`.
     referent: Ref,
     mesh: AssetRef,
     /// The mesh's own `TextureID`, and `None` whenever `appearance` is set: a
@@ -79,7 +79,7 @@ pub(crate) struct Plan {
 ///
 /// `Clone`: a union's instances outlive the resolved set they sit in, which a
 /// streaming load rebuilds from the file mesh plan every time more meshes
-/// land — see `scene::union::Merged`.
+/// land, see `scene::union::Merged`.
 #[derive(Clone)]
 pub(crate) struct ResolvedInstance {
     /// The part this instance draws in place of (see [`Entry::referent`]), so
@@ -99,12 +99,12 @@ pub(crate) struct ResolvedInstance {
     /// by [`resolve`] rather than handed to the renderer to blend away.
     pub(crate) alpha: f32,
     pub(crate) reflectance: f32,
-    /// `BasePart.CastShadow` of the part this mesh stands for — see
+    /// `BasePart.CastShadow` of the part this mesh stands for, see
     /// [`super::Part::casts_shadow`].
     pub(crate) casts_shadow: bool,
     /// The part's own [`super::Part::is_drawn`] isolation flag, carried
     /// over because a mesh part draws through this instance and not its box
-    /// — see `scene::isolation`.
+    /// see `scene::isolation`.
     pub(crate) isolated_out: bool,
 }
 
@@ -125,7 +125,7 @@ impl ResolvedInstance {
 pub(crate) struct Resolved {
     /// Behind `Arc`s so a hit test on another thread (see
     /// `crate::pick::Meshes`) reads the very vertices the renderer uploads
-    /// rather than a copy of every mesh in the place — and so the decoded
+    /// rather than a copy of every mesh in the place, and so the decoded
     /// mesh kept across reloads (see `load::Resident`) is that same one.
     pub(crate) meshes: HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
     /// Behind `Arc`s for the second of those reasons.
@@ -164,8 +164,8 @@ impl Resolved {
     }
 
     /// Takes `referent`'s instance out. Order only ever mattered to a full
-    /// build's batch construction — the renderer finds instances by referent
-    /// from there on — so the last one fills the hole.
+    /// build's batch construction, the renderer finds instances by referent
+    /// from there on, so the last one fills the hole.
     /// Takes `referent`'s rig, and the derived mesh it drew, out.
     pub(crate) fn drop_rig(&mut self, referent: Ref) {
         if let Some(rig) = self.rigs.remove(&referent) {
@@ -185,17 +185,19 @@ impl Resolved {
 }
 
 impl Entry {
-    /// The mesh this entry draws and every image it samples — its own
+    /// The mesh this entry draws and every image it samples, its own
     /// `TextureID` and, where it has one, the four `SurfaceAppearance` maps.
     pub(super) fn assets(&self) -> (AssetRef, Vec<AssetRef>) {
         let images = self
             .texture
             .iter()
-            .chain(
-                self.appearance
+            .chain(self.appearance.iter().flat_map(|appearance| {
+                appearance
+                    .maps
                     .iter()
-                    .flat_map(|appearance| appearance.maps.iter().flatten()),
-            )
+                    .flatten()
+                    .chain(appearance.emissive_mask.iter())
+            }))
             .chain(self.dressing.iter().flat_map(|dressing| dressing.images()))
             .chain(makeup::images(&self.makeup))
             .cloned()
@@ -236,7 +238,7 @@ impl Plan {
     ///
     /// A plan is made once from the DOM and joined to assets again every time
     /// more of them land (see `load::Loaded::resolve`), long after the DOM is
-    /// out of reach — so a single-instance edit that changes what an instance
+    /// out of reach, so a single-instance edit that changes what an instance
     /// draws has to leave the plan saying so, or the next landing would
     /// resolve the `MeshId` the file was opened with.
     pub(super) fn install(&mut self, referent: Ref, entry: Option<Entry>) {
@@ -355,7 +357,7 @@ pub(crate) fn resolve(
             }
         }
         // A skinned mesh drawn as itself (not dressed, not wrapped) draws
-        // through a copy of its own, posed later — the very same `Arc` at
+        // through a copy of its own, posed later, the very same `Arc` at
         // rest, so nothing is copied until a bone moves.
         if mesh_key == entry.mesh {
             if let Some(rig) = skinned::Rig::of(entry, &mesh, &plan.poses) {
@@ -468,7 +470,7 @@ fn from_mesh_part(
 
 /// A plain `Part` wearing a `SpecialMesh` FileMesh child: the child replaces
 /// the part's geometry outright, same precedence as `scene::shape::resolve`.
-/// Only the FileMesh case reaches here — every other `MeshType` already has a
+/// Only the FileMesh case reaches here, every other `MeshType` already has a
 /// procedural stand-in built in `shape::resolve` and is left alone.
 fn from_special_mesh_child(
     dom: &WeakDom,

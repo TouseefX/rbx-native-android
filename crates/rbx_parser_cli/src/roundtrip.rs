@@ -5,9 +5,9 @@
 //!
 //! Referents are not guaranteed to survive a round-trip identically (the XML
 //! writer/reader in particular assigns fresh ones), so both trees are walked in
-//! the same deterministic pre-order — root list, then each instance's
+//! the same deterministic pre-order, root list, then each instance's
 //! `children()` in order, which every serializer/deserializer in this
-//! workspace preserves — and instances are paired up by position in that walk.
+//! workspace preserves, and instances are paired up by position in that walk.
 //! This mirrors `rbx_xml/tests/serialize_round_trip.rs`'s approach; it is
 //! reimplemented here rather than shared because that test module is
 //! `#[cfg(test)]`-only and not reachable from this binary crate.

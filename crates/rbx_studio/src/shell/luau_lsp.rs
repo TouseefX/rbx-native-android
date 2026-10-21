@@ -175,8 +175,8 @@ impl Shell {
     }
 
     /// Called from a render: schedules a refresh if the DOM moved since the
-    /// mirror last matched it — an undo, a Command Bar script, an Argon
-    /// sync — and one is not already waiting.
+    /// mirror last matched it, an undo, a Command Bar script, an Argon
+    /// sync, and one is not already waiting.
     pub(super) fn notice_luau_lsp_dom_change(&mut self, cx: &mut Context<Self>) {
         if self.live_shown() {
             return;
@@ -284,7 +284,7 @@ impl Shell {
     }
 
     /// A definition in another script: opens it with the name selected.
-    /// Anything outside the place — Roblox's own definitions file — has no
+    /// Anything outside the place, Roblox's own definitions file, has no
     /// tab to open, and is left alone.
     pub(super) fn reveal_location(
         &mut self,
@@ -300,7 +300,7 @@ impl Shell {
         self.reveal(reference, range.unwrap_or_default(), window, cx);
     }
 
-    /// Opens `reference` with `range` — in the server's columns — selected.
+    /// Opens `reference` with `range`, in the server's columns, selected.
     pub(in crate::shell) fn reveal(
         &mut self,
         reference: Ref,

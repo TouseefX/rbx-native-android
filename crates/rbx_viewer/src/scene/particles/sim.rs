@@ -1,5 +1,5 @@
 //! Advances one emitter's particles by a time step, and prepares them for
-//! rendering. Pure CPU state — no GPU handle anywhere in this file — so the
+//! rendering. Pure CPU state, no GPU handle anywhere in this file, so the
 //! renderer only ever reads [`Simulation::particles`] once a frame.
 
 use glam::{Quat, Vec3};
@@ -23,7 +23,7 @@ struct Particle {
     rot_speed: f32,
 }
 
-/// One alive particle, resolved to whatever the renderer needs to draw it —
+/// One alive particle, resolved to whatever the renderer needs to draw it,
 /// everything except the emitter-wide constants (texture, light emission,
 /// z-offset), which the renderer already has one copy of per emitter.
 pub(crate) struct RenderParticle {
@@ -54,7 +54,7 @@ impl Simulation {
     }
 
     /// Runs enough fixed `dt` steps to reach the steady state a continuously
-    /// running emitter settles into — every particle a spawn could have
+    /// running emitter settles into, every particle a spawn could have
     /// produced since t=0 that has not yet expired. `Lifetime.1` (the longest a
     /// particle can live) is exactly that long: anything spawned before now
     /// minus that has already expired, whatever spawned after is already
@@ -162,12 +162,12 @@ impl Simulation {
     }
 }
 
-/// Tilts `axis` by up to `degrees_a`/`degrees_b` around its two perpendiculars —
+/// Tilts `axis` by up to `degrees_a`/`degrees_b` around its two perpendiculars,
 /// an ellipse-shaped cone approximating `SpreadAngle`'s independent X/Z limits.
 /// Composing two small rotations is not exactly Roblox's own cone (which
 /// samples the ellipse's interior, not just this one diagonal), but it keeps
 /// every direction within the same angular bound, which is what the emission
-/// cone is actually for — see the module's tests.
+/// cone is actually for, see the module's tests.
 fn spread_direction(axis: Vec3, degrees_a: f32, degrees_b: f32) -> Vec3 {
     if degrees_a == 0.0 && degrees_b == 0.0 {
         return axis;

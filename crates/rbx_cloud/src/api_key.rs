@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 /// The key a host process read from somewhere this crate cannot reach
-/// itself — `rbxstudio`'s OS keyring entry, which only GPUI's platform layer
+/// itself, `rbxstudio`'s OS keyring entry, which only GPUI's platform layer
 /// can open. Consulted by [`ApiKey::from_env_or_config`], so every `Client`
 /// built afterwards (the viewer's asset fetches included) sees it.
 static INSTALLED: RwLock<Option<ApiKey>> = RwLock::new(None);
@@ -44,7 +44,7 @@ impl ApiKey {
         *INSTALLED.write().unwrap_or_else(|e| e.into_inner()) = key;
     }
 
-    /// Where the plaintext key file lives, whether or not it exists — so the
+    /// Where the plaintext key file lives, whether or not it exists, so the
     /// editor can move a key found there into the OS keyring and delete it.
     pub fn plaintext_file_path() -> Option<PathBuf> {
         config_file_path(

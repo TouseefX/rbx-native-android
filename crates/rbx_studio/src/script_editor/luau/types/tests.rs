@@ -178,7 +178,7 @@ fn typeofs_argument_is_an_expression_not_a_type() {
 
 #[test]
 fn the_contextual_type_keyword_is_only_a_declaration_where_one_follows() {
-    // `type` is reserved only in context — Luau still lets it be a call and a
+    // `type` is reserved only in context, Luau still lets it be a call and a
     // variable name, and neither is followed by the name a declaration needs.
     assert!(named("local kind = type(x)").is_empty());
     assert!(named("local type = 1").is_empty());

@@ -386,6 +386,43 @@ fn a_radial_gradient_carries_the_reciprocal_of_that_radius() {
     assert_eq!(axis[1], 0.0);
 }
 
+fn elliptical(dom: &mut WeakDom, frame: Ref, rotation: f32) -> Ref {
+    let gradient = gradient(dom, frame, rotation);
+    dom.set_property(gradient, "Type", Variant::Enum(3))
+        .unwrap();
+    gradient
+}
+
+#[test]
+fn an_elliptical_gradient_reads_type_three_with_radii_of_half_the_sides() {
+    let (mut dom, gui) = screen_gui();
+    let frame = boxed(&mut dom, gui);
+    let gradient = elliptical(&mut dom, frame, 0.0);
+
+    let read = only(&dom).gradient.unwrap();
+    assert_eq!(read.kind, GradientKind::Elliptical);
+    assert!((read.axis[0] - 1.0 / 100.0).abs() < 1e-6);
+    assert!((read.axis[1] - 1.0 / 50.0).abs() < 1e-6);
+
+    dom.set_property(gradient, "Scale", Variant::Float32(2.0))
+        .unwrap();
+    let scaled = only(&dom).gradient.unwrap();
+    assert!((scaled.axis[0] - 1.0 / 200.0).abs() < 1e-6);
+    assert!((scaled.axis[1] - 1.0 / 100.0).abs() < 1e-6);
+}
+
+#[test]
+fn a_gradient_carries_the_cosine_and_sine_of_its_rotation() {
+    let (mut dom, gui) = screen_gui();
+    let frame = boxed(&mut dom, gui);
+    elliptical(&mut dom, frame, 90.0);
+
+    let turn = only(&dom).gradient.unwrap().turn;
+
+    assert!(turn[0].abs() < 1e-6);
+    assert!((turn[1] - 1.0).abs() < 1e-6);
+}
+
 #[test]
 fn a_disabled_gradient_is_ignored() {
     let (mut dom, gui) = screen_gui();

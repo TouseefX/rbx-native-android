@@ -1,6 +1,6 @@
 //! Gestures on the selection region: drawing a new one by dragging across
-//! the terrain, scaling it by a face's ball, moving it by an arrow, and —
-//! for the Transform tool — turning it by a ring.
+//! the terrain, scaling it by a face's ball, moving it by an arrow, and,
+//! for the Transform tool, turning it by a ring.
 //!
 //! `Shift` on a scale handle scales every axis in proportion and `Ctrl`
 //! grows both faces of the pulled axis at once (`terrain-editor.md`'s Select

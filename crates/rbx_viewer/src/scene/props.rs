@@ -37,7 +37,7 @@ pub(super) fn float_or(properties: &Properties, key: &str, default: f32) -> f32 
 }
 
 /// The first of `keys` the instance actually carries, for a property Roblox
-/// saves under more than one spelling — `Fire.Size` and the legacy lowercase
+/// saves under more than one spelling, `Fire.Size` and the legacy lowercase
 /// `Fire.size`, both of which the API dump lists.
 pub(super) fn float_of_any(properties: &Properties, keys: &[&str], default: f32) -> f32 {
     keys.iter()
@@ -73,7 +73,7 @@ pub(super) fn vector3_or(properties: &Properties, key: &str, default: Vec3) -> V
 
 /// A plain `Color3` property, as the `[f32; 3]` the sequence builders below
 /// take. The first of `keys` present wins, for a colour Roblox exposes under
-/// two names — `Sparkles.SparkleColor` and its deprecated `Sparkles.Color`.
+/// two names, `Sparkles.SparkleColor` and its deprecated `Sparkles.Color`.
 pub(super) fn color3_of_any(properties: &Properties, keys: &[&str], default: [f32; 3]) -> [f32; 3] {
     for key in keys {
         if let Some(Variant::Color3(color)) = properties.get(*key) {
@@ -94,7 +94,7 @@ pub(super) fn number_sequence_or(
     }
 }
 
-/// A `NumberSequence` from plain `(time, value)` pairs — what an effect with
+/// A `NumberSequence` from plain `(time, value)` pairs, what an effect with
 /// no sequence property of its own (a `Fire`, a `Smoke`) is given instead.
 pub(super) fn number_sequence(points: &[(f32, f32)]) -> NumberSequence {
     NumberSequence {
@@ -120,7 +120,7 @@ pub(super) fn color_sequence_or(
     }
 }
 
-/// One colour held for the whole lifetime — a `Fire`'s `Color` or a `Smoke`'s,
+/// One colour held for the whole lifetime, a `Fire`'s `Color` or a `Smoke`'s,
 /// neither of which is a sequence.
 pub(super) fn flat_color(color: [f32; 3]) -> ColorSequence {
     color_sequence(&[(0.0, color), (1.0, color)])

@@ -133,7 +133,7 @@ impl Shell {
     }
 
     /// The plugin connects on its own when a place opens if `AutoConnect`
-    /// is on (`argon-roblox@30fd38d:src/App/init.luau:120-125`) — here
+    /// is on (`argon-roblox@30fd38d:src/App/init.luau:120-125`), here
     /// only when the CLI is installed too, so a machine without Argon
     /// doesn't open every place to a failed connection. The
     /// `RBX_STUDIO_ARGON_CONNECT` aid wins when it is set, so a scripted
@@ -163,7 +163,7 @@ impl Shell {
     /// The Game and Place identities Argon's settings resolve against:
     /// the connected project's, or none while disconnected (the plugin
     /// keys them on the place's own IDs, `Config.luau:61-62`, which a local
-    /// file doesn't have — see `settings::argon`).
+    /// file doesn't have, see `settings::argon`).
     pub(in crate::shell) fn argon_level_keys(&self) -> LevelKeys {
         match &self.argon.state {
             SyncState::Connected { keys, .. } => keys.clone(),
@@ -249,7 +249,7 @@ impl Shell {
         }
         let events = self.argon.client.as_ref().unwrap().poll();
         if events.is_empty() {
-            // Nothing new — still notify, so a live "Ns ago" readout keeps
+            // Nothing new, still notify, so a live "Ns ago" readout keeps
             // counting up while connected.
             if matches!(self.argon.state, SyncState::Connected { .. }) {
                 cx.notify();
@@ -265,7 +265,7 @@ impl Shell {
                         _ => None,
                     };
                     // Persisted here, not on every keystroke of a draft
-                    // still being typed — this is the address that just
+                    // still being typed, this is the address that just
                     // actually worked.
                     if self.argon_saved_address != address {
                         self.argon_saved_address = address.clone();
@@ -314,7 +314,7 @@ impl Shell {
         cx.notify();
     }
 
-    /// Auto Reconnect: five seconds after a failed connection, try again —
+    /// Auto Reconnect: five seconds after a failed connection, try again,
     /// unless something else touched the connection in the meantime
     /// (`App/init.luau:440-446` checks its `lastUpdate` the same way; the
     /// generation counter is this side's version of it).

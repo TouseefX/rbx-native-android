@@ -38,7 +38,7 @@ fn grouping_is_one_batch_of_changes_for_the_whole_selection() {
 
     let model = apply_group(&mut dom, &[a, b], Some(workspace));
     // One drain, mirroring `Shell::group_selected`'s single
-    // `push_history`/`take_changes` pair — this is what makes a Group
+    // `push_history`/`take_changes` pair, this is what makes a Group
     // one undo step rather than one per instance.
     let changes = dom.take_changes();
 

@@ -1,5 +1,5 @@
 //! The list pane: section headers and change rows, an addition's subtree
-//! under it — or, when the window is narrow, the picker bar that stands
+//! under it, or, when the window is narrow, the picker bar that stands
 //! in for it, whose menu is the same list.
 
 use crate::shell::chrome::ScrollbarY as _;
@@ -232,7 +232,7 @@ impl ArgonDiffWindow {
     }
 
     /// The right column of a row: line counts for a script, the nested
-    /// count for a container, the property count otherwise — and nothing
+    /// count for a container, the property count otherwise, and nothing
     /// when every count is zero.
     fn row_meta(&mut self, node: &DiffNode) -> AnyElement {
         if node.source.is_some() {

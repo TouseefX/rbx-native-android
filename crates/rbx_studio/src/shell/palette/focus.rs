@@ -40,7 +40,8 @@ pub(super) fn entry(panel: Panel) -> Option<Entry> {
         | Panel::Collaborators
         | Panel::PluginWidgets
         | Panel::InputActions
-        | Panel::Tests => None,
+        | Panel::Tests
+        | Panel::Loren => None,
     }
 }
 

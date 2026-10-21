@@ -1,8 +1,8 @@
 //! The background OS thread that owns the HTTP connection to `argon serve`
-//! — long-polls `POST read`, decodes each [`Message`], and reports back
+//! long-polls `POST read`, decodes each [`Message`], and reports back
 //! over a channel. Mirrors `workspace_view::pump`'s own idiom (a dedicated
 //! `std::thread::spawn` loop, typed messages over `std::sync::mpsc`, drained
-//! non-blockingly) rather than an async runtime — the shape every other
+//! non-blockingly) rather than an async runtime, the shape every other
 //! networked/threaded piece of this codebase already uses, and the one
 //! `ureq` (blocking by design) is built for.
 
@@ -21,7 +21,7 @@ pub(crate) enum ArgonEvent {
     Changes(Changes),
     Error(String),
     Disconnected,
-    /// `POST /open` was refused — the plugin logs this at Debug
+    /// `POST /open` was refused, the plugin logs this at Debug
     /// (`Core/init.luau:393-395`).
     OpenFailed(String),
 }
@@ -33,12 +33,12 @@ const READ_TIMEOUT: Duration = Duration::from_secs(35);
 const CALL_TIMEOUT: Duration = Duration::from_secs(10);
 /// This client's own protocol identity, checked against `Project.version`
 /// the same way `argon-roblox`'s `SemVer.isCompatible` gates its plugin's
-/// connection — major.minor must match exactly.
+/// connection, major.minor must match exactly.
 const CLIENT_VERSION: &str = "2.0.0";
 
 /// The read-loop thread's body. `stop` is polled between each `read` (a
 /// long-poll can't be cancelled mid-flight with a blocking client, so a
-/// disconnect can take up to [`READ_TIMEOUT`] to actually settle — see
+/// disconnect can take up to [`READ_TIMEOUT`] to actually settle, see
 /// `argon_client`'s own doc). `writes` is drained non-blockingly in the same
 /// gap, each landing as its own short-lived request (see [`write_changes`]).
 #[allow(clippy::too_many_arguments)]
@@ -53,7 +53,7 @@ pub(super) fn run(
 ) {
     let scheme = if https { "https" } else { "http" };
     let base = format!("{scheme}://{host}:{port}");
-    // A 4xx/5xx is turned into `Err` by default, discarding the body —
+    // A 4xx/5xx is turned into `Err` by default, discarding the body,
     // Argon's server puts its actual error ("Already subscribed", a
     // version mismatch, ...) in that body, so status-as-error is switched
     // off and `call_body` below reads it back out itself.
@@ -126,7 +126,7 @@ pub(super) fn run(
                     break;
                 }
             }
-            // Deliberately dropped — running server-sent code is a
+            // Deliberately dropped, running server-sent code is a
             // boundary this client refuses to cross, see the module doc.
             Ok(Some(Message::ExecuteCode)) => {}
             Ok(Some(Message::Disconnect(reason))) => {
@@ -145,7 +145,7 @@ pub(super) fn run(
 }
 
 /// `argon-roblox`'s own `Client:generateId`: a random number, not a real
-/// auth token — the server uses it only to route one client's `/read`
+/// auth token, the server uses it only to route one client's `/read`
 /// queue and to reject a duplicate subscription.
 fn generate_client_id() -> u32 {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -212,7 +212,7 @@ fn post_client_id(agent: &ureq::Agent, url: &str, client_id: u32) -> Result<(), 
     Ok(())
 }
 
-/// `POST subscribe` takes a `name` alongside `clientId` — unlike
+/// `POST subscribe` takes a `name` alongside `clientId`: unlike
 /// `unsubscribe`/`read`, which take `clientId` alone (see
 /// [`post_client_id`]). `argon-roblox` sends its own plugin's name here;
 /// this client identifies itself the same way.
@@ -254,7 +254,7 @@ fn read_once(agent: &ureq::Agent, base: &str, client_id: u32) -> Result<Option<M
     match post_msgpack(agent, &format!("{base}/read"), &body) {
         Ok(value) => Ok(Message::decode(&value)),
         // The long-poll's own timeout firing (no change to report yet) is
-        // not a connection failure — read again.
+        // not a connection failure, read again.
         Err(message) if message.to_lowercase().contains("timeout") => Ok(None),
         Err(message) => Err(message),
     }

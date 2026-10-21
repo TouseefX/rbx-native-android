@@ -10,12 +10,12 @@
 //! - Move's, Scale's and Rotate's handles all summon (Transform's too, being
 //!   the three at once).
 //! - "When summoning the rotate handles, the selection will be rotated
-//!   around the point that you summoned them to" — Rotate's rings turn the
+//!   around the point that you summoned them to", Rotate's rings turn the
 //!   selection about wherever they stand, so that comes for free.
 //! - "if you place your cursor close to an edge or vertex when summoning,
-//!   the handles will snap to that edge or vertex" — said of Rotate, and
+//!   the handles will snap to that edge or vertex", said of Rotate, and
 //!   kept to the tools with Rotate's rings here; see [`onto_edges`].
-//! - Scale's balls are kept "within the bounds of [the] selected object" —
+//! - Scale's balls are kept "within the bounds of [the] selected object",
 //!   see `rbx_viewer::gizmo::Faces::summoned` for how that is read here.
 //!
 //! The announcement does not say whether the handles follow the cursor
@@ -43,7 +43,7 @@ use super::WorkspaceView;
 gpui_kit::actions!(rbx_viewport, [SummonHandles]);
 
 /// The key context the 3D view carries, so its `Tab` out-ranks the window's
-/// own focus-cycling binding (see `shell::roving`) — and hands the key back
+/// own focus-cycling binding (see `shell::roving`), and hands the key back
 /// to it whenever there are no handles to summon.
 pub(crate) const CONTEXT: &str = "RbxViewport";
 
@@ -79,7 +79,7 @@ pub(super) struct Summon {
     /// Whether `Tab` is down: the handles stay summoned through a drag that
     /// began with it held, and go home at the end of it if it was let go.
     tab: bool,
-    /// How far a handle drag's rays are moved before they are measured —
+    /// How far a handle drag's rays are moved before they are measured,
     /// see [`WorkspaceView::measure_from_handle`].
     shift: Vec3,
     /// The gizmo last asked of the renderer, before the summon point is
@@ -89,7 +89,7 @@ pub(super) struct Summon {
 
 impl WorkspaceView {
     /// `Tab` pressed over the view (and again, repeated, for as long as it
-    /// is held — only the first press places the handles).
+    /// is held, only the first press places the handles).
     pub(super) fn summon_handles(
         &mut self,
         _: &SummonHandles,
@@ -112,7 +112,7 @@ impl WorkspaceView {
         // `Shell`'s last hover answer is where the cursor met the scene when
         // the mouse last moved: a camera flown with the keys since has
         // carried the scene out from under it. Ask again where the cursor
-        // stands now, and place the handles once that answer is in — the
+        // stands now, and place the handles once that answer is in, the
         // hover event is handled before the deferred placement runs, GPUI
         // flushing its effects in order (see the test beside this).
         if let Some(at) = self.cursor.filter(|_| !self.looking) {
@@ -169,7 +169,7 @@ impl WorkspaceView {
 
     /// Studio's magenta indicator on the edge or vertex the handles
     /// snapped to (staff reply #14: "you'll get a magenta colored indicator
-    /// letting you know that the handles snapped") — shown while they stand
+    /// letting you know that the handles snapped"), shown while they stand
     /// there and no drag is under way. Its size is not published; it is the
     /// hover ruler's dot's.
     pub(super) fn snap_marker(&self) -> Option<Dot> {
@@ -188,7 +188,7 @@ impl WorkspaceView {
         self.refresh_gizmo();
     }
 
-    /// The last gizmo shown again, summoned to where the handles are now —
+    /// The last gizmo shown again, summoned to where the handles are now,
     /// a no-op while nothing is summoned.
     pub(super) fn refresh_gizmo(&self) {
         let (summon, pivot, snapped) = (self.summoned(), self.targets.pivot(), self.snapped);
@@ -209,7 +209,7 @@ impl WorkspaceView {
     }
 
     /// Where the cursor puts the handles: the point under it on whatever
-    /// part it is over (`Shell`'s last hover answer) — snapped onto that
+    /// part it is over (`Shell`'s last hover answer), snapped onto that
     /// face's edge or corner when it is close to one, for the tools with
     /// Rotate's rings only; over nothing, the point under the cursor level
     /// with the selection's centre. A curved region of a mesh has no real
@@ -247,7 +247,7 @@ impl WorkspaceView {
     }
 
     /// The flat face of the mesh under the cursor (see
-    /// `PartSurface::flat_face`), and where the cursor meets it — not the
+    /// `PartSurface::flat_face`), and where the cursor meets it, not the
     /// hover's own point, which sits on the grid when Studio's probes found
     /// no edge of the face. Outlined here, on the press, rather than at every
     /// hover: walking a mesh's triangles is more than a hover needs. `None`
@@ -291,7 +291,7 @@ impl WorkspaceView {
     /// cursor, a summoned Scale ball slid across its face, a group's arrows
     /// at the group's centre rather than its anchor's. Under perspective,
     /// where the cursor's ray meets a line depends on which line it is, so
-    /// the rays are moved by the offset between the two lines instead —
+    /// the rays are moved by the offset between the two lines instead,
     /// measuring a moved ray against the part's line is measuring the real
     /// ray against the handle's.
     pub(super) fn measure_from_handle(&mut self, mut drag: Drag, ray: Ray) -> Drag {
@@ -351,16 +351,16 @@ impl WorkspaceView {
 }
 
 /// `hit` on `frame`'s face, moved onto the face's edge or corner when it is
-/// within `reach` of one — Studio's summoned handles "snap to that edge or
-/// vertex" — or `None` when it is near neither. Only a flat face has edges
+/// within `reach` of one, Studio's summoned handles "snap to that edge or
+/// vertex", or `None` when it is near neither. Only a flat face has edges
 /// and corners to snap to; a point on a ball's or a cylinder's curve has
 /// none.
 ///
 /// The candidates are the face's real outline, out of the part it is on
 /// (`frame.part`): a box's or a wedge's face is the polygon of the solid's
-/// corners lying in the face's plane — a wedge's side a triangle, not the
-/// rectangle round it the frame's `size` measures — a cylinder's cap is its
-/// rim, and a mesh face only the edge its frame was probed from — the one
+/// corners lying in the face's plane, a wedge's side a triangle, not the
+/// rectangle round it the frame's `size` measures, a cylinder's cap is its
+/// rim, and a mesh face only the edge its frame was probed from, the one
 /// edge of it known for sure until the mesh has downloaded, after which
 /// [`WorkspaceView::summon_point`] outlines the face from its triangles
 /// instead. A frame with no part is its own rectangle.
@@ -432,7 +432,7 @@ fn onto_rim(model: Mat4, hit: Vec3, reach: f32) -> Option<Vec3> {
 }
 
 /// `hit` moved onto the nearest corner of `outline` within `reach`, else onto
-/// the nearest point of its sides within `reach` — the last corner joined
+/// the nearest point of its sides within `reach`: the last corner joined
 /// back to the first when `closed`.
 fn onto_outline(outline: &[Vec3], closed: bool, hit: Vec3, reach: f32) -> Option<Vec3> {
     let closing = closed.then(|| [outline[outline.len() - 1], outline[0]]);

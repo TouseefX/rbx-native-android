@@ -7,13 +7,13 @@
 //! [`geometry`]) and picks which of two depth behaviours to draw them with:
 //! an adornment is documented as being "occluded by scene geometry like an
 //! ordinary world object" by default, and as drawing over everything while
-//! `AlwaysOnTop` — with `ZIndex` ordering the ones that do among
+//! `AlwaysOnTop`: with `ZIndex` ordering the ones that do among
 //! themselves, which is why the buffer is built in that order and drawn
 //! straight through.
 //!
 //! Nothing here is back-face culled. An adornment is a thin overlay that a
-//! camera is free to stand inside — a `SelectionBox` around the part the
-//! eye is in, a `Handles` arrow the camera has flown past — and culling
+//! camera is free to stand inside, a `SelectionBox` around the part the
+//! eye is in, a `Handles` arrow the camera has flown past, and culling
 //! would turn those into holes.
 //!
 //! Costs nothing in a place with no adornments: the pipelines are built the
@@ -144,7 +144,7 @@ pub(super) struct Adornments {
     pictures: Vec<Picture>,
     picture_vertices: Option<wgpu::Buffer>,
     /// Every image an `ImageHandleAdornment` asked for, uploaded once and
-    /// kept across re-plans — `None` for one the loader answered with a
+    /// kept across re-plans, `None` for one the loader answered with a
     /// failure, which is not asked for again.
     uploaded: HashMap<AssetRef, Option<texture::Uploaded>>,
     sampler: wgpu::Sampler,
@@ -281,7 +281,7 @@ impl Adornments {
         for (reference, range, on_top) in draws {
             if !self.uploaded.contains_key(&reference) {
                 // No answer yet leaves the reference unrecorded, so the
-                // rebuild that follows its landing picks it up — the same
+                // rebuild that follows its landing picks it up, the same
                 // rule `renderer::particles` follows for an emitter texture.
                 let Some(answer) = images.get(&reference) else {
                     continue;
@@ -307,7 +307,7 @@ impl Adornments {
         }
     }
 
-    /// Follows a new sample count — see
+    /// Follows a new sample count, see
     /// `renderer::switch::Renderer::rebuild_pipelines`.
     pub(super) fn set_target(&mut self, device: &wgpu::Device, target: Target) {
         self.format = target;

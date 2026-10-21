@@ -78,7 +78,7 @@ fn scrambled(plain: &[u8]) -> Vec<u8> {
 }
 
 /// A quad facing +Y, two triangles, then the same two again as a second
-/// LOD — the shape every real version-5 blob has.
+/// LOD, the shape every real version-5 blob has.
 fn quad() -> (Vec<Corner>, Vec<u32>, Vec<u32>) {
     let up = [0.0, 1.0, 0.0];
     let green = [20, 200, 40, 255];

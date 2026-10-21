@@ -39,7 +39,7 @@ fn union_of(children: Vec<Node>) -> Node {
 }
 
 /// `Solid::subtract`/`union` no longer weld or watertight-check every
-/// intermediate step (too costly for a tree of hundreds of leaves) —
+/// intermediate step (too costly for a tree of hundreds of leaves),
 /// `evaluate` does that once, at the end. These regression tests exercise
 /// one boolean directly, so they call the same pair of passes themselves.
 fn assert_watertight(solid: &Solid) {
@@ -63,7 +63,7 @@ fn subtracting_a_rotated_box_stays_watertight() {
     // A box rotated only around Y, fully inside the outer box on every axis:
     // the outer's own faces are never geometrically touched by it, yet
     // without `merge_quad_pairs` the two triangles making up each outer face
-    // independently mis-cut against the rotated planes and left real gaps —
+    // independently mis-cut against the rotated planes and left real gaps,
     // caught here as `Failure::Leaky` before `merge_quad_pairs` existed.
     let outer = block(Vec3::splat(4.0), Vec3::ZERO);
     let inner = Solid::from_mesh(
@@ -114,9 +114,9 @@ fn subtracting_a_smaller_box_carves_a_watertight_pocket() {
 
 /// Pins the exact geometry of a corner notch, the shape this module's real
 /// regression (the legacy rock carving a double-rotated cavity instead of a
-/// shallow facet — see `tree::walk`'s `echo` parameter) was ultimately about:
+/// shallow facet, see `tree::walk`'s `echo` parameter) was ultimately about:
 /// not just "some positive volume survived", but the right volume with every
-/// face — original hull and freshly exposed notch alike — wound outward.
+/// face, original hull and freshly exposed notch alike, wound outward.
 #[test]
 fn a_corner_notch_pins_exact_geometry_and_outward_winding() {
     // [0,2]^3 minus [1,3]^3: a 2-unit cube with its (2,2,2) corner notched by
@@ -130,7 +130,7 @@ fn a_corner_notch_pins_exact_geometry_and_outward_winding() {
     // A point just inside the remaining solid, close to the notch corner:
     // every outward-wound boundary face (original hull or freshly exposed
     // notch wall alike) has its normal pointing away from it, so the sign is
-    // positive everywhere — see the module's plane convention in `bsp.rs`.
+    // positive everywhere, see the module's plane convention in `bsp.rs`.
     let reference = DVec3::splat(0.9);
     for polygon in &notched.polygons {
         let centroid: DVec3 =
@@ -143,7 +143,7 @@ fn a_corner_notch_pins_exact_geometry_and_outward_winding() {
     }
 
     // Exactly 3 new planar faces are exposed by the notch: the cut planes
-    // x=1, y=1, z=1 (offset 1 — every original hull plane sits at 0 or 2
+    // x=1, y=1, z=1 (offset 1, every original hull plane sits at 0 or 2
     // instead), each possibly landing as more than one polygon fragment (the
     // BSP splits a face against every plane it is clipped through, and
     // `merge_quad_pairs` only re-fuses an exact triangulated-quad diagonal,
@@ -444,7 +444,7 @@ fn a_zero_sized_leaf_contributes_nothing() {
 
 /// Every asset this module has been tested against so far (see
 /// `super::super::tests`'s real-rock fixture) is one additive leaf with many
-/// negations — it never exercises `Solid::union` at all. A builder's organic
+/// negations, it never exercises `Solid::union` at all. A builder's organic
 /// rock is the opposite shape: several overlapping *additive* boulders with
 /// no negation in sight. This constructs one purely through the tree API and
 /// checks every surviving facet's plane still points outward, via a ray-cast

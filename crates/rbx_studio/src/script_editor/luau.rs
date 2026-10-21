@@ -48,7 +48,7 @@ const SPECIAL_VARIABLES: [&str; 7] = [
 /// Longest match first: `..` must not shadow `...`, nor `/` shadow `//=`.
 ///
 /// `|` and `&` are here for Luau's union and intersection types (`A | B`,
-/// `A & B`), which is the only place either appears — Lua has no bitwise
+/// `A & B`), which is the only place either appears, Lua has no bitwise
 /// operators and spells its logical ones `or`/`and`.
 const OPERATORS: [&str; 30] = [
     "...", "//=", "..=", "==", "~=", "<=", ">=", "..", "::", "->", "+=", "-=", "*=", "/=", "%=",
@@ -63,11 +63,11 @@ pub(crate) enum TokenKind {
     Keyword,
     Boolean,
     Nil,
-    /// An identifier in call position — see [`calls`].
+    /// An identifier in call position, see [`calls`].
     Function,
     /// `self` and the Roblox globals; see [`SPECIAL_VARIABLES`].
     SpecialVariable,
-    /// An identifier naming a type rather than a value — see [`types`].
+    /// An identifier naming a type rather than a value, see [`types`].
     Type,
     /// A type Luau has without anyone declaring it (`number`, `string`).
     BuiltinType,
@@ -113,7 +113,7 @@ impl TokenKind {
 
 /// One lexed token. `range` is a byte range into the source it was lexed
 /// from, always on `char` boundaries, and tokens come back in source order
-/// without overlapping — whitespace is simply not covered by any of them.
+/// without overlapping, whitespace is simply not covered by any of them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Token {
     pub(crate) range: Range<usize>,
@@ -127,7 +127,7 @@ pub(crate) fn tokenize(source: &str) -> Vec<Token> {
     tokenize_at(source, 0)
 }
 
-/// `depth` is how many interpolated strings this source sits inside — 0 for a
+/// `depth` is how many interpolated strings this source sits inside, 0 for a
 /// whole file, and one more for each hole `interpolation::expand` descends
 /// into. It bounds that recursion and nothing else.
 fn tokenize_at(source: &str, depth: usize) -> Vec<Token> {
@@ -157,7 +157,7 @@ fn tokenize_at(source: &str, depth: usize) -> Vec<Token> {
                 TokenKind::String
             }
             // `[[` opens a long string even directly after a name, which is
-            // why `t[[1]]` indexes nothing in Lua either — the lexer decides
+            // why `t[[1]]` indexes nothing in Lua either, the lexer decides
             // this before any parser sees it, and so does this one.
             b'[' if long_bracket(bytes, at).is_some() => {
                 at = long_string_end(bytes, at);
@@ -184,7 +184,7 @@ fn tokenize_at(source: &str, depth: usize) -> Vec<Token> {
                     at = end;
                     kind
                 }
-                // A byte the language has no token for at all — a stray
+                // A byte the language has no token for at all, a stray
                 // non-ASCII one outside any string, say. Stepping to the next
                 // `char` boundary rather than by one byte is what keeps every
                 // range returned here sliceable.
@@ -261,7 +261,7 @@ fn quoted_string_end(bytes: &[u8], at: usize) -> usize {
     bytes.len()
 }
 
-/// The `=` count of the long bracket opening at `at`, if one does — `[[` is
+/// The `=` count of the long bracket opening at `at`, if one does, `[[` is
 /// level 0, `[==[` level 2.
 fn long_bracket(bytes: &[u8], at: usize) -> Option<usize> {
     if bytes.get(at) != Some(&b'[') {
