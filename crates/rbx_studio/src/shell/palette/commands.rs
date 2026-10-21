@@ -93,15 +93,6 @@ impl Command {
     }
 }
 
-/// The documents' palette names. The first document's tab reads the
-/// place's file name, which says nothing about what focusing it does.
-const DOCUMENTS: [(Document, &str); 4] = [
-    (Document::Viewport, "3D View"),
-    (Document::Scripts, "Script Editor"),
-    (Document::UiEditor, "UI Editor"),
-    (Document::Animation, "Animation Editor"),
-];
-
 /// Every command, in menu-bar order, then the tools, the ribbon, the docks
 /// and the documents. `panels` is what the current document can show (see
 /// `Shell::document_hides`).
@@ -161,10 +152,10 @@ pub(in crate::shell) fn registry(
             Run::Focus(panel),
         )
     }));
-    commands.extend(DOCUMENTS.map(|(document, name)| {
+    commands.extend(Document::ALL.map(|document| {
         command(
             "View",
-            &format!("Focus {name}"),
+            &format!("Focus {}", document.name()),
             None,
             Run::Document(document),
         )

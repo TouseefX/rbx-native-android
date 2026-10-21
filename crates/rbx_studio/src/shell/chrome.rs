@@ -80,16 +80,27 @@ impl Document {
         Document::Animation,
     ];
 
+    /// The tab's title: the place's own name on its tab, since that tab
+    /// *is* the place.
     fn label(self, place: &SharedString) -> SharedString {
         match self {
             Document::Viewport => place.clone(),
-            Document::Scripts => "Script Editor".into(),
-            Document::UiEditor => "UI Editor".into(),
-            Document::Animation => "Animation Editor".into(),
+            _ => self.name().into(),
         }
     }
 
-    fn icon(self) -> IconName {
+    /// What the document is, wherever the place's file name would say
+    /// nothing: the palette, the "+" menu, a close button's label.
+    pub(super) fn name(self) -> &'static str {
+        match self {
+            Document::Viewport => "3D View",
+            Document::Scripts => "Script Editor",
+            Document::UiEditor => "UI Editor",
+            Document::Animation => "Animation Editor",
+        }
+    }
+
+    pub(super) fn icon(self) -> IconName {
         match self {
             Document::Viewport => IconName::Globe,
             Document::Scripts => IconName::Code,
@@ -188,12 +199,14 @@ impl Shell {
     /// One Tab stop for the whole strip, arrows within it, Enter/Space to
     /// switch: the APG Tabs pattern with *manual* activation, so browsing
     /// the strip with the arrows doesn't tear down and rebuild an editor on
-    /// the way past (see `shell::roving`).
+    /// the way past (see `shell::roving`). Delete closes the focused editor,
+    /// the same pattern's answer to a closable tab.
     pub(super) fn document_tabs(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let active = self.document;
         let place = self.title.clone();
-        self.document_nav
-            .begin(&self.tab_order, Some(Document::ALL.len()), cx);
+        let tabs = self.documents.tabs();
+        let count = tabs.len();
+        self.document_nav.begin(&self.tab_order, Some(count), cx);
 
         h_flex()
             .w_full()
@@ -206,34 +219,43 @@ impl Shell {
             .bg(tokens::black())
             .border_b_1()
             .border_color(tokens::border())
+            .id("document-tabs")
+            .role(Role::TabList)
+            .aria_label("Documents")
             .on_key_down(cx.listener(|shell, event: &KeyDownEvent, window, cx| {
                 if shell.document_nav.key(&event.keystroke, window, cx) {
                     cx.stop_propagation();
                     cx.notify();
+                } else if event.keystroke.key == "delete" && shell.document_nav.holds_focus(window)
+                {
+                    let tabs = shell.documents.tabs();
+                    let index = shell.document_nav.current();
+                    if let Some(document) = tabs.get(index).filter(|tab| tab.closable()) {
+                        shell.close_document(*document, cx);
+                        // The tab that slid into its place, or the new last.
+                        shell
+                            .document_nav
+                            .focus(index.min(tabs.len() - 2), window, cx);
+                        cx.stop_propagation();
+                    }
                 }
             }))
-            .children(
-                Document::ALL
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, document)| {
-                        self.document_nav.item(
-                            index,
-                            document_tab(
-                                document,
-                                document.label(&place),
-                                document == active,
-                                cx.listener(move |shell, _, _, cx| {
-                                    shell.set_document(document, cx);
-                                }),
-                            ),
-                            cx,
-                        )
-                    }),
-            )
-            // The frame's "+": this editor's three documents are fixed, so
-            // what it adds is another place, a new Baseplate or a file,
-            // the same as File › New and Open….
+            .children(tabs.into_iter().enumerate().map(|(index, document)| {
+                self.document_nav.item(
+                    index,
+                    document_tab(
+                        document,
+                        document.label(&place),
+                        document == active,
+                        (index, count),
+                        cx,
+                    ),
+                    cx,
+                )
+            }))
+            // The frame's "+": another place, a new Baseplate or a file,
+            // the same as File › New and Open…, and below that whichever
+            // editors were closed.
             .child(super::menu::dropdown(
                 self,
                 super::menu::MenuId::DocumentAdd,
@@ -242,7 +264,11 @@ impl Shell {
                         .id("document-tab-add")
                         .flex_none()
                         .w(tokens::tab_add_width())
-                        .h_full()
+                        // A fixed height, not `h_full`: the menu's wrapper
+                        // divs have no height of their own, so a full-height
+                        // trigger collapsed to the icon and the strip's
+                        // `items_end` sat it below the tab labels.
+                        .h(tokens::tabs_height() - px(8.))
                         .items_center()
                         .justify_center()
                         .cursor_pointer()
@@ -250,11 +276,8 @@ impl Shell {
                         .hover(|this| this.text_color(tokens::text()))
                         .child(Icon::new(IconName::Plus).size(px(10.))),
                 )
-                .tooltip("New place or open a file"),
-                vec![
-                    super::menu::item("New Place").on_click(|shell, cx| shell.request_new(cx)),
-                    super::menu::item("Open…").on_click(|shell, cx| shell.open_place_dialog(cx)),
-                ],
+                .tooltip("New place, open a file or reopen an editor"),
+                self.document_add_items(),
                 cx,
             ))
     }
@@ -313,27 +336,38 @@ impl Shell {
     }
 }
 
-/// One document tab: icon, title, close. Sized to its own content, not to a
-/// fixed slot, the reference floats each tab's label at its own width, and
-/// three fixed documents never reflow the strip the way an arbitrary count
-/// of them might.
+/// One document tab: icon, title, and on an editor a close mark. Sized to
+/// its own content, not to a fixed slot: the reference floats each tab's
+/// label at its own width.
+///
+/// Every editor's tab wears its ×, open or not, as Studio's script tabs
+/// do, and a middle click closes it too.
 fn document_tab(
     document: Document,
     label: SharedString,
     active: bool,
-    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    (index, count): (usize, usize),
+    cx: &mut Context<Shell>,
 ) -> Stateful<Div> {
+    let closable = document.closable();
     h_flex()
         .id(("document-tab", document as usize))
         .flex_none()
         .items_center()
         .gap(px(7.))
-        .px(px(16.))
+        .pl(px(16.))
+        .pr(if closable { px(8.) } else { px(16.) })
         .py(px(8.))
         .rounded_t(tokens::radius_tile())
         .relative()
         .cursor_pointer()
         .focus_visible(|this| this.shadow(tokens::focus_ring_inset()))
+        .role(Role::Tab)
+        .aria_label(label.clone())
+        .aria_selected(active)
+        .aria_position_in_set(index + 1)
+        .aria_size_of_set(count)
+        .when(closable, |this| this.aria_keyshortcuts("Delete"))
         .text_size(tokens::text_sm())
         .line_height(tokens::line_sm())
         .text_color(if active {
@@ -357,13 +391,41 @@ fn document_tab(
         .when(!active, |this| {
             this.hover(|this| tokens::hover_fx(this).bg(tokens::hover_subtle()))
         })
-        .on_click(on_click)
+        .on_click(cx.listener(move |shell, _, _, cx| shell.set_document(document, cx)))
+        .when(closable, |this| {
+            this.on_mouse_up(
+                MouseButton::Middle,
+                cx.listener(move |shell, _, _, cx| shell.close_document(document, cx)),
+            )
+        })
         .child(Icon::new(document.icon()).size(px(13.)))
         .child(div().truncate().child(label))
-    // No close mark. The frame draws one, and §11 already rejects it on
-    // a dock tab as "a control that lies", a document here is a view
-    // of the one open place, not a file that closes independently, so
-    // the identical argument applies.
+        .when(closable, |this| this.child(document_close(document, cx)))
+}
+
+/// A document tab's ×: Studio's 16px square hover box, sharp-cornered,
+/// with the glyph's colour left alone. Its own click stops there: the tab
+/// under it would otherwise take the same click and open the editor
+/// straight back up.
+fn document_close(document: Document, cx: &mut Context<Shell>) -> impl IntoElement {
+    let label = SharedString::from(format!("Close {}", document.name()));
+    h_flex()
+        .id(("document-close", document as usize))
+        .flex_none()
+        .size(px(16.))
+        .items_center()
+        .justify_center()
+        .role(Role::Button)
+        .aria_label(label.clone())
+        .aria_keyshortcuts("Delete")
+        .text_color(tokens::text_label())
+        .hover(|this| tokens::hover_fx(this).bg(tokens::hover()))
+        .tooltip(move |window, cx| super::tooltip::text(label.clone(), window, cx))
+        .on_click(cx.listener(move |shell, _, _, cx| {
+            cx.stop_propagation();
+            shell.close_document(document, cx);
+        }))
+        .child(Icon::new(IconName::X).size(px(8.)))
 }
 
 /// The title bar every window of this app wears: logo, "RbxNative | title"
