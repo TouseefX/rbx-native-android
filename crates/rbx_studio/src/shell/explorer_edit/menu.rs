@@ -340,7 +340,7 @@ impl Shell {
                 IconName::Pencil,
                 "Pin Note",
                 true,
-                |shell, _, cx| shell.pin_note("Note", cx),
+                |shell, window, cx| shell.pin_note(window, cx),
             ),
             row(
                 "delete",
