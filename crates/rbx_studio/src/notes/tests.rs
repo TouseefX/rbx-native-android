@@ -146,15 +146,27 @@ fn a_part_is_pinned_at_the_top_of_its_box_a_model_at_its_anchor() {
     let (mut dom, part) = place();
     assert_eq!(pin_point(&dom, part), Some([10.0, 0.0, 0.0]));
     // Parts store their size as `size`, the name in the place file.
-    dom.set_property(part, "size", Variant::Vector3(Vector3Data { x: 4.0, y: 16.0, z: 2.0 }))
-        .unwrap();
+    dom.set_property(
+        part,
+        "size",
+        Variant::Vector3(Vector3Data {
+            x: 4.0,
+            y: 16.0,
+            z: 2.0,
+        }),
+    )
+    .unwrap();
     assert_eq!(pin_point(&dom, part), Some([10.0, 8.0, 0.0]));
     // Lying on its side (90 degrees about Z), its X size is what stands up.
     dom.set_property(
         part,
         "CFrame",
         Variant::CFrame(rbx_dom::CFrameData {
-            position: Vector3Data { x: 10.0, y: 0.0, z: 0.0 },
+            position: Vector3Data {
+                x: 10.0,
+                y: 0.0,
+                z: 0.0,
+            },
             rotation: [0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
         }),
     )

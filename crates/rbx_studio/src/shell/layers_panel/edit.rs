@@ -55,7 +55,12 @@ impl Shell {
         cx: &mut Context<Self>,
     ) {
         self.set_panel_open(Panel::Layers, true, cx);
-        self.begin_edit(EditTarget::Note(note), crate::notes::DEFAULT_TEXT, window, cx);
+        self.begin_edit(
+            EditTarget::Note(note),
+            crate::notes::DEFAULT_TEXT,
+            window,
+            cx,
+        );
         cx.notify();
     }
 
