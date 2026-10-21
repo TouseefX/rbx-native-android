@@ -37,6 +37,23 @@
   icon it draws exists, and a test checks every icon name written in the
   editor's source. (@chteau)
 
+- **Loren, by fabi, as the optional built-in framework.** rbx-native now
+  ships [Loren](https://github.com/fabideveloper/Loren-Framework), fabi's
+  Roblox framework (Services and Controllers booted in dependency order,
+  packed networking with typed specs and middleware, `Loren.Testing`), for
+  anyone who wants one; a place that ignores it changes in nothing. Its
+  runtime, template and unit specs are vendored from 2.0.0-beta.2 with his
+  MIT licence (`vendor/loren`), and its `loren` CLI is ported to Rust as
+  `rbxstudio loren` (init, make, inject, add, refresh, serve, migrate,
+  update, types, doctor): the same files and messages as the Node CLI,
+  checked side by side, with its test suite ported too. `serve` runs Argon,
+  the protocol the editor's live sync speaks. Home › New gains a Loren
+  project, and a Loren dock shows the place's Services and Controllers in
+  boot order with their dependencies, cycles and Loren's own "Did you
+  mean" checks. Loren's 1,061 unit specs run in the Luau sandbox as a
+  test, and one measured speed-up to its Codec is kept as a patch to
+  offer upstream. Thanks, fabi. (@chteau)
+
 ## 2026-10-19
 
 - **Creator Roadmap catch-up against the live API dump.** Checked the
