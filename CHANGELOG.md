@@ -26,6 +26,20 @@
   can't be read stays in the list with the reason and a Delete button.
   Studio has nothing like it. (@chteau)
 
+- **A Performance view for the place being edited.** The Viewport dock's
+  new Performance section tints every part by what it costs: part
+  density per 32-stud cell, triangles, decoded texture memory (shared
+  images counted once, MaterialVariant maps and clothing included),
+  collision (fidelity, CanCollide, unanchored assemblies) or draw
+  batches, on a colour-blind-safe ramp, with a legend, the place's
+  total, the part under the cursor read out beside it, and the 20
+  costliest parts, each a click away from being selected and framed.
+  Figures are worked out on a thread of their own from the asset cache
+  and follow edits part by part. The first copy of the place goes over
+  a few milliseconds per frame, so turning the view on never stalls the
+  editor, and turning it off stops and joins the thread. Nothing is
+  written to the place. (@chteau)
+
 - **Select by query.** The Explorer's search field has a query mode (the
   `</>` toggle beside it): `Part where Material = Plastic and Anchored =
   false`, `BasePart where Size.Y < 1`, `* where Name ~ "Door" under
