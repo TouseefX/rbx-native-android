@@ -269,3 +269,20 @@ fn a_runaway_loop_fails_its_test_and_the_file_goes_on() {
         human(&report)
     );
 }
+
+#[test]
+fn loren_style_specs_get_t_and_each_test_keeps_what_it_printed() {
+    let dom = place(&[("loren.spec", include_str!("fixtures/loren.spec.luau"))]);
+    let report = run_all(&dom);
+    assert_eq!(report.count(Status::Passed), 1, "{}", human(&report));
+    assert_eq!(report.count(Status::Failed), 1);
+    assert_eq!(report.count(Status::Skipped), 1);
+    assert_eq!(
+        find(&report, &["math", "adds"]).output.lines(),
+        ["before", "adding"]
+    );
+    let failed = find(&report, &["math", "waits then fails"]);
+    assert_eq!(failed.output.lines(), ["before", "about to fail"]);
+    assert_eq!(failed.output.kinds()[1], crate::LineKind::Warn);
+    assert!(find(&report, &["math", "is not ready"]).output.is_empty());
+}

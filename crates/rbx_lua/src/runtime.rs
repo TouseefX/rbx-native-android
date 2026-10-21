@@ -221,6 +221,11 @@ impl Runtime {
         &self.lua
     }
 
+    /// What scripts printed since the last resume returned.
+    pub(crate) fn pending_output(&self) -> Rc<RefCell<Output>> {
+        self.output.clone()
+    }
+
     /// Borrows the DOM the scripts have been mutating.
     ///
     /// Returns a guard rather than a plain `&WeakDom` because the tree is shared
