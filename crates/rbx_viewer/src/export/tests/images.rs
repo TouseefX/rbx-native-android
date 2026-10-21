@@ -127,20 +127,21 @@ fn a_texture_shared_by_several_parts_is_written_once() {
     assert_eq!(pixels, image.pixels);
 }
 
-/// `Overlay`: the colour map is baked over the part's red where it is clear,
-/// the tint is the base colour factor, and the other maps come as authored,
+/// `Overlay`: the colour map is baked, tinted, over the part's red where it
+/// is clear, the red itself left untinted (as Studio draws it), and the
+/// other maps come as authored,
 /// metalness and roughness packed for glTF, apart for OBJ.
 #[test]
 fn a_surface_appearance_exports_its_four_maps() {
     let (exported, [_, normal, metalness, roughness]) = dressed(AlphaMode::Overlay);
     let mesh = &exported.meshes[0];
-    assert_eq!(mesh.color, [0.5, 1.0, 1.0, 1.0]);
+    assert_eq!(mesh.color, [1.0; 4]);
     assert!(!mesh.blend);
 
     let png_of = |index: Option<usize>| exported.textures[index.unwrap()].clone();
     assert_eq!(
         decode(&png_of(mesh.maps.color)).2,
-        [255, 0, 0, 255, 0, 255, 0, 255]
+        [255, 0, 0, 255, 0, 188, 0, 255]
     );
     assert_eq!(decode(&png_of(mesh.maps.normal)).2, normal.pixels);
     // The frame the viewport reads it in comes along: the triangle's U runs
@@ -171,7 +172,7 @@ fn a_surface_appearance_exports_its_four_maps() {
     let pbr = &material["pbrMetallicRoughness"];
     assert_eq!(
         pbr["baseColorFactor"],
-        serde_json::json!([0.5, 1.0, 1.0, 1.0])
+        serde_json::json!([1.0, 1.0, 1.0, 1.0])
     );
     assert_eq!(pbr["metallicFactor"], 1.0);
     assert_eq!(pbr["roughnessFactor"], 1.0);
