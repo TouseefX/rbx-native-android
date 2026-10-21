@@ -70,15 +70,32 @@ fn blend2d() -> Case {
     number_param(&mut g, "X", 0.);
     number_param(&mut g, "Y", 0.);
     let blend = g.add(NodeKind::Blend2D);
-    for (clip, x, y) in [("C0", 0., 0.), ("C1", 1., 0.), ("C2", 0., 1.), ("C3", 1., 1.)] {
+    for (clip, x, y) in [
+        ("C0", 0., 0.),
+        ("C1", 1., 0.),
+        ("C2", 0., 1.),
+        ("C3", 1., 1.),
+    ] {
         let c = clip_node(&mut g, clip);
         let pin = g.connect_new(c, blend).unwrap();
-        let input = g.nodes[blend].inputs.iter_mut().find(|i| i.pin == pin).unwrap();
-        input.props.insert("X".into(), Prop::Value(Value::Number(x)));
-        input.props.insert("Y".into(), Prop::Value(Value::Number(y)));
+        let input = g.nodes[blend]
+            .inputs
+            .iter_mut()
+            .find(|i| i.pin == pin)
+            .unwrap();
+        input
+            .props
+            .insert("X".into(), Prop::Value(Value::Number(x)));
+        input
+            .props
+            .insert("Y".into(), Prop::Value(Value::Number(y)));
     }
-    g.nodes[blend].props.insert("X".into(), Prop::Param("X".into()));
-    g.nodes[blend].props.insert("Y".into(), Prop::Param("Y".into()));
+    g.nodes[blend]
+        .props
+        .insert("X".into(), Prop::Param("X".into()));
+    g.nodes[blend]
+        .props
+        .insert("Y".into(), Prop::Param("Y".into()));
     into_output(&mut g, blend);
     let at = |x, y| (vec![("X", x), ("Y", y)], 3);
     Case {
@@ -107,7 +124,9 @@ fn layered(kind: NodeKind, name: &str, a: &str, b: &str) -> Case {
     let cb = clip_node(&mut g, b);
     g.connect(ca, node, &pins[0]);
     g.connect(cb, node, &pins[1]);
-    g.nodes[node].props.insert("Weight".into(), Prop::Param("W".into()));
+    g.nodes[node]
+        .props
+        .insert("Weight".into(), Prop::Param("W".into()));
     into_output(&mut g, node);
     let w = |w| (vec![("W", w)], 3);
     Case {
@@ -125,21 +144,25 @@ fn random() -> Case {
     g.nodes[node]
         .props
         .insert("Seed".into(), Prop::Value(Value::Number(7.)));
-    g.nodes[node]
-        .props
-        .insert("DefaultTransitionDuration".into(), Prop::Value(Value::Number(0.)));
+    g.nodes[node].props.insert(
+        "DefaultTransitionDuration".into(),
+        Prop::Value(Value::Number(0.)),
+    );
     for clip in ["R0", "R1", "R2"] {
         let c = clip_node(&mut g, clip);
-        g.nodes[c]
-            .props
-            .insert("PlayMode".into(), Prop::Value(Value::Text("OnceAndHold".into())));
+        g.nodes[c].props.insert(
+            "PlayMode".into(),
+            Prop::Value(Value::Text("OnceAndHold".into())),
+        );
         g.connect_new(c, node).unwrap();
     }
     into_output(&mut g, node);
     // A sample in the middle of each of the first twelve plays.
     Case {
         graph: g,
-        samples: (0..12).map(|i| (vec![], if i == 0 { 7 } else { 15 })).collect(),
+        samples: (0..12)
+            .map(|i| (vec![], if i == 0 { 7 } else { 15 }))
+            .collect(),
     }
 }
 
@@ -160,19 +183,28 @@ fn clip_of(name: &str, length: f32, pose: Frame) -> Clip {
 }
 
 /// A KeyframeSequence holding `pose` on joint `A` at 0 and at `length`.
-fn sequence_instance(dom: &mut WeakDom, parent: Option<Ref>, name: &str, length: f32, pose: Frame) -> Ref {
+fn sequence_instance(
+    dom: &mut WeakDom,
+    parent: Option<Ref>,
+    name: &str,
+    length: f32,
+    pose: Frame,
+) -> Ref {
     let ks = dom.new_instance("KeyframeSequence", name, parent);
     dom.set_property(ks, "Loop", Variant::Bool(true)).unwrap();
     dom.set_property(ks, "Priority", Variant::Enum(2)).unwrap();
     for time in [0., length] {
         let kf = dom.new_instance("Keyframe", "Keyframe", Some(ks));
-        dom.set_property(kf, "Time", Variant::Float32(time)).unwrap();
+        dom.set_property(kf, "Time", Variant::Float32(time))
+            .unwrap();
         let root = dom.new_instance("Pose", "Root", Some(kf));
         dom.set_property(root, "CFrame", Variant::CFrame(Frame::IDENTITY.to_data()))
             .unwrap();
-        dom.set_property(root, "Weight", Variant::Float32(0.)).unwrap();
+        dom.set_property(root, "Weight", Variant::Float32(0.))
+            .unwrap();
         let a = dom.new_instance("Pose", "A", Some(root));
-        dom.set_property(a, "CFrame", Variant::CFrame(pose.to_data())).unwrap();
+        dom.set_property(a, "CFrame", Variant::CFrame(pose.to_data()))
+            .unwrap();
         dom.set_property(a, "Weight", Variant::Float32(1.)).unwrap();
     }
     ks
@@ -184,10 +216,17 @@ const FACE_STEPS: [usize; 5] = [3, 8, 15, 18, 27];
 
 fn face_curves() -> BTreeMap<String, FloatCurve> {
     let curve = |mode, keys: &[(f32, f32)]| {
-        FloatCurve::new(keys.iter().map(|&(t, v)| FloatKey::new(t, v, mode)).collect())
+        FloatCurve::new(
+            keys.iter()
+                .map(|&(t, v)| FloatKey::new(t, v, mode))
+                .collect(),
+        )
     };
     let mut faces = BTreeMap::new();
-    faces.insert("JawDrop".into(), curve(Interpolation::Linear, &[(0., 0.), (1., 1.)]));
+    faces.insert(
+        "JawDrop".into(),
+        curve(Interpolation::Linear, &[(0., 0.), (1., 1.)]),
+    );
     faces.insert(
         "LeftEyeClosed".into(),
         curve(Interpolation::Cubic, &[(0., 0.), (0.5, 1.), (1., 0.2)]),
@@ -278,7 +317,9 @@ fn write_face_rig(dom: &mut WeakDom, workspace: Ref) {
 }
 
 fn out_dir() -> std::path::PathBuf {
-    std::env::var("RBX_GRAPH_OUT").expect("RBX_GRAPH_OUT").into()
+    std::env::var("RBX_GRAPH_OUT")
+        .expect("RBX_GRAPH_OUT")
+        .into()
 }
 
 fn line(case: &str, sample: usize, f: &Frame) -> String {
@@ -332,7 +373,11 @@ fn studio_lua() -> String {
                 format!("{{p={{{}}},n={steps}}}", p.join(","))
             })
             .collect();
-        cases_lua += &format!("{{g=\"{}\",s={{{}}}}},\n", case.graph.name, samples.join(","));
+        cases_lua += &format!(
+            "{{g=\"{}\",s={{{}}}}},\n",
+            case.graph.name,
+            samples.join(",")
+        );
     }
     format!(
         r#"local KSP = game:GetService("KeyframeSequenceProvider")
@@ -401,7 +446,8 @@ fn write_graphs_for_studio() {
     };
     let root = part(&mut dom, "Root");
     let a = part(&mut dom, "A");
-    dom.set_property(rig, "PrimaryPart", Variant::Ref(root)).unwrap();
+    dom.set_property(rig, "PrimaryPart", Variant::Ref(root))
+        .unwrap();
     let j = dom.new_instance("Motor6D", "J", Some(a));
     dom.set_property(j, "Part0", Variant::Ref(root)).unwrap();
     dom.set_property(j, "Part1", Variant::Ref(a)).unwrap();
@@ -419,7 +465,11 @@ fn write_graphs_for_studio() {
     write_face_rig(&mut dom, workspace);
 
     let dir = out_dir();
-    std::fs::write(dir.join("graph180.rbxl"), rbx_binary::serialize(&dom).unwrap()).unwrap();
+    std::fs::write(
+        dir.join("graph180.rbxl"),
+        rbx_binary::serialize(&dom).unwrap(),
+    )
+    .unwrap();
     std::fs::write(dir.join("graph180.lua"), studio_lua()).unwrap();
     std::fs::write(dir.join("graph180_ours.txt"), all_ours().join("\n")).unwrap();
 }
@@ -459,7 +509,10 @@ fn studio_matches_our_graphs() {
         let entry = worst.entry(key.0.clone()).or_default();
         *entry = entry.max(gap);
         if gap > 1e-3 {
-            eprintln!("{} #{}: studio {theirs:?}\n      ours   {mine:?}", key.0, key.1);
+            eprintln!(
+                "{} #{}: studio {theirs:?}\n      ours   {mine:?}",
+                key.0, key.1
+            );
         }
     }
     eprintln!("worst gap per graph: {worst:?}");

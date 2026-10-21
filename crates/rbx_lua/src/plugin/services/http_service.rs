@@ -310,7 +310,6 @@ pub(super) fn permission_answered(lua: &Lua, prompt: UiId, answer: &Answer) -> R
     Ok(())
 }
 
-
 pub(super) fn finished(lua: &Lua, finished: Vec<Finished>) -> Result<()> {
     let plugin = env(lua).plugin;
     for (owner, id, result) in finished {

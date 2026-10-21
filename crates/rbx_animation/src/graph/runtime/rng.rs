@@ -20,10 +20,7 @@ impl Pcg32 {
     const MULTIPLIER: u64 = 6_364_136_223_846_793_005;
 
     pub fn new(seed: u64) -> Pcg32 {
-        let mut rng = Pcg32 {
-            state: 0,
-            inc: 105,
-        };
+        let mut rng = Pcg32 { state: 0, inc: 105 };
         rng.next_u32();
         rng.state = rng.state.wrapping_add(seed);
         rng.next_u32();
