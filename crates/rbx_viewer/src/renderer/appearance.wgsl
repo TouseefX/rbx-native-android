@@ -11,11 +11,14 @@
 @group(2) @binding(3) var appearance_roughness: texture_2d<f32>;
 @group(2) @binding(4) var appearance_sampler: sampler;
 @group(2) @binding(5) var<uniform> appearance: Appearance;
+@group(2) @binding(6) var appearance_emissive: texture_2d<f32>;
 
 struct Appearance {
     // xyz: `SurfaceAppearance.Color`, linear. w: 1 for AlphaMode Transparency,
     // 0 for Overlay.
     tint: vec4<f32>,
+    // xyz: emissive tint times strength, linear.
+    emissive: vec4<f32>,
 }
 
 struct VertexInput {
@@ -88,14 +91,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // The two alpha modes differ only in what the colour map's alpha does:
     // Overlay lets the part's own colour show through where it dips, while
-    // Transparency hands it to the blend instead.
+    // Transparency hands it to the blend instead. `Color` tints the map
+    // only: in Studio a clear texel shows the part's colour as it is, and a
+    // tint with no colour map changes nothing.
     let blends = appearance.tint.w > 0.5;
-    let painted = select(mix(in.color.rgb, map.rgb, map.a), map.rgb, blends);
+    let tinted = map.rgb * appearance.tint.rgb;
+    let painted = select(mix(in.color.rgb, tinted, map.a), tinted, blends);
     let alpha = select(in.color.a, map.a * in.color.a, blends);
 
     var mapped: Mapped;
     mapped.base_albedo = in.color.rgb;
-    mapped.albedo = painted * appearance.tint.rgb;
+    mapped.albedo = painted;
     mapped.geometric_normal = in.normal;
     mapped.normal = vertex_tangent_normal(normal, in.normal, in.tangent);
     mapped.world_position = in.world_position;
@@ -104,5 +110,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     mapped.roughness = roughness;
     mapped.kind = in.kind;
 
-    return vec4<f32>(mapped_shade(mapped), alpha);
+    let glow = textureSample(appearance_emissive, appearance_sampler, in.uv).r * appearance.emissive.rgb;
+
+    return vec4<f32>(mapped_shade(mapped) + mapped.albedo * glow, alpha);
 }
