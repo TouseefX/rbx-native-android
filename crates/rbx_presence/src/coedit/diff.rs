@@ -6,6 +6,7 @@
 use std::collections::HashSet;
 
 use rbx_dom::{Ref, Variant, WeakDom};
+use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Map, Value};
 
 use super::attrs;
@@ -162,7 +163,14 @@ pub fn local_ops(
             };
             let mut map = Map::new();
             map.insert("Name".to_string(), string_value(&name));
+            // A new instance starts at its class defaults on every peer, so
+            // only what differs is sent (thousands of parts at once stay
+            // small).
+            let db = ReflectionDatabase::shared();
             for (k, v) in &props {
+                if db.default_value(&class, k) == Some(v) {
+                    continue;
+                }
                 if let Some(e) = encode_prop(current, ids, v) {
                     map.insert(names::wire_name(&class, k), e);
                 }
@@ -178,18 +186,31 @@ pub fn local_ops(
             continue;
         };
 
+        // A peer that finds this instance by path (the Studio plugin, which
+        // cannot read ids) still has it where it was: the rename goes to the
+        // old path, the move to the old parent under the new name.
+        let mut before = Target {
+            id: at.id.clone(),
+            p: paths::path_of(shadow, r).unwrap_or_else(|| at.p.clone()),
+        };
         if name != old.name() {
             ops.push(Op::Set {
-                at: at.clone(),
+                at: before.clone(),
                 n: "Name".to_string(),
                 v: string_value(&name),
                 c: engine.tick(),
             });
+            if let Some(mut names) = paths::split(&before.p) {
+                if let Some(last) = names.last_mut() {
+                    last.clone_from(&name);
+                }
+                before.p = paths::join(&names);
+            }
         }
         if current.parent(r) != shadow.parent(r) {
             if let Some(v) = parent_value(current, ids, r) {
                 ops.push(Op::Set {
-                    at: at.clone(),
+                    at: before,
                     n: "Parent".to_string(),
                     v,
                     c: engine.tick(),
