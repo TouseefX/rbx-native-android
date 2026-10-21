@@ -187,22 +187,27 @@ fn arg_to_variant(name: &str, value: Arg) -> Result<Option<Variant>> {
 
 fn set_attribute(ctx: &Ctx, referent: Ref, name: &str, value: Option<Variant>) -> Result<()> {
     ctx.check_write(referent)?;
-    let mut attributes = read_attributes(ctx, referent);
-    match value {
-        Some(value) => attributes.insert(name.to_string(), value),
-        None => attributes.remove(name),
+    // Only this entry is re-encoded: the others keep their bytes, so an
+    // `EnumItem` attribute (whose enum name the DOM doesn't keep) never
+    // blocks a write to another one.
+    let blob = ctx
+        .dom()
+        .get(referent)
+        .and_then(|i| i.properties().get(ATTRIBUTES).cloned());
+    let blob = match blob {
+        Some(Variant::String(text)) => Variant::Unknown {
+            type_id: STRING_TYPE_ID,
+            raw: text.into_bytes(),
+        },
+        other => other.unwrap_or(Variant::Unknown {
+            type_id: STRING_TYPE_ID,
+            raw: Vec::new(),
+        }),
     };
-    let raw = rbx_dom::attributes::encode(&attributes, |_| None)
+    let blob = rbx_dom::attributes::set_attribute(Some(&blob), name, value.as_ref(), None)
         .ok_or_else(|| mlua::Error::runtime("these attributes cannot be written back"))?;
     ctx.dom_mut()
-        .set_property(
-            referent,
-            ATTRIBUTES,
-            Variant::Unknown {
-                type_id: STRING_TYPE_ID,
-                raw,
-            },
-        )
+        .set_property(referent, ATTRIBUTES, blob)
         .map_err(|e| mlua::Error::runtime(e.to_string()))?;
     Ok(())
 }

@@ -348,6 +348,14 @@ impl Engine {
             },
             None => None,
         };
+        // A camera is each editor's own view (older Studio plugins sent
+        // their presence markers from under it).
+        if parent_ref
+            .and_then(|p| cx.dom.get(p))
+            .is_some_and(|p| p.class() == "Camera")
+        {
+            return false;
+        }
         let r = match existing {
             Some(r) => {
                 cx.reparent(r, parent_ref);

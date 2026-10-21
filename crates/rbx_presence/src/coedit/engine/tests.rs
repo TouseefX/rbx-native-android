@@ -431,3 +431,26 @@ fn studio_attributes_and_tags_land_in_the_blobs() {
     assert!(inst.tags().is_empty());
     assert_eq!(inst.attributes().keys().collect::<Vec<_>>(), ["Kind"]);
 }
+
+#[test]
+fn nothing_is_added_under_a_camera() {
+    let (mut dom, mut ids, part, _) = world();
+    let ws = dom.parent(part).unwrap();
+    let camera = dom.new_instance("Camera", "Camera", Some(ws));
+    let mut e = Engine::new("9:native".into());
+    let r = e.apply(
+        &mut dom,
+        &mut ids,
+        &batch(
+            "1:studio",
+            vec![add(
+                "0000000100000002000000000000000f",
+                Some(t("", "Workspace.Camera")),
+                json!({"Name": s("Marker")}),
+                1,
+            )],
+        ),
+    );
+    assert_eq!(r.applied, 0);
+    assert!(dom.get(camera).unwrap().children().is_empty());
+}
