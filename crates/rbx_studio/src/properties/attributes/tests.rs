@@ -57,7 +57,10 @@ fn every_offered_type_can_be_edited_after_it_is_created() {
 
         let text = super::super::edit::edit_text(&value)
             .unwrap_or_else(|| panic!("{type_name} has no editable text"));
-        assert!(edit_kind(&value).is_some(), "{type_name}");
+        assert!(
+            edit_kind(&value, None, &database()).is_some(),
+            "{type_name}"
+        );
 
         // Committing a row back unchanged is the weakest edit there is, and
         // the one every widget makes on a focus loss, so it must not be the
@@ -372,13 +375,20 @@ fn row_name_round_trips_through_attribute_of_row() {
 
 #[test]
 fn edit_kind_routes_through_the_same_per_type_mapping_ordinary_properties_use() {
-    assert_eq!(edit_kind(&Variant::Bool(true)), Some(EditKind::Bool(true)));
+    assert_eq!(
+        edit_kind(&Variant::Bool(true), None, &database()),
+        Some(EditKind::Bool(true))
+    );
     assert!(matches!(
-        edit_kind(&Variant::Vector3(Vector3Data {
-            x: 1.0,
-            y: 2.0,
-            z: 3.0
-        })),
+        edit_kind(
+            &Variant::Vector3(Vector3Data {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0
+            }),
+            None,
+            &database()
+        ),
         Some(EditKind::Fields { .. })
     ));
 }
@@ -390,7 +400,10 @@ fn edit_kind_routes_through_the_same_per_type_mapping_ordinary_properties_use() 
 /// covering this path.
 #[test]
 fn a_type_with_no_properties_panel_editor_falls_back_to_read_only() {
-    assert_eq!(edit_kind(&Variant::SharedString(7)), None);
+    assert_eq!(
+        edit_kind(&Variant::SharedString(7), None, &database()),
+        None
+    );
 }
 
 /// Both sequences used to be exactly that case. They are creatable types
@@ -416,7 +429,7 @@ fn a_sequence_attribute_edits_through_the_graph() {
     });
 
     assert_eq!(
-        edit_kind(&sequence),
+        edit_kind(&sequence, None, &database()),
         Some(EditKind::Sequence {
             color: false,
             text: "0, 1, 0; 1, 0, 0".to_owned()
@@ -526,4 +539,66 @@ fn the_filter_box_narrows_tags_by_name() {
     );
     assert_eq!(tags_matching(&dom, part, "door"), ["Door"]);
     assert!(tags_matching(&dom, part, "nothing").is_empty());
+}
+
+/// Studio's own place: an `EnumItem` attribute beside a number, the way
+/// `workspace:SetAttribute("Shape", Enum.PartType.Cylinder)` saves it.
+fn with_enum_attribute() -> (WeakDom, Ref) {
+    let (mut dom, part) = instance();
+    let blob = rbx_dom::attributes::set_attribute(
+        None,
+        "Shape",
+        Some(&Variant::Enum(2)),
+        Some("PartType"),
+    )
+    .unwrap();
+    let blob = rbx_dom::attributes::set_attribute(
+        Some(&blob),
+        "Speed",
+        Some(&Variant::Float64(5.0)),
+        None,
+    )
+    .unwrap();
+    dom.set_property(part, ATTRIBUTES_PROPERTY, blob).unwrap();
+    (dom, part)
+}
+
+#[test]
+fn an_enum_attribute_edits_through_its_enums_dropdown() {
+    let (dom, part) = with_enum_attribute();
+    let enums = enum_types(&dom, part);
+    let value = attributes(&dom, part)["Shape"].clone();
+
+    let Some(EditKind::Enum { current, items }) =
+        edit_kind(&value, enums.get("Shape").map(String::as_str), &database())
+    else {
+        panic!("not a dropdown");
+    };
+    assert_eq!(current, "Cylinder");
+    assert!(items.iter().any(|item| item == "Ball"));
+}
+
+#[test]
+fn picking_an_enum_item_keeps_the_enum_name() {
+    let (mut dom, part) = with_enum_attribute();
+    set_attribute_value(&mut dom, &database(), part, "Shape", "Ball").unwrap();
+
+    assert_eq!(attributes(&dom, part)["Shape"], Variant::Enum(0));
+    assert_eq!(enum_types(&dom, part)["Shape"], "PartType");
+}
+
+/// Every other write re-encodes the whole blob, which needs the enum's name
+/// for the `EnumItem` it didn't touch.
+#[test]
+fn editing_beside_an_enum_attribute_keeps_it() {
+    let (mut dom, part) = with_enum_attribute();
+    set_attribute_value(&mut dom, &database(), part, "Speed", "7").unwrap();
+    add_attribute(&mut dom, part, "Label", Variant::String("hi".to_owned())).unwrap();
+    rename_attribute(&mut dom, part, "Shape", "Kind").unwrap();
+    remove_attribute(&mut dom, part, "Label").unwrap();
+
+    let current = attributes(&dom, part);
+    assert_eq!(current["Kind"], Variant::Enum(2));
+    assert_eq!(current["Speed"], Variant::Float64(7.0));
+    assert_eq!(enum_types(&dom, part)["Kind"], "PartType");
 }

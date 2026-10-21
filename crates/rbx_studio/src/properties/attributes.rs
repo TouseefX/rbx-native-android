@@ -77,7 +77,8 @@ pub(crate) fn is_backing_store(name: &str) -> bool {
 
 /// The Roblox attribute types this editor can create: every type
 /// `Instance:SetAttribute` accepts (`studio/properties.md#instance-attributes`),
-/// none left out. Each one's value then edits through the Properties panel's
+/// none left out, bar `EnumItem`: Studio's own Add Attribute list doesn't
+/// offer it either, a script sets one. Each one's value then edits through the Properties panel's
 /// own widget for that type, see [`edit_kind`], so this list can only ever
 /// grow as far as `properties::edit::edit_text` has an arm.
 pub(crate) const ATTRIBUTE_TYPES: &[&str] = &[
@@ -205,6 +206,16 @@ pub(crate) fn attributes(dom: &WeakDom, reference: Ref) -> BTreeMap<String, Vari
         .unwrap_or_default()
 }
 
+/// The enum each `EnumItem` attribute on `reference` belongs to, by
+/// attribute name. The blob keeps that name; [`attributes`] does not.
+pub(crate) fn enum_types(dom: &WeakDom, reference: Ref) -> BTreeMap<String, String> {
+    dom.get(reference)
+        .map(|instance| {
+            rbx_dom::attributes::enum_types(instance.properties().get(ATTRIBUTES_PROPERTY))
+        })
+        .unwrap_or_default()
+}
+
 /// Every tag on `reference`: empty for a reference the DOM no longer holds.
 pub(crate) fn tags(dom: &WeakDom, reference: Ref) -> Vec<String> {
     dom.get(reference)
@@ -250,8 +261,23 @@ pub(crate) fn tags_matching(dom: &WeakDom, reference: Ref, filter: &str) -> Vec<
 /// same case. Every type in [`ATTRIBUTE_TYPES`] has one, so in practice that
 /// is only reachable for an attribute some other tool wrote in a type
 /// `Instance:SetAttribute` does not accept.
-pub(crate) fn edit_kind(value: &Variant) -> Option<EditKind> {
+///
+/// An `EnumItem` attribute gets the same dropdown an enum property does,
+/// listing the items of `enum_type` (see [`enum_types`]).
+pub(crate) fn edit_kind(
+    value: &Variant,
+    enum_type: Option<&str>,
+    db: &ReflectionDatabase,
+) -> Option<EditKind> {
     let text = super::edit::edit_text(value)?;
+    if let (Variant::Enum(raw), Some(enum_name)) = (value, enum_type) {
+        if let Some(items) = db.enum_items(enum_name).filter(|items| !items.is_empty()) {
+            return Some(EditKind::Enum {
+                current: db.enum_name(enum_name, *raw).map_or(text, str::to_owned),
+                items: items.iter().map(|(name, _)| name.clone()).collect(),
+            });
+        }
+    }
     Some(value_edit_kind(value, text))
 }
 
@@ -351,16 +377,18 @@ pub(crate) fn rename_attribute(
     }
     let value = current.remove(old_name).expect("checked above");
     current.insert(new_name.to_owned(), value);
-    write_attributes(dom, reference, &current)
+    let mut enums = enum_types(dom, reference);
+    if let Some(enum_name) = enums.remove(old_name) {
+        enums.insert(new_name.to_owned(), enum_name);
+    }
+    write_with_enums(dom, reference, &current, &enums)
 }
 
 /// Parses `text` into a value shaped like attribute `name`'s current one,
 /// the same textual commit path an ordinary property row takes
-/// (`properties::edit::parse`), and writes it back. Attributes are never
-/// `Variant::Enum` (not one of the types `Instance:SetAttribute` accepts),
-/// so `parse`'s reflection lookup is never exercised here; the empty
-/// class/property-name arguments are inert placeholders for the one arm that
-/// would need them.
+/// (`properties::edit::parse`), and writes it back. An `EnumItem` takes an
+/// item name of its own enum (or an ordinal), the enum named by the blob
+/// since there's no class/property to resolve it from.
 pub(crate) fn set_attribute_value(
     dom: &mut WeakDom,
     db: &ReflectionDatabase,
@@ -373,7 +401,10 @@ pub(crate) fn set_attribute_value(
         .get(name)
         .ok_or_else(|| format!("{name:?} is not an attribute on this instance"))?
         .clone();
-    let value = super::edit::parse(&existing, db, "", "", text)?;
+    let value = match (&existing, enum_types(dom, reference).get(name)) {
+        (Variant::Enum(_), Some(enum_name)) => super::edit::parse_enum_item(db, enum_name, text)?,
+        _ => super::edit::parse(&existing, db, "", "", text)?,
+    };
     current.insert(name.to_owned(), value);
     write_attributes(dom, reference, &current)
 }
@@ -410,12 +441,21 @@ pub(crate) fn write_attributes(
     reference: Ref,
     attributes: &BTreeMap<String, Variant>,
 ) -> Result<(), String> {
-    // Attributes are never `Enum` (see `set_attribute_value`), so `encode`'s
-    // callback is never actually invoked; it exists only to satisfy the
-    // signature `style_editor::write_properties` also has to fill in.
-    let raw = rbx_dom::attributes::encode(attributes, |_| None).ok_or_else(|| {
-        "one of these attributes holds a type this editor cannot write back".to_owned()
-    })?;
+    let enums = enum_types(dom, reference);
+    write_with_enums(dom, reference, attributes, &enums)
+}
+
+/// [`write_attributes`] with the enum each `EnumItem` is written under,
+/// for a caller that moved one to another name.
+fn write_with_enums(
+    dom: &mut WeakDom,
+    reference: Ref,
+    attributes: &BTreeMap<String, Variant>,
+    enums: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    let raw = rbx_dom::attributes::encode(attributes, |name| enums.get(name).cloned()).ok_or_else(
+        || "one of these attributes holds a type this editor cannot write back".to_owned(),
+    )?;
     dom.set_property(
         reference,
         ATTRIBUTES_PROPERTY,

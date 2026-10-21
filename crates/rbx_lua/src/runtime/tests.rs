@@ -256,6 +256,78 @@ fn an_enum_attribute_does_not_block_writing_another() {
     assert_eq!(output.lines(), ["red"]);
 }
 
+/// An `EnumItem` attribute Studio saved reads back as the item, in
+/// `GetAttribute` and `GetAttributes` both.
+#[test]
+fn an_enum_attribute_reads_as_its_item() {
+    let mut dom = place();
+    let ws = dom.root_refs()[0];
+    let blob = rbx_dom::attributes::set_attribute(
+        None,
+        "Mat",
+        Some(&Variant::Enum(288)),
+        Some("Material"),
+    )
+    .unwrap();
+    dom.set_property(ws, "AttributesSerialize", blob).unwrap();
+    let mut runtime = Runtime::new(dom, ReflectionDatabase::embedded()).unwrap();
+    let output = runtime
+        .run(
+            "local m = workspace:GetAttribute('Mat') \
+             print(m, typeof(m), m == Enum.Material.Neon) \
+             print(workspace:GetAttributes().Mat == Enum.Material.Neon)",
+        )
+        .unwrap();
+    assert_eq!(output.lines(), ["Enum.Material.Neon EnumItem true", "true"]);
+}
+
+/// `SetAttribute` with an `EnumItem` writes the enum's name beside the
+/// ordinal, so it reads back and survives a save in both formats.
+#[test]
+fn an_enum_attribute_round_trips_through_both_formats() {
+    let mut runtime = runtime();
+    let output = runtime
+        .run(
+            "workspace:GetAttributeChangedSignal('Shape'):Connect(function() \
+                 print('changed', workspace:GetAttribute('Shape')) \
+             end) \
+             workspace:SetAttribute('Shape', Enum.PartType.Cylinder) \
+             print(workspace:GetAttribute('Shape'))",
+        )
+        .unwrap();
+    assert_eq!(output.lines()[0], "Enum.PartType.Cylinder");
+    assert!(
+        output
+            .lines()
+            .contains(&"changed Enum.PartType.Cylinder".to_owned()),
+        "{:?}",
+        output.lines()
+    );
+
+    let dom = runtime.into_dom();
+    let binary = rbx_binary::deserialize(&rbx_binary::serialize(&dom).unwrap()).unwrap();
+    let xml = rbx_xml::deserialize(&rbx_xml::serialize(&dom).unwrap()).unwrap();
+    for dom in [binary, xml] {
+        let ws = dom.root_refs()[0];
+        let blob = dom.get(ws).unwrap().properties().get("AttributesSerialize");
+        assert_eq!(
+            rbx_dom::attributes::decode(blob).get("Shape"),
+            Some(&Variant::Enum(2))
+        );
+        assert_eq!(
+            rbx_dom::attributes::enum_types(blob)
+                .get("Shape")
+                .map(String::as_str),
+            Some("PartType")
+        );
+        let mut runtime = Runtime::new(dom, ReflectionDatabase::embedded()).unwrap();
+        let output = runtime
+            .run("print(workspace:GetAttribute('Shape') == Enum.PartType.Cylinder)")
+            .unwrap();
+        assert_eq!(output.lines(), ["true"]);
+    }
+}
+
 #[test]
 fn changed_reaches_only_connections_made_before_the_change() {
     let printed = lines(

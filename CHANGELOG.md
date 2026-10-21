@@ -2,6 +2,13 @@
 
 ## 2026-10-21
 
+- **`EnumItem` attributes work in scripts and the Attributes panel.**
+  `GetAttribute` and `GetAttributes` used to give `nil` for one, and
+  `SetAttribute(name, Enum.X.Y)` errored. Now they read and write the real
+  item, so plugins and the command bar match Studio. The Attributes panel
+  shows it as a dropdown of its enum's items, and editing any other
+  attribute on that instance no longer fails. (@chteau)
+
 - **`SurfaceAppearance.Color` tints the colour map only.** Where an
   `Overlay` map is clear, the part's own colour now shows as it is, like in
   Studio, instead of tinted too. An emissive face cut into a tinted pumpkin

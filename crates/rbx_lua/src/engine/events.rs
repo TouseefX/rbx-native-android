@@ -151,8 +151,36 @@ pub(super) fn read_attributes(ctx: &Ctx, referent: Ref) -> BTreeMap<String, Vari
     rbx_dom::attributes::decode(blob)
 }
 
-fn variant_to_arg(variant: &Variant) -> Arg {
+/// Every attribute as the value a script sees. An `EnumItem` needs its
+/// enum's name, which only the blob keeps (see `attributes::enum_types`).
+fn read_attribute_args(ctx: &Ctx, referent: Ref) -> BTreeMap<String, Arg> {
+    let enums = {
+        let dom = ctx.dom();
+        let blob = dom
+            .get(referent)
+            .and_then(|i| i.properties().get(ATTRIBUTES));
+        rbx_dom::attributes::enum_types(blob)
+    };
+    read_attributes(ctx, referent)
+        .into_iter()
+        .map(|(name, value)| {
+            let arg = variant_to_arg(ctx, &value, enums.get(&name).map(String::as_str));
+            (name, arg)
+        })
+        .collect()
+}
+
+fn variant_to_arg(ctx: &Ctx, variant: &Variant, enum_type: Option<&str>) -> Arg {
     match variant {
+        Variant::Enum(value) => enum_type
+            .and_then(|enum_name| {
+                let item = ctx.database().enum_name(enum_name, *value)?;
+                Some(Arg::Enum {
+                    enum_name: enum_name.to_owned(),
+                    item: item.to_owned(),
+                })
+            })
+            .unwrap_or(Arg::Nil),
         Variant::String(s) => Arg::String(s.clone()),
         Variant::Bool(b) => Arg::Bool(*b),
         Variant::Int32(n) => Arg::Number(f64::from(*n)),
@@ -167,29 +195,49 @@ fn variant_to_arg(variant: &Variant) -> Arg {
     }
 }
 
-fn arg_to_variant(name: &str, value: Arg) -> Result<Option<Variant>> {
-    Ok(Some(match value {
-        Arg::Nil => return Ok(None),
-        Arg::String(s) => Variant::String(s),
-        Arg::Bool(b) => Variant::Bool(b),
-        Arg::Number(n) => Variant::Float64(n),
-        Arg::Vector2([x, y]) => Variant::Vector2(Vector2Data { x, y }),
-        Arg::Vector3([x, y, z]) => Variant::Vector3(Vector3Data { x, y, z }),
-        Arg::Color3([r, g, b]) => Variant::Color3(Color3Data { r, g, b }),
-        Arg::BrickColor(n) => Variant::BrickColor(n),
-        _ => {
-            return Err(mlua::Error::runtime(format!(
-                "attribute '{name}' cannot hold a value of this type"
-            )))
-        }
-    }))
+/// The attribute value `value` is written as, with the enum an `EnumItem`
+/// belongs to (the blob stores that name beside the ordinal).
+fn arg_to_variant(ctx: &Ctx, name: &str, value: Arg) -> Result<Option<(Variant, Option<String>)>> {
+    if let Arg::Enum { enum_name, item } = value {
+        let value = ctx
+            .database()
+            .enum_items(&enum_name)
+            .and_then(|items| items.iter().find(|(n, _)| *n == item))
+            .map(|(_, v)| *v)
+            .ok_or_else(|| {
+                mlua::Error::runtime(format!("{item} is not a valid member of Enum.{enum_name}"))
+            })?;
+        return Ok(Some((Variant::Enum(value), Some(enum_name))));
+    }
+    Ok(Some((
+        match value {
+            Arg::Nil => return Ok(None),
+            Arg::String(s) => Variant::String(s),
+            Arg::Bool(b) => Variant::Bool(b),
+            Arg::Number(n) => Variant::Float64(n),
+            Arg::Vector2([x, y]) => Variant::Vector2(Vector2Data { x, y }),
+            Arg::Vector3([x, y, z]) => Variant::Vector3(Vector3Data { x, y, z }),
+            Arg::Color3([r, g, b]) => Variant::Color3(Color3Data { r, g, b }),
+            Arg::BrickColor(n) => Variant::BrickColor(n),
+            _ => {
+                return Err(mlua::Error::runtime(format!(
+                    "attribute '{name}' cannot hold a value of this type"
+                )))
+            }
+        },
+        None,
+    )))
 }
 
-fn set_attribute(ctx: &Ctx, referent: Ref, name: &str, value: Option<Variant>) -> Result<()> {
+fn set_attribute(
+    ctx: &Ctx,
+    referent: Ref,
+    name: &str,
+    value: Option<(Variant, Option<String>)>,
+) -> Result<()> {
     ctx.check_write(referent)?;
-    // Only this entry is re-encoded: the others keep their bytes, so an
-    // `EnumItem` attribute (whose enum name the DOM doesn't keep) never
-    // blocks a write to another one.
+    // Only this entry is re-encoded: the others keep their bytes, enum
+    // names included.
     let blob = ctx
         .dom()
         .get(referent)
@@ -204,8 +252,14 @@ fn set_attribute(ctx: &Ctx, referent: Ref, name: &str, value: Option<Variant>) -
             raw: Vec::new(),
         }),
     };
-    let blob = rbx_dom::attributes::set_attribute(Some(&blob), name, value.as_ref(), None)
-        .ok_or_else(|| mlua::Error::runtime("these attributes cannot be written back"))?;
+    let (value, enum_type) = value.unzip();
+    let blob = rbx_dom::attributes::set_attribute(
+        Some(&blob),
+        name,
+        value.as_ref(),
+        enum_type.flatten().as_deref(),
+    )
+    .ok_or_else(|| mlua::Error::runtime("these attributes cannot be written back"))?;
     ctx.dom_mut()
         .set_property(referent, ATTRIBUTES, blob)
         .map_err(|e| mlua::Error::runtime(e.to_string()))?;
@@ -230,21 +284,19 @@ fn attribute_function(lua: &Lua, ctx: &Ctx, referent: Ref, key: &str) -> Result<
             return signal_getter(lua, referent, "AttributeChanged").map(Some)
         }
         "GetAttribute" => lua.create_function(move |lua, (_this, name): (Value, String)| {
-            let value = read_attributes(&ctx, referent)
-                .get(&name)
-                .map(variant_to_arg);
+            let value = read_attribute_args(&ctx, referent).remove(&name);
             arg::to_lua(lua, &ctx, &value.unwrap_or(Arg::Nil))
         })?,
         "SetAttribute" => {
             lua.create_function(move |_, (_this, name, value): (Value, String, Value)| {
-                let variant = arg_to_variant(&name, arg::from_lua(&value))?;
+                let variant = arg_to_variant(&ctx, &name, arg::from_lua(&value))?;
                 set_attribute(&ctx, referent, &name, variant)
             })?
         }
         "GetAttributes" => lua.create_function(move |lua, _this: Value| {
             let table = lua.create_table()?;
-            for (name, value) in read_attributes(&ctx, referent) {
-                table.set(name, arg::to_lua(lua, &ctx, &variant_to_arg(&value))?)?;
+            for (name, value) in read_attribute_args(&ctx, referent) {
+                table.set(name, arg::to_lua(lua, &ctx, &value)?)?;
             }
             Ok(table)
         })?,
