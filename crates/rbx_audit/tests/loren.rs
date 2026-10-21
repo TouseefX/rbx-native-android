@@ -5,6 +5,7 @@
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use rbx_audit::{audit, Severity};
 use rbx_dom::{CFrameData, Variant, Vector3Data, WeakDom};
@@ -12,7 +13,10 @@ use rbx_dom::{CFrameData, Variant, Vector3Data, WeakDom};
 const SHOP: &str = include_str!("loren/ShopService.luau");
 
 fn project() -> WeakDom {
-    let dir = std::env::temp_dir().join(format!("rbx-audit-loren-{}", std::process::id()));
+    // Tests run in parallel: each call gets a folder of its own.
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("rbx-audit-loren-{}-{n}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let template = rbx_loren::template::template_dir().unwrap();
     rbx_loren::commands::init::write_scaffold(
