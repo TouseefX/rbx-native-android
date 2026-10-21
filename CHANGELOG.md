@@ -53,6 +53,22 @@
   icon it draws exists, and a test checks every icon name written in the
   editor's source. (@chteau)
 
+- **Editor layers and 3D notes.** A Layers dock (View › Layers) groups
+  instances into named, coloured layers, assigned from the dock, the
+  Explorer row menu or Ctrl+Alt+L, and hides, locks, solos or isolates
+  each one in the edit viewport only. Hidden parts are neither drawn nor
+  clickable, locked ones can't be clicked or dragged and dim in the
+  Explorer, and nothing ever writes `Transparency`, `Locked` or `Parent`.
+  Notes pinned to a point or an instance float over the viewport as
+  labels and are listed in the dock; clicking one points the camera at it.
+  Pin Note sits a note on top of the part and opens its text right away.
+  Layers and notes are plain attributes and an `ObjectValue` folder, so
+  they travel with the place through both file formats, co-editing and
+  merge, while who hides what stays in each user's own editor data.
+  Save/Publish to Roblox upload a copy without them (a Studio Settings
+  toggle, on by default), and File › Export Clean Copy… writes one to
+  disk. (@chteau)
+
 - **Loren, by fabi, as the optional built-in framework.** rbx-native now
   ships [Loren](https://github.com/fabideveloper/Loren-Framework), fabi's
   Roblox framework (Services and Controllers booted in dependency order,

@@ -34,6 +34,8 @@ mod history;
 pub(crate) mod import3d;
 mod input_panel;
 mod keys;
+mod layers;
+mod layers_panel;
 mod layout;
 mod light_guides;
 mod loren_panel;
@@ -274,6 +276,10 @@ pub(crate) struct Shell {
     /// persisted, see `shell::explorer_edit::picker`.
     increment_names: bool,
     expand_on_select: bool,
+    /// See `Settings::strip_on_publish`.
+    strip_on_publish: bool,
+    /// Editor layers and 3D notes; see `shell::layers`.
+    layers: layers::LayerState,
     search: Entity<InputState>,
     /// What the Explorer's search field holds, trimmed; see
     /// `explorer::search`.
@@ -562,6 +568,7 @@ impl Shell {
             optimize_graph_on_open,
             increment_names,
             expand_on_select,
+            strip_on_publish,
             dragger,
             controls,
             argon_address: argon_address_setting,
@@ -802,6 +809,7 @@ impl Shell {
             explorer_edit: explorer_edit::ExplorerEdit::default(),
             increment_names,
             expand_on_select,
+            strip_on_publish,
             search,
             explorer_query: String::new(),
             query: query_select::QuerySearch::default(),
@@ -825,6 +833,7 @@ impl Shell {
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
+            layers: layers::LayerState::load(&path),
             loren: loren_panel::LorenState::default(),
             style_scroll: ScrollHandle::new(),
             ui,
@@ -941,6 +950,7 @@ impl Shell {
         shell.sync_snap_neighbours(cx);
         // Its light guides, for the same reason.
         shell.sync_light_guides(cx);
+        shell.sync_layers(cx);
         // And the screen it sits in, for the UI editor's canvas.
         shell.ui_follow_selection();
 
@@ -1095,6 +1105,7 @@ impl Shell {
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
         shell.apply_debug_tests(cx);
+        shell.apply_debug_layers(cx);
         shell.apply_debug_loren(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
@@ -1808,6 +1819,7 @@ impl Shell {
             output_display: self.output_display,
             optimize_graph_on_open: self.optimize_graph_on_open,
             increment_names: self.increment_names,
+            strip_on_publish: self.strip_on_publish,
             expand_on_select: self.expand_on_select,
             dragger: self.dragger,
             controls: crate::settings::Controls {

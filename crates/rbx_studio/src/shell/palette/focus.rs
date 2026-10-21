@@ -41,6 +41,7 @@ pub(super) fn entry(panel: Panel) -> Option<Entry> {
         | Panel::PluginWidgets
         | Panel::InputActions
         | Panel::Tests
+        | Panel::Layers
         | Panel::Loren => None,
     }
 }

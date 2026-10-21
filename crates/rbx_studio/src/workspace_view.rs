@@ -20,6 +20,7 @@ pub(crate) mod input;
 pub(crate) mod joints;
 mod label;
 mod measure;
+mod notes;
 mod orientation;
 mod pivot;
 mod plugin_handles;
@@ -56,6 +57,7 @@ use frame::{device_pixels, render_image, Viewport};
 use gizmo::Drag;
 use input::{camera_key, chorded, tool_key, Layout};
 pub(crate) use joints::JointPhase;
+pub(crate) use notes::NoteMark;
 pub(crate) use pump::canvas::{FrameRequest, Request as CanvasRequest};
 use pump::Pump;
 pub(crate) use pump::TerrainChunks;
@@ -354,6 +356,8 @@ pub(crate) struct WorkspaceView {
     /// Everything screen-to-world unprojects against this, so a click resolves
     /// against the view it was aimed at.
     view: Option<Pose>,
+    /// The 3D notes' billboards (see `notes`).
+    notes: Vec<NoteMark>,
     /// The file meshes resident on the render thread, as of the last scene it
     /// built, see `pump::Ready::meshes`. What `Shell` picks a `MeshPart`
     /// against, so a click resolves against the triangles on screen rather
@@ -529,6 +533,7 @@ impl WorkspaceView {
             targets: Targets::default(),
             neighbours: Vec::new(),
             view: None,
+            notes: Vec::new(),
             meshes: Meshes::default(),
             drag: None,
             terrain_b: false,
@@ -1291,6 +1296,7 @@ impl Render for WorkspaceView {
                 .size_full(),
             )
             .children(self.device_overlay(scale, cx))
+            .children(self.note_elements(window, cx))
             // Only for the moment after the wheel changes the speed: anything
             // that stays belongs in the Viewport dock, not over the scene.
             .when_some(

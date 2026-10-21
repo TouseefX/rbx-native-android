@@ -38,6 +38,8 @@ pub(crate) enum Export {
     Model,
     /// The whole place, from the File menu.
     Place,
+    /// The whole place without layers and notes; the open file is untouched.
+    CleanPlace,
     Obj,
     Gltf,
 }
@@ -46,7 +48,7 @@ impl Export {
     fn extension(self) -> &'static str {
         match self {
             Export::Model => "rbxm",
-            Export::Place => "rbxl",
+            Export::Place | Export::CleanPlace => "rbxl",
             Export::Obj => "obj",
             Export::Gltf => "gltf",
         }
@@ -97,6 +99,10 @@ fn encode(
             Ok(vec![(path.to_path_buf(), bytes)])
         }
         Export::Place => Ok(vec![(path.to_path_buf(), format.encode(dom)?)]),
+        Export::CleanPlace => Ok(vec![(
+            path.to_path_buf(),
+            format.encode(&crate::strip::stripped(dom))?,
+        )]),
         Export::Obj => {
             let stem = path.file_stem().unwrap_or_default().to_string_lossy();
             Ok(export::obj_files(&solids()?, &stem)
@@ -145,10 +151,13 @@ impl Shell {
             },
             _ => self.dom.root_refs().to_vec(),
         };
-        let name = self.path.file_stem().map_or_else(
+        let mut name = self.path.file_stem().map_or_else(
             || "Place".to_owned(),
             |stem| stem.to_string_lossy().into_owned(),
         );
+        if kind == Export::CleanPlace {
+            name.push_str(" (clean)");
+        }
         self.ask_and_export(kind, roots, &name, cx);
     }
 
@@ -160,7 +169,7 @@ impl Shell {
         cx: &mut Context<Self>,
     ) {
         let extension = match (kind, self.format) {
-            (Export::Place, Format::Xml) => "rbxlx",
+            (Export::Place | Export::CleanPlace, Format::Xml) => "rbxlx",
             _ => kind.extension(),
         };
         let suggested = format!("{name}.{extension}");

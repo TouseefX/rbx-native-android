@@ -55,6 +55,7 @@ actions!(
         MenuSaveToFile,
         MenuClosePlace,
         MenuExportGltf,
+        MenuExportClean,
         MenuSaveToRoblox,
         MenuPublishToRoblox,
         MenuLinkRobloxPlace,
@@ -102,6 +103,7 @@ actions!(
         MenuToggleViewport,
         MenuToggleCollaborators,
         MenuToggleInputActions,
+        MenuToggleLayers,
         MenuToggleLoren,
         /// Shared by every item below that has no real handler yet; always
         /// paired with `.disabled(true)` (see `menus`), so `PopupMenu` never
@@ -197,6 +199,8 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Save to File", MenuSave),
                 MenuItem::action("Save to File As…", MenuSaveToFile),
                 MenuItem::action("Export as glTF…", MenuExportGltf),
+                // A copy without layers and 3D notes (`crate::strip`).
+                MenuItem::action("Export Clean Copy…", MenuExportClean),
                 MenuItem::separator(),
                 // Uploads, not local saves: see `shell::roblox_publish`. An
                 // unlinked file asks for its place on first use.
@@ -252,6 +256,7 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 // rbx-native. Shut by default, so it needs a way in.
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
+                MenuItem::action("Layers", MenuToggleLayers),
                 MenuItem::action("Loren", MenuToggleLoren),
                 MenuItem::separator(),
                 // The accessibility settings the reference guidance calls
