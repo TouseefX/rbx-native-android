@@ -5,6 +5,7 @@ mod edit;
 mod scripts;
 mod studio;
 mod tree;
+mod values;
 
 #[cfg(test)]
 mod tests;

@@ -64,8 +64,11 @@ impl Broker {
             return Some(protocol::reply(id, Err(failure)));
         }
         if params.get("name").and_then(Value::as_str) == Some(LIST_STUDIOS) {
-            let studios = json!({ STUDIOS_KEY: self.studios() });
-            return Some(protocol::reply(id, Ok(tools::result(&studios, false))));
+            let studios = json!({ STUDIOS_KEY: self.studios() }).to_string();
+            return Some(protocol::reply(
+                id,
+                Ok(tools::result(&Value::String(studios), false)),
+            ));
         }
         let wanted = params
             .get("arguments")

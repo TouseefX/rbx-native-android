@@ -23,9 +23,10 @@ pub(crate) fn describe(studio: &Studio) -> Value {
     json!({ "id": studio.id, "name": name })
 }
 
-/// `list_roblox_studios` as one editor answers it: only itself.
+/// `list_roblox_studios` as one editor answers it: only itself, as compact
+/// JSON the way Studio sends it.
 pub(super) fn list(studio: &Studio) -> Value {
-    json!({ STUDIOS_KEY: [describe(studio)] })
+    Value::String(json!({ STUDIOS_KEY: [describe(studio)] }).to_string())
 }
 
 /// Studio's own three lines. A playtest here runs in a real Roblox client,

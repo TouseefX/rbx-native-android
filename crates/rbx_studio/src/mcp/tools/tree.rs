@@ -14,7 +14,7 @@ use serde_json::{json, Map, Value};
 
 use super::{
     count_argument, edit_datamodel, path_of, required_text, resolve, resolve_all, text_argument,
-    Outcome, ROOT,
+    values, Outcome, ROOT,
 };
 use crate::mcp::Session;
 
@@ -24,6 +24,7 @@ const MAX_DEPTH: usize = 10;
 const DEFAULT_HEAD_LIMIT: usize = 200;
 /// `inspect_instance` returns this many matches at most and counts the rest.
 const MAX_MATCHES: usize = 20;
+const UNIQUE_ID: &str = "UniqueId";
 
 /// The DataModel's class: the place itself, which this DOM does not hold
 /// as an instance (its children, the services, are the DOM's roots).
@@ -199,27 +200,18 @@ fn report(reference: Ref, session: &Session) -> Value {
         return Value::Null;
     };
     let class = instance.class();
-    // Booleans and numbers stay JSON values, as Studio returns them; the
-    // rest reads as the Properties panel shows it.
-    let value = |name: &str, value: &Variant| match value {
-        Variant::Bool(flag) => json!(flag),
-        Variant::Int32(n) => json!(n),
-        Variant::Int64(n) => json!(n),
-        Variant::Float32(n) => json!(n),
-        Variant::Float64(n) => json!(n),
-        other => Value::String(session.properties.format(dom, class, name, other)),
-    };
-
-    let properties: Map<String, Value> = instance
-        .properties()
-        .iter()
-        .map(|(name, variant)| (name.clone(), value(name, variant)))
-        .collect();
-    let attributes: Map<String, Value> = instance
-        .attributes()
-        .iter()
-        .map(|(name, variant)| (name.clone(), value(name, variant)))
-        .collect();
+    let panel = session.properties;
+    // The properties a script can read, by the names it reads them by, as
+    // the Properties panel lists them, not the fields the file stores.
+    let settable = panel.settable(dom, reference);
+    let mut properties = Map::new();
+    for (name, value) in &settable {
+        values::insert(&mut properties, panel, dom, class, name, value);
+    }
+    let mut attributes = Map::new();
+    for (name, value) in instance.attributes() {
+        values::insert(&mut attributes, panel, dom, class, &name, &value);
+    }
     let immediate: Vec<Value> = instance
         .children()
         .iter()
@@ -234,17 +226,26 @@ fn report(reference: Ref, session: &Session) -> Value {
         "className": class,
         "path": path_of(dom, reference),
         "properties": properties,
-        "attributes": attributes,
-        "tags": instance.tags(),
         "children": {
             "immediateChildren": immediate,
             "childrenCount": instance.children().len(),
             "totalDescendants": descendants(dom, reference),
         },
     });
+    // Studio has no entry for either when there is nothing in it.
+    if !attributes.is_empty() {
+        report["attributes"] = Value::Object(attributes);
+    }
+    if !instance.tags().is_empty() {
+        report["tags"] = json!(instance.tags());
+    }
     // A place saved by Studio carries one; an instance made here does not.
-    if let Some(unique) = properties.get("UniqueId") {
-        report["uniqueId"] = unique.clone();
+    // It cannot be set, so it is not among `settable`, but Studio lists it
+    // with the properties as well as on its own.
+    if let Some(Variant::UniqueId(id)) = instance.properties().get(UNIQUE_ID) {
+        let id = json!(values::unique_id(id));
+        report["properties"][UNIQUE_ID] = id.clone();
+        report["uniqueId"] = id;
     }
     report
 }
