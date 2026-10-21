@@ -286,6 +286,7 @@ impl Shell {
                                     name: u.name.clone(),
                                     path: e.path.clone(),
                                     property: e.property.clone(),
+                                    value: e.value.clone(),
                                     at: e.at,
                                 })
                         })

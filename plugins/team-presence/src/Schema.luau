@@ -178,7 +178,7 @@ function Schema.decodeSnapshot(text: string): any
 end
 
 -- The state as the relay sees it: `ct` is the state JSON, `j` one sealed
--- journal entry per edit (value left out). `nonceFor` returns 12 raw bytes
+-- journal entry per edit (its display value included). `nonceFor` returns 12 raw bytes
 -- and is called once per ciphertext.
 function Schema.sealState(encKey: string, room: string, state: any, nonceFor: () -> string): string
 	local client: string = state.client
@@ -189,7 +189,7 @@ function Schema.sealState(encKey: string, room: string, state: any, nonceFor: ()
 	for i = 1, math.min(#edits, Schema.MAX_EDITS) do
 		local edit = edits[i]
 		local path, property = clampText(edit.path), clampText(edit.property)
-		local plain = Json.encode({ name = name, path = path, property = property })
+		local plain = Json.encode({ name = name, path = path, property = property, value = clampText(edit.value or "") })
 		table.insert(j, {
 			at = edit.at,
 			tag = Crypto.journalTag(encKey, path, property, edit.at),
@@ -267,7 +267,8 @@ function Schema.openJournal(encKey: string, room: string, entry: any): any?
 	if type(obj.name) ~= "string" or type(obj.path) ~= "string" or type(obj.property) ~= "string" then
 		return nil
 	end
-	return { userId = userId, name = obj.name, path = obj.path, property = obj.property, at = at }
+	local value = if type(obj.value) == "string" then obj.value else ""
+	return { userId = userId, name = obj.name, path = obj.path, property = obj.property, value = value, at = at }
 end
 
 return Schema

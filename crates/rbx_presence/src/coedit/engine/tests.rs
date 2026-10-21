@@ -389,3 +389,45 @@ fn a_studio_only_property_is_not_stored() {
     );
     assert_eq!(prop(&dom, part, "BrickColor"), None);
 }
+
+#[test]
+fn studio_attributes_and_tags_land_in_the_blobs() {
+    let (mut dom, mut ids, part, _) = world();
+    let pid = id(&ids, part);
+    let mut e = Engine::new("9:native".into());
+    let studio = |n: &str, v: Value, c: u64| set(t(&pid, ""), n, v, Clock(c, "1:studio".into()));
+    e.apply(
+        &mut dom,
+        &mut ids,
+        &batch(
+            "1:studio",
+            vec![
+                studio("@Speed", json!({"t": "Float64", "v": 16.0}), 1),
+                studio("@Kind", json!({"t": "EnumItem", "v": ["Material", 256]}), 2),
+                studio("#Lava", json!({"t": "Bool", "v": true}), 3),
+            ],
+        ),
+    );
+    let inst = dom.get(part).unwrap();
+    assert_eq!(
+        inst.attributes().get("Speed"),
+        Some(&Variant::Float64(16.0))
+    );
+    assert_eq!(inst.attributes().get("Kind"), Some(&Variant::Enum(256)));
+    assert_eq!(inst.tags(), ["Lava"]);
+
+    e.apply(
+        &mut dom,
+        &mut ids,
+        &batch(
+            "1:studio",
+            vec![
+                studio("#Lava", Value::Null, 4),
+                studio("@Speed", Value::Null, 5),
+            ],
+        ),
+    );
+    let inst = dom.get(part).unwrap();
+    assert!(inst.tags().is_empty());
+    assert_eq!(inst.attributes().keys().collect::<Vec<_>>(), ["Kind"]);
+}

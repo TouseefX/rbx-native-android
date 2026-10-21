@@ -77,7 +77,8 @@ function Coedit.new(options: Options)
 		apply = Apply.new(state),
 		running = false,
 		connections = {} :: { RBXScriptConnection },
-		watched = {} :: { [Instance]: RBXScriptConnection },
+		watched = {} :: { [Instance]: { RBXScriptConnection } },
+		tagsHooked = {} :: { [string]: boolean },
 		roots = {} :: { [Instance]: boolean },
 		secret = nil :: Instance?,
 		added = {} :: { [Instance]: boolean },
@@ -152,9 +153,14 @@ function Coedit.watch(self: any, inst: Instance)
 	if self.watched[inst] ~= nil or not self:isTracked(inst) then
 		return
 	end
-	self.watched[inst] = inst.Changed:Connect(function(prop: string)
-		self:onChanged(inst, prop)
-	end)
+	self.watched[inst] = {
+		inst.Changed:Connect(function(prop: string)
+			self:onChanged(inst, prop)
+		end),
+		inst.AttributeChanged:Connect(function(name: string)
+			self:onChanged(inst, "@" .. name)
+		end),
+	}
 	self.paths[inst] = Paths.pathOf(inst)
 	if inst:IsA("LuaSourceContainer") then
 		self.state.log:hash(self:scriptKey(inst), Apply.editorSource(inst))
@@ -162,9 +168,11 @@ function Coedit.watch(self: any, inst: Instance)
 end
 
 function Coedit.unwatch(self: any, inst: Instance)
-	local conn = self.watched[inst]
-	if conn ~= nil then
-		conn:Disconnect()
+	local conns = self.watched[inst]
+	if conns ~= nil then
+		for _, conn in conns do
+			conn:Disconnect()
+		end
 		self.watched[inst] = nil
 	end
 end
@@ -278,6 +286,15 @@ function Coedit.collect(self: any): { any }
 					props[prop] = Json.decode(encoded)
 				end
 			end
+		end
+		for name in inst:GetAttributes() do
+			local encoded = Apply.encodeProp(state, inst, "@" .. name)
+			if encoded ~= nil and encoded ~= "null" then
+				props["@" .. name] = Json.decode(encoded)
+			end
+		end
+		for _, tag in inst:GetTags() do
+			props["#" .. tag] = { t = "Bool", v = true }
 		end
 		props.Name = { t = "String", v = inst.Name }
 		if inst:IsA("LuaSourceContainer") then
@@ -490,6 +507,24 @@ function Coedit.start(self: any)
 			end
 		end))
 	end
+	local tags = game:GetService("CollectionService")
+	local function hookTag(tag: string)
+		if self.tagsHooked[tag] then
+			return
+		end
+		self.tagsHooked[tag] = true
+		local function changed(inst: Instance)
+			if self.running and self.watched[inst] ~= nil then
+				self:onChanged(inst, "#" .. tag)
+			end
+		end
+		table.insert(self.connections, tags:GetInstanceAddedSignal(tag):Connect(changed))
+		table.insert(self.connections, tags:GetInstanceRemovedSignal(tag):Connect(changed))
+	end
+	for _, tag in tags:GetAllTags() do
+		hookTag(tag)
+	end
+	table.insert(self.connections, tags.TagAdded:Connect(hookTag))
 	pcall(function()
 		local editor = game:GetService("ScriptEditorService")
 		table.insert(self.connections, editor.TextDocumentDidChange:Connect(function(document)
@@ -526,10 +561,13 @@ function Coedit.stop(self: any)
 		conn:Disconnect()
 	end
 	self.connections = {}
-	for _, conn in self.watched do
-		conn:Disconnect()
+	for _, conns in self.watched do
+		for _, conn in conns do
+			conn:Disconnect()
+		end
 	end
 	self.watched = {}
+	self.tagsHooked = {}
 	self.roots = {}
 	self.added = {}
 	self.dirty = {}

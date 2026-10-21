@@ -219,3 +219,42 @@ fn undo_reverts() {
     let mut older = f.dom.clone();
     converge(&modified, &mut older);
 }
+
+#[test]
+fn attributes_and_tags_go_one_by_one() {
+    use crate::coedit::attrs;
+    let f = fixture();
+    let mut cur = f.dom.clone();
+    attrs::write(
+        &mut cur,
+        f.part,
+        "@Speed",
+        &json!({"t": "Float64", "v": 16.0}),
+    );
+    attrs::write(&mut cur, f.part, "#Lava", &json!({"t": "Bool", "v": true}));
+    let ops = diff(&f.dom, &mut cur).0;
+    let names: Vec<&str> = ops
+        .iter()
+        .map(|op| match op {
+            Op::Set { n, .. } => n.as_str(),
+            other => panic!("unexpected {other:?}"),
+        })
+        .collect();
+    assert_eq!(names, ["#Lava", "@Speed"]);
+
+    let shadow = cur.clone();
+    attrs::write(&mut cur, f.part, "#Lava", &Value::Null);
+    let ops = diff(&shadow, &mut cur).0;
+    assert!(matches!(&ops[..], [Op::Set { n, v, .. }] if n == "#Lava" && v.is_null()));
+
+    let m = cur.new_instance("Model", "M", Some(f.ws));
+    attrs::write(&mut cur, m, "@Team", &json!({"t": "String", "v": "red"}));
+    let ops = diff(&f.dom, &mut cur).0;
+    let add = ops.iter().find_map(|op| match op {
+        Op::Add { props, .. } => Some(props),
+        _ => None,
+    });
+    let add = add.unwrap();
+    assert_eq!(add["@Team"]["v"], "red");
+    assert!(!add.contains_key("AttributesSerialize"));
+}
