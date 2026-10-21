@@ -209,6 +209,7 @@ impl HomeWindow {
     ) -> impl IntoElement {
         let thumb = grid.card - 22.;
         let open = game.clone();
+        let whole = game.clone();
         let universe = game.universe_id;
         let (visibility, glyph) = visibility_label(&game.visibility);
         v_flex()
@@ -229,6 +230,24 @@ impl HomeWindow {
                     .items_center()
                     .justify_between()
                     .child(ui::pill(visibility, Some(glyph), false))
+                    .child(h_flex().gap(px(2.)).child(
+                        h_flex()
+                            .id(SharedString::from(format!("game-all-{universe}")))
+                            .size(px(24.))
+                            .rounded(px(5.))
+                            .items_center()
+                            .justify_center()
+                            .text_color(tokens::text3())
+                            .hover(|this| tokens::hover_fx(this).bg(ui::wash()).text_color(tokens::text()))
+                            .tooltip(|window, cx| {
+                                crate::shell::tooltip::text("Open every place as one game", window, cx)
+                            })
+                            .child(ui::icon("layers", 12.))
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                cx.stop_propagation();
+                                this.open_whole_game(whole.clone(), cx);
+                            })),
+                    )
                     .child(
                         h_flex()
                             .id(SharedString::from(format!("game-more-{universe}")))
@@ -248,7 +267,7 @@ impl HomeWindow {
                                     "https://create.roblox.com/dashboard/creations/experiences/{universe}/overview"
                                 ))
                             }),
-                    ),
+                    )),
             )
             .child(
                 v_flex()
