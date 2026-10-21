@@ -888,7 +888,7 @@ impl WorkspaceView {
         self.pump.camera_feel(feel);
     }
 
-    /// Unloads the scene while the place is off screen, or brings it back —
+    /// Drops the viewer while the place is off screen, or brings it back;
     /// see `Pump::park`.
     pub(crate) fn park(&self, parked: bool) {
         self.pump.park(parked);

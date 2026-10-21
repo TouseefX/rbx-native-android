@@ -125,7 +125,7 @@ enum Command {
     /// see [`canvas`].
     Canvas(Option<canvas::Request>),
     /// Lets go of the viewer (`true`) or rebuilds it from the mirror
-    /// (`false`) — see [`Pump::park`].
+    /// (`false`); see [`Pump::park`].
     Park(bool),
     Stop,
 }
