@@ -249,9 +249,28 @@ pub(super) fn dropdown(
     dropdown_at(shell, menu, trigger, items, Anchor::TopLeft, cx)
 }
 
+/// [`dropdown`] for a trigger that is already one item of a roving group
+/// (a ribbon tile): the group is the Tab stop, so the trigger doesn't get
+/// one of its own.
+pub(super) fn dropdown_in_group(
+    shell: &Shell,
+    menu: MenuId,
+    trigger: super::chrome::Trigger,
+    items: Vec<Item>,
+    cx: &mut Context<Shell>,
+) -> impl IntoElement + 'static {
+    popover(shell, menu, trigger, items, Anchor::TopLeft, None, cx)
+}
+
 /// [`dropdown`] with the menu's `anchor` corner on the trigger: a trigger
 /// at a window's right edge opens its menu leftwards, one near the bottom
 /// upwards.
+///
+/// The trigger is a Tab stop of its own: Enter or Space on it opens the
+/// menu on its first row, the keyboard half of the menu-button pattern.
+/// Toolkit triggers carry only a `tab_index`, which the window's own Tab
+/// walk (`shell::roving::TabOrder`) never reads, so without this an
+/// overflow "…" was mouse-only.
 pub(super) fn dropdown_at(
     shell: &Shell,
     menu: MenuId,
@@ -260,8 +279,44 @@ pub(super) fn dropdown_at(
     anchor: Anchor,
     cx: &mut Context<Shell>,
 ) -> impl IntoElement + 'static {
+    let stop = shell.tab_order.claim(cx);
+    let len = items.len();
+    let handle = cx.entity();
+    let focus = shell.menu_nav.focus.clone();
+    div()
+        .id(SharedString::from(format!("{menu:?}-stop")))
+        .track_focus(&stop)
+        .rounded(tokens::radius())
+        .focus_visible(|this| this.shadow(tokens::focus_ring(tokens::dock())))
+        .on_key_down(move |event: &KeyDownEvent, window, cx| {
+            if !matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                return;
+            }
+            cx.stop_propagation();
+            focus.focus(window, cx);
+            handle.update(cx, |shell, cx| {
+                shell.open_menu = Some(menu);
+                shell.menu_nav.cursor = Move::First.from(None, len);
+                cx.notify();
+            });
+        })
+        .child(popover(shell, menu, trigger, items, anchor, Some(stop.clone()), cx))
+}
+
+fn popover(
+    shell: &Shell,
+    menu: MenuId,
+    trigger: super::chrome::Trigger,
+    items: Vec<Item>,
+    anchor: Anchor,
+    // Where focus goes back to once the menu closes: the trigger's own Tab
+    // stop, so the keyboard picks up where it left off.
+    back: Option<FocusHandle>,
+    cx: &mut Context<Shell>,
+) -> impl IntoElement + 'static {
     let handle = cx.entity();
     let open = shell.open_menu == Some(menu);
+    let closed_back = back.clone();
     let len = items.len();
     let focus = shell.menu_nav.focus.clone();
     let cursor = clamp(shell.menu_nav.cursor.filter(|_| open), len);
@@ -278,6 +333,9 @@ pub(super) fn dropdown_at(
             move |open, window, cx| {
                 let open = *open;
                 let keyboard = window.last_input_was_keyboard();
+                if let Some(back) = closed_back.as_ref().filter(|_| !open && keyboard) {
+                    back.focus(window, cx);
+                }
                 handle.update(cx, |shell, cx| {
                     shell.open_menu = open.then_some(menu);
                     shell.menu_nav.cursor = (open && keyboard)
@@ -289,6 +347,7 @@ pub(super) fn dropdown_at(
         })
         .trigger(trigger)
         .content(move |_, _, _| {
+            let back = back.clone();
             let actions: Rc<[Option<Action>]> = items
                 .iter()
                 .map(|item| item.is_enabled().then(|| item.action.clone()).flatten())
@@ -311,7 +370,7 @@ pub(super) fn dropdown_at(
                 // here first, so they run the row rather than only close.
                 // With nothing highlighted (a mouse-opened menu) they go on
                 // to the popover, which closes it as before.
-                .on_action(move |_: &Confirm, _, cx| {
+                .on_action(move |_: &Confirm, window, cx| {
                     let Some(index) = clamp(confirm_shell.read(cx).menu_nav.cursor, len) else {
                         cx.propagate();
                         return;
@@ -319,6 +378,9 @@ pub(super) fn dropdown_at(
                     let Some(Some(action)) = actions.get(index).cloned() else {
                         return;
                     };
+                    if let Some(back) = &back {
+                        back.focus(window, cx);
+                    }
                     confirm_shell.update(cx, |shell, cx| {
                         shell.open_menu = None;
                         action(shell, cx);
