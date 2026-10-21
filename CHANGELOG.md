@@ -12,7 +12,7 @@
 - **Every place of a game in one window.** Roblox Studio edits one place
   per window; File › Open Game… (or a card's new "Open every place as one
   game" on Home, which downloads the experience's places) opens them all
-  together, listed in a `.rbxgame` manifest beside the place files:
+  together, listed in a `.rbxgame` manifest beside the place files,
   nothing about the game is written into a place file. A Places bar swaps
   the place on screen at once, each keeping its own undo history,
   selection, camera and script tabs, and a place is only read when first
@@ -26,7 +26,7 @@
   target, and never copies the source's `UniqueId`s. A place left off
   screen for 30 s drops its render scene and GPU device, and rebuilds it
   when shown again. Save All and Publish All report per place.
-  — @chteau
+  (@chteau)
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores

@@ -6,8 +6,8 @@
 //! in the window can be searched from its file alone.
 //!
 //! Text only. An instance query (selecting by class, property or tag) would
-//! be a second producer of the same per-place rows: `search`'s shape
-//! (one `WeakDom` in, rows grouped by instance out) is the seam it plugs
+//! be a second producer of the same per-place rows: `search`'s shape,
+//! one `WeakDom` in, rows grouped by instance out, is the seam it plugs
 //! into, with the Find window unchanged.
 
 use std::ops::Range;
