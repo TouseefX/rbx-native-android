@@ -6679,6 +6679,7 @@ dependencies = [
  "gpui-base",
  "gpui-kit",
  "image",
+ "libc",
  "lsp-types",
  "raw-window-handle",
  "rbx_animation",
