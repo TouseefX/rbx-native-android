@@ -2,7 +2,7 @@
 //! Explorer shows it.
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -13,6 +13,8 @@ use rbx_dom::{Ref, WeakDom};
 
 // Studio's service order and its default-hidden services, shared with the
 // browser build's Explorer (see `rbx_viewer::services`).
+mod order;
+
 #[cfg(test)]
 use rbx_viewer::services::SERVICE_ORDER;
 use rbx_viewer::services::{explorer_rank, rank};
@@ -338,19 +340,44 @@ fn node(dom: &WeakDom, reference: Ref, parent_path: &str) -> Option<Node> {
         format!("{parent_path}.{name}")
     };
 
+    let mut children: Vec<Node> = instance
+        .children()
+        .iter()
+        .filter_map(|child| node(dom, *child, &path))
+        .collect();
+    sort_children(&mut children);
     Some(Node {
         id: reference.value(),
         class: instance.class().to_string(),
         name,
-        // Children keep the file's order, which is the order Studio shows them
-        // in for the services that matter (Camera and Terrain before the parts).
-        children: instance
-            .children()
-            .iter()
-            .filter_map(|child| node(dom, *child, &path))
-            .collect(),
+        children,
         path,
     })
+}
+
+/// Where a class sits among its siblings when Studio's metadata names no
+/// `ExplorerOrder` for it: after every class that does (measured: a
+/// `KeyframeSequence`, a `Path3D` or a `Glue` lists below a
+/// `Configuration`, Studio's 220, and no class inherits its parent's).
+const UNLISTED_ORDER: i32 = 1000;
+
+fn explorer_order(class: &str) -> i32 {
+    order::EXPLORER_ORDER
+        .binary_search_by(|(name, _)| name.cmp(&class))
+        .map_or(UNLISTED_ORDER, |index| order::EXPLORER_ORDER[index].1)
+}
+
+/// Studio's sibling order: by the class's `ExplorerOrder` (Camera and
+/// Terrain, then folders and sounds, ... models, parts, wedges), then by
+/// name, byte by byte, so `Zed` lists before `_under` before `alpha`.
+/// Stable, so same-named siblings keep the file's order. Measured against
+/// real Studio's Explorer on one place holding each of these.
+fn sort_children(children: &mut [Node]) {
+    children.sort_by(|left, right| {
+        explorer_order(&left.class)
+            .cmp(&explorer_order(&right.class))
+            .then_with(|| left.name.as_bytes().cmp(right.name.as_bytes()))
+    });
 }
 
 /// Services first, in Studio's fixed order (shown by default or ticked to
@@ -517,21 +544,32 @@ pub(crate) fn search(items: &[TreeItem], query: &str) -> Vec<TreeItem> {
     if query.is_empty() {
         return items.to_vec();
     }
+    keep_matching(items, &|item| item.label.to_lowercase().contains(&query))
+}
+
+/// [`search`] for the rows of `matches` rather than for a name: what a query
+/// in the search field's query mode selected (see `crate::query`), laid out
+/// the same way.
+pub(crate) fn search_refs(items: &[TreeItem], matches: &[Ref]) -> Vec<TreeItem> {
+    let ids: HashSet<SharedString> = matches
+        .iter()
+        .map(|&reference| item_id(reference))
+        .collect();
+    keep_matching(items, &|item| ids.contains(&item.id))
+}
+
+fn keep_matching(items: &[TreeItem], is_match: &dyn Fn(&TreeItem) -> bool) -> Vec<TreeItem> {
     items
         .iter()
-        .filter_map(|item| matching(item, &query))
+        .filter_map(|item| matching(item, is_match))
         .collect()
 }
 
-fn matching(item: &TreeItem, query: &str) -> Option<TreeItem> {
-    if item.label.to_lowercase().contains(query) {
+fn matching(item: &TreeItem, is_match: &dyn Fn(&TreeItem) -> bool) -> Option<TreeItem> {
+    if is_match(item) {
         return Some(item.clone());
     }
-    let children: Vec<TreeItem> = item
-        .children
-        .iter()
-        .filter_map(|child| matching(child, query))
-        .collect();
+    let children = keep_matching(&item.children, is_match);
     if children.is_empty() {
         return None;
     }

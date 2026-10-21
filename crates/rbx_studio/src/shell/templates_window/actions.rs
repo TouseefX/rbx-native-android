@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use gpui_kit::*;
 
+use crate::command_bar::Feedback;
 use crate::script_templates::{Imported, NameError, SkipReason, StoreError, CLASSES};
 
 use super::{Selected, TemplatesWindow};
@@ -239,18 +240,27 @@ impl TemplatesWindow {
             }
         };
         let line = summary(&imported);
+        let skipped = imported.ignored > 0 || !imported.refused.is_empty();
         self.shell.update(cx, |shell, _| {
             shell
                 .output
-                .push_warning(&format!("Script Templates: {line}"));
+                .push("Script Templates", import_feedback(&line, skipped));
         });
-        self.notice = (imported.ignored > 0 || !imported.refused.is_empty())
-            .then_some(Notice::Info(line.clone()));
+        self.notice = skipped.then_some(Notice::Info(line.clone()));
         self.reload(cx);
         if let Some(name) = imported.added.into_iter().next() {
             self.select_and_edit(Selected::Template { class, name }, window, cx);
         }
         cx.notify();
+    }
+}
+
+/// A clean import is a plain Output row; one that skipped files warns.
+fn import_feedback(line: &str, skipped: bool) -> Feedback {
+    if skipped {
+        Feedback::Warning(line.to_owned())
+    } else {
+        Feedback::Output(line.to_owned())
     }
 }
 
@@ -288,7 +298,8 @@ fn summary(imported: &Imported) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::summary;
+    use super::{import_feedback, summary};
+    use crate::command_bar::Feedback;
     use crate::script_templates::{Imported, SkipReason};
 
     #[test]
@@ -311,5 +322,14 @@ mod tests {
             summary(&imported),
             "Imported 1 template, ignored 1 file that isn\u{2019}t .luau, skipped Bad.luau (not UTF-8 text)."
         );
+    }
+
+    #[test]
+    fn a_clean_import_is_output_and_a_skipping_one_warns() {
+        assert_eq!(
+            import_feedback("Imported 1 template.", false),
+            Feedback::Output("Imported 1 template.".into())
+        );
+        assert!(matches!(import_feedback("x", true), Feedback::Warning(_)));
     }
 }

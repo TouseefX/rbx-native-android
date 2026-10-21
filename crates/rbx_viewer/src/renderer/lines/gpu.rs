@@ -4,7 +4,7 @@
 use super::super::adornment::LineVertex;
 use super::super::gizmo;
 use super::super::pipeline;
-use super::DotVertex;
+use super::{DotVertex, FillVertex};
 
 const SHADER: &str = include_str!("../lines.wgsl");
 const HANDLE_SHADER: &str = include_str!("../gizmo.wgsl");
@@ -34,6 +34,8 @@ pub(super) struct Gpu {
     pub(super) depth_layout: wgpu::BindGroupLayout,
     pub(super) pipelines: [[wgpu::RenderPipeline; 2]; 2],
     pub(super) handles: wgpu::RenderPipeline,
+    /// Filled quads, depth-tested; seen from either side.
+    pub(super) fills: wgpu::RenderPipeline,
 }
 
 impl Gpu {
@@ -145,6 +147,7 @@ impl Gpu {
                 ],
             ],
             handles,
+            fills: build("vs_fill", "fs_fill", FillVertex::layout()),
         }
     }
 }

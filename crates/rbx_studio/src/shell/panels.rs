@@ -92,8 +92,9 @@ impl Shell {
                 // Home, End and type-ahead arrive as plain keystrokes, so
                 // they are caught here; the arrows arrive as actions and are
                 // caught by `intercept_arrows` (see `shell::tree_keys`).
-                .capture_key_down(cx.listener(|shell, event: &KeyDownEvent, _, cx| {
+                .capture_key_down(cx.listener(|shell, event: &KeyDownEvent, window, cx| {
                     if shell.handle_tree_key(&event.keystroke, cx) {
+                        super::tooltip::rehover(window);
                         cx.stop_propagation();
                     }
                 }))
@@ -292,6 +293,7 @@ impl Shell {
                     .overflow_y_scroll()
                     .track_scroll(&self.properties_scroll)
                     .pr(super::chrome::SCROLLBAR_GUTTER)
+                    .child(super::reveal::follow(&self.properties_scroll))
                     .child(
                         v_flex()
                             .w_full()

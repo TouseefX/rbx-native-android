@@ -272,7 +272,7 @@ impl Shell {
     /// the Model menu already uses, so a ribbon click and a menu-bar click
     /// are the same code path.
     fn insert_tiles(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let part = menu::dropdown(
+        let part = menu::dropdown_in_group(
             self,
             MenuId::InsertPart,
             super::chrome::Trigger::new(tile(
@@ -285,7 +285,7 @@ impl Shell {
             PART_INSERTS.iter().map(insert_item).collect(),
             cx,
         );
-        let script = menu::dropdown(
+        let script = menu::dropdown_in_group(
             self,
             MenuId::InsertScript,
             super::chrome::Trigger::new(tile(
@@ -494,6 +494,14 @@ impl Shell {
             (Panel::Output, IconName::Terminal, "Output"),
             (Panel::Viewport, IconName::MonitorCog, "Viewport"),
             (Panel::InputActions, IconName::Gamepad2, "Input Actions"),
+            (
+                Panel::SecurityAudit,
+                IconName::ShieldAlert,
+                "Security Audit",
+            ),
+            (Panel::Playtests, IconName::Film, "Playtests"),
+            (Panel::Layers, IconName::Layers, "Layers"),
+            (Panel::Loren, IconName::Layers, "Loren"),
         ];
         // Argon and Wally have no tab of their own to reopen from outside
         // the Script Editor, because they're nowhere to be seen outside it
@@ -508,6 +516,7 @@ impl Shell {
             ));
             tiles.push((Panel::Watch, IconName::Eye, "Watch"));
             tiles.push((Panel::CallStack, IconName::Layers, "Call Stack"));
+            tiles.push((Panel::Tests, IconName::CircleCheck, "Tests"));
         }
         tiles
             .into_iter()
@@ -527,7 +536,7 @@ impl Shell {
     }
 
     fn insert_gui(&self, cx: &mut Context<Self>) -> impl IntoElement + 'static {
-        menu::dropdown(
+        menu::dropdown_in_group(
             self,
             MenuId::InsertGui,
             super::chrome::Trigger::new(tile(

@@ -37,6 +37,21 @@ pub(crate) struct Target {
     /// read per-instance, which is why nothing here stores *which* axis is
     /// which.
     pub(crate) cylinder: bool,
+    /// Whether this resolves to a wedge or a corner wedge, the two shapes
+    /// whose slope `Alt` keeps (see `Drag::Size::slope`).
+    pub(crate) slope: Slope,
+}
+
+/// A sloped part's shape, for the Scale tool's `Alt` lock: a wedge's slope
+/// runs across its Y and Z, so `Alt` scales those two by the same factor;
+/// a corner wedge's two slopes span all three axes, so it scales all three.
+/// Either way the slope keeps its angle.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum Slope {
+    #[default]
+    None,
+    Wedge,
+    CornerWedge,
 }
 
 impl Target {
@@ -57,6 +72,11 @@ impl Target {
             model: rbx_viewer::pick::model_of(dom, referent)?,
             sphere: shape == Some("Ball"),
             cylinder: shape == Some("CylinderX"),
+            slope: match shape {
+                Some("Wedge") => Slope::Wedge,
+                Some("CornerWedge") => Slope::CornerWedge,
+                _ => Slope::None,
+            },
         })
     }
 

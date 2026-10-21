@@ -20,9 +20,9 @@
     "warning": "#FFC46B",
     "text_error": "#FF8F8F",
     "diff_add": "#7FE3A1",
-    "output_client": "#7FE3A1",
+    "output_client": "#8CC8FF",
     "output_info": "#A6D4FF",
-    "output_server": "#8CC8FF",
+    "output_server": "#7FE3A1",
 
     "check_on": "#9AA8FF",
     "accent_hover": "#A4B1FF",

@@ -16,16 +16,22 @@ use super::Shell;
 pub(in crate::shell) const OPEN_VARIABLE: &str = "RBX_STUDIO_OPEN";
 
 /// Whether `path` names a file the editor reads: a place or a model, binary
-/// or XML. GPUI's file chooser has no extension filter, so the pick is
-/// checked here.
+/// or XML, or an Argon/Rojo `*.project.json`. GPUI's file chooser has no
+/// extension filter, so the pick is checked here.
 pub(super) fn is_place_file(path: &Path) -> bool {
-    path.extension()
-        .and_then(|ext| ext.to_str())
-        .is_some_and(|ext| {
-            ["rbxl", "rbxlx", "rbxm", "rbxmx"]
-                .iter()
-                .any(|known| ext.eq_ignore_ascii_case(known))
-        })
+    let project = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with(".project.json"));
+    project
+        || path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| {
+                ["rbxl", "rbxlx", "rbxm", "rbxmx"]
+                    .iter()
+                    .any(|known| ext.eq_ignore_ascii_case(known))
+            })
 }
 
 /// A fresh Baseplate on disk, in the places folder.
@@ -68,7 +74,7 @@ impl Shell {
     }
 
     fn open_picked(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        if is_place_file(&path) {
+        if is_place_file(&path) || super::game::manifest::is_manifest(&path) {
             self.request_open(path, cx);
         } else {
             self.warn(

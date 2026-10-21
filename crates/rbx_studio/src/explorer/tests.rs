@@ -126,18 +126,69 @@ fn a_missing_service_leaves_no_gap() {
 }
 
 #[test]
-fn instances_keep_their_children_in_file_order() {
+fn children_sort_like_studios_explorer() {
+    // Inserted shuffled; the expected order is what real Studio's Explorer
+    // listed for the same Workspace (Studio 0.744). `k1`, a class with no
+    // `ExplorerOrder`, is from a second place, where it listed below a
+    // `Configuration`.
+    let shuffled = [
+        ("Part", "Zed"),
+        ("Model", "beta"),
+        ("Part", "Alpha"),
+        ("Folder", "Mid"),
+        ("Script", "aScript"),
+        ("Part", "alpha2"),
+        ("Model", "Alpha"),
+        ("WedgePart", "W"),
+        ("Camera", "Camera"),
+        ("SpawnLocation", "SpawnLocation"),
+        ("Part", "_under"),
+        ("Part", "10"),
+        ("Part", "9"),
+        ("LocalScript", "Client"),
+        ("Configuration", "Cfg"),
+        ("Attachment", "Att"),
+        ("Sound", "Snd"),
+        ("MeshPart", "Mesh"),
+        ("Folder", "apple"),
+        ("KeyframeSequence", "k1"),
+        ("Terrain", "Terrain"),
+    ];
     let mut dom = WeakDom::new();
     let workspace = insert(&mut dom, 1, "Workspace", "Workspace");
-    let camera = insert(&mut dom, 2, "Camera", "Camera");
-    let baseplate = insert(&mut dom, 3, "Part", "Baseplate");
-    dom.set_parent(camera, Some(workspace));
-    dom.set_parent(baseplate, Some(workspace));
+    for (id, (class, name)) in (2..).zip(shuffled) {
+        let child = insert(&mut dom, id, class, name);
+        dom.set_parent(child, Some(workspace));
+    }
 
     let roots = roots(&dom);
 
-    assert_eq!(names(&roots), ["Workspace"]);
-    assert_eq!(names(&roots[0].children), ["Camera", "Baseplate"]);
+    assert_eq!(
+        names(&roots[0].children),
+        [
+            "Camera",
+            "Terrain",
+            "Mid",
+            "Snd",
+            "apple",
+            "Att",
+            "SpawnLocation",
+            "aScript",
+            "Client",
+            "Alpha",
+            "beta",
+            "Mesh",
+            "10",
+            "9",
+            "Alpha",
+            "Zed",
+            "_under",
+            "alpha2",
+            "W",
+            "Cfg",
+            "k1",
+        ]
+    );
 }
 
 #[test]

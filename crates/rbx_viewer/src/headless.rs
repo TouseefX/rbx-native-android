@@ -19,11 +19,14 @@ use crate::input::{CameraInput, Input};
 use crate::load::{Loaded, Resident, Toggles};
 use crate::pick::Selected;
 use crate::quality::QualityLevel;
-use crate::renderer::{GuiBox, Segment};
+use crate::renderer::{Fill, GuiBox, Segment};
 use crate::scene::{Bounds, ScrollTarget};
 use crate::view::View;
 
 mod assets;
+mod park;
+
+pub use park::Parked;
 
 /// One [`Headless::render_gui`] frame.
 pub struct GuiCanvas {
@@ -143,21 +146,45 @@ impl Headless {
             clock_time: None,
             show_development_gui: false,
         };
-        let database = ReflectionDatabase::embedded();
+        Headless::build(
+            dom,
+            toggles,
+            ReflectionDatabase::embedded(),
+            View::default(),
+        )
+    }
+
+    /// [`Headless::from_dom`] with the toggles, database and view given,
+    /// at the default quality and calibration.
+    fn build(
+        dom: &WeakDom,
+        toggles: Toggles,
+        database: ReflectionDatabase,
+        view: View,
+    ) -> Result<Self, String> {
         let mut resident = Resident::streaming();
         let mut loaded = Loaded::from_dom(dom, &database, toggles, &mut resident)
             .map_err(|err| format!("nothing to show: {err}"))?;
-        let warnings = loaded.take_warnings();
+        let mut warnings = loaded.take_warnings();
+        if view.filters_scene() {
+            warnings.extend(loaded.isolate(
+                view.scene_roots(),
+                &view.layer_hidden,
+                view.isolated(),
+                |at| dom.parent(at),
+                &mut resident,
+            ));
+        }
         let roles = Roles::of_dom(dom, &database);
 
         let bounds = *loaded.world().scene.bounds();
         let uploaded_material_layers = loaded.scene().materials().layers();
         let quality = QualityLevel::default();
         let mut headless = Headless {
-            offscreen: Offscreen::new(loaded.world(), &quality.profile(), &View::default())?,
+            offscreen: Offscreen::new(loaded.world(), &quality.profile(), &view)?,
             quality,
             calibration: crate::lighting::Calibration::default(),
-            view: View::default(),
+            view,
             bounds,
             controller: Controller::new(Start::Orbit, &bounds, None, DEFAULT_SENSITIVITY),
             feel: CameraFeel::default(),
@@ -235,9 +262,11 @@ impl Headless {
         // The scene is new and knows nothing of an isolation; the roots are
         // `self.view`'s, and the DOM is right here to place every part
         // against them before anything is uploaded.
-        if let Some(roots) = &self.view.isolation {
+        if self.view.filters_scene() {
             let warnings = loaded.isolate(
-                Some(roots.as_slice()),
+                self.view.scene_roots(),
+                &self.view.layer_hidden,
+                self.view.isolated(),
                 |at| dom.parent(at),
                 &mut self.resident,
             );
@@ -378,7 +407,34 @@ impl Headless {
         self.view.set_isolation(roots);
         let roles = &self.roles;
         let warnings = self.loaded.isolate(
-            self.view.isolation.as_deref(),
+            self.view.scene_roots(),
+            &self.view.layer_hidden,
+            self.view.isolated(),
+            |at| roles.get(at).and_then(|known| known.parent),
+            &mut self.resident,
+        );
+        self.warnings.extend(warnings);
+        self.offscreen.reload(self.loaded.world(), &self.view);
+        self.meshes_changed = true;
+    }
+
+    /// Draws only `only` (and what hangs under it) when set, and never
+    /// `hidden` or anything beneath it: the editor's layer visibility.
+    /// Unlike [`Headless::set_isolation`] it keeps the place's own sky,
+    /// lighting and backdrop; an animation isolation's roots win over `only`
+    /// while both are set. Setting what is already set costs nothing;
+    /// otherwise the host forces a frame and re-takes
+    /// [`Headless::pick_meshes`], as after `set_isolation`.
+    pub fn set_layer_filter(&mut self, only: Option<Vec<Ref>>, hidden: Vec<Ref>) {
+        if only == self.view.layer_only && hidden == self.view.layer_hidden {
+            return;
+        }
+        self.view.set_layer_filter(only, hidden);
+        let roles = &self.roles;
+        let warnings = self.loaded.isolate(
+            self.view.scene_roots(),
+            &self.view.layer_hidden,
+            self.view.isolated(),
             |at| roles.get(at).and_then(|known| known.parent),
             &mut self.resident,
         );
@@ -445,6 +501,18 @@ impl Headless {
         self.offscreen.set_hover(selected, self.loaded.scene());
     }
 
+    /// Tints every part in `bins` its bin's colour, the Performance view's
+    /// heatmap (see [`crate::perf`]), or clears the tint with an empty list.
+    /// Nothing about the place changes; same idle-skipping caveat as
+    /// [`Headless::set_hover`].
+    pub fn set_heat(&mut self, bins: Vec<crate::perf::HeatBin>) {
+        if self.view.heat == bins {
+            return;
+        }
+        self.offscreen.set_heat(&bins, self.loaded.scene());
+        self.view.heat = bins;
+    }
+
     /// Recolours the editor cues, the selection and hover silhouettes and
     /// boxes, and the preview's ghost boxes, from linear RGB plus alpha. A
     /// no-op when `colors` equals what is already set; otherwise only the
@@ -503,6 +571,14 @@ impl Headless {
     pub fn set_lines(&mut self, layer: usize, segments: Vec<Segment>) {
         self.offscreen.set_lines(layer, &segments);
         self.view.set_lines(layer, segments);
+    }
+
+    /// Fills flat world-space quads under the lines, a heat map's cells.
+    /// Layered, replaced, cleared and kept across a reload exactly like
+    /// [`Headless::set_lines`]; drawn before every layer's lines.
+    pub fn set_fills(&mut self, layer: usize, fills: Vec<Fill>) {
+        self.offscreen.set_fills(layer, &fills);
+        self.view.set_fills(layer, fills);
     }
 
     /// Draws the transform tool's axis draggers over the selected part, or

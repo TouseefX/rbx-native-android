@@ -315,7 +315,7 @@ impl Shell {
         open.state.update(cx, |state, cx| {
             let start = editor_offset(state.text(), range.start);
             let end = editor_offset(state.text(), range.end);
-            state.set_selected_range(start..end, cx);
+            state.reveal_range(start..end, cx);
             state.focus(window, cx);
         });
     }

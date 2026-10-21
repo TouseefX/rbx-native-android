@@ -64,22 +64,36 @@ pub(crate) fn rehover_on_scroll() -> impl IntoElement {
                 let this = latest.get().wrapping_add(1);
                 latest.set(this);
                 let latest = latest.clone();
-                window.on_next_frame(move |window, _| {
-                    window.on_next_frame(move |window, cx| {
-                        if latest.get() != this {
-                            return;
-                        }
-                        let event = MouseMoveEvent {
-                            position: window.mouse_position(),
-                            pressed_button: None,
-                            modifiers: window.modifiers(),
-                        };
-                        window.dispatch_event(PlatformInput::MouseMove(event), cx);
-                    })
-                });
+                replay_pointer(window, move || latest.get() == this);
             })
         },
     )
     .absolute()
     .size_0()
+}
+
+/// Re-checks hover after code scrolled a list under a still pointer, the
+/// way [`rehover_on_scroll`] does after a wheel: the Explorer's arrow keys,
+/// Home, End and type-ahead move its rows with `scroll_to_item`, and without
+/// this the row that lands under the pointer never gets its hover.
+pub(crate) fn rehover(window: &mut Window) {
+    replay_pointer(window, || true);
+}
+
+/// Two frames on (one to draw the scroll, one to hit-test the result),
+/// replays the pointer where it already is, if `still_wanted` says so.
+fn replay_pointer(window: &mut Window, still_wanted: impl FnOnce() -> bool + 'static) {
+    window.on_next_frame(move |window, _| {
+        window.on_next_frame(move |window, cx| {
+            if !still_wanted() {
+                return;
+            }
+            let event = MouseMoveEvent {
+                position: window.mouse_position(),
+                pressed_button: None,
+                modifiers: window.modifiers(),
+            };
+            window.dispatch_event(PlatformInput::MouseMove(event), cx);
+        })
+    });
 }

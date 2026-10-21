@@ -42,14 +42,24 @@ fn unpack(zip: &[u8], dir: &Path) -> io::Result<PathBuf> {
     fs::create_dir_all(dir)?;
     let mut bytes = Vec::with_capacity(entry.size() as usize);
     entry.read_to_end(&mut bytes)?;
-    let partial = dir.join(format!("{EXECUTABLE}.{}.partial", std::process::id()));
+    // Threads of one process can unpack at once (tests do), so the name has
+    // to be unique per call, not just per process.
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let partial = dir.join(format!("{EXECUTABLE}.{}-{n}.partial", std::process::id()));
     fs::write(&partial, bytes)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
         fs::set_permissions(&partial, fs::Permissions::from_mode(0o755))?;
     }
-    fs::rename(&partial, &path)?;
+    if let Err(error) = fs::rename(&partial, &path) {
+        // Another thread got there first (and on Windows may be running it).
+        let _ = fs::remove_file(&partial);
+        if !fs::metadata(&path).is_ok_and(|meta| meta.len() == entry.size()) {
+            return Err(error);
+        }
+    }
     fs::write(dir.join("NOTICE.txt"), NOTICE)?;
     Ok(path)
 }

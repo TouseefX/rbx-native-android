@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21
+
+- **`SurfaceAppearance.Color` tints the colour map only.** Where an
+  `Overlay` map is clear, the part's own colour now shows as it is, like in
+  Studio, instead of tinted too. An emissive face cut into a tinted pumpkin
+  glows white again, not orange. Exports bake it the same way. (@chteau)
+
 ## 2026-10-20
 
 - **An MCP server for the open place (beta).** With Settings › Beta
@@ -27,6 +34,105 @@
   starts with no editor open and says so in a tool's result instead of
   exiting. (@Vikmanou)
 
+- **A Security Audit dock, and `rbxaudit` for CI.** View › Security Audit
+  (also a ribbon toggle) audits every script in the place, something
+  Studio has no equivalent for: remote handlers that let a client's
+  arguments reach currency, `Health`, `CFrame`, `Parent`, `:Destroy()`,
+  `Instance.new`, data store writes, `MarketplaceService`, `require` or
+  `loadstring` unchecked (type checks, `tonumber`, `math.clamp`,
+  whitelist lookups and early returns count as checks); handlers that
+  treat the Player argument as data; remotes nothing on the server
+  listens on, and calls on remotes the place doesn't have; `require`
+  targets that aren't ModuleScripts; and server-only services reached
+  from the client, or `InvokeClient` on the server. Loren's client routes
+  (`Service.Client` methods, `ClientEvents` listeners, `Middleware`) are
+  audited like remote handlers, a notch lower when a `Spec` or `Middleware`
+  gates them. A number only counts as checked with both a lower and an
+  upper bound, and client data is followed into the script's own
+  functions. Each finding has a severity and opens its script scrolled to
+  the line. The audit runs in the background, so a big place doesn't stall
+  the editor. `rbxaudit place.rbxl` prints the same findings and exits 1 on
+  any high one. (@chteau)
+
+- **Recorded playtests, replayed in Edit mode.** Play now records each
+  player's root part and camera (10 Hz by default; Off/5/10/20 in the new
+  Playtests dock) plus joins, deaths, respawns, damage, chat, game
+  warnings and errors, and `shared.rbxnative.mark(name, data)` calls from
+  game code, a guarded call that is a no-op in a published game, where
+  `shared.rbxnative` is nil. Each session is saved as a compact `.rbxrec`
+  file in the editor's own config folder, one folder per place, never in
+  the place. The Playtests dock (View menu, Home ribbon) lists them with
+  date, length, players and deaths, renames and deletes them, overlays
+  any number in the 3D view as ghost capsules with trails, cameras and
+  event markers on a shared timeline (scrub, play, 0.5–4×), and lays
+  presence, death and stuck-spot heat maps on the ground, drawn through a
+  new filled-quad path on the viewer's overlay layers. A reset is logged
+  as a death only, not also as a 100-point hit, and a recording that
+  can't be read stays in the list with the reason and a Delete button.
+  Studio has nothing like it. (@chteau)
+
+- **Every place of a game in one window.** Roblox Studio edits one place
+  per window; File › Open Game… (or a card's new "Open every place as one
+  game" on Home, which downloads the experience's places) opens them all
+  together, listed in a `.rbxgame` manifest beside the place files,
+  nothing about the game is written into a place file. A Places bar swaps
+  the place on screen at once, each keeping its own undo history,
+  selection, camera and script tabs, and a place is only read when first
+  shown. Find in Game searches every script of every place (place ›
+  script › line, click to open) and replaces with a preview, one undo step
+  per place. Model › Mark as Shared tags a Model, Folder or ModuleScript
+  with an `RbxNativeSharedId` attribute, and Sync Shared copies the active
+  place's version to every place holding the same id, with each asset's
+  diff and a per-place switch. Sync keeps references into the asset by
+  path, points the copy's references out of it at the same path in the
+  target, and never copies the source's `UniqueId`s. A place left off
+  screen for 30 s drops its render scene and GPU device, and rebuilds it
+  when shown again. Save All and Publish All report per place. A
+  `.rbxlx` save now writes a string XML can't hold (Terrain's
+  `PhysicsGrid`) as `BinaryString`; as text it made Studio refuse the file.
+  (@chteau)
+
+- **A built-in Luau test runner.** A place's TestEZ specs (ModuleScripts
+  named `*.spec`/`*.test`) run headlessly in the command bar's sandbox,
+  each file over its own fresh copy of the place, on a simulated clock so
+  `task.wait(30)` takes no time. `describe`/`it`/`expect` with TestEZ's
+  matchers, hooks, `SKIP`/`FOCUS`, and Jest-Lua's `toBe`-style names
+  beside them. A failure names the script and line it was raised on.
+  Loren's `return function(t)` specs run through Loren's own runner in the
+  same tree. `rbxlua test <place or project folder> [--filter] [--root]
+  [--format json] [--junit]` exits 1 on a failure; the Script Editor's new
+  **Tests** dock shows the specs as a tree, runs all or one, shows what each
+  test printed and how it failed, opens a failure at its line and can rerun
+  after each save; `.github/actions/rbxlua-test` runs it in CI. Script
+  Analysis knows `describe`/`it`/`expect` now. `docs/testing.md` lists what
+  the sandbox lacks (HTTP, data stores, RunService frames, physics) and how
+  each behaves. (@chteau)
+
+- **A Performance view for the place being edited.** The Viewport dock's
+  new Performance section tints every part by what it costs: part
+  density per 32-stud cell, triangles, decoded texture memory (shared
+  images counted once, MaterialVariant maps and clothing included),
+  collision (fidelity, CanCollide, unanchored assemblies) or draw
+  batches, on a colour-blind-safe ramp, with a legend, the place's
+  total, the part under the cursor read out beside it, and the 20
+  costliest parts, each a click away from being selected and framed.
+  Figures are worked out on a thread of their own from the asset cache
+  and follow edits part by part. The first copy of the place goes over
+  a few milliseconds per frame, so turning the view on never stalls the
+  editor, and turning it off stops and joins the thread. Nothing is
+  written to the place. (@chteau)
+
+- **Select by query.** The Explorer's search field has a query mode (the
+  `</>` toggle beside it): `Part where Material = Plastic and Anchored =
+  false`, `BasePart where Size.Y < 1`, `* where Name ~ "Door" under
+  Workspace.Map`, `has tag Lava`, `attr Health > 50`. Classes match their
+  subclasses, components (`Size.Y`, `Color.R`) and enum names work, the
+  tree narrows to the matches with a count under the field, and Enter
+  selects them all, the viewport outlines them and one Properties edit
+  changes every one as a single undo step. A query that doesn't parse says
+  what and where, and a misspelt enum item suggests the closest one. The
+  Command Bar takes `:select <query>` too. (@chteau)
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its
@@ -44,7 +150,51 @@
   icon it draws exists, and a test checks every icon name written in the
   editor's source. (@chteau)
 
+- **Editor layers and 3D notes.** A Layers dock (View › Layers) groups
+  instances into named, coloured layers, assigned from the dock, the
+  Explorer row menu or Ctrl+Alt+L, and hides, locks, solos or isolates
+  each one in the edit viewport only. Hidden parts are neither drawn nor
+  clickable, locked ones can't be clicked or dragged and dim in the
+  Explorer, and nothing ever writes `Transparency`, `Locked` or `Parent`.
+  Notes pinned to a point or an instance float over the viewport as
+  labels and are listed in the dock; clicking one points the camera at it.
+  Pin Note sits a note on top of the part and opens its text right away.
+  Layers and notes are plain attributes and an `ObjectValue` folder, so
+  they travel with the place through both file formats, co-editing and
+  merge, while who hides what stays in each user's own editor data.
+  Save/Publish to Roblox upload a copy without them (a Studio Settings
+  toggle, on by default), and File › Export Clean Copy… writes one to
+  disk. (@chteau)
+
+- **Loren, by fabi, as the optional built-in framework.** rbx-native now
+  ships [Loren](https://github.com/fabideveloper/Loren-Framework), fabi's
+  Roblox framework (Services and Controllers booted in dependency order,
+  packed networking with typed specs and middleware, `Loren.Testing`), for
+  anyone who wants one; a place that ignores it changes in nothing. Its
+  runtime, template and unit specs are vendored from 2.0.0-beta.2 with his
+  MIT licence (`vendor/loren`), and its `loren` CLI is ported to Rust as
+  `rbxstudio loren` (init, make, inject, add, refresh, serve, migrate,
+  update, types, doctor): the same files and messages as the Node CLI,
+  checked side by side, with its test suite ported too. `serve` runs Argon,
+  the protocol the editor's live sync speaks. Home › New gains a Loren
+  project, and a Loren dock shows the place's Services and Controllers in
+  boot order with their dependencies, cycles and Loren's own "Did you
+  mean" checks. Loren's 1,061 unit specs run in the Luau sandbox as a
+  test, and one measured speed-up to its Codec is kept as a patch to
+  offer upstream. Thanks, fabi. (@chteau)
+
 ## 2026-10-19
+
+- **Creator Roadmap catch-up against the live API dump.** Checked the
+  Renderer and GUI items against API dump version-4f087c32742644ab (the
+  live one, already embedded) and real Studio. `UIGradient` now draws the
+  `Elliptical` type the dump added, and the UI Editor's Fill section gets
+  type and tile toggles and a `Scale` field for a gradient, which Studio's
+  own Properties window hides. `SurfaceAppearance` draws its emissive mask,
+  strength and tint. A part `shape` this build does not know says so once
+  in Output instead of silently drawing as a block. The orthographic
+  `Camera` properties, `UIBlur` and `ParticleEmitter2D` are in the dump
+  but Studio does nothing with them yet, so they stay planned. (@chteau)
 
 - **Two tests no longer collide when suites run side by side.** The
   viewer's XML sniffing test and the graph probe's save test wrote a fixed

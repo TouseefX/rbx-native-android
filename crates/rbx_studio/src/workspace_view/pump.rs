@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use rbx_dom::{Change, Ref, Snapshot, WeakDom};
 use rbx_viewer::pick::{Meshes, Selected};
 use rbx_viewer::{
-    Applied, Calibration, CameraFeel, CameraInput, Gizmo, Headless, JointSolver, Pose,
+    Applied, Calibration, CameraFeel, CameraInput, Gizmo, Headless, JointSolver, Parked, Pose,
     QualityLevel, Segment,
 };
 
@@ -74,15 +74,22 @@ enum Command {
     LookAt {
         eye: [f32; 3],
         target: [f32; 3],
+        fov: f32,
     },
     /// The renderer's tuned constants, see `Headless::set_calibration`.
     Calibration(Calibration),
     /// Draws only these instances on a plain backdrop, or everything again
     /// see `Headless::set_isolation`.
     Isolation(Option<Vec<rbx_dom::Ref>>),
+    /// The editor layers' hidden roots, and the isolated layer's, see
+    /// `Headless::set_layer_filter`.
+    LayerFilter(Option<Vec<rbx_dom::Ref>>, Vec<rbx_dom::Ref>),
     /// Whether a part in front of the selection hides its outline box, see
     /// `Headless::set_selection_occluded`.
     SelectionOccluded(bool),
+    /// The Performance view's heat tint, see `Headless::set_heat`. An
+    /// empty list clears it.
+    Heat(Vec<rbx_viewer::perf::HeatBin>),
     Selection(Vec<Selected>),
     /// The "about to click" cue, see `Headless::set_hover`. `None` clears
     /// it, the way an empty `Selection` clears the selection outline.
@@ -104,6 +111,9 @@ enum Command {
     /// One layer of the world-space line segments drawn over the scene,
     /// see `Headless::set_lines`. An empty list clears that layer.
     Lines(usize, Vec<Segment>),
+    /// One layer of flat world-space quads drawn under the lines, see
+    /// `Headless::set_fills`. An empty list clears that layer.
+    Fills(usize, Vec<rbx_viewer::Fill>),
     /// A terrain edit in progress, as the chunks it changed, see
     /// `Headless::preview_terrain`.
     TerrainPreview(TerrainChunks),
@@ -124,6 +134,9 @@ enum Command {
     /// The UI editor's canvas to draw, or `None` once it is off screen,
     /// see [`canvas`].
     Canvas(Option<canvas::Request>),
+    /// Lets go of the viewer (`true`) or rebuilds it from the mirror
+    /// (`false`); see [`Pump::park`].
+    Park(bool),
     Stop,
 }
 
@@ -248,12 +261,16 @@ impl Pump {
         let _ = self.commands.send(Command::CameraFeel(feel));
     }
 
-    pub(super) fn look_at(&self, eye: [f32; 3], target: [f32; 3]) {
-        let _ = self.commands.send(Command::LookAt { eye, target });
+    pub(super) fn look_at(&self, eye: [f32; 3], target: [f32; 3], fov: f32) {
+        let _ = self.commands.send(Command::LookAt { eye, target, fov });
     }
 
     pub(super) fn isolation(&self, roots: Option<Vec<rbx_dom::Ref>>) {
         let _ = self.commands.send(Command::Isolation(roots));
+    }
+
+    pub(super) fn layer_filter(&self, only: Option<Vec<rbx_dom::Ref>>, hidden: Vec<rbx_dom::Ref>) {
+        let _ = self.commands.send(Command::LayerFilter(only, hidden));
     }
 
     pub(super) fn calibration(&self, calibration: Calibration) {
@@ -269,6 +286,11 @@ impl Pump {
     /// scene or drawn through it.
     pub(super) fn selection_occluded(&self, occluded: bool) {
         let _ = self.commands.send(Command::SelectionOccluded(occluded));
+    }
+
+    /// Tints parts by cost, or nothing with an empty list.
+    pub(super) fn heat(&self, bins: Vec<rbx_viewer::perf::HeatBin>) {
+        let _ = self.commands.send(Command::Heat(bins));
     }
 
     /// Outlines what `selected` covers in the viewport.
@@ -296,6 +318,12 @@ impl Pump {
 
     pub(super) fn lines(&self, layer: usize, segments: Vec<Segment>) {
         let _ = self.commands.send(Command::Lines(layer, segments));
+    }
+
+    /// Fills one layer of flat quads under the lines, see
+    /// `Headless::set_fills`.
+    pub(super) fn fills(&self, layer: usize, fills: Vec<rbx_viewer::Fill>) {
+        let _ = self.commands.send(Command::Fills(layer, fills));
     }
 
     /// Shows or hides the transform tool's draggers over the selection.
@@ -340,6 +368,14 @@ impl Pump {
     /// [`canvas`]. Sending the same request again costs nothing.
     pub(super) fn canvas(&self, request: Option<canvas::Request>) {
         let _ = self.commands.send(Command::Canvas(request));
+    }
+
+    /// Drops the viewer (scene, GPU device, decoded assets) while the place
+    /// is not on screen, keeping the mirror, camera and view; unparking
+    /// rebuilds it from the mirror. Every command sent meanwhile waits and
+    /// is applied, in order, once it is back.
+    pub(super) fn park(&self, parked: bool) {
+        let _ = self.commands.send(Command::Park(parked));
     }
 
     /// The next message waiting, without ever blocking the UI thread.
@@ -419,9 +455,12 @@ fn run(
     let mut joints = JointSolver::new();
     let mut overlay: Option<rbx_viewer::OverlayColors> = None;
     let mut plugin_adornments = Vec::new();
+    let mut park = false;
+    // Commands that arrived while parked, applied once the viewer is back.
+    let mut held = Vec::new();
 
     loop {
-        let wait = idle.then_some(if visible { interval } else { IDLE_WAIT });
+        let wait = (idle && held.is_empty()).then_some(if visible { interval } else { IDLE_WAIT });
         if !drain(
             commands,
             Rendering {
@@ -437,10 +476,25 @@ fn run(
                 canvas: &mut canvas,
                 owed: &mut owed,
                 plugin_adornments: &mut plugin_adornments,
+                park: &mut park,
             },
             wait,
+            std::mem::take(&mut held),
         ) {
             return;
+        }
+        if std::mem::take(&mut park) {
+            match parked(viewer.park(), &mirror, commands, resting) {
+                Some((resumed, waiting)) => {
+                    viewer = resumed;
+                    held = waiting;
+                    rebuilt = true;
+                    owed = true;
+                    overlay = None;
+                    continue;
+                }
+                None => return,
+            }
         }
 
         // Polled because a theme switch happens on the UI thread and sends
@@ -673,6 +727,8 @@ struct Rendering<'a> {
     /// The plugin adornments the mirror holds, see
     /// [`Command::PluginAdornments`].
     plugin_adornments: &'a mut Vec<Ref>,
+    /// Set by [`Command::Park`]; `run` parks once the batch is through.
+    park: &'a mut bool,
 }
 
 /// Applies everything the UI thread has asked for, blocking for up to `idle`
@@ -682,6 +738,7 @@ fn drain(
     commands: &Receiver<Command>,
     mut rendering: Rendering<'_>,
     idle: Option<Duration>,
+    held: Vec<Command>,
 ) -> bool {
     if let Some(wait) = idle {
         match commands.recv_timeout(wait) {
@@ -696,7 +753,7 @@ fn drain(
         }
     }
 
-    let mut queued = Vec::new();
+    let mut queued = held;
     loop {
         match commands.try_recv() {
             Ok(command) => queued.push(command),
@@ -713,6 +770,42 @@ fn drain(
         }
     }
     true
+}
+
+/// Holds every command until the viewer is asked back, then rebuilds it
+/// from `mirror` and hands the held commands back to be applied in order.
+/// `None` once the view is gone or the rebuild fails.
+fn parked(
+    parked: Parked,
+    mirror: &WeakDom,
+    commands: &Receiver<Command>,
+    resting: &AtomicBool,
+) -> Option<(Headless, Vec<Command>)> {
+    resting.store(true, Ordering::Relaxed);
+    // glibc keeps what a thread frees in that thread's arena; a parked scene
+    // is hundreds of megabytes nobody will ask for until it is rebuilt.
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    // SAFETY: `malloc_trim` only releases free memory; it touches nothing
+    // still allocated.
+    unsafe {
+        libc::malloc_trim(0);
+    }
+    let mut held = Vec::new();
+    loop {
+        match commands.recv().ok()? {
+            Command::Park(false) => break,
+            Command::Park(true) => {}
+            Command::Stop => return None,
+            command => held.push(command),
+        }
+    }
+    match parked.resume(mirror) {
+        Ok(viewer) => Some((viewer, held)),
+        Err(err) => {
+            eprintln!("rbxstudio: the scene could not be rebuilt: {err}");
+            None
+        }
+    }
 }
 
 /// Folds every run of consecutive [`Command::Changes`] into one, keeping
@@ -743,7 +836,7 @@ fn coalesce(commands: Vec<Command>) -> Vec<Command> {
                 let open = folded
                     .iter_mut()
                     .rev()
-                    .find(|queued| !matches!(queued, Command::Lines(..)));
+                    .find(|queued| !matches!(queued, Command::Lines(..) | Command::Fills(..)));
                 if let Some(Command::Changes(snapshots, changes)) = open {
                     snapshots.extend(more);
                     changes.extend(further);
@@ -755,6 +848,11 @@ fn coalesce(commands: Vec<Command>) -> Vec<Command> {
                 folded
                     .retain(|queued| !matches!(queued, Command::Lines(held, _) if *held == layer));
                 folded.push(Command::Lines(layer, segments));
+            }
+            Command::Fills(layer, fills) => {
+                folded
+                    .retain(|queued| !matches!(queued, Command::Fills(held, _) if *held == layer));
+                folded.push(Command::Fills(layer, fills));
             }
             // Back to back, two previews are one: each carries whole chunks,
             // and the later copy of a chunk is the one that stands.
@@ -788,14 +886,17 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         Command::Orthographic(orthographic) => rendering.viewer.set_orthographic(orthographic),
         Command::CameraFeel(feel) => rendering.viewer.set_camera_feel(feel),
         // Studio's own default field of view.
-        Command::LookAt { eye, target } => rendering.viewer.open_at(eye, target, 70.0),
+        Command::LookAt { eye, target, fov } => rendering.viewer.open_at(eye, target, fov),
         Command::Isolation(roots) => rendering.viewer.set_isolation(roots),
+        Command::LayerFilter(only, hidden) => rendering.viewer.set_layer_filter(only, hidden),
         Command::Calibration(calibration) => rendering.viewer.set_calibration(calibration),
         Command::SelectionOccluded(occluded) => rendering.viewer.set_selection_occluded(occluded),
+        Command::Heat(bins) => rendering.viewer.set_heat(bins),
         Command::Selection(selected) => rendering.viewer.set_selection(&selected),
         Command::Hover(selected) => rendering.viewer.set_hover(selected),
         Command::Preview(boxes) => rendering.viewer.set_preview(boxes),
         Command::Lines(layer, segments) => rendering.viewer.set_lines(layer, segments),
+        Command::Fills(layer, fills) => rendering.viewer.set_fills(layer, fills),
         Command::TerrainPreview(chunks) => rendering.viewer.preview_terrain(chunks),
         Command::Gizmo(gizmo) => rendering.viewer.set_gizmo(gizmo),
         Command::GuiScreen(screen) => rendering.viewer.set_gui_screen(screen),
@@ -832,6 +933,8 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         }
         Command::Visible(new) => *rendering.visible = new,
         Command::Canvas(request) => rendering.canvas.set(request),
+        // The last word wins: shown again in the same batch is not parked.
+        Command::Park(parked) => *rendering.park = parked,
         Command::Stop => return false,
     }
 

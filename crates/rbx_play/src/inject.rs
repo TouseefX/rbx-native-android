@@ -29,6 +29,8 @@ pub const TOUCH_NAME: &str = "__rbxnative_touch";
 /// `__rbxnative_touch_input`: game scripts' UserInputService on a simulated
 /// touch device (see `crate::touch`).
 pub const PROBE_TOUCH_INPUT: &str = include_str!("probe/touch_input.luau");
+/// `__rbxnative_record`: playtest sampling and `shared.rbxnative` (see `crate::record`).
+pub const PROBE_RECORD: &str = include_str!("probe/record.luau");
 pub const DEBUG_NAME: &str = "__rbxnative_debug";
 pub const CODEC_NAME: &str = "__rbxnative_codec";
 pub const LIVE_NAME: &str = "__rbxnative_live";
@@ -65,6 +67,7 @@ pub struct Injected {
     pub print: Ref,
     pub touch: Ref,
     pub touch_input: Ref,
+    pub record: Ref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,7 +121,15 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
     remove_named(dom, rs, crate::print::PRINT_NAME);
     remove_named(dom, rs, TOUCH_NAME);
     remove_named(dom, rs, crate::touch::TOUCH_INPUT_NAME);
+    remove_named(dom, rs, crate::record::RECORD_NAME);
 
+    let record = dom.new_instance("ModuleScript", crate::record::RECORD_NAME, Some(rs));
+    set_prop(
+        dom,
+        record,
+        "Source",
+        Variant::String(PROBE_RECORD.to_owned()),
+    );
     let market = dom.new_instance("ModuleScript", crate::market::MARKET_NAME, Some(rs));
     set_prop(
         dom,
@@ -218,6 +229,7 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         print,
         touch,
         touch_input,
+        record,
     })
 }
 

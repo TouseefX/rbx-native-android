@@ -14,9 +14,14 @@ use rbx_viewer::QualityLevel;
 
 pub(crate) const USAGE: &str = "\
 usage: rbxstudio [options] [file.rbxl|.rbxm|.rbxlx|.rbxmx]
+       rbxstudio loren <command> [options]
 
 Without a file, opens the API key setup wizard on first launch and the
 Home screen after that.
+
+`rbxstudio loren <command>` runs the CLI of Loren, the optional built-in
+game framework (by fabi): init, make, inject, add, refresh, serve, migrate,
+update, types and doctor. `rbxstudio loren --help` lists them.
 
 options:
   --select <target>[,<target>...]

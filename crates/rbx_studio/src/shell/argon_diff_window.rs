@@ -77,6 +77,10 @@ pub(crate) enum Provider {
     /// it is now). It does not track the live DOM: it is a snapshot of what
     /// changed while the user was away.
     Presence(Rc<Vec<DiffNode>>),
+    /// One shared asset's diff between two places of a game (Sync Shared),
+    /// under its own title. Read-only like a presence diff: the Sync Shared
+    /// window is where it is applied.
+    Shared(Rc<Vec<DiffNode>>, SharedString),
     /// A three-way place merge being resolved (File › Merge Place…, or a
     /// `rbxmerge` sidecar): the rows are its conflicted instances, the
     /// detail its conflicts with a pick per side, Apply lands it.
@@ -117,6 +121,7 @@ pub(super) fn window_title(provider: &Provider, project: &str) -> SharedString {
     match provider {
         Provider::Argon => SharedString::from(format!("Argon Diff \u{2014} {project}")),
         Provider::Presence(_) => SharedString::from("Changes while you were away"),
+        Provider::Shared(_, title) => title.clone(),
         Provider::Merge(session) => SharedString::from(format!(
             "Merge Place \u{2014} {}",
             session.borrow().theirs_label
@@ -138,6 +143,16 @@ impl ArgonDiffWindow {
         cx: &mut App,
     ) -> Option<WindowHandle<Root>> {
         Self::open_with(shell, Provider::Presence(Rc::new(nodes)), cx)
+    }
+
+    /// A shared asset's diff, titled `title` (see `shell::game::sync_window`).
+    pub(in crate::shell) fn open_shared(
+        shell: Entity<Shell>,
+        nodes: Rc<Vec<DiffNode>>,
+        title: String,
+        cx: &mut App,
+    ) -> Option<WindowHandle<Root>> {
+        Self::open_with(shell, Provider::Shared(nodes, title.into()), cx)
     }
 
     /// The place-merge resolver for `session`.

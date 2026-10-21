@@ -161,7 +161,7 @@ impl Shell {
             "Material",
             cx,
         );
-        menu::dropdown(
+        menu::dropdown_in_group(
             self,
             MenuId::RibbonMaterial,
             chrome::Trigger::new(trigger),
@@ -241,7 +241,7 @@ impl Shell {
             "Import",
             cx,
         );
-        vec![menu::dropdown(
+        vec![menu::dropdown_in_group(
             self,
             MenuId::RibbonImport,
             chrome::Trigger::new(trigger),

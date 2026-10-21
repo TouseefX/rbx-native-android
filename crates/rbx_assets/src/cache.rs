@@ -35,7 +35,10 @@ impl AssetCache {
     }
 
     pub fn get_id(&self, id: u64) -> Option<Vec<u8>> {
-        std::fs::read(self.id_path(id)).ok()
+        let path = self.id_path(id);
+        let bytes = std::fs::read(&path).ok()?;
+        touch(&path);
+        Some(bytes)
     }
 
     pub fn put_id(&self, id: u64, bytes: &[u8]) -> Result<(), CacheError> {
@@ -43,7 +46,47 @@ impl AssetCache {
     }
 
     pub fn get_native(&self, relative_path: &str) -> Option<Vec<u8>> {
-        std::fs::read(self.native_path(relative_path)).ok()
+        let path = self.native_path(relative_path);
+        let bytes = std::fs::read(&path).ok()?;
+        touch(&path);
+        Some(bytes)
+    }
+
+    /// Deletes the least recently used downloads until `ids/` and `native/`
+    /// together hold at most `limit` bytes, and returns how many bytes it
+    /// freed. A read marks an entry used (see [`touch`]), so what a place
+    /// still opens with stays. Content packages (`native-packages/`) are
+    /// left alone: they are few, and re-fetching one is slow.
+    pub fn trim(&self, limit: u64) -> u64 {
+        let mut entries: Vec<(std::time::SystemTime, u64, PathBuf)> = Vec::new();
+        for dir in ["ids", "native"] {
+            collect_files(&self.root.join(dir), &mut entries);
+        }
+        let mut total: u64 = entries.iter().map(|(_, size, _)| size).sum();
+        if total <= limit {
+            return 0;
+        }
+        entries.sort();
+        let mut freed = 0;
+        for (_, size, path) in entries {
+            if total <= limit {
+                break;
+            }
+            if std::fs::remove_file(&path).is_ok() {
+                total -= size;
+                freed += size;
+            }
+        }
+        freed
+    }
+
+    /// [`Self::trim`] to [`DEFAULT_LIMIT`], or to `RBX_NATIVE_ASSET_CACHE_MB`
+    /// megabytes when that is set.
+    pub fn trim_to_default(&self) -> u64 {
+        let limit = non_empty_env("RBX_NATIVE_ASSET_CACHE_MB")
+            .and_then(|mb| mb.parse::<u64>().ok())
+            .map_or(DEFAULT_LIMIT, |mb| mb * 1024 * 1024);
+        self.trim(limit)
     }
 
     pub fn put_native(&self, relative_path: &str, bytes: &[u8]) -> Result<(), CacheError> {
@@ -56,6 +99,36 @@ impl AssetCache {
 
     fn native_path(&self, relative_path: &str) -> PathBuf {
         self.root.join("native").join(relative_path)
+    }
+}
+
+/// How much the downloaded-asset cache may hold before the least recently
+/// used entries go: 32 GiB, roomy enough that an existing cache isn't cut
+/// down the first time this runs. `RBX_NATIVE_ASSET_CACHE_MB` sets a tighter one.
+pub const DEFAULT_LIMIT: u64 = 32 * 1024 * 1024 * 1024;
+
+/// Marks a cache entry as just used, by its modified time, which is what
+/// [`AssetCache::trim`] evicts by. Best effort: a read-only cache still reads.
+fn touch(path: &Path) {
+    if let Ok(file) = std::fs::File::options().write(true).open(path) {
+        let _ = file.set_modified(std::time::SystemTime::now());
+    }
+}
+
+/// Every file under `dir`, with its modified time and size.
+fn collect_files(dir: &Path, into: &mut Vec<(std::time::SystemTime, u64, PathBuf)>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if meta.is_dir() {
+            collect_files(&entry.path(), into);
+        } else if let Ok(modified) = meta.modified() {
+            into.push((modified, meta.len(), entry.path()));
+        }
     }
 }
 
@@ -128,6 +201,33 @@ mod tests {
     fn temp_dir() -> PathBuf {
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!("rbx_assets_cache_test_{}_{n}", std::process::id()))
+    }
+
+    #[test]
+    fn trim_drops_the_least_recently_used_entries_first() {
+        let cache = AssetCache::new(Some(temp_dir())).unwrap();
+        for id in 1..=4 {
+            cache.put_id(id, &[0u8; 100]).unwrap();
+        }
+        let old = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+        for id in 1..=4 {
+            let file = std::fs::File::options()
+                .write(true)
+                .open(cache.id_path(id))
+                .unwrap();
+            file.set_modified(old + std::time::Duration::from_secs(id))
+                .unwrap();
+        }
+        // Reading 1 makes it the newest, so 2 and 3 go first.
+        assert!(cache.get_id(1).is_some());
+
+        assert_eq!(cache.trim(250), 200);
+
+        assert!(cache.get_id(1).is_some());
+        assert!(cache.get_id(2).is_none());
+        assert!(cache.get_id(3).is_none());
+        assert!(cache.get_id(4).is_some());
+        assert_eq!(cache.trim(250), 0, "already under the limit");
     }
 
     #[test]

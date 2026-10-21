@@ -481,6 +481,14 @@ fn sealed_state_interoperates_with_rust() {
     assert_eq!(state.name, "Ada");
     assert_eq!(state.client, Client::Studio);
     assert_eq!(state.edits[0].value, "1, 2, 3");
+    let edit = &luau_sealed.j[0];
+    let journal = rbx_presence::schema::SealedJournalEntry {
+        user_id: 7,
+        at: edit.at,
+        ct: edit.ct.clone(),
+    };
+    let opened = seal::open_journal(&rust_key, room, &journal).expect("Rust opens Luau's journal");
+    assert_eq!(opened.value, "1, 2, 3");
 }
 
 /// The plugin's `Catchup.summarize` agrees with the golden fixture (and so
@@ -651,8 +659,8 @@ fn data_changes_group_by_instance() {
     let entries: Table = lua
         .load(
             r#"return {
-                { userId = 1, name = "Ana", path = "Workspace.Ramp", property = "Size", at = 1000 },
-                { userId = 2, name = "Cleo", path = "Workspace.Ramp", property = "Size", at = 3000 },
+                { userId = 1, name = "Ana", path = "Workspace.Ramp", property = "Size", value = "1, 1, 1", at = 1000 },
+                { userId = 2, name = "Cleo", path = "Workspace.Ramp", property = "Size", value = "4, 1, 2", at = 3000 },
                 { userId = 1, name = "Ana", path = "Workspace.Ramp", property = "Anchored", at = 1500 },
                 { userId = 1, name = "Ana", path = "Lighting", property = "ClockTime", at = 2000 },
             }"#,
@@ -672,6 +680,9 @@ fn data_changes_group_by_instance() {
     assert_eq!(first.get::<String>("property").unwrap(), "Anchored");
     let size: Table = props.get(2).unwrap();
     assert_eq!(size.get::<f64>("edits").unwrap(), 2.0);
+    // The newest edit's value, whatever order the journal lists them in.
+    assert_eq!(size.get::<String>("value").unwrap(), "4, 1, 2");
+    assert_eq!(first.get::<String>("value").unwrap(), "");
     let authors: Table = size.get("authors").unwrap();
     assert_eq!(authors.get::<String>(1).unwrap(), "Cleo");
     assert_eq!(authors.get::<String>(2).unwrap(), "Ana");

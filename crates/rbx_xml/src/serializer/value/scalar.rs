@@ -5,10 +5,22 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 
 use crate::serializer::writer::Writer;
 
-/// Always writes the canonical `string` tag: the reader decodes `ProtectedString`
+/// Writes the canonical `string` tag: the reader decodes `ProtectedString`
 /// identically (see `value::mod`'s dispatch), and `Variant::String` carries no bit
 /// remembering which spelling produced it, so there is nothing to pick between.
+///
+/// Text XML 1.0 cannot hold at all (a control character other than tab and the
+/// two line breaks, even as a character reference) goes out as `BinaryString`
+/// instead, which reads back as the same `Variant::String`. Terrain's
+/// `PhysicsGrid` read from a binary place is one: written as text, Studio
+/// refuses the whole file as ill-formed XML.
 pub(crate) fn string(writer: &mut Writer, name: &str, text: &str) {
+    if text
+        .chars()
+        .any(|c| matches!(c, '\0'..='\u{8}' | '\u{b}' | '\u{c}' | '\u{e}'..='\u{1f}'))
+    {
+        return binary_string(writer, name, text.as_bytes());
+    }
     writer.leaf("string", &[("name", name)], text);
 }
 

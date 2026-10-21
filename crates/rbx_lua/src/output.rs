@@ -61,6 +61,17 @@ impl Output {
         self.push(kind, vec![PrintPart::Text(text)]);
     }
 
+    /// The lines in `range`, clamped to what there is.
+    pub fn slice(&self, range: std::ops::Range<usize>) -> Output {
+        let end = range.end.min(self.lines.len());
+        let start = range.start.min(end);
+        Output {
+            lines: self.lines[start..end].to_vec(),
+            printed: self.printed[start..end].to_vec(),
+            kinds: self.kinds[start..end].to_vec(),
+        }
+    }
+
     /// Drains the lines, dropping their parts (the debugger's view).
     pub(crate) fn take_lines(&mut self) -> Vec<String> {
         std::mem::take(self).lines
