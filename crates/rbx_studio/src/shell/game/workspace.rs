@@ -6,10 +6,14 @@
 //!
 //! A place is loaded the first time it is shown, or when a game-wide
 //! command has to write to it. Until then it is only a path: Find in Game
-//! reads its file without building a render scene for it.
+//! reads its file without building a render scene for it. A place left off
+//! screen for [`PARK_AFTER`] lets go of its render scene (see
+//! `WorkspaceView::park`) and rebuilds it from its DOM when shown again;
+//! its DOM, undo history, selection and camera stay.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use gpui_kit::component::Root;
 use gpui_kit::*;
@@ -23,11 +27,17 @@ use crate::{EditorBoot, Place};
 const PLACE_VARIABLE: &str = "RBX_STUDIO_GAME_PLACE";
 const SYNC_VARIABLE: &str = "RBX_STUDIO_SYNC_SHARED";
 
+/// Long enough that flicking between two places never rebuilds a scene.
+const PARK_AFTER: Duration = Duration::from_secs(30);
+
 /// One place of the game.
 pub(crate) struct Slot {
     pub(crate) path: PathBuf,
     pub(crate) label: String,
     pub(crate) shell: Option<Entity<Shell>>,
+    /// Unloads the place's scene once it has been off screen for
+    /// [`PARK_AFTER`]; dropped (cancelling it) when the place is shown.
+    park: Option<Task<()>>,
 }
 
 pub(crate) struct GameWorkspace {
@@ -66,6 +76,7 @@ impl GameWorkspace {
                 label: manifest.label(index),
                 path,
                 shell: None,
+                park: None,
             })
             .collect();
         let mut game = GameWorkspace {
@@ -168,6 +179,9 @@ impl GameWorkspace {
             .map_err(|err| format!("{}: {err}", self.slots[index].label))?;
         let shell = self.build_shell(index, place, boot, window, cx);
         self.slots[index].shell = Some(shell.clone());
+        if index != self.active {
+            self.park_later(index, cx);
+        }
         // `Shell::new` points the menu bar at the editor it builds.
         self.retarget(cx);
         Ok(shell)
@@ -181,6 +195,9 @@ impl GameWorkspace {
         }
         match self.load(index, window, cx) {
             Ok(shell) => {
+                self.park_later(self.active, cx);
+                self.slots[index].park = None;
+                shell.read(cx).viewport.read(cx).park(false);
                 self.active = index;
                 shell.update(cx, |shell, _| shell.retitle = true);
                 self.retarget(cx);
@@ -188,6 +205,16 @@ impl GameWorkspace {
             }
             Err(err) => self.warn(format!("Couldn\u{2019}t open {err}"), cx),
         }
+    }
+
+    fn park_later(&mut self, index: usize, cx: &mut Context<Self>) {
+        let Some(shell) = self.shell(index).cloned() else {
+            return;
+        };
+        self.slots[index].park = Some(cx.spawn(async move |_, cx| {
+            cx.background_executor().timer(PARK_AFTER).await;
+            shell.update(cx, |shell, cx| shell.viewport.read(cx).park(true));
+        }));
     }
 
     /// A line in the active place's Output.

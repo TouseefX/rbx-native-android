@@ -20,10 +20,11 @@ use rbx_dom::diff::{diff, ChangeKind, DiffNode};
 use rbx_dom::{Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
-use super::super::clipboard::{detached, materialize, snapshot};
+use super::super::clipboard::{detached, snapshot};
 use super::search::full_name;
 use crate::properties::attributes;
 
+mod links;
 #[cfg(test)]
 mod tests;
 
@@ -195,22 +196,18 @@ fn tidy(mut nodes: Vec<DiffNode>, db: &ReflectionDatabase) -> Vec<DiffNode> {
 const IDENTITY: [&str; 2] = ["UniqueId", "HistoryId"];
 
 /// Replaces each pair's target subtree in `target` by a fresh copy of its
-/// source subtree (`clipboard::snapshot` + `clipboard::materialize`) under
-/// the same parent, at the same position among its siblings (materialize,
-/// `place_after` the old instance, then remove the old one). Pairs with no
-/// `nodes`, or whose refs no longer resolve, are skipped. Returns the new
-/// roots, in pair order. Every write goes through `WeakDom`'s logged
-/// mutators so `take_changes` reports it.
+/// source subtree under the same parent, at the same position among its
+/// siblings, with references across its edge and its `UniqueId`s put right
+/// (`links::swap`). Pairs with no `nodes`, or whose refs no longer resolve,
+/// are skipped. Returns the new roots, in pair order. Every write goes
+/// through `WeakDom`'s logged mutators so `take_changes` reports it.
 pub(crate) fn apply(target: &mut WeakDom, source: &WeakDom, pairs: &[Pair]) -> Vec<Ref> {
     let mut roots = Vec::new();
     for pair in pairs.iter().filter(|pair| !pair.nodes.is_empty()) {
         let (Some(node), Some(_)) = (snapshot(source, pair.source), target.get(pair.target)) else {
             continue;
         };
-        let fresh = materialize(target, &node, target.parent(pair.target));
-        target.place_after(fresh, pair.target);
-        target.remove(pair.target);
-        roots.push(fresh);
+        roots.push(links::swap(target, source, &node, pair.target));
     }
     roots
 }
