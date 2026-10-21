@@ -77,21 +77,28 @@ fn painted(
     referent: Ref,
     placement: &Placement,
 ) -> Option<(AssetRef, FaceInstance)> {
-    let properties = dom.get(referent)?.properties();
+    let instance = dom.get(referent)?;
+    let properties = instance.properties();
 
     let reference = AssetRef::parse(asset_uri(properties.get("Texture")?)?).ok()?;
     if reference == AssetRef::Empty {
         return None;
     }
-    let Some(&Variant::Enum(raw_face)) = properties.get("Face") else {
-        return None;
+    // A fresh `Instance.new("Decal")` holds no `Face` until one is set, and
+    // reads as `FaceInstance.Face`'s own default; skipping it left a live
+    // decal undrawn and its image never asked for (so a bad one never
+    // warned), while the same decal saved and reopened drew.
+    let face = match properties.get("Face") {
+        Some(&Variant::Enum(raw)) => NormalId::from_ordinal(raw)?,
+        _ => NormalId::Front,
     };
-    let face = NormalId::from_ordinal(raw_face)?;
+    // Likewise a fresh `Texture` has no tiling properties yet; it still
+    // tiles at the class's own 2 studs rather than stretching like a decal.
+    let tile = |name| {
+        number(properties.get(name)).or((instance.class() == "Texture").then_some(2.0))
+    };
 
-    let mapping = match (
-        number(properties.get("StudsPerTileU")),
-        number(properties.get("StudsPerTileV")),
-    ) {
+    let mapping = match (tile("StudsPerTileU"), tile("StudsPerTileV")) {
         (Some(u), Some(v)) => Mapping::Tiled {
             studs: [u, v],
             offset: [
@@ -346,6 +353,37 @@ mod tests {
         assert_eq!(legs.len(), 6);
         assert!(legs.iter().all(|(image, _)| *image == AssetRef::Id(3)));
         assert!(faces(&dom, &database, hat, &unit_placement()).is_empty());
+    }
+
+    /// A Decal or Texture made with `Instance.new` and only its image set
+    /// draws on the Front face, and the Texture tiles at 2 studs.
+    #[test]
+    fn a_fresh_decal_and_texture_draw_on_the_front_face() {
+        let mut dom = WeakDom::new();
+        let workspace = dom.new_instance("Workspace", "Workspace", None);
+        let part = dom.new_instance("Part", "Wall", Some(workspace));
+        for class in ["Decal", "Texture"] {
+            let made = dom.new_instance(class, class, Some(part));
+            dom.set_property(made, "Texture", Variant::String("rbxassetid://9".into()))
+                .unwrap();
+        }
+        let database = ReflectionDatabase::embedded();
+        let placement = Placement {
+            kind: crate::scene::ShapeKind::Box,
+            model: glam::Mat4::from_scale(glam::Vec3::new(8.0, 4.0, 1.0)),
+            size: glam::Vec3::new(8.0, 4.0, 1.0),
+        };
+
+        let drawn = faces(&dom, &database, part, &placement);
+        assert_eq!(drawn.len(), 2);
+        for (image, face) in &drawn {
+            assert_eq!(*image, AssetRef::Id(9));
+            assert!((face.projection.normal - glam::Vec3::NEG_Z).length() < 1e-5);
+        }
+        // Stretched once across the face for the decal, 4 tiles across the
+        // 8-stud face for the texture.
+        assert_eq!(drawn[0].1.projection.uv_scale[0], 1.0);
+        assert!((drawn[1].1.projection.uv_scale[0] - 4.0).abs() < 1e-5);
     }
 
     /// A place with an ad surface on it draws the creator's own fallback
