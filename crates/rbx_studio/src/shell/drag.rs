@@ -111,7 +111,9 @@ impl Shell {
         let posed = self.pose_in();
         let hovered: Vec<Selected> = ray
             .and_then(|ray| {
-                let hits = pick::parts_along(&self.dom, &self.database, &meshes, ray);
+                let mut hits = pick::parts_along(&self.dom, &self.database, &meshes, ray);
+                // A locked layer is no more a hover target than a click one.
+                hits.retain(|&hit| !self.layer_locked(hit));
                 // The same resolution a click makes, current selection and
                 // all: a plain hover previews the enclosing `Model` a plain
                 // click would take, and an `Alt` hover previews the *next*
@@ -218,7 +220,7 @@ impl Shell {
         // only selected from the Explorer.
         let hits: Vec<Ref> = hits
             .into_iter()
-            .filter(|&hit| !ribbon::is_locked(&self.dom, hit))
+            .filter(|&hit| !ribbon::is_locked(&self.dom, hit) && !self.layer_locked(hit))
             .collect();
         if held {
             let posed = self.pose_in();

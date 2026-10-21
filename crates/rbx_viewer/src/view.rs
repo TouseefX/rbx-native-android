@@ -66,6 +66,11 @@ pub(crate) struct View {
     /// put back like every other one; the scene's half is re-applied from
     /// the same roots by whoever builds the scene.
     pub(crate) isolation: Option<Vec<rbx_dom::Ref>>,
+    /// The editor's layer filter (see `Headless::set_layer_filter`): when
+    /// set, only these and what hangs under them draw.
+    pub(crate) layer_only: Option<Vec<rbx_dom::Ref>>,
+    /// Instances the layer filter hides, with everything beneath them.
+    pub(crate) layer_hidden: Vec<rbx_dom::Ref>,
     /// The colours the selection, hover and preview cues are drawn in,
     /// baked into their pipelines, so a rebuilt renderer must be told them
     /// again.
@@ -127,8 +132,30 @@ impl View {
         self.isolation = roots;
     }
 
+    pub(crate) fn set_layer_filter(
+        &mut self,
+        only: Option<Vec<rbx_dom::Ref>>,
+        hidden: Vec<rbx_dom::Ref>,
+    ) {
+        self.layer_only = only;
+        self.layer_hidden = hidden;
+    }
+
+    /// Only the Animation Editor's isolation: it alone puts the rig on the
+    /// stage backdrop and the neutral light.
     pub(crate) fn isolated(&self) -> bool {
         self.isolation.is_some()
+    }
+
+    /// The roots the scene is limited to: the animation rig when isolated,
+    /// otherwise the layer filter's.
+    pub(crate) fn scene_roots(&self) -> Option<&[rbx_dom::Ref]> {
+        self.isolation.as_deref().or(self.layer_only.as_deref())
+    }
+
+    /// Whether the scene needs an isolation of any kind.
+    pub(crate) fn filters_scene(&self) -> bool {
+        self.scene_roots().is_some() || !self.layer_hidden.is_empty()
     }
 }
 

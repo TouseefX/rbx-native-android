@@ -148,6 +148,59 @@ impl HomeWindow {
         }
     }
 
+    pub(super) fn new_loren_project(&mut self, cx: &mut Context<Self>) {
+        // The folder picker is a desktop portal, which a nested test X
+        // server doesn't have.
+        if let Some(folder) = std::env::var_os(crate::launcher::fixtures::FOLDER_VARIABLE) {
+            return self.create_loren_in(Path::new(&folder), cx);
+        }
+        let picked = cx.prompt_for_paths(PathPromptOptions {
+            files: false,
+            directories: true,
+            multiple: false,
+            prompt: Some("Create Loren project here".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let picked = match picked.await {
+                Ok(picked) => picked,
+                Err(_) => return,
+            };
+            let _ = this.update(cx, |this, cx| match picked {
+                Ok(Some(paths)) => {
+                    if let Some(folder) = paths.into_iter().next() {
+                        this.create_loren_in(&folder, cx);
+                    }
+                }
+                Ok(None) => {}
+                Err(err) => {
+                    this.dialog = Some(Dialog::Error {
+                        experience: None,
+                        title: "Couldn\u{2019}t open the file picker".to_string(),
+                        status: None,
+                        reason: format!("{err:#}"),
+                    });
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+    }
+
+    fn create_loren_in(&mut self, folder: &Path, cx: &mut Context<Self>) {
+        match create_loren_project(folder) {
+            Ok(place) => self.open_path_later(place, cx),
+            Err(reason) => {
+                self.dialog = Some(Dialog::Error {
+                    experience: None,
+                    title: "Couldn\u{2019}t create the Loren project".to_string(),
+                    status: None,
+                    reason,
+                });
+                cx.notify();
+            }
+        }
+    }
+
     pub(super) fn open_file(&mut self, cx: &mut Context<Self>) {
         let picked = cx.prompt_for_paths(PathPromptOptions {
             files: true,
@@ -255,11 +308,108 @@ impl HomeWindow {
     }
 }
 
+/// The picked folder itself when empty, else the first free `LorenGame`,
+/// `LorenGame2`, ... inside it.
+fn loren_target(picked: &Path) -> PathBuf {
+    let empty = std::fs::read_dir(picked).is_ok_and(|mut entries| entries.next().is_none());
+    if empty {
+        return picked.to_path_buf();
+    }
+    let mut target = picked.join("LorenGame");
+    let mut n = 2;
+    while target.exists() {
+        target = picked.join(format!("LorenGame{n}"));
+        n += 1;
+    }
+    target
+}
+
+/// Scaffolds a Loren project under `picked` and returns its place file.
+fn create_loren_project(picked: &Path) -> Result<PathBuf, String> {
+    let target = loren_target(picked);
+    let folder_name = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    let name = if rbx_loren::names::validate_project_name(folder_name).is_ok() {
+        folder_name.to_string()
+    } else {
+        "LorenGame".to_string()
+    };
+    let template = rbx_loren::template::template_dir()?;
+    // Argon: rbx-native's live sync is its Argon client.
+    rbx_loren::commands::init::write_scaffold(
+        &template,
+        &target,
+        &name,
+        rbx_loren::ctx::Tool::Argon,
+    )?;
+    rbx_loren::types::generate_types(&target, &Default::default())
+        .map_err(|err| err.to_string())?;
+    let mut dom = Template::Baseplate.dom();
+    rbx_loren::place::apply_project(&mut dom, &target)?;
+    let place = target.join(format!("{name}.rbxl"));
+    crate::save::save(&dom, crate::save::Format::Binary, &place)?;
+    Ok(place)
+}
+
 /// The DownloadError line after the status.
 fn download_reason(status: Option<u16>, message: &str) -> String {
     match status {
         Some(401 | 403) => "legacy-asset:manage is not granted for this experience".to_string(),
         Some(404) => "The place doesn\u{2019}t exist any more".to_string(),
         _ => message.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Not a glob: `gpui::test` would shadow the `#[test]` attribute.
+    use super::{create_loren_project, loren_target};
+    use std::path::PathBuf;
+
+    fn scratch(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("rbx-loren-home-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn empty_folder_becomes_the_project() {
+        let dir = scratch("empty");
+        assert_eq!(loren_target(&dir), dir);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn busy_folder_gets_the_first_free_loren_game() {
+        let dir = scratch("busy");
+        std::fs::create_dir(dir.join("LorenGame")).unwrap();
+        assert_eq!(loren_target(&dir), dir.join("LorenGame2"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn creates_a_place_with_loren_in_it() {
+        let dir = scratch("create");
+        std::fs::write(dir.join("notes.txt"), "").unwrap();
+        let place = create_loren_project(&dir).unwrap();
+        assert_eq!(place, dir.join("LorenGame/LorenGame.rbxl"));
+        assert!(dir.join("LorenGame/default.project.json").is_file());
+        let dom = rbx_binary::deserialize(&std::fs::read(&place).unwrap()).unwrap();
+        for name in [
+            "LorenRuntime",
+            "LorenServer",
+            "LorenPackages",
+            "Shared",
+            "Client",
+        ] {
+            assert!(
+                crate::explorer::find_by_name(&dom, name).is_some(),
+                "{name}"
+            );
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
