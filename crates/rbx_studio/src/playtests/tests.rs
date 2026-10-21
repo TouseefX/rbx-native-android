@@ -156,14 +156,34 @@ fn store_save_twice_same_started_is_distinct() {
 }
 
 #[test]
-fn store_list_newest_first_skips_junk() {
+fn store_list_newest_first_then_unreadable_with_reason() {
     let dir = temp_dir("list");
     store::save(&dir, &recording(10, vec![], vec![])).unwrap();
     store::save(&dir, &recording(20, vec![], vec![])).unwrap();
     std::fs::write(dir.join("junk.rbxrec"), b"not a recording").unwrap();
-    let listed = store::list(&dir);
-    let started: Vec<u64> = listed.iter().map(|(_, s)| s.started).collect();
-    assert_eq!(started, vec![20, 10]);
+    let mut cut = format::encode(&recording(30, vec![], vec![]));
+    cut.truncate(cut.len() - 3);
+    std::fs::write(dir.join("cut.rbxrec"), cut).unwrap();
+    std::fs::write(dir.join("notes.txt"), b"ignored").unwrap();
+    let listed: Vec<(String, Result<u64, String>)> = store::list(&dir)
+        .into_iter()
+        .map(|(path, summary)| {
+            let file = path.file_name().unwrap().to_string_lossy().into_owned();
+            (file, summary.map(|s| s.started))
+        })
+        .collect();
+    assert_eq!(
+        listed,
+        vec![
+            ("20.rbxrec".to_string(), Ok(20)),
+            ("10.rbxrec".to_string(), Ok(10)),
+            ("cut.rbxrec".to_string(), Err("truncated file".to_string())),
+            (
+                "junk.rbxrec".to_string(),
+                Err("not a recording (bad magic)".to_string())
+            ),
+        ]
+    );
     assert!(store::list(&dir.join("missing")).is_empty());
     let _ = std::fs::remove_dir_all(&dir);
 }

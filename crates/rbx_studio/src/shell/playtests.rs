@@ -56,7 +56,8 @@ fn heat_cell(kind: HeatKind) -> f32 {
 /// One recording of the open place, as the dock lists it.
 pub(super) struct Entry {
     pub(super) path: PathBuf,
-    pub(super) summary: Summary,
+    /// Why the file can't be read, when it can't: the dock says so on its row.
+    pub(super) summary: Result<Summary, String>,
     /// Overlaid in the 3D view.
     pub(super) visible: bool,
     /// Read once it is first shown.
@@ -193,7 +194,8 @@ impl Shell {
         self.playtests_redraw(cx);
     }
 
-    /// Reads entry `i` if it is not yet; hides it when it cannot be read.
+    /// Reads entry `i` if it is not yet; hides it, keeping why, when it
+    /// cannot be read.
     pub(super) fn playtests_ensure_loaded(&mut self, i: usize) {
         let Some(entry) = self.playtests.entries.get_mut(i) else {
             return;
@@ -203,7 +205,10 @@ impl Shell {
         }
         match store::load(&entry.path) {
             Ok(recording) => entry.loaded = Some(Rc::new(recording)),
-            Err(_) => entry.visible = false,
+            Err(err) => {
+                entry.visible = false;
+                entry.summary = Err(err);
+            }
         }
     }
 

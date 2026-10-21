@@ -44,22 +44,28 @@ pub(crate) fn save(dir: &Path, recording: &Recording) -> io::Result<PathBuf> {
     Ok(path)
 }
 
-/// Every readable `.rbxrec` in `dir`, newest `started` first; unreadable
-/// files are skipped, a missing `dir` is an empty list.
-pub(crate) fn list(dir: &Path) -> Vec<(PathBuf, Summary)> {
+/// Every `.rbxrec` in `dir` with its summary, or why it can't be read:
+/// readable ones newest `started` first, then unreadable ones by path. A
+/// missing `dir` is an empty list.
+pub(crate) fn list(dir: &Path) -> Vec<(PathBuf, Result<Summary, String>)> {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return Vec::new();
     };
-    let mut found: Vec<(PathBuf, Summary)> = entries
+    let mut found: Vec<(PathBuf, Result<Summary, String>)> = entries
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.extension().is_some_and(|ext| ext == format::EXTENSION))
-        .filter_map(|path| {
-            let summary = load(&path).ok()?.summary();
-            Some((path, summary))
+        .map(|path| {
+            let summary = load(&path).map(|recording| recording.summary());
+            (path, summary)
         })
         .collect();
-    found.sort_by(|a, b| b.1.started.cmp(&a.1.started).then_with(|| a.0.cmp(&b.0)));
+    found.sort_by(|a, b| match (&a.1, &b.1) {
+        (Ok(x), Ok(y)) => y.started.cmp(&x.started).then_with(|| a.0.cmp(&b.0)),
+        (Ok(_), Err(_)) => std::cmp::Ordering::Less,
+        (Err(_), Ok(_)) => std::cmp::Ordering::Greater,
+        (Err(_), Err(_)) => a.0.cmp(&b.0),
+    });
     found
 }
 

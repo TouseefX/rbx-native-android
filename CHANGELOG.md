@@ -14,8 +14,10 @@
   any number in the 3D view as ghost capsules with trails, cameras and
   event markers on a shared timeline (scrub, play, 0.5–4×), and lays
   presence, death and stuck-spot heat maps on the ground, drawn through a
-  new filled-quad path on the viewer's overlay layers. Studio has nothing
-  like it. (@chteau)
+  new filled-quad path on the viewer's overlay layers. A reset is logged
+  as a death only, not also as a 100-point hit, and a recording that
+  can't be read stays in the list with the reason and a Delete button.
+  Studio has nothing like it. (@chteau)
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores

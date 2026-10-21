@@ -287,7 +287,37 @@ impl Shell {
                 .into_any_element();
         }
         let rows = self.playtests.entries.iter().enumerate().map(|(i, entry)| {
-            let summary = &entry.summary;
+            let delete_path = entry.path.clone();
+            let delete = chrome::icon_button(("playtests-delete", i), IconName::Trash, "Delete")
+                .on_click(cx.listener(move |shell, _, _, cx| {
+                    shell.playtests_delete(delete_path.clone(), cx)
+                }));
+            let summary = match &entry.summary {
+                Ok(summary) => summary,
+                Err(err) => {
+                    let file = entry
+                        .path
+                        .file_name()
+                        .map(|name| name.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    return h_flex()
+                        .id(("playtests-row", i))
+                        .w_full()
+                        .gap_2()
+                        .px_2()
+                        .items_center()
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .truncate()
+                                .text_size(tokens::text_xs())
+                                .text_color(tokens::text_error())
+                                .child(format!("Can't read {file}: {err}")),
+                        )
+                        .child(delete);
+                }
+            };
             let visible = entry.visible;
             let renaming = self
                 .playtests
@@ -325,7 +355,6 @@ impl Shell {
                 .unwrap_or_default();
             let rename_path = entry.path.clone();
             let rename_name = summary.name.clone();
-            let delete_path = entry.path.clone();
             h_flex()
                 .id(("playtests-row", i))
                 .w_full()
@@ -362,12 +391,7 @@ impl Shell {
                             )
                         })),
                 )
-                .child(
-                    chrome::icon_button(("playtests-delete", i), IconName::Trash, "Delete")
-                        .on_click(cx.listener(move |shell, _, _, cx| {
-                            shell.playtests_delete(delete_path.clone(), cx)
-                        })),
-                )
+                .child(delete)
         });
         v_flex().w_full().gap_1().children(rows).into_any_element()
     }
