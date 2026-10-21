@@ -52,7 +52,7 @@ impl Material {
 }
 
 /// The 2022 set: every `Enum.Material` a `BasePart` can carry, `Air` and
-/// `Water` included — those two are legal on a part and Roblox draws them as
+/// `Water` included, those two are legal on a part and Roblox draws them as
 /// plain plastic, so they are rows here rather than a special case upstream.
 pub(crate) const CURRENT: [Material; 45] = [
     pack("Asphalt", TILE, 9930003046, 9429449876, 0, 9429450346),

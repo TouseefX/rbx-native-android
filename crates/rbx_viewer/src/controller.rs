@@ -4,7 +4,7 @@
 //! spawns straight into free flight centered on the scene, an embedder usually
 //! starts at the place's own saved camera, and `--orbit` instead auto-orbits
 //! hands-free until the first look button, movement key, or recentre request
-//! switches permanently to free flight — seeded from that exact instant so the
+//! switches permanently to free flight, seeded from that exact instant so the
 //! view never jumps between the two.
 
 use std::time::Duration;
@@ -30,7 +30,7 @@ const INITIAL_ORBIT_YAW: f32 = 0.0;
 // `--speed`'s own default, cruising speed for an ordinary baseplate-sized scene.
 pub(crate) const DEFAULT_SPEED: f32 = 30.0;
 // Past this radius a 30 studs/s cruise would take forever to cross the scene, so the
-// default scales with it instead — still clamped like any other speed.
+// default scales with it instead, still clamped like any other speed.
 pub(crate) const LARGE_SCENE_RADIUS: f32 = 500.0;
 pub(crate) const LARGE_SCENE_SPEED_DIVISOR: f32 = 20.0;
 // Studio's own mouse-look feel, and slow enough that a full turn takes a
@@ -38,7 +38,7 @@ pub(crate) const LARGE_SCENE_SPEED_DIVISOR: f32 = 20.0;
 pub(crate) const DEFAULT_SENSITIVITY: f32 = 0.1;
 // Time constant for easing WASD velocity and the wheel's dolly hop: 3*tau
 // (~180ms) is roughly how long the transient takes to settle. No Roblox/Studio
-// value to match here — this is this renderer's own feel call, picked to read
+// value to match here, this is this renderer's own feel call, picked to read
 // as smooth without lagging behind the keys.
 const MOVEMENT_TIME_CONSTANT: f32 = 0.06;
 // The `CameraFeel::smoothing` that gives `MOVEMENT_TIME_CONSTANT`: the
@@ -169,7 +169,7 @@ impl Controller {
     }
 
     /// Resyncs the free pose's orthographic view volume to its current
-    /// distance from the scene, the moment orthographic mode switches on —
+    /// distance from the scene, the moment orthographic mode switches on,
     /// see `Pose::ortho_scale`'s own doc comment for why this is only ever a
     /// reasonable starting guess (the mouse wheel is what actually corrects
     /// it from there, in `free_update` below), not a claim that this
@@ -189,7 +189,7 @@ impl Controller {
     /// `elapsed` is only read while still orbiting: the orbit is driven by wall
     /// time, so it turns at the same rate however many frames were drawn.
     /// `orthographic` changes what the mouse wheel does without the look
-    /// button held — see `free_update`.
+    /// button held, see `free_update`.
     pub(crate) fn update(
         &mut self,
         input: &mut Input,
@@ -221,7 +221,7 @@ impl Controller {
     }
 }
 
-/// The free camera's flight on its own, over a pose the host keeps — for a
+/// The free camera's flight on its own, over a pose the host keeps, for a
 /// view that is not the scene's, such as an editor flying a
 /// `ViewportFrame`'s `Camera`, whose pose lives in the place itself and is
 /// read back out of it every step. The same step the scene's own camera
@@ -288,7 +288,7 @@ fn default_speed(bounds: &Bounds) -> f32 {
 /// The free-flight step proper: mouse-look, keyboard movement, and the wheel's
 /// roles (speed with the look button held; a dolly hop without it in
 /// perspective, or the orthographic view volume's own zoom without it in
-/// orthographic — see the wheel-handling block below). Kept free of `self`
+/// orthographic, see the wheel-handling block below). Kept free of `self`
 /// so it's trivially callable from a pure unit test.
 fn free_update(
     pose: &mut Pose,
@@ -308,7 +308,7 @@ fn free_update(
         pose.yaw -= (dx * feel.sensitivity).to_radians();
         // Pitch needs no such flip: `dy` grows downward, and `look_direction`'s
         // vertical component already grows as pitch shrinks, so dy < 0 (mouse up)
-        // already looks up — this is a plain, uninverted Y axis.
+        // already looks up, this is a plain, uninverted Y axis.
         pose.pitch = (pose.pitch + (dy * feel.sensitivity).to_radians()).clamp(
             -MAX_PITCH_DEGREES.to_radians(),
             MAX_PITCH_DEGREES.to_radians(),
@@ -323,7 +323,7 @@ fn free_update(
             speed = (speed * SPEED_STEP.powf(notches)).clamp(MIN_SPEED, MAX_SPEED);
         } else if orthographic {
             // A parallel projection has no perspective divide to make
-            // dollying the eye change apparent size — moving `pose.position`
+            // dollying the eye change apparent size, moving `pose.position`
             // here would do nothing visible and risk flying the eye straight
             // through geometry with no size cue at all (see
             // `Pose::ortho_scale`'s doc comment for why that's a real,
@@ -364,7 +364,7 @@ fn free_update(
     // actually curving, which over- or under-shoots by an amount that grows
     // with `dt`. At a rock-steady frame rate that shows up as a fixed bias
     // nobody notices, but real frame times wobble around their average, so
-    // the bias itself wobbles frame to frame — jitter with no effect on the
+    // the bias itself wobbles frame to frame, jitter with no effect on the
     // reported FPS, since that only ever sees the average.
     let (velocity, displacement) = ease_and_advance(motion.velocity, target_velocity, dt, feel.tau);
     motion.velocity = velocity;
@@ -384,7 +384,7 @@ fn ease_towards(current: Vec3, target: Vec3, dt: Duration, tau: f32) -> Vec3 {
 }
 
 /// `ease_towards`, plus the exact distance covered while `current` curves
-/// towards `target` over `dt` — the closed-form integral of
+/// towards `target` over `dt`: the closed-form integral of
 /// `v(s) = target + (current - target) * exp(-s / tau)` from 0 to `dt`,
 /// rather than approximating it with `new_velocity * dt` (a straight line
 /// through the curve's *end* value, which is only exact once the ease has

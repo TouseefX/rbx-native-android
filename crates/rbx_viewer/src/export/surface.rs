@@ -10,36 +10,33 @@ use crate::scene::{linear_to_srgb, srgb_to_linear, AlphaMode};
 
 /// Dresses `mesh` in a `SurfaceAppearance` the way `renderer/appearance.wgsl`
 /// shades one: the colour map tinted by `Color`, its alpha either blended
-/// (`Transparency`) or revealing the part's own colour (`Overlay`), and the
-/// other three maps as they are.
+/// (`Transparency`) or revealing the part's own, untinted colour
+/// (`Overlay`), and the other three maps as they are.
 ///
 /// Neither format can say "mix the part colour in by the map's alpha", so an
-/// `Overlay` map that has any is baked over the part's colour into an opaque
-/// image of its own. Without a colour map the renderer's neutral one is
-/// clear, which leaves the part colour, tinted.
+/// `Overlay` map that has any is baked, tinted, over the part's colour into
+/// an opaque image of its own. Without a colour map the renderer's neutral
+/// one is clear, which leaves the part colour as it is.
 pub(super) fn wear(mesh: &mut ExportMesh, surface: &Surface, textures: &mut Textures) {
     let [color, normal, metalness, roughness] = &surface.maps;
     let [r, g, b, alpha] = mesh.color;
     let [tr, tg, tb] = surface.tint;
-    match color {
-        None => mesh.color = [r * tr, g * tg, b * tb, alpha],
-        Some(map) => {
-            mesh.color = [tr, tg, tb, alpha];
-            mesh.maps.color = match surface.alpha_mode {
-                AlphaMode::Transparency => {
-                    mesh.blend |= map.has_alpha();
-                    textures.of(map)
-                }
-                AlphaMode::Overlay if map.has_alpha() => {
-                    let part = [r, g, b];
-                    textures.add(
-                        Key::Overlay(Arc::as_ptr(map), part.map(f32::to_bits)),
-                        || png(&overlay(map, part)),
-                    )
-                }
-                AlphaMode::Overlay => textures.of(map),
-            };
-        }
+    if let Some(map) = color {
+        mesh.color = [tr, tg, tb, alpha];
+        mesh.maps.color = match surface.alpha_mode {
+            AlphaMode::Transparency => {
+                mesh.blend |= map.has_alpha();
+                textures.of(map)
+            }
+            AlphaMode::Overlay if map.has_alpha() => {
+                mesh.color = [1.0, 1.0, 1.0, alpha];
+                let bits = [r, g, b, tr, tg, tb].map(f32::to_bits);
+                textures.add(Key::Overlay(Arc::as_ptr(map), bits), || {
+                    png(&overlay(map, [r, g, b], surface.tint))
+                })
+            }
+            AlphaMode::Overlay => textures.of(map),
+        };
     }
     data_maps(mesh, [normal, metalness, roughness], textures);
 }
@@ -65,7 +62,7 @@ pub(super) fn data_maps(
 
 /// `map` laid over `part` (linear) by its own alpha, opaque: what an
 /// `Overlay` colour map shows, mixed in linear light as the shader mixes it.
-fn overlay(map: &Image, part: [f32; 3]) -> Image {
+fn overlay(map: &Image, part: [f32; 3], tint: [f32; 3]) -> Image {
     let pixels = map
         .pixels
         .as_chunks::<4>()
@@ -75,7 +72,7 @@ fn overlay(map: &Image, part: [f32; 3]) -> Image {
             let a = f32::from(texel[3]) / 255.0;
             let mix = |channel: usize| {
                 let painted = srgb_to_linear(f32::from(texel[channel]) / 255.0);
-                let linear = part[channel] * (1.0 - a) + painted * a;
+                let linear = part[channel] * (1.0 - a) + painted * tint[channel] * a;
                 (linear_to_srgb(linear).clamp(0.0, 1.0) * 255.0).round() as u8
             };
             [mix(0), mix(1), mix(2), u8::MAX]

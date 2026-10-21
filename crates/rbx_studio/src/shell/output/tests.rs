@@ -1,7 +1,7 @@
 // Not `use super::*;`: the parent module's `use gpui_kit::*;` re-exports
 // `gpui::test`, which would then shadow `std`'s `#[test]` here and expand
 // every plain test below through GPUI's randomized-test machinery instead
-// — see `shell::dock`'s own test module for the same guard.
+// see `shell::dock`'s own test module for the same guard.
 use std::time::UNIX_EPOCH;
 
 use super::{
@@ -183,7 +183,7 @@ fn a_run_never_shows_under_warnings() {
 }
 
 /// The search box narrows *within* the level filter rather than replacing
-/// it — the same contract the Errors/Output buckets already have.
+/// it, the same contract the Errors/Output buckets already have.
 #[test]
 fn the_search_box_narrows_inside_the_warnings_bucket() {
     let mut log = OutputLog::default();
@@ -215,7 +215,7 @@ fn pushing_warnings_past_the_cap_drops_the_oldest() {
 #[test]
 fn an_entry_carries_a_timestamp() {
     let entry = OutputEntry::new(0, "print(1)", output("1"));
-    // Not a fixed value to assert against — just confirms `new` actually
+    // Not a fixed value to assert against, just confirms `new` actually
     // captured one rather than leaving it at some sentinel.
     assert!(entry.timestamp.duration_since(UNIX_EPOCH).is_ok());
 }
@@ -228,7 +228,7 @@ fn an_entrys_kind_matches_its_feedback() {
 
 // --- the search box ---------------------------------------------------
 
-/// Empty means "no narrowing", not "nothing matches" — the box sits on top of
+/// Empty means "no narrowing", not "nothing matches", the box sits on top of
 /// the level filter rather than beside it.
 #[test]
 fn an_empty_query_keeps_every_entry() {

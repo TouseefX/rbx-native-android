@@ -1,5 +1,5 @@
 //! [`Held`]: an element as a gesture grabbed it, with every layout fact a
-//! write back into its `UDim2`s has to honour — the box its parent lays it
+//! write back into its `UDim2`s has to honour, the box its parent lays it
 //! out in (`UIPadding` taken off), its `UIScale`, whether an aspect
 //! constraint shapes it, and its `SizeConstraint`. The first three are the
 //! renderer's own answers (see `rbx_viewer::GuiBox`), never re-derived.
@@ -16,7 +16,7 @@ use crate::ui_canvas::{box_of, rotate, Rect, Udim2};
 /// The box an element's `UDim2`s resolve in.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(in crate::shell::ui_editor) struct Parent {
-    /// The parent's box less `UIPadding` — or the screen's own frame.
+    /// The parent's box less `UIPadding`: or the screen's own frame.
     pub(in crate::shell::ui_editor) content: Rect,
     /// The parent's own box: its children are placed square to `content`,
     /// then carried round this box's centre by `rotation`.
@@ -111,7 +111,7 @@ impl Held {
             .map_or(self.rotation - self.own_rotation, |parent| parent.rotation)
     }
 
-    /// Its box in its parent's own frame — turned back round the parent's
+    /// Its box in its parent's own frame, turned back round the parent's
     /// centre, where [`Parent::content`] is square to the axes.
     pub(in crate::shell::ui_editor) fn local_rect(&self) -> Rect {
         let Some(parent) = self.parent.filter(|parent| parent.rotation != 0.0) else {
@@ -130,7 +130,7 @@ impl Held {
         }
     }
 
-    /// As a group takes it in — see `ui_canvas::arrange::group`.
+    /// As a group takes it in, see `ui_canvas::arrange::group`.
     pub(in crate::shell::ui_editor) fn member(&self) -> Member {
         Member {
             rect: self.local_rect(),
@@ -142,7 +142,7 @@ impl Held {
         }
     }
 
-    /// As a selection resize or turn carries it — see `ui_canvas::carry`.
+    /// As a selection resize or turn carries it, see `ui_canvas::carry`.
     pub(in crate::shell::ui_editor) fn carried(&self) -> Carried {
         Carried {
             centre: self.rect.centre(),
@@ -153,8 +153,8 @@ impl Held {
 }
 
 /// The box `referent`'s `UDim2`s resolve in: the nearest laid-out
-/// `GuiObject` above it — a `Folder` between the two is a scope of its
-/// own but lays its contents out in that same box — or the root's frame.
+/// `GuiObject` above it, a `Folder` between the two is a scope of its
+/// own but lays its contents out in that same box, or the root's frame.
 pub(in crate::shell::ui_editor) fn parent_of(
     dom: &WeakDom,
     database: &ReflectionDatabase,

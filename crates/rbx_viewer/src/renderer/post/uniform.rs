@@ -23,25 +23,25 @@ pub(super) struct PostRaw {
     misc: [f32; 4],
     /// x/y: the sun's screen-space UV this frame, z: `SunRaysEffect.Intensity`
     /// (0 disables the whole effect, whether that is because the place has
-    /// none, the moon is lit instead, or the projection fell off-screen — see
+    /// none, the moon is lit instead, or the projection fell off-screen, see
     /// `renderer::sun::sun_screen_position`), w: `Spread`.
     sun_rays: [f32; 4],
     /// `DepthOfFieldEffect`, in studs and 0-1 mixes: x: `FocusDistance`,
     /// y: `InFocusRadius`, z: `NearIntensity`, w: `FarIntensity`. Whether any of
-    /// it applies at all is `misc.w`, not a zero in here — a place may legally
+    /// it applies at all is `misc.w`, not a zero in here, a place may legally
     /// enable the effect with both intensities at zero.
     depth_of_field: [f32; 4],
-    /// x: 1 on an orthographic frame, 0 on a perspective one — which
+    /// x: 1 on an orthographic frame, 0 on a perspective one, which
     /// `view_distance` formula the depth buffer needs (see `camera.rs`'s
     /// `reversed_depth`/`orthographic_reversed_depth`). y/z: the orthographic
-    /// far and near planes in studs (near is negative — see
+    /// far and near planes in studs (near is negative, see
     /// `camera::orthographic_range`), meaningless when x is 0. w unused.
     camera: [f32; 4],
 }
 
 impl Post {
     /// This frame's uniform: the place's own effects, minus whatever the quality
-    /// level has turned off, plus the two things only the frame knows — the tent
+    /// level has turned off, plus the two things only the frame knows, the tent
     /// radius the bloom chain was sized for, and where the sun landed on screen.
     ///
     /// `sun_screen` is `None` on a frame where the rays must not draw at all (see

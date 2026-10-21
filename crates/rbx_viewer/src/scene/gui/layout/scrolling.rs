@@ -3,8 +3,8 @@
 //! `CanvasPosition` and clipped to the window, and a bar is drawn on each axis
 //! the canvas overflows along.
 //!
-//! The docs describe the pieces — which box each is, when a bar appears,
-//! what the three bar images are — but no geometry beyond that. What is
+//! The docs describe the pieces, which box each is, when a bar appears,
+//! what the three bar images are, but no geometry beyond that. What is
 //! decided here, and nowhere in the docs: `CanvasSize`'s scale is a fraction
 //! of the *window* (the docs' inset diagram has a 100% canvas meeting the bar
 //! "edge-to-edge", which only the window makes true); the children resolve
@@ -19,7 +19,7 @@ use super::super::plan::{Node, Scrolling};
 use super::{children, sizing, Context, Element, ImageScale, Painted, Rect, Scope, TextMeasure};
 
 /// The window the canvas shows through, what the canvas came to, and the
-/// bars that came with it — `AbsoluteWindowSize` and `AbsoluteCanvasSize`,
+/// bars that came with it, `AbsoluteWindowSize` and `AbsoluteCanvasSize`,
 /// in the docs' terms.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct Window {
@@ -32,8 +32,8 @@ pub(super) struct Window {
     pub(super) shown: [bool; 2],
 }
 
-/// One scroll bar's thumb as three axis-aligned boxes along the track — top
-/// (or left) cap, middle, bottom (or right) cap — plus the turn the images
+/// One scroll bar's thumb as three axis-aligned boxes along the track, top
+/// (or left) cap, middle, bottom (or right) cap, plus the turn the images
 /// take: none along a vertical bar, a quarter counterclockwise along a
 /// horizontal one, per the docs.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -211,7 +211,7 @@ pub(super) fn window(
 /// The docs never say which box a child's scale is a fraction of. A
 /// `CanvasSize` of zero with scale-sized children is the common way to build
 /// a frame that only scrolls once `AutomaticCanvasSize` makes it, and those
-/// children fill the window in Studio — on the automatic axis too, where the
+/// children fill the window in Studio, on the automatic axis too, where the
 /// grown canvas cannot be the answer: a row 30% of a canvas that in turn grows
 /// to hold the rows never settles.
 fn content_box(scrolling: &Scrolling, window: [f32; 2]) -> [f32; 2] {
@@ -221,7 +221,7 @@ fn content_box(scrolling: &Scrolling, window: [f32; 2]) -> [f32; 2] {
 
 /// `AbsoluteCanvasSize`: "the maximum of the `CanvasSize` property and the
 /// size of the children if `AutomaticCanvasSize` is set to something other
-/// than `None`" — per axis, since the enum names them separately.
+/// than `None`", per axis, since the enum names them separately.
 fn canvas_extent(
     node: &Node,
     scrolling: &Scrolling,

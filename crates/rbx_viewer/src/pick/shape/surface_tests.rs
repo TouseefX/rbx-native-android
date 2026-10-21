@@ -43,7 +43,7 @@ fn a_wedge_is_hit_on_its_slope_not_its_box_top() {
 
 // Four studs deep and one tall, the slope rises a quarter stud per stud: its
 // normal leans a quarter as far forward, which only the inverse-transpose of
-// the stretch gives — the stretch itself would lean it four times as far.
+// the stretch gives, the stretch itself would lean it four times as far.
 #[test]
 fn a_stretched_wedge_tilts_its_slope_normal_the_other_way() {
     let model = Mat4::from_scale(Vec3::new(1.0, 1.0, 4.0));

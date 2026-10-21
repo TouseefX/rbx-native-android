@@ -9,7 +9,7 @@ use super::repair::{clean, weld_t_junctions, DirectedEdge, WELD_EPSILON};
 use super::{evaluate_node, Node, Solid};
 
 /// Test-only: the same shared-edge grouping [`discard_disconnected_debris`]
-/// does, without the filtering — so a test can assert a result is (or, for
+/// does, without the filtering, so a test can assert a result is (or, for
 /// `discard_disconnected_debris`'s own tests, was) a single connected piece.
 #[cfg(test)]
 pub(in crate::scene::union) fn connected_components(solid: &Solid) -> Vec<f64> {
@@ -61,7 +61,7 @@ pub(in crate::scene::union) fn connected_components(solid: &Solid) -> Vec<f64> {
     volume.into_values().collect()
 }
 
-/// Test-only: why a tree's result is not watertight — how many directed
+/// Test-only: why a tree's result is not watertight, how many directed
 /// edges, how many lack their reverse, how many repeat, and how many
 /// distinct vertices the weld saw.
 #[cfg(test)]

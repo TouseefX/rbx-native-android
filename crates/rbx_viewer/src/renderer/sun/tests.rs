@@ -20,7 +20,7 @@ fn celestial(angular_size: f32, toward_sun: bool) -> Celestial {
 #[test]
 fn a_disc_spans_the_tangent_of_half_its_angular_size() {
     // Roblox's default sun is 21 degrees across, which is a much bigger disc
-    // than the real thing — 0.185 either side of a unit direction.
+    // than the real thing, 0.185 either side of a unit direction.
     let corners = quad(&celestial(21.0, true));
 
     assert!((corners[0].extent[0] - 0.1853).abs() < 1e-3);
@@ -58,7 +58,7 @@ fn every_vertex_fits_inside_its_own_stride() {
 }
 
 /// Built with the exact same two glam functions `Camera::view_rotation_projection`
-/// composes, at yaw 0 / pitch 0 (forward is -Z there — see `camera::direction`),
+/// composes, at yaw 0 / pitch 0 (forward is -Z there, see `camera::direction`),
 /// so a test here stays honest about what the real matrix looks like without
 /// reaching into `camera.rs`'s own private fields.
 fn forward_looking_matrix() -> Mat4 {
@@ -99,7 +99,7 @@ fn the_sun_below_the_horizon_never_gets_a_screen_position() {
     let matrix = forward_looking_matrix();
 
     // Straight ahead in every axis but Y, which is what would normally
-    // land dead center — it is only the sign of Y that must matter here.
+    // land dead center, it is only the sign of Y that must matter here.
     let below_horizon = Vec3::new(0.0, -0.1, -1.0);
     assert_eq!(sun_screen_position(below_horizon, &matrix), None);
 }
@@ -127,7 +127,7 @@ fn the_sun_in_front_and_above_the_horizon_gets_its_real_screen_position() {
 }
 
 // The rebuild decision for the discs: the same images at the same sizes are
-// the same pass, and a `SunAngularSize` edit alone — no new download — still
+// the same pass, and a `SunAngularSize` edit alone, no new download, still
 // has to rebuild the quads, since the size is baked into their vertices.
 #[test]
 fn the_discs_identity_is_their_images_and_their_angular_sizes() {

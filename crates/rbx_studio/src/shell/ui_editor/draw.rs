@@ -1,5 +1,5 @@
 //! Drawing an element onto the canvas, Figma's way: arm a tool from the
-//! insert bar or its key, then drag its box out — or click, for the class's
+//! insert bar or its key, then drag its box out, or click, for the class's
 //! own size centred on the pointer. It lands in the topmost container under
 //! where the drag began, placed in the unit the bar's switch names, and is
 //! one undo step together with its first values.
@@ -16,7 +16,7 @@ use crate::ui_canvas::{covers, rotate, udim2_text, Rect, Unit};
 /// What a drawn element nests in: the classes a designer builds with.
 const CONTAINERS: [&str; 3] = ["Frame", "ScrollingFrame", "CanvasGroup"];
 
-/// The tools' keys — the set Roblox's Figma-style editors settled on, F and
+/// The tools' keys, the set Roblox's Figma-style editors settled on, F and
 /// T being Figma's own.
 pub(super) const TOOL_KEYS: [(Command, &str); 6] = [
     (Command::UiToolFrame, "Frame"),
@@ -39,7 +39,7 @@ impl Shell {
     }
 
     /// Puts down the element a draw from `from` to `to` (canvas pixels)
-    /// made, or — with no `to`, a click — one of its class's own size.
+    /// made, or, with no `to`, a click, one of its class's own size.
     pub(super) fn finish_draw(
         &mut self,
         class: &'static str,

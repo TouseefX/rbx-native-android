@@ -125,7 +125,7 @@ fn dressed(alpha_mode: AlphaMode) -> (Export, [Arc<Image>; 4]) {
         statue,
         Surface {
             maps: maps.clone().map(Some),
-            tint: [0.5, 1.0, 1.0],
+            tint: [1.0, 0.5, 1.0],
             alpha_mode,
         },
     )]));

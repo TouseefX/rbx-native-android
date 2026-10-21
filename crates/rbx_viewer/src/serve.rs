@@ -1,7 +1,7 @@
 //! `rbxview --serve`: what the browser build (`web`) talks to.
 //!
-//! A page cannot fetch from Roblox's asset CDNs — they send no CORS headers
-//! — and has no disk cache, no Open Cloud key and no Studio install to read
+//! A page cannot fetch from Roblox's asset CDNs, they send no CORS headers
+//! and has no disk cache, no Open Cloud key and no Studio install to read
 //! `rbxasset://` content out of. This process has all four, through the very
 //! resolver `rbxview` itself loads with (`assets::resolver`), and hands the
 //! page the resolved bytes; decoding stays in the page. Alongside that it
@@ -11,7 +11,7 @@
 //! Plain HTTP/1.1, one thread per connection, `Connection: close`: a browser
 //! keeps at most six connections to one host, which is also how many
 //! requests `rbxview`'s own pool keeps in flight against Open Cloud (see
-//! `assets::WORKERS`). Bound to loopback only — the asset route spends the
+//! `assets::WORKERS`). Bound to loopback only, the asset route spends the
 //! machine's own API key on whatever id it is asked for.
 
 use std::io::{BufRead, BufReader, Write};
@@ -25,7 +25,7 @@ use crate::assets;
 
 pub const DEFAULT_PORT: u16 = 8123;
 
-/// Serves `web` (the built page — see `scripts/build-web.sh`), the asset
+/// Serves `web` (the built page, see `scripts/build-web.sh`), the asset
 /// route, and `place` at `/place` if given, until the process is killed.
 pub fn serve(web: &Path, place: Option<&Path>, port: u16) -> Result<(), String> {
     let resolver = Arc::new(assets::resolver()?);
@@ -93,7 +93,7 @@ fn route(
     }
 }
 
-/// `/asset/id/<n>` or `/asset/native/<path>` — the two forms the page's
+/// `/asset/id/<n>` or `/asset/native/<path>`: the two forms the page's
 /// fetcher asks with (see `load::fetcher::web::path`). The status is the
 /// resolver's verdict: 404 for a failure asking again cannot change, 503 for
 /// one of the moment, which the page retries the way `load::Resident` does.

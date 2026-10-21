@@ -1,5 +1,5 @@
-//! Resolves a `Beam`'s `Attachment0`/`Attachment1` — Refs to `Attachment`
-//! instances anywhere in the DOM, not necessarily nearby — into a world
+//! Resolves a `Beam`'s `Attachment0`/`Attachment1`: Refs to `Attachment`
+//! instances anywhere in the DOM, not necessarily nearby, into a world
 //! CFrame: the parent `BasePart`'s own `CFrame` composed with the
 //! attachment's own, which is relative to it. Same composition
 //! `lighting::local` uses for a light hung off an `Attachment`, just walked
@@ -34,7 +34,7 @@ impl<'a> ParentMap<'a> {
 
 /// World CFrame of the `Attachment` instance `referent` points at, or `None`
 /// if the reference is dangling, either instance carries no `CFrame`, or the
-/// attachment's parent was never recorded (no parent, i.e. a root instance) —
+/// attachment's parent was never recorded (no parent, i.e. a root instance),
 /// a beam that cannot be placed is simply not drawn (see [`super::plan`]).
 pub(crate) fn world_cframe(dom: &WeakDom, parents: &ParentMap<'_>, referent: Ref) -> Option<Mat4> {
     let attachment = dom.get(referent)?;

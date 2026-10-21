@@ -1,12 +1,12 @@
 //! The Performance view's numbers: what every part in the `Workspace` costs,
-//! five ways, read off the DOM and the local asset cache — never the network,
+//! five ways, read off the DOM and the local asset cache, never the network,
 //! never the GPU, so it runs on whatever thread the editor gives it.
 //!
 //! Roblox publishes no per-instance cost model for edit time (the
 //! MicroProfiler only measures a running game), so every figure here is a
 //! proxy, named for what it counts rather than for a time it would take:
 //!
-//! - **Part density**: instances per 32-stud world cell — a part and every
+//! - **Part density**: instances per 32-stud world cell, a part and every
 //!   non-part instance beneath it (attachments, decals, scripts, welds).
 //! - **Triangles**: what the part draws as. A file mesh's own LOD 0 count, a
 //!   union's `TriangleCount` (or its baked mesh), a primitive's unit mesh.
@@ -17,7 +17,7 @@
 //!   draws with, and the clothing a character limb wears), each image split evenly
 //!   between the parts sharing it, so the parts' figures add up to every
 //!   image counted once.
-//! - **Collision**: a relative score — 1 for a primitive or a `Box`
+//! - **Collision**: a relative score, 1 for a primitive or a `Box`
 //!   fidelity, 2 for `Hull`, 4 for `Default`, 8 for
 //!   `PreciseConvexDecomposition`, a quarter of that for a part that only
 //!   touches or is queried, nothing for one that does neither, and double for
@@ -25,7 +25,7 @@
 //!   anchored part), which the physics step simulates every frame.
 //! - **Draw cost**: parts sharing a geometry, material, texture set and
 //!   opacity can go out as one instanced batch, so a part costs `1 / n` of a
-//!   batch where `n` parts share its combination — the sum is the number of
+//!   batch where `n` parts share its combination, the sum is the number of
 //!   batches.
 //!
 //! [`Metrics`] keeps one record per part and patches it from the same
@@ -57,7 +57,7 @@ pub const CELL_STUDS: f32 = 32.0;
 /// How many parts [`Report::worst`] lists.
 pub const WORST: usize = 20;
 
-/// The heat ramp, coolest first: viridis, sampled at eight even steps —
+/// The heat ramp, coolest first: viridis, sampled at eight even steps,
 /// perceptually uniform and readable with every common colour-vision
 /// deficiency, which a red-to-green ramp is not.
 ///
@@ -92,7 +92,7 @@ const JOINT_CLASSES: [&str; 8] = [
     "RigidConstraint",
 ];
 
-/// The classic clothing a character model's limbs wear — see
+/// The classic clothing a character model's limbs wear, see
 /// `textures::clothing`.
 const GARMENT_CLASSES: [&str; 3] = ["Shirt", "Pants", "ShirtGraphic"];
 
@@ -126,7 +126,7 @@ impl Metric {
     }
 
     /// Whether the figures span orders of magnitude, so the ramp is laid
-    /// along their logarithm — one 50 000-triangle mesh would otherwise
+    /// along their logarithm, one 50 000-triangle mesh would otherwise
     /// leave every other part in the coolest bin.
     fn logarithmic(self) -> bool {
         matches!(
@@ -275,7 +275,7 @@ pub struct Metrics {
     /// Decoded bytes by image, `None` while the image is not in the cache.
     images: HashMap<AssetRef, Option<u64>>,
     shapes: Vec<(ShapeKind, u32)>,
-    /// Union triangle counts by bake — see `union::triangles`.
+    /// Union triangle counts by bake, see `union::triangles`.
     unions: HashMap<AssetRef, Option<u32>>,
     /// `MaterialService`, for the variant maps a part samples.
     materials: Service,
@@ -307,8 +307,8 @@ impl Metrics {
     /// Brings the records in line with one edit's `Change` log, `dom` being
     /// the tree as it stands after it. Only what the log names is re-read:
     /// the instance itself, the part it hangs under (whose instance count,
-    /// mesh or textures it may be), and — for an instance that arrived,
-    /// moved or changed class — everything beneath it. A garment's edit
+    /// mesh or textures it may be), and, for an instance that arrived,
+    /// moved or changed class, everything beneath it. A garment's edit
     /// re-reads the limbs of the model it dresses, and an edit to
     /// `MaterialService` or a variant in it every part, since any of them
     /// may draw with it.

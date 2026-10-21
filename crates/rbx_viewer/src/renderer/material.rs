@@ -47,8 +47,8 @@ pub(super) struct Materials {
     arrays: Vec<wgpu::Texture>,
     /// What the arrays were uploaded from (see [`Catalog::resolved_maps`]), so
     /// a scene rebuild can tell whether the new scene's catalog would upload
-    /// the very same texels — the common case for any edit that is not a new
-    /// material — and keep them (see [`Materials::holds`]).
+    /// the very same texels, the common case for any edit that is not a new
+    /// material, and keep them (see [`Materials::holds`]).
     maps: Vec<Maps>,
 }
 
@@ -93,7 +93,7 @@ impl Materials {
     }
 
     /// [`Materials::new`] for a catalog that differs from the one these
-    /// arrays hold — the rebuild after a pack streams in. Every layer whose
+    /// arrays hold, the rebuild after a pack streams in. Every layer whose
     /// map the old arrays already hold is copied across on the GPU instead of
     /// resampled and mip-mapped again: the chain is a CPU box filter over a
     /// megapixel per map, which is most of a rebuild when only one pack of
@@ -138,7 +138,7 @@ impl Materials {
         }
     }
 
-    /// Whether the arrays already hold exactly what `catalog` would upload —
+    /// Whether the arrays already hold exactly what `catalog` would upload,
     /// every layer, every map, in the same order, so every instance buffer's
     /// layer index still points at the right texels. This is the whole of the
     /// arrays' identity: their size is fixed (see [`RESOLUTION`]) and the
@@ -205,7 +205,7 @@ fn bind(
     })
 }
 
-/// Uploads one map kind for every layer, with its whole mip chain — or, for
+/// Uploads one map kind for every layer, with its whole mip chain, or, for
 /// a map `old` (an earlier array of the same kind, and the maps it was built
 /// from) already holds, copies that layer's chain across in `encoder`.
 fn array(
@@ -329,8 +329,8 @@ fn solid(color: [u8; CHANNELS], resolution: u32) -> Image {
 
 /// Nearest-neighbour resampling to the array's own size.
 ///
-/// Only a hand-authored `MaterialVariant` map — or a quality level that caps the
-/// array below the packs' own 1024 — ever needs it: a tiling pattern rescaled by
+/// Only a hand-authored `MaterialVariant` map, or a quality level that caps the
+/// array below the packs' own 1024, ever needs it: a tiling pattern rescaled by
 /// a factor near 1 loses nothing a box filter would have saved.
 fn fit(image: &Image, resolution: u32) -> Image {
     if image.width == resolution && image.height == resolution {
@@ -371,7 +371,7 @@ mod tests {
     use crate::quality::QualityLevel;
 
     /// A catalog holding `materials`, every map of which decoded to one
-    /// four-by-four pattern per reference — distinct enough that a layer
+    /// four-by-four pattern per reference, distinct enough that a layer
     /// copied from the wrong place would not read the same.
     fn catalog(materials: &[&str]) -> Catalog {
         let database = ReflectionDatabase::embedded();

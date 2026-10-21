@@ -111,8 +111,8 @@ fn two_different_referents_seed_different_streams() {
 }
 
 // A `Fire`'s two emitters share a referent, so the slot is the only thing
-// keeping their particle streams — and the simulations a re-plan matches them
-// to — apart.
+// keeping their particle streams, and the simulations a re-plan matches them
+// to, apart.
 #[test]
 fn two_slots_of_one_instance_seed_different_streams() {
     assert_ne!(seed_of(7, 0), seed_of(7, 1));

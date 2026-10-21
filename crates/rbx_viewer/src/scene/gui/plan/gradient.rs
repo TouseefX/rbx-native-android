@@ -22,6 +22,7 @@ pub(crate) enum GradientKind {
     Linear,
     Radial,
     Conical,
+    Elliptical,
 }
 
 /// `Enum.GradientTileMode`, in ordinal order: what fills the part of the box
@@ -55,7 +56,7 @@ const MIN_SCALE: f32 = 0.001;
 
 /// `Scale`, 1 where absent. Roblox clamps the property to [`MIN_SCALE`] on
 /// write, so a zero can only be a class default filled in by a serializer
-/// that does not know the property — read as unset rather than as the
+/// that does not know the property, read as unset rather than as the
 /// thousandfold ramp the clamp would make of it.
 fn scale(properties: &BTreeMap<String, Variant>) -> f32 {
     match float(properties, "Scale", 1.0) {
@@ -115,6 +116,7 @@ pub(super) fn read(
         kind: match enum_of(properties, "Type", 0) {
             1 => GradientKind::Radial,
             2 => GradientKind::Conical,
+            3 => GradientKind::Elliptical,
             _ => GradientKind::Linear,
         },
         tile: match enum_of(properties, "TileMode", 0) {

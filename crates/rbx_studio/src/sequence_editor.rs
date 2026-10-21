@@ -2,7 +2,7 @@
 //! row: what the keypoints are, what dragging one is allowed to do to them,
 //! and where they sit inside a plot rectangle.
 //!
-//! No rendering and no GPUI here — `crate::sequence_window` draws this and
+//! No rendering and no GPUI here, `crate::sequence_window` draws this and
 //! feeds it pointer positions, and every edit leaves through [`Editor::text`]
 //! into the same textual commit path a typed row takes
 //! (`properties::edit::sequence`), so the graph is a second *input* to one
@@ -15,7 +15,7 @@ mod plot;
 pub(crate) use plot::{sample, Handle, Rect};
 
 /// Roblox's own bounds, enforced here so the graph cannot build a sequence
-/// `properties::edit::sequence` would then refuse — see that module for the
+/// `properties::edit::sequence` would then refuse, see that module for the
 /// documentation these come from.
 const MIN_STOPS: usize = 2;
 const MAX_STOPS: usize = 20;
@@ -27,13 +27,13 @@ const HEADROOM: f32 = 1.15;
 
 /// How close in normalized plot space a click has to land to grab a handle.
 /// A handle draws at roughly 5px on a ~440x260 plot, so this is a little
-/// over the mark's own radius — WCAG 2.5.8's target floor asks for slack
+/// over the mark's own radius, WCAG 2.5.8's target floor asks for slack
 /// around a small control, and a curve editor is unusable if a grab has to
 /// be pixel-exact.
 const GRAB_RADIUS: f32 = 0.045;
 
-/// Which sequence is being edited. The two share every operation below —
-/// stops move, split and merge identically — and differ only in what a stop
+/// Which sequence is being edited. The two share every operation below,
+/// stops move, split and merge identically, and differ only in what a stop
 /// *carries*, so they share one type rather than two near-identical ones.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Kind {
@@ -67,7 +67,7 @@ pub(crate) struct Drag {
 /// builds one from whatever the DOM holds at that instant, applies the edit,
 /// and commits the result as text. The DOM stays the single copy of the
 /// value, so an undo, a script, or a second panel writing the same property
-/// all show up here with nothing to invalidate — and nothing here can go
+/// all show up here with nothing to invalidate, and nothing here can go
 /// stale against the viewport it is supposed to be steering.
 pub(crate) struct Editor {
     pub(crate) kind: Kind,
@@ -93,7 +93,7 @@ impl Editor {
     }
 
     /// The commit text, in the spelling `properties::edit::sequence` reads
-    /// back — the only way an edit here reaches the DOM.
+    /// back, the only way an edit here reaches the DOM.
     pub(crate) fn text(&self) -> String {
         let one = |stop: &Stop| match self.kind {
             Kind::Number => format!("{}, {}, {}", stop.time, stop.value, stop.envelope),
@@ -119,7 +119,7 @@ impl Editor {
     /// The top of the value axis. Auto-fitted rather than typed into a "Max"
     /// box the way Studio's graph asks for one: every sequence this editor
     /// opens already says how tall it is, and dragging a keypoint past the
-    /// top edge simply raises it — [`drag_to`](Self::drag_to) does not clamp
+    /// top edge simply raises it, [`drag_to`](Self::drag_to) does not clamp
     /// upward, and the axis refits the moment the drag ends. (The window
     /// freezes this for the duration of a gesture; see
     /// `sequence_window::SequenceWindow::drag_ceiling` for why it has to.)
@@ -169,7 +169,7 @@ impl Editor {
     ///
     /// The value is only floored at zero, never capped: a `NumberSequence`
     /// has no upper bound (`ParticleEmitter.Size` is studs), so dragging
-    /// past the top of the plot is how the axis grows — see
+    /// past the top of the plot is how the axis grows, see
     /// [`ceiling`](Self::ceiling).
     pub(crate) fn drag_to(&mut self, time: f32, value: f32) {
         let Some(Drag { index, handle }) = self.drag else {
@@ -235,7 +235,7 @@ impl Editor {
     }
 
     /// Whether [`remove_selected`](Self::remove_selected) would do anything
-    /// — what greys the panel's Delete button rather than letting it look
+    /// what greys the panel's Delete button rather than letting it look
     /// live and then refuse.
     pub(crate) fn can_remove_selected(&self) -> bool {
         self.stops.len() > MIN_STOPS && self.selected != 0 && self.selected != self.stops.len() - 1
@@ -253,7 +253,7 @@ impl Editor {
         true
     }
 
-    /// Whether `text` — typed into one of the panel's numeric fields — is a
+    /// Whether `text`, typed into one of the panel's numeric fields, is a
     /// legal new value for `field` on the selected stop. Applied here rather
     /// than in the field so the same clamping a drag obeys also applies to a
     /// typed number.
@@ -294,7 +294,7 @@ impl Editor {
         plot::sample(&self.stops, t)
     }
 
-    /// What the edit becomes once committed — the shape
+    /// What the edit becomes once committed, the shape
     /// `properties::edit::parse` rebuilds from [`text`](Self::text). Only
     /// the tests need it as a `Variant`: everything else in the editor
     /// works in stops and commits as text.

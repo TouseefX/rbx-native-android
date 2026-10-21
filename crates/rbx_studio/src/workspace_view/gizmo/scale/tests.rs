@@ -58,8 +58,8 @@ fn cube(dom: &mut WeakDom, parent: Option<Ref>, at: Vec3) -> Ref {
     part
 }
 
-/// A model of two 2-stud cubes, at x = 0 and x = 6 — its parts span x -1..7
-/// and y, z -1..1 — with its `WorldPivot` at `pivot`, turned by `rotation`.
+/// A model of two 2-stud cubes, at x = 0 and x = 6, its parts span x -1..7
+/// and y, z -1..1, with its `WorldPivot` at `pivot`, turned by `rotation`.
 fn model(pivot: Vec3, rotation: [f32; 9]) -> Targets {
     let mut dom = WeakDom::new();
     let model = dom.new_instance("Model", "Model", None);
@@ -69,7 +69,7 @@ fn model(pivot: Vec3, rotation: [f32; 9]) -> Targets {
     Targets::read(&dom, &ReflectionDatabase::embedded(), &[model])
 }
 
-/// The pivot four studs above the middle of the parts — outside them.
+/// The pivot four studs above the middle of the parts, outside them.
 fn raised() -> Targets {
     model(Vec3::new(3.0, 4.0, 0.0), IDENTITY)
 }

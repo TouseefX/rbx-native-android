@@ -4,7 +4,7 @@
 //! measured from the edge Studio probes for.
 //!
 //! The ball, the cylinder's side and the fallback for a mesh with no edge
-//! snap *inside* the frame — the grid is already in where the frame stands —
+//! snap *inside* the frame, the grid is already in where the frame stands,
 //! so those need the grid in force; a face's frame does not.
 
 mod mesh;
@@ -43,8 +43,8 @@ pub(crate) fn target_frame(
 }
 
 /// The frame under `ray` on `part`, and the point on it a ruler measures
-/// to: where the ray meets the part, or on a surface with no edge — whose
-/// frame already stands on the snapped point — that point.
+/// to: where the ray meets the part, or on a surface with no edge, whose
+/// frame already stands on the snapped point, that point.
 pub(crate) fn under(part: &PartSurface, ray: Ray, grid: f32) -> Option<(SurfaceFrame, Vec3)> {
     let (distance, normal) = part.raycast(ray)?;
     let hit = ray.at(distance);
@@ -162,8 +162,8 @@ const CORNER_WEDGE_EDGES: [(usize, usize); 8] = [
     (0, 3),
 ];
 
-/// A wedge's face (DragHelper PROTO_18): of every edge of the part — Studio's
-/// edge test is signed, so on a convex part none is ever filtered out — the
+/// A wedge's face (DragHelper PROTO_18): of every edge of the part, Studio's
+/// edge test is signed, so on a convex part none is ever filtered out, the
 /// one whose line runs nearest `hit`, cornered on its end nearest `hit`.
 fn polygon(
     model: Mat4,

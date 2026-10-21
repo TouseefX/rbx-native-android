@@ -1,7 +1,7 @@
 //! Legacy union assets built in memory, for the tests of everything that
 //! reads one. No asset is committed to this repository and none of these
-//! touch the network (see `agents/AGENTS.md`), so a test that needs a
-//! `PartOperationAsset` serializes one here — through `rbx_binary`, in the
+//! touch the network (see `CONTRIBUTING.md`), so a test that needs a
+//! `PartOperationAsset` serializes one here, through `rbx_binary`, in the
 //! very `ChildData`-of-a-nested-`.rbxm` shape `tree::parse` decodes.
 
 use glam::{Mat4, Vec3};
@@ -42,7 +42,7 @@ impl Leaf {
     }
 
     /// A colour of its own, so a test can tell one recovered piece from
-    /// another — a real builder's parts nearly always have one.
+    /// another, a real builder's parts nearly always have one.
     pub(in crate::scene) fn painted(mut self, color: [u8; 3]) -> Self {
         self.color = Some(color);
         self
@@ -51,7 +51,7 @@ impl Leaf {
 
 /// `pieces` additive boxes in a row with one negation swallowing every one of
 /// them: the boolean carves the result away to nothing (`csg::Failure::Empty`)
-/// and `union::resolve` falls back to drawing the additive leaves — the case
+/// and `union::resolve` falls back to drawing the additive leaves, the case
 /// a union with no baked mesh to fall back on is drawn as its recovered
 /// pieces at all.
 pub(in crate::scene) fn fallback_leaves(pieces: usize) -> Vec<Leaf> {
@@ -91,7 +91,7 @@ pub(in crate::scene) fn asset_bytes(leaves: &[Leaf]) -> Vec<u8> {
     let root = Ref::new(1);
     let mut asset = Instance::new(root, "PartOperationAsset", "Union");
     // `ChildData` is a `BinaryString`, which shares wire type 0x01 (String)
-    // with `Variant::String` — see the module doc on `tree::parse`.
+    // with `Variant::String`: see the module doc on `tree::parse`.
     asset.properties_mut().insert(
         "ChildData".to_string(),
         Variant::Unknown {

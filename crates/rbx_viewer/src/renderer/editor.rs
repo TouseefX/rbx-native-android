@@ -3,7 +3,7 @@
 //! boxes a tool is previewing, the editor's own line segments and the
 //! transform gizmo's draggers.
 //!
-//! Split out of [`Renderer`] because they are one family — none of them is
+//! Split out of [`Renderer`] because they are one family, none of them is
 //! rebuilt from the DOM, all of them survive a reload through
 //! [`crate::view::View`], and every one is a setter the embedder calls
 //! between frames.
@@ -31,7 +31,7 @@ impl Renderer {
     ///
     /// Two cues, not one: a container gets the box `renderer::selection`
     /// draws, and anything with a shape of its own gets the silhouette
-    /// `renderer::cue` traces — which is why this needs the scene the
+    /// `renderer::cue` traces, which is why this needs the scene the
     /// silhouette is masked from.
     pub(crate) fn set_selection(
         &mut self,
@@ -50,7 +50,7 @@ impl Renderer {
         );
     }
 
-    /// Whether scene geometry in front of the selection hides its outline —
+    /// Whether scene geometry in front of the selection hides its outline,
     /// see `renderer::selection`, which draws it through everything by
     /// default.
     pub(crate) fn set_selection_occluded(
@@ -111,7 +111,7 @@ impl Renderer {
         );
     }
 
-    /// Tints every part in `bins` its bin's colour — the Performance view —
+    /// Tints every part in `bins` its bin's colour, the Performance view,
     /// or no part at all with an empty list.
     pub(crate) fn set_heat(
         &mut self,
@@ -129,13 +129,13 @@ impl Renderer {
         );
     }
 
-    /// Replaces the ghost boxes a tool is previewing — see
+    /// Replaces the ghost boxes a tool is previewing, see
     /// `renderer::preview`. An empty list clears them.
     pub(crate) fn set_preview(&mut self, device: &wgpu::Device, boxes: &[glam::Mat4]) {
         self.preview.set(device, boxes);
     }
 
-    /// Replaces one layer of the editor's line segments — see
+    /// Replaces one layer of the editor's line segments, see
     /// `renderer::lines`. An empty list clears it.
     pub(crate) fn set_lines(
         &mut self,
@@ -156,7 +156,7 @@ impl Renderer {
 
     /// What the cue pass masks a silhouette out of: the same parts and
     /// resolved meshes the place's own highlights are drawn from, with no
-    /// highlight of its own — `renderer::cue` supplies those.
+    /// highlight of its own, `renderer::cue` supplies those.
     fn cue_source(scene: &Scene) -> highlight::Source<'_> {
         highlight::Source {
             highlights: &[],

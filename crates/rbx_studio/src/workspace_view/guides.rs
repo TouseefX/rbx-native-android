@@ -1,6 +1,6 @@
 //! Studio's dragger guides over the 3D view: which of them show for what the
-//! cursor is doing right now, built from what the view knows — the camera,
-//! the handles, the toolbar — plus the face under the cursor, which only
+//! cursor is doing right now, built from what the view knows, the camera,
+//! the handles, the toolbar, plus the face under the cursor, which only
 //! `Shell` can find (see `crate::dragger` for the guides themselves).
 //!
 //! - Nothing held, Select or Move tool: the hover ruler on the face under the
@@ -43,7 +43,7 @@ pub(super) struct State {
     /// last hover `Shell` resolved.
     hover: Option<(SurfaceFrame, Vec3)>,
     /// The modifiers at that hover, and whether a Move arrow was under the
-    /// cursor — Studio shows no hover ruler over a handle.
+    /// cursor, Studio shows no hover ruler over a handle.
     pub(super) modifiers: Modifiers,
     over_handle: bool,
     /// Whether the cursor is over the view at all, so a hover asked for
@@ -92,7 +92,7 @@ impl WorkspaceView {
 
     /// `Shell`'s answer to a hover: the face under the cursor, framed on its
     /// corner nearest the cursor, where the cursor meets it, and the part
-    /// it is on — `None` over nothing selectable.
+    /// it is on, `None` over nothing selectable.
     pub(crate) fn set_hover_target(&mut self, target: Option<(SurfaceFrame, Vec3, PartSurface)>) {
         if self.drag.is_some() {
             return;
@@ -152,7 +152,7 @@ impl WorkspaceView {
 
     /// Resolves the hover again where the cursor stands, next frame: after an
     /// edit, an undo or a delete moved or removed the face the ruler was
-    /// measuring, after a drag, and after a tool switch — none of which moves
+    /// measuring, after a drag, and after a tool switch, none of which moves
     /// the mouse, and a ruler left on a face that has gone is a lie.
     pub(super) fn rehover(&mut self) {
         if self.drag.is_some() || self.looking || !self.guides.inside {
@@ -164,7 +164,7 @@ impl WorkspaceView {
     }
 
     /// Whether the cursor is over the view, and the face it was last over
-    /// there with where it met it — `Shell`'s last hover answer.
+    /// there with where it met it, `Shell`'s last hover answer.
     pub(super) fn cursor_over(&self) -> (bool, Option<(SurfaceFrame, Vec3)>) {
         (self.guides.inside, self.guides.hover)
     }
@@ -195,9 +195,9 @@ impl WorkspaceView {
     }
 
     /// `Shift` or `Alt` pressed or released mid-drag, or a quarter turn:
-    /// Studio re-lands the drag on the change — onto the grid or off it,
+    /// Studio re-lands the drag on the change, onto the grid or off it,
     /// onto the soft snaps or off them, turned onto the face or held as
-    /// grabbed — without waiting for the mouse, so the drag is stepped again
+    /// grabbed, without waiting for the mouse, so the drag is stepped again
     /// where the cursor stands (once per frame, like any step: see
     /// `step_drag`).
     pub(super) fn modifiers_changed(&mut self, modifiers: Modifiers) {
@@ -262,7 +262,7 @@ impl WorkspaceView {
     }
 
     /// Sends the render thread the segments the guides draw now, on their
-    /// own line layer — only when they changed: a hover that lands on the
+    /// own line layer, only when they changed: a hover that lands on the
     /// same grid point sends nothing. Also what follows a resized view, whose
     /// screen-constant widths are pixels of the old height.
     pub(super) fn send_lines(&mut self) {

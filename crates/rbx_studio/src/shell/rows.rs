@@ -1,4 +1,4 @@
-//! The Explorer's own rows — guide lines, indentation, states — and the
+//! The Explorer's own rows, guide lines, indentation, states, and the
 //! Properties panel's two row shapes.
 //!
 //! The Explorer row paints its own chrome rather than leaning on the
@@ -29,7 +29,7 @@ use super::edit::RowEditor;
 use super::explorer_edit::RowWidgets;
 use super::roving::TabOrder;
 
-/// One indent step per depth level — the reference's 20.
+/// One indent step per depth level, the reference's 20.
 const INDENT: f32 = 20.0;
 /// The guide line sits half an indent into its own level.
 const GUIDE_OFFSET: f32 = INDENT / 2.0;
@@ -40,7 +40,7 @@ const CONNECTOR_WIDTH: f32 = INDENT / 2.0 - 1.0;
 /// or not the row has children.
 const CHEVRON_WIDTH: f32 = 9.0;
 const CLASS_ICON_SIZE: f32 = 12.0;
-/// Out of 255 — how strongly a tagged row's hover/selected background reads
+/// Out of 255, how strongly a tagged row's hover/selected background reads
 /// against the row behind it. Selected is the stronger of the two, matching
 /// the relationship the untagged selection has with its own hover step.
 const HOVER_ALPHA: u8 = 20;
@@ -48,7 +48,7 @@ const SELECTED_ALPHA: u8 = 89;
 
 /// Which ancestor levels still have a sibling below a given row, as one bit
 /// per level. Computed once per render for every visible row (see
-/// [`guide_mask`]) — a row can't work this out alone, since "does my
+/// [`guide_mask`]), a row can't work this out alone, since "does my
 /// grandparent have another child further down" is a question about rows it
 /// never sees.
 pub(super) type Guides = u64;
@@ -88,13 +88,13 @@ pub(super) fn guide_mask(depths: &[usize]) -> Vec<Guides> {
 
 /// One instance: its hierarchy guides, its depth as indentation, a chevron
 /// when it has children, the class icon (already recoloured to a tagged
-/// `Folder`'s own tag, if any — see `explorer::items`) and its name.
+/// `Folder`'s own tag, if any, see `explorer::items`) and its name.
 ///
 /// `tint` is that same tag, reused for the row's hover and selected
 /// backgrounds so a tagged folder's subtree stays visually its own.
 ///
-/// `widgets` carries the two things a row cannot build for itself — the
-/// name box while it is being renamed, the `+` while it is hovered — since
+/// `widgets` carries the two things a row cannot build for itself, the
+/// name box while it is being renamed, the `+` while it is hovered, since
 /// only `shell::explorer_edit` knows which row is which.
 ///
 /// `ringed` is the keyboard cursor, drawn as an outline over whatever fill
@@ -207,7 +207,7 @@ pub(super) fn row(
                         .justify_center()
                         // No disc behind the chevron. It was there so a
                         // guide line could pass *behind* it rather than
-                        // through — but a filled circle on every folder row
+                        // through, but a filled circle on every folder row
                         // is a lot of visual noise to buy one hairline's
                         // correctness, and the guides are quiet enough now
                         // that the collision does not read.
@@ -246,7 +246,7 @@ pub(super) fn row(
 /// cover (see `explorer::resolve_icon`).
 ///
 /// Shared with the insert picker, which lists classes rather than
-/// instances but has to draw them the same way — a `Part` in the tree and
+/// instances but has to draw them the same way, a `Part` in the tree and
 /// `Part` in the picker are the same thing, and two lookups would be two
 /// chances to disagree.
 pub(super) fn class_icon(icon: ClassIcon) -> AnyElement {
@@ -256,7 +256,7 @@ pub(super) fn class_icon(icon: ClassIcon) -> AnyElement {
     }
 }
 
-/// §3.2/§3.3 — the vertical guides this row passes through, plus the
+/// §3.2/§3.3, the vertical guides this row passes through, plus the
 /// connector into the row itself.
 ///
 /// A level whose subtree continues below draws a full-height line; the level
@@ -330,15 +330,15 @@ fn tag_color(color: (u8, u8, u8), alpha: u8) -> Rgba {
 /// section starts at the same x, and a value column that clips rather than
 /// wraps so every row stays exactly one line tall.
 ///
-/// A read-only property dims *both* columns, not just the value — the name
+/// A read-only property dims *both* columns, not just the value, the name
 /// of something you cannot set is as unavailable as the setting is.
 pub(super) fn property_row(row: &PropertyRow) -> impl IntoElement {
     property_shell(
         row,
         true,
         // `text_muted`, not the dimmest step in the ramp: a read-only
-        // property's *value* is real data — `SecurityCapabilities(0x0)`, a
-        // `HistoryId` — and dimming it to match its dimmed label put actual
+        // property's *value* is real data, `SecurityCapabilities(0x0)`, a
+        // `HistoryId`: and dimming it to match its dimmed label put actual
         // content at 1.7:1. Only the name reads as unavailable.
         div()
             .flex_none()
@@ -355,7 +355,7 @@ pub(super) fn property_row(row: &PropertyRow) -> impl IntoElement {
 
 /// The editable twin of [`property_row`]: the value column becomes whichever
 /// widget `control` is (an `Input`, a `Checkbox`, a `ColorPicker`, a
-/// `Select`, or a row of `Input`s — see [`render_editor`]) rather than the
+/// `Select`, or a row of `Input`s, see [`render_editor`]) rather than the
 /// read-only text column; a failed commit's error shows below it and the old
 /// value stays in the DOM.
 pub(super) fn property_row_control(
@@ -420,12 +420,12 @@ fn property_stack(
         })
 }
 
-/// The row both shapes share: name column, value column, and — only when a
-/// commit has just failed — the reason underneath.
+/// The row both shapes share: name column, value column, and, only when a
+/// commit has just failed, the reason underneath.
 ///
 /// The names are **left-aligned** on a common edge. Right alignment binds a
 /// label to its field more tightly and was tried first, but it leaves a
-/// ragged left edge that makes a long list of properties hard to scan —
+/// ragged left edge that makes a long list of properties hard to scan,
 /// which is what this panel is mostly used for. The binding is carried
 /// instead by the gaps: `label_gap` separates a label from its own input,
 /// and `row_gap`, twice as large, separates one row from the next.
@@ -490,7 +490,7 @@ fn property_shell(
 /// Every property row's outer box, whatever shape it takes inside: full
 /// width, its own height, no separator line under it.
 ///
-/// The reference draws no seam between rows — [`tokens::row_gap`]'s 7px
+/// The reference draws no seam between rows, [`tokens::row_gap`]'s 7px
 /// carries the separation instead, which is what lets a value two lines
 /// tall sit next to one that is five without a line drawn hard against
 /// whichever field box happens to be shorter.
@@ -501,7 +501,7 @@ pub(super) fn row_frame() -> Div {
 /// A numeric row's name column, which is also the control that shows and
 /// hides its components: the chevron, then the property's name.
 ///
-/// The whole column is the target rather than the chevron alone — 14px of
+/// The whole column is the target rather than the chevron alone, 14px of
 /// icon is well under WCAG 2.5.8's floor, and a name is the obvious thing
 /// to click to open what is under it.
 pub(super) fn expander(
@@ -550,7 +550,7 @@ pub(super) fn expander(
 ///
 /// The summary stays editable while the components show, because it is the
 /// same value in a different spelling and typing `0, 5, 0` is faster than
-/// three fields — the two are kept in step by the commit itself, which
+/// three fields, the two are kept in step by the commit itself, which
 /// rebuilds the row from what the DOM ended up with (see
 /// `shell::edit::Shell::commit_row`).
 pub(super) fn property_expandable(
@@ -601,7 +601,7 @@ pub(super) fn property_expandable(
 /// [`tokens::toggle_height`], filled with the accent and a right-parked
 /// thumb when on, [`tokens::field_select`] and a left-parked one when not.
 ///
-/// The unticked track still **outlines** — [`tokens::check_off_border`],
+/// The unticked track still **outlines**: [`tokens::check_off_border`],
 /// exactly as the square checkbox this replaced did, and for the same
 /// reason: a borderless track this close in tone to the field surface
 /// around it fails WCAG 1.4.11 for a control whose entire job is to show a
@@ -728,10 +728,10 @@ pub(super) fn section_header(
 }
 
 /// Turns a row's live widget (see `shell::edit::RowEditor`) into the element
-/// [`property_row_control`] should show for it. `Bool` has no `RowEditor` —
+/// [`property_row_control`] should show for it. `Bool` has no `RowEditor`,
 /// its `Checkbox` is built directly where it renders, since a checkbox needs
 /// no persistent entity (see `shell::panels::properties`).
-/// Builds the mouse-down handler that starts a scrub on one field — see
+/// Builds the mouse-down handler that starts a scrub on one field, see
 /// `shell::scrub`. Taken as a factory rather than a closure per field so the
 /// row can capture the property's name once.
 pub(super) type OnScrub =
@@ -744,8 +744,8 @@ pub(super) type OnOpen = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 
 ///
 /// `stops` is the window's own Tab order: the two editors that are whole
-/// widgets rather than toolkit elements — `Select` for an enum, `ColorPicker`
-/// for a `Color3` — take no `tab_index`, so they can only be reached by
+/// widgets rather than toolkit elements, `Select` for an enum, `ColorPicker`
+/// for a `Color3`: take no `tab_index`, so they can only be reached by
 /// recording their focus handle here, at the point in paint order the row is
 /// built. That has to happen per row per render, unlike the graphics-quality
 /// dropdown's one-off registration in `Shell::quality_control`, because a
@@ -791,7 +791,7 @@ fn render_row_editor(
         // the graph that edits it (`crate::sequence_window`). A sequence has
         // more numbers than a row has width and they are the wrong numbers
         // to type, so this replaces the field rather than sitting beside
-        // one. Unparseable text draws nothing rather than an empty box —
+        // one. Unparseable text draws nothing rather than an empty box,
         // the only way to reach that is a sequence some other tool wrote
         // that Roblox's own constructors would reject too.
         RowEditor::Sequence { color, text } => {
@@ -840,7 +840,7 @@ fn render_row_editor(
                     .child(text_field(&input, tab_index, cx)),
             )
             .into_any_element(),
-        // Captioned lines — a `CFrame`'s Position over its Orientation.
+        // Captioned lines, a `CFrame`'s Position over its Orientation.
         // Each group is its own run of field rows under its own caption,
         // which is what makes six numbers readable where one flat run of
         // six is a wall.
@@ -898,7 +898,7 @@ fn render_row_editor(
         //
         // The caption travels with the value rather than being a constant
         // here, because the two types shaped this way mean different things
-        // by the box — "Has value" for an `OptionalCFrame`, "Custom" for a
+        // by the box, "Has value" for an `OptionalCFrame`, "Custom" for a
         // `PhysicalProperties` (see `properties::EditKind::Optional`).
         RowEditor::Optional(present, label, inner) => {
             let toggle = on_flag(0, present);
@@ -923,9 +923,9 @@ fn render_row_editor(
                         ),
                 )
                 .children(present.then(|| {
-                    // An optional's inner editor is a numeric one — a
+                    // An optional's inner editor is a numeric one, a
                     // `CFrame`'s six fields or a `PhysicalProperties`'
-                    // five, the only two `Variant`s shaped this way — never
+                    // five, the only two `Variant`s shaped this way, never
                     // a flag set, so nothing below ever reaches `on_flag`.
                     render_row_editor(
                         tab_index,
@@ -1013,11 +1013,11 @@ fn render_row_editor(
 ///
 /// They used to share one wrapping line. Side by side, three fields in a
 /// 150px column left each one 16px wide with 8px of padding on either side
-/// — no room for a digit — and wrapping them fixed the width at the cost of
+/// no room for a digit, and wrapping them fixed the width at the cost of
 /// a value column whose left edge moved from row to row. Stacking gets both:
 /// full-width fields, and one edge every input in the panel starts at.
 ///
-/// `depth` is how far in the names sit — 1 under a property's own expander,
+/// `depth` is how far in the names sit, 1 under a property's own expander,
 /// 2 under a captioned group inside it.
 fn number_fields(
     fields: &'static [Field],
@@ -1101,7 +1101,7 @@ pub(super) fn name_indent(depth: usize) -> Pixels {
     tokens::row_padding() + (tokens::chevron_slot() + tokens::label_gap()) * (depth as f32 + 1.)
 }
 
-/// One `Input` in the panel's field box — the value column's whole content
+/// One `Input` in the panel's field box, the value column's whole content
 /// for a scalar row, a summary, or one component.
 pub(super) fn text_field(input: &Entity<InputState>, tab_index: isize, cx: &App) -> Div {
     let handle = input.read(cx).focus_handle(cx);
@@ -1114,14 +1114,14 @@ pub(super) fn text_field(input: &Entity<InputState>, tab_index: isize, cx: &App)
                 .with_size(tokens::field_size())
                 .h_full()
                 // Without an index a toolkit input keeps the default 0 and
-                // sorts ahead of every region in the window — a property field
+                // sorts ahead of every region in the window, a property field
                 // reached before the menu bar.
                 .tab_index(tab_index),
         )
 }
 
 /// The `InputsStyle` frame's field: [`tokens::field_select`], `RADIUS`, 8px
-/// of horizontal padding, 31px tall, and **no border** — the surface change
+/// of horizontal padding, 31px tall, and **no border**: the surface change
 /// is the whole affordance. 31px also clears WCAG 2.5.8's 24x24 target
 /// floor without any help from the spacing exception.
 pub(super) fn field_box() -> Div {
@@ -1134,7 +1134,7 @@ pub(super) fn select_box() -> Div {
     field_surface(tokens::field_select())
 }
 
-/// A dropdown's box, ringed while keyboard focus is on `handle` — the
+/// A dropdown's box, ringed while keyboard focus is on `handle`, the
 /// toolkit `Select` inside it, or the box itself where the box is the
 /// control. The toolkit draws no ring once its own chrome is off, so
 /// without this a select took focus invisibly. Inset, like the Viewport

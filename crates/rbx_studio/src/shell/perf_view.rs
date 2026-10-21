@@ -294,7 +294,7 @@ impl Shell {
         let perf = self.perf.as_ref()?;
         let readout = perf.report.as_ref()?.readout(part?)?;
         Some(SharedString::from(format!(
-            "{} · {} — {}",
+            "{} · {}, {}",
             readout.name,
             perf.metric.format(readout.value),
             readout.detail

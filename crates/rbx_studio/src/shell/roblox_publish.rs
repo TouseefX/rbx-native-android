@@ -4,9 +4,9 @@
 //! `Published` saves it and publishes it (`creator-docs`,
 //! `reference/cloud/universes-api/v1.json`).
 //!
-//! The place comes from the game picker — Home's My Games reopened over the
+//! The place comes from the game picker, Home's My Games reopened over the
 //! editor (`launcher::open_game_picker`), with its listing, cache, owner
-//! dropdown and add-by-link — and is remembered as the file's link
+//! dropdown and add-by-link, and is remembered as the file's link
 //! (`home::Link`, recorded through `home::remember` like a place opened from
 //! Home), so a place downloaded from Roblox needs no picking at all.
 //!
@@ -105,7 +105,7 @@ impl Failure {
 
 /// The game picker that is open, and the upload it was opened for (`None`
 /// when the user only relinks). A pick carries the token of the picker it
-/// came from and counts only while that picker is still this one — see
+/// came from and counts only while that picker is still this one, see
 /// [`pick_landed`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Picking {
@@ -220,7 +220,7 @@ impl Shell {
     }
 
     /// The game picker's answer: links the file, then asks to confirm the
-    /// upload the picker was opened for — a pick never uploads by itself.
+    /// upload the picker was opened for, a pick never uploads by itself.
     fn picked(&mut self, token: u64, experience: Experience, cx: &mut Context<Self>) {
         let Some(then) = pick_landed(&mut self.roblox.picking, token) else {
             return;
@@ -354,14 +354,14 @@ fn confirm(mode: PublishMode, target: Target, name: Option<String>) -> Dialog {
 }
 
 /// What follows a pick: the confirmation of the upload the picker was
-/// opened for, if any — never the upload itself.
+/// opened for, if any, never the upload itself.
 fn after_pick(then: Option<PublishMode>, target: Target, name: String) -> Option<Dialog> {
     then.map(|mode| confirm(mode, target, Some(name)))
 }
 
 /// The upload a confirmation agrees to: closes it and hands back its place
-/// and mode. Anything else open — a failure, or nothing because Cancel or
-/// Escape closed it — is left alone and uploads nothing.
+/// and mode. Anything else open, a failure, or nothing because Cancel or
+/// Escape closed it, is left alone and uploads nothing.
 fn confirmed(dialog: &mut Option<Dialog>) -> Option<(Target, PublishMode)> {
     match dialog.take() {
         Some(Dialog::Confirm { mode, target, .. }) => Some((target, mode)),

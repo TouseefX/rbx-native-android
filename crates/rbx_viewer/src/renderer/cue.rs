@@ -1,18 +1,18 @@
-//! The editor's own cues — what the Explorer has selected, and what the
-//! cursor is about to click — drawn as the silhouette of the geometry they
+//! The editor's own cues, what the Explorer has selected, and what the
+//! cursor is about to click, drawn as the silhouette of the geometry they
 //! cover rather than as the box around it.
 //!
 //! A part keeps its shape here: a `Ball` outlines as a circle, a wedge as a
 //! wedge and a downloaded `MeshPart` as its own polygon, because this is
 //! the very mask-and-composite pass `renderer::highlight` draws a
-//! `Highlight` with — pointed at the editor's selection instead of at an
+//! `Highlight` with, pointed at the editor's selection instead of at an
 //! instance in the file. Roblox publishes no shape-conformance spec for
 //! Studio's own selection visual (its docs give it as "a light-blue
 //! outline" and no more), so this is not a claim of parity: it is the same
 //! answer this renderer already gives for the one outline effect that *is*
 //! specified as a silhouette.
 //!
-//! A container — a `Model`, a `Folder` — still outlines as one box around
+//! A container, a `Model`, a `Folder`, still outlines as one box around
 //! everything beneath it, which `renderer::selection` and
 //! `renderer::hover` go on drawing: a model has no silhouette of its own to
 //! trace, and the box around it is what Studio calls its bounding box.
@@ -33,7 +33,7 @@ use crate::pick::Selected;
 use crate::scene::perf::HeatBin;
 use crate::scene::{DepthMode, Highlight, Part, PartId, Resolved};
 
-/// The colours of the editor's cues, as linear RGB plus straight alpha — what
+/// The colours of the editor's cues, as linear RGB plus straight alpha, what
 /// the renderer's HDR target is blended in, not sRGB.
 ///
 /// One set drives both halves of each cue: the silhouette this module
@@ -125,7 +125,7 @@ pub(super) fn overlay_pipeline(
     })
 }
 /// What stands in `Highlight::referent` for a cue: no instance asked for
-/// one, and nothing reads the field back — it exists so a re-planned list
+/// one, and nothing reads the field back, it exists so a re-planned list
 /// can be matched to the DOM, which the editor's own cues never are.
 const NO_INSTANCE: Ref = Ref::new(0);
 
@@ -134,12 +134,12 @@ pub(super) struct Cues {
     pass: Highlights,
     selection: Vec<Ref>,
     hover: Vec<Ref>,
-    /// Whether scene geometry in front of the selection hides it — the same
+    /// Whether scene geometry in front of the selection hides it, the same
     /// setting `renderer::selection` carries for the container box, applied
     /// here as the `Highlight` depth mode that means the same thing.
     occluded: bool,
     colors: OverlayColors,
-    /// The Performance view's tint — see this module's doc comment. Empty,
+    /// The Performance view's tint, see this module's doc comment. Empty,
     /// and so free, while the view is off.
     heat: Highlights,
     heat_bins: Vec<Highlight>,
@@ -295,7 +295,7 @@ impl Cues {
         );
     }
 
-    /// Rebuilds every cue against a scene that has just been replaced — see
+    /// Rebuilds every cue against a scene that has just been replaced, see
     /// `renderer::rebuild`, where the parts they cover are new objects even
     /// where they are the same instances.
     pub(super) fn rebuild(
@@ -469,8 +469,8 @@ mod tests {
         assert!(cue_highlights(&[], &[], false, &OverlayColors::default()).is_empty());
     }
 
-    /// A container has no silhouette to trace — it keeps the box
-    /// `renderer::selection` draws — so only the parts of a selection reach
+    /// A container has no silhouette to trace, it keeps the box
+    /// `renderer::selection` draws, so only the parts of a selection reach
     /// the mask.
     #[test]
     fn only_parts_reach_the_silhouette() {

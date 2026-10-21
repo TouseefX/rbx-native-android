@@ -2,7 +2,7 @@
 //! Script Function Filter lists, and the declaration Go to Declaration jumps
 //! to.
 //!
-//! No parse tree — the editor has none, and `luau-lsp` is the place a real
+//! No parse tree, the editor has none, and `luau-lsp` is the place a real
 //! one belongs. Scoping is tracked by block keywords alone (`function`, `do`,
 //! `then`, `repeat` open a block; `end`, `until`, `elseif`, `else` close
 //! one), which is exact for well-formed code and degrades to "nearest earlier
@@ -54,7 +54,7 @@ pub(crate) fn functions(source: &str) -> Vec<Function> {
 /// on a name or nothing in `source` declares it.
 ///
 /// A local visible from `offset` wins, innermost and latest first; failing
-/// that, any `function` statement whose name path ends in the same word — the
+/// that, any `function` statement whose name path ends in the same word, the
 /// case for a global function defined further down, or `M.helper()` /
 /// `self:method()` naming a function declared as `function M.helper`.
 pub(crate) fn declaration(source: &str, offset: usize) -> Option<Range<usize>> {
@@ -96,7 +96,7 @@ struct Declaration {
 /// block it lives in.
 struct Walk {
     declarations: Vec<Declaration>,
-    /// The blocks open at the queried token — the only ones whose locals it
+    /// The blocks open at the queried token, the only ones whose locals it
     /// can see.
     visible: Vec<usize>,
 }
@@ -186,7 +186,7 @@ fn is_text(source: &str, token: Option<&Token>, text: &str) -> bool {
     token.is_some_and(|token| &source[token.range.clone()] == text)
 }
 
-/// The `a`, `b`, `c` of `function a.b:c` — token indices, empty for an
+/// The `a`, `b`, `c` of `function a.b:c`: token indices, empty for an
 /// anonymous `function(`.
 fn name_path_after(tokens: &[Token], keyword: usize, source: &str) -> Vec<usize> {
     let mut path = Vec::new();
@@ -246,7 +246,7 @@ fn for_names(tokens: &[Token], keyword: usize, source: &str) -> Vec<Range<usize>
 }
 
 /// `a, b: T, c` starting at `start`: each name, skipping a type annotation up
-/// to the next comma at bracket depth zero — or the end of the line, since a
+/// to the next comma at bracket depth zero, or the end of the line, since a
 /// `local x: number` with no initializer is followed by the next statement.
 fn name_list(tokens: &[Token], start: usize, source: &str) -> Vec<usize> {
     let mut names = Vec::new();

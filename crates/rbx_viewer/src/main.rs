@@ -38,7 +38,7 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// `--serve <web-dir> [place-file] [--port <n>]` — see `rbx_viewer::serve`.
+/// `--serve <web-dir> [place-file] [--port <n>]`: see `rbx_viewer::serve`.
 fn serve(args: &[String]) -> Result<(), String> {
     let mut paths = Vec::new();
     let mut port = rbx_viewer::DEFAULT_PORT;

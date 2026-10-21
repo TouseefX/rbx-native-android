@@ -235,7 +235,7 @@ fn a_scale_drag_grows_onto_a_soft_snap() {
         unreachable!()
     };
     // Grabbed a stud out on the +X face: 1.9 of pull, 0.1 short of the face
-    // at 1.8 of growth — within reach, so it grows by exactly that.
+    // at 1.8 of growth, within reach, so it grows by exactly that.
     assert!((size.x - (2.0 + 1.8)).abs() < 1e-4, "{size}");
 }
 
@@ -258,8 +258,8 @@ fn block() -> Target {
     }
 }
 
-/// A ball of the same footprint as [`block`] — same referent and starting
-/// size, only its `sphere` flag differs — so a test can compare the two
+/// A ball of the same footprint as [`block`], same referent and starting
+/// size, only its `sphere` flag differs, so a test can compare the two
 /// shapes' behavior directly under an identical grab.
 fn ball() -> Target {
     Target {
@@ -268,7 +268,7 @@ fn ball() -> Target {
     }
 }
 
-/// A cylinder of the same footprint as [`block`] — its length along local X
+/// A cylinder of the same footprint as [`block`], its length along local X
 /// (see `Target::cylinder`'s own doc comment), round in Y/Z.
 fn cylinder() -> Target {
     Target {
@@ -541,7 +541,7 @@ fn grabbing_the_ball_on_the_far_face_resizes_the_part_the_other_way() {
 #[test]
 fn a_turned_parts_ball_resizes_the_face_it_actually_sits_on() {
     // A quarter turn about Z carries the part's own X onto world +Y, so its
-    // own X faces — one stud out either way of a 2-stud width — now stand a
+    // own X faces, one stud out either way of a 2-stud width, now stand a
     // stud above and below the part, where nothing of the world's own X is.
     let target = Target {
         referent: Ref::new(1),
@@ -565,7 +565,7 @@ fn a_turned_parts_ball_resizes_the_face_it_actually_sits_on() {
     else {
         panic!("expected a resize, got {drag:?}");
     };
-    // The part's own X, pointing out through the face that was grabbed — a
+    // The part's own X, pointing out through the face that was grabbed, a
     // resize along world Y that nonetheless writes `Size.X`.
     assert!((axis - Vec3::Y).length() < 1e-4, "{axis:?}");
     assert_eq!(component, 0);
@@ -946,7 +946,7 @@ fn a_snapped_rotate_drag_rounds_its_whole_sweep_not_each_step() {
     let Some(Change::Orientation(turned)) = last else {
         panic!("expected a rotation, got {last:?}");
     };
-    // Two 20° steps are a 40° sweep, which rounds up to one 45° increment —
+    // Two 20° steps are a 40° sweep, which rounds up to one 45° increment,
     // where per-step rounding would have turned the part not at all.
     let expected = Vec3::new(45f32.to_radians().cos(), 45f32.to_radians().sin(), 0.0);
     assert!((turned.x_axis - expected).length() < 1e-4);
