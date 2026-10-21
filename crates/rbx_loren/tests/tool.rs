@@ -6,7 +6,7 @@ use std::path::Path;
 use common::{project, FakeRunner};
 use rbx_loren::ctx::Tool;
 use rbx_loren::json::Json;
-use rbx_loren::run::{ProcessRunner, RunOpts, RunResult, Runner, SpawnError};
+use rbx_loren::run::{RunOpts, RunResult, Runner, SpawnError};
 use rbx_loren::tool::{self, ToolInfo};
 use rbx_loren::toolchain::vscode_settings;
 
@@ -266,6 +266,7 @@ fn vscode_settings_luau_lsp_autogenerates_the_sourcemap_only_for_rojo() {
 #[cfg(unix)]
 #[test]
 fn default_run_runs_a_real_program_and_reports_a_missing_one_as_enoent() {
+    use rbx_loren::run::ProcessRunner;
     let cwd = std::env::temp_dir();
     let args = ["-c".to_string(), "printf hi".to_string()];
     let ok = ProcessRunner.run(
