@@ -6,7 +6,9 @@ mod fetcher;
 mod resident;
 mod resolve;
 
+use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::{Mutex, PoisonError};
 
 use rbx_assets::AssetRef;
 use rbx_dom::{Ref, WeakDom};
@@ -18,8 +20,30 @@ pub(crate) use resident::{Answered, Resident};
 use crate::fonts::Library;
 use crate::lighting::{self, Lighting, LocalLight};
 use crate::renderer::World;
-use crate::scene::Scene;
+use crate::scene::{unknown_part_types, Scene};
 use crate::textures::{self, Decor};
+
+/// Part `shape` values already reported this process, so a place that is
+/// reloaded (or a second place with the same stray value) does not repeat the
+/// warning in Output.
+static REPORTED_PART_TYPES: Mutex<BTreeSet<u32>> = Mutex::new(BTreeSet::new());
+
+/// One warning per unknown `Enum.PartType` value in `dom` not yet reported
+/// by this process.
+fn unknown_part_type_warnings(dom: &WeakDom) -> Vec<String> {
+    let mut reported = REPORTED_PART_TYPES
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    unknown_part_types(dom)
+        .into_iter()
+        .filter(|raw| reported.insert(*raw))
+        .map(|raw| {
+            format!(
+                "Part shape {raw} is not an Enum.PartType this build knows (Ball, Block, Cylinder, Wedge, CornerWedge); drawn as a block"
+            )
+        })
+        .collect()
+}
 
 /// Reads `path` and parses it into a DOM tree, sniffing whether the bytes are
 /// the XML place/model format or the binary one.
@@ -211,6 +235,7 @@ impl Loaded {
         };
         loaded.lights = local_lights(dom, database, &loaded.scene, toggles.lights);
         loaded.warnings = loaded.resolve(resident);
+        loaded.warnings.extend(unknown_part_type_warnings(dom));
         Ok(loaded)
     }
 

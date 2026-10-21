@@ -22,6 +22,7 @@ pub(crate) enum GradientKind {
     Linear,
     Radial,
     Conical,
+    Elliptical,
 }
 
 /// `Enum.GradientTileMode`, in ordinal order: what fills the part of the box
@@ -115,6 +116,7 @@ pub(super) fn read(
         kind: match enum_of(properties, "Type", 0) {
             1 => GradientKind::Radial,
             2 => GradientKind::Conical,
+            3 => GradientKind::Elliptical,
             _ => GradientKind::Linear,
         },
         tile: match enum_of(properties, "TileMode", 0) {
