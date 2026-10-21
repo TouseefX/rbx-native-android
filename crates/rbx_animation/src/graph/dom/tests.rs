@@ -188,10 +188,14 @@ fn nodes_keep_their_properties_as_attributes_and_layout_in_a_configuration() {
     );
     let run = kid(&dom, def, "ClipNode1");
     assert_eq!(prop(&dom, run, "NodeType"), Some(Variant::Enum(5)));
-    assert_eq!(
+    let Some(Variant::String(id)) = prop(&dom, run, "NodeId") else {
+        panic!("a node needs its NodeId to play in Roblox");
+    };
+    assert_eq!(id.len(), 36, "a GUID like the editor's");
+    assert_ne!(
+        prop(&dom, kid(&dom, def, "ClipNode"), "NodeId"),
         prop(&dom, run, "NodeId"),
-        None,
-        "script-locked; the editor leaves it"
+        "one per node"
     );
     assert_eq!(attr(&dom, run, "Speed"), text("param::speed"));
     assert_eq!(attr(&dom, run, "PlayMode"), Some(Variant::Enum(0)));
