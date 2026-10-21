@@ -20,6 +20,20 @@ pub fn decode_image(asset: &Asset) -> Result<RgbaImage, AssetError> {
         .map_err(|e| AssetError::ImageDecode(e.to_string()))
 }
 
+/// The width and height `bytes` decode to, read off the image's header
+/// without decoding it, what the viewer's decoded copy of it will measure,
+/// for a caller that only needs the size. `None` for anything
+/// [`decode_image`] would refuse.
+pub fn image_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    let kind = crate::sniff::sniff(bytes);
+    if kind == AssetKind::Dds {
+        return crate::dds::dimensions(bytes);
+    }
+    image::ImageReader::with_format(std::io::Cursor::new(bytes), image_format_for(&kind)?)
+        .into_dimensions()
+        .ok()
+}
+
 fn image_format_for(kind: &AssetKind) -> Option<image::ImageFormat> {
     match kind {
         AssetKind::Png => Some(image::ImageFormat::Png),
@@ -52,6 +66,12 @@ mod tests {
             )
             .unwrap();
         bytes
+    }
+
+    #[test]
+    fn reads_dimensions_without_decoding() {
+        assert_eq!(image_dimensions(&tiny_png_bytes()), Some((2, 2)));
+        assert_eq!(image_dimensions(b"not an image"), None);
     }
 
     #[test]

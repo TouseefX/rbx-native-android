@@ -11,11 +11,11 @@
 //! are projected: see `scene::filemesh::appearance`.
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use rbx_assets::AssetRef;
-use rbx_dom::{Variant, WeakDom};
+use rbx_dom::{Ref, Variant, WeakDom};
 use rbx_materials::{MapKind, Set};
 use rbx_reflection::ReflectionDatabase;
 
@@ -64,12 +64,15 @@ struct Def {
 
 /// `MaterialService`: which texture set the place asks for, the variants it
 /// carries, and which built-in materials they have been substituted for.
-struct Service {
+pub(super) struct Service {
     set: Set,
     /// Material name -> variant name, only where they differ (`WoodName =
     /// "MyWood"`); a service that leaves `WoodName = "Wood"` overrides nothing.
     overrides: HashMap<String, String>,
     variants: HashMap<String, Def>,
+    /// The service and every variant in it, so a reader can tell an edit
+    /// to one of them from any other.
+    pub(super) referents: HashSet<Ref>,
 }
 
 /// Every distinct material a scene uses, deduplicated into texture-array layers.
@@ -229,24 +232,8 @@ impl Catalog {
     /// Builds the definition a part's `Material`/`MaterialVariantSerialized`
     /// pair stands for, without adding it to the catalog.
     fn define(&self, properties: &BTreeMap<String, Variant>, database: &ReflectionDatabase) -> Def {
-        let name = match properties.get(MATERIAL_ENUM) {
-            Some(&Variant::Enum(value)) => database
-                .enum_name(MATERIAL_ENUM, value)
-                .unwrap_or(DEFAULT_MATERIAL),
-            _ => DEFAULT_MATERIAL,
-        };
-
-        // A part naming a variant wins over the service-wide substitution, which
-        // is what Studio does: `MaterialVariantSerialized` is per part.
-        let named = properties
-            .get("MaterialVariantSerialized")
-            .and_then(asset_uri)
-            .filter(|text| !text.is_empty());
-        let variant = named
-            .or_else(|| self.service.overrides.get(name).map(String::as_str))
-            .and_then(|variant| self.service.variants.get(variant));
-
-        match variant {
+        let name = material_name(properties, database);
+        match self.service.variant_for(name, properties) {
             Some(def) => Def {
                 kind: def.kind,
                 studs_per_tile: def.studs_per_tile,
@@ -254,6 +241,46 @@ impl Catalog {
             },
             None => builtin(name, self.service.set),
         }
+    }
+}
+
+impl Service {
+    /// The variant a part draws with: the one it names, else the one the
+    /// service substitutes for its material. A part naming a variant wins
+    /// over the service-wide substitution, which is what Studio does:
+    /// `MaterialVariantSerialized` is per part.
+    fn variant_for(&self, material: &str, properties: &BTreeMap<String, Variant>) -> Option<&Def> {
+        let named = properties
+            .get("MaterialVariantSerialized")
+            .and_then(asset_uri)
+            .filter(|text| !text.is_empty());
+        named
+            .or_else(|| self.overrides.get(material).map(String::as_str))
+            .and_then(|variant| self.variants.get(variant))
+    }
+
+    /// The maps of the variant a part with these properties draws with;
+    /// none for a built-in material.
+    pub(super) fn variant_maps(
+        &self,
+        properties: &BTreeMap<String, Variant>,
+        database: &ReflectionDatabase,
+    ) -> Vec<AssetRef> {
+        self.variant_for(material_name(properties, database), properties)
+            .map(|def| def.maps.iter().flatten().cloned().collect())
+            .unwrap_or_default()
+    }
+}
+
+fn material_name<'a>(
+    properties: &BTreeMap<String, Variant>,
+    database: &'a ReflectionDatabase,
+) -> &'a str {
+    match properties.get(MATERIAL_ENUM) {
+        Some(&Variant::Enum(value)) => database
+            .enum_name(MATERIAL_ENUM, value)
+            .unwrap_or(DEFAULT_MATERIAL),
+        _ => DEFAULT_MATERIAL,
     }
 }
 
@@ -288,11 +315,12 @@ fn builtin(name: &str, set: Set) -> Def {
 
 /// Reads `MaterialService`, which a place file may leave out entirely, in
 /// which case every part is a built-in 2022 material.
-fn service(dom: &WeakDom, database: &ReflectionDatabase) -> Service {
+pub(super) fn service(dom: &WeakDom, database: &ReflectionDatabase) -> Service {
     let mut service = Service {
         set: Set::Current,
         overrides: HashMap::new(),
         variants: HashMap::new(),
+        referents: HashSet::new(),
     };
 
     let Some(referent) = super::descendants(dom).find(|&referent| {
@@ -304,6 +332,7 @@ fn service(dom: &WeakDom, database: &ReflectionDatabase) -> Service {
     let Some(instance) = dom.get(referent) else {
         return service;
     };
+    service.referents.insert(referent);
 
     if let Some(&Variant::Bool(false)) = instance.properties().get("Use2022MaterialsXml") {
         service.set = Set::Legacy;
@@ -329,6 +358,7 @@ fn service(dom: &WeakDom, database: &ReflectionDatabase) -> Service {
         if child_instance.class() != MATERIAL_VARIANT {
             continue;
         }
+        service.referents.insert(child);
         service.variants.insert(
             child_instance.name().to_string(),
             variant(child_instance.properties(), database),
