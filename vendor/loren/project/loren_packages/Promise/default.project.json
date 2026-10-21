@@ -1,0 +1,7 @@
+{
+	"name": "Promise",
+	"globIgnorePaths": ["**/*.spec.lua", "**/*.spec.luau"],
+	"tree": {
+		"$path": "lib"
+	}
+}
