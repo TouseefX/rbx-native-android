@@ -19,7 +19,7 @@ mod sober;
 
 pub use asset_ref::AssetRef;
 pub use cache::{cache_root, AssetCache};
-pub use decode::decode_image;
+pub use decode::{decode_image, image_dimensions};
 pub use error::{AssetError, AssetRefError, CacheError, FetchError};
 pub use native::NativeContent;
 pub use resolver::{Asset, AssetFetcher, AssetResolver, MemoryFetcher};

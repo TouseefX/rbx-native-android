@@ -30,6 +30,20 @@
   `PhysicsGrid`) as `BinaryString`; as text it made Studio refuse the file.
   (@chteau)
 
+- **A Performance view for the place being edited.** The Viewport dock's
+  new Performance section tints every part by what it costs: part
+  density per 32-stud cell, triangles, decoded texture memory (shared
+  images counted once, MaterialVariant maps and clothing included),
+  collision (fidelity, CanCollide, unanchored assemblies) or draw
+  batches, on a colour-blind-safe ramp, with a legend, the place's
+  total, the part under the cursor read out beside it, and the 20
+  costliest parts, each a click away from being selected and framed.
+  Figures are worked out on a thread of their own from the asset cache
+  and follow edits part by part. The first copy of the place goes over
+  a few milliseconds per frame, so turning the view on never stalls the
+  editor, and turning it off stops and joins the thread. Nothing is
+  written to the place. (@chteau)
+
 - **Select by query.** The Explorer's search field has a query mode (the
   `</>` toggle beside it): `Part where Material = Plastic and Anchored =
   false`, `BasePart where Size.Y < 1`, `* where Name ~ "Door" under
@@ -57,6 +71,22 @@
   the label off centre. They use `trash` now; a debug build asserts every
   icon it draws exists, and a test checks every icon name written in the
   editor's source. (@chteau)
+
+- **Editor layers and 3D notes.** A Layers dock (View › Layers) groups
+  instances into named, coloured layers, assigned from the dock, the
+  Explorer row menu or Ctrl+Alt+L, and hides, locks, solos or isolates
+  each one in the edit viewport only. Hidden parts are neither drawn nor
+  clickable, locked ones can't be clicked or dragged and dim in the
+  Explorer, and nothing ever writes `Transparency`, `Locked` or `Parent`.
+  Notes pinned to a point or an instance float over the viewport as
+  labels and are listed in the dock; clicking one points the camera at it.
+  Pin Note sits a note on top of the part and opens its text right away.
+  Layers and notes are plain attributes and an `ObjectValue` folder, so
+  they travel with the place through both file formats, co-editing and
+  merge, while who hides what stays in each user's own editor data.
+  Save/Publish to Roblox upload a copy without them (a Studio Settings
+  toggle, on by default), and File › Export Clean Copy… writes one to
+  disk. (@chteau)
 
 - **Loren, by fabi, as the optional built-in framework.** rbx-native now
   ships [Loren](https://github.com/fabideveloper/Loren-Framework), fabi's

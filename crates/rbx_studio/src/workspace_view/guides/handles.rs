@@ -257,7 +257,11 @@ impl WorkspaceView {
 
     /// `point` in the panel's own logical pixels, where an absolutely placed
     /// child goes; `None` off screen, where Studio hides its label.
-    fn project(&self, point: Vec3, scale: f32) -> Option<Point<Pixels>> {
+    pub(in crate::workspace_view) fn project(
+        &self,
+        point: Vec3,
+        scale: f32,
+    ) -> Option<Point<Pixels>> {
         let pixel = self.screen(point)?;
         let viewport = self.viewport.get();
         let size = Vec2::new(viewport.size.0 as f32, viewport.size.1 as f32);

@@ -80,9 +80,15 @@ enum Command {
     /// Draws only these instances on a plain backdrop, or everything again
     /// see `Headless::set_isolation`.
     Isolation(Option<Vec<rbx_dom::Ref>>),
+    /// The editor layers' hidden roots, and the isolated layer's, see
+    /// `Headless::set_layer_filter`.
+    LayerFilter(Option<Vec<rbx_dom::Ref>>, Vec<rbx_dom::Ref>),
     /// Whether a part in front of the selection hides its outline box, see
     /// `Headless::set_selection_occluded`.
     SelectionOccluded(bool),
+    /// The Performance view's heat tint, see `Headless::set_heat`. An
+    /// empty list clears it.
+    Heat(Vec<rbx_viewer::perf::HeatBin>),
     Selection(Vec<Selected>),
     /// The "about to click" cue, see `Headless::set_hover`. `None` clears
     /// it, the way an empty `Selection` clears the selection outline.
@@ -259,6 +265,10 @@ impl Pump {
         let _ = self.commands.send(Command::Isolation(roots));
     }
 
+    pub(super) fn layer_filter(&self, only: Option<Vec<rbx_dom::Ref>>, hidden: Vec<rbx_dom::Ref>) {
+        let _ = self.commands.send(Command::LayerFilter(only, hidden));
+    }
+
     pub(super) fn calibration(&self, calibration: Calibration) {
         let _ = self.commands.send(Command::Calibration(calibration));
     }
@@ -272,6 +282,11 @@ impl Pump {
     /// scene or drawn through it.
     pub(super) fn selection_occluded(&self, occluded: bool) {
         let _ = self.commands.send(Command::SelectionOccluded(occluded));
+    }
+
+    /// Tints parts by cost, or nothing with an empty list.
+    pub(super) fn heat(&self, bins: Vec<rbx_viewer::perf::HeatBin>) {
+        let _ = self.commands.send(Command::Heat(bins));
     }
 
     /// Outlines what `selected` covers in the viewport.
@@ -858,8 +873,10 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         // Studio's own default field of view.
         Command::LookAt { eye, target } => rendering.viewer.open_at(eye, target, 70.0),
         Command::Isolation(roots) => rendering.viewer.set_isolation(roots),
+        Command::LayerFilter(only, hidden) => rendering.viewer.set_layer_filter(only, hidden),
         Command::Calibration(calibration) => rendering.viewer.set_calibration(calibration),
         Command::SelectionOccluded(occluded) => rendering.viewer.set_selection_occluded(occluded),
+        Command::Heat(bins) => rendering.viewer.set_heat(bins),
         Command::Selection(selected) => rendering.viewer.set_selection(&selected),
         Command::Hover(selected) => rendering.viewer.set_hover(selected),
         Command::Preview(boxes) => rendering.viewer.set_preview(boxes),
