@@ -21,7 +21,7 @@
   and follow edits part by part. The first copy of the place goes over
   a few milliseconds per frame, so turning the view on never stalls the
   editor, and turning it off stops and joins the thread. Nothing is
-  written to the place. — @chteau
+  written to the place. (@chteau)
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
