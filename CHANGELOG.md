@@ -29,6 +29,23 @@
   the editor. `rbxaudit place.rbxl` prints the same findings and exits 1 on
   any high one. (@chteau)
 
+- **Recorded playtests, replayed in Edit mode.** Play now records each
+  player's root part and camera (10 Hz by default; Off/5/10/20 in the new
+  Playtests dock) plus joins, deaths, respawns, damage, chat, game
+  warnings and errors, and `shared.rbxnative.mark(name, data)` calls from
+  game code, a guarded call that is a no-op in a published game, where
+  `shared.rbxnative` is nil. Each session is saved as a compact `.rbxrec`
+  file in the editor's own config folder, one folder per place, never in
+  the place. The Playtests dock (View menu, Home ribbon) lists them with
+  date, length, players and deaths, renames and deletes them, overlays
+  any number in the 3D view as ghost capsules with trails, cameras and
+  event markers on a shared timeline (scrub, play, 0.5–4×), and lays
+  presence, death and stuck-spot heat maps on the ground, drawn through a
+  new filled-quad path on the viewer's overlay layers. A reset is logged
+  as a death only, not also as a 100-point hit, and a recording that
+  can't be read stays in the list with the reason and a Delete button.
+  Studio has nothing like it. (@chteau)
+
 - **Every place of a game in one window.** Roblox Studio edits one place
   per window; File › Open Game… (or a card's new "Open every place as one
   game" on Home, which downloads the experience's places) opens them all

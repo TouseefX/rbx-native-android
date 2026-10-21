@@ -499,6 +499,7 @@ impl Shell {
                 IconName::ShieldAlert,
                 "Security Audit",
             ),
+            (Panel::Playtests, IconName::Film, "Playtests"),
             (Panel::Layers, IconName::Layers, "Layers"),
             (Panel::Loren, IconName::Layers, "Loren"),
         ];

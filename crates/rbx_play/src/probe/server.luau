@@ -120,11 +120,18 @@ end)
 
 Debug.attach("server", queue)
 
+local remote = ReplicatedStorage:WaitForChild("__rbxnative_remote")
+local Record = require(ReplicatedStorage:WaitForChild("__rbxnative_record"))
+Record.startServer(queue, t0, remote)
+
 local live = Live.new("server", queue, codec)
 
-local remote = ReplicatedStorage:WaitForChild("__rbxnative_remote")
 remote.OnServerEvent:Connect(function(player, payload)
 	if type(payload) ~= "table" then
+		return
+	end
+	if payload.kind == "rec_cam" or payload.kind == "rec_mark" then
+		Record.fromClient(player, payload)
 		return
 	end
 	if payload.kind == "msg" then
