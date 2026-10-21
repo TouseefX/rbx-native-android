@@ -3,16 +3,15 @@
 //! through the exact DOM take/put-back discipline the Command Bar uses (see
 //! `shell::command`). Every widget round-trips through the same textual
 //! commit path `properties::edit::commit` already used for plain text
-//! fields — a `Checkbox` writes `"true"`/`"false"`, a `ColorPicker` writes
+//! fields, a `Checkbox` writes `"true"`/`"false"`, a `ColorPicker` writes
 //! `"r, g, b"`, a `Select` writes the enum member's name, and a row of
 //! numeric fields writes its values joined the same way `edit::edit_text`
 //! already joins them. No second mutation path is introduced.
 //!
 //! `RBX_STUDIO_EDIT='Prop=value'` applies one edit to the selected instance
-//! right after startup, through this same commit path — a debugging aid for
+//! right after startup, through this same commit path, a debugging aid for
 //! a screenshot that proves a written property reaches the viewport, since
-//! nothing else can type into the panel on the editor's behalf (see
-//! `AGENTS.md`'s safety rules).
+//! nothing else can type into the panel on the editor's behalf.
 
 use std::collections::{HashMap, HashSet};
 
@@ -39,17 +38,17 @@ pub(crate) const EDIT_VARIABLE: &str = "RBX_STUDIO_EDIT";
 pub(super) type EnumOptions = SearchableVec<SharedString>;
 
 /// One row's live widget entity (or entities, for a multi-field row).
-/// `Clone` is cheap — every variant only holds `Entity` handles.
+/// `Clone` is cheap, every variant only holds `Entity` handles.
 #[derive(Clone)]
 pub(super) enum RowEditor {
     Text(Entity<InputState>),
     /// The same field, plus a rail for the values that have somewhere to
     /// run between (see `properties::ranges`). The field stays the one
-    /// that commits — the rail only writes into it — so a value outside
+    /// that commits, the rail only writes into it, so a value outside
     /// the rail's reach is still typeable.
     Slider(Entity<InputState>, Entity<SliderState>),
     /// One `Input` per label, in the same order as `EditKind::Fields`'
-    /// `labels` — carried alongside so `shell::rows` can pair each field
+    /// `labels`: carried alongside so `shell::rows` can pair each field
     /// with its caption without reaching back into `EditKind`, plus the
     /// **summary** input that holds the same value whole (see
     /// [`Self::summary`]).
@@ -58,7 +57,7 @@ pub(super) enum RowEditor {
         Entity<InputState>,
         Vec<Entity<InputState>>,
     ),
-    /// The same inputs, but split into captioned lines — see
+    /// The same inputs, but split into captioned lines, see
     /// `properties::FieldGroup`. One flat list, in group order, because the
     /// commit path joins them all into one string regardless.
     Groups(
@@ -72,7 +71,7 @@ pub(super) enum RowEditor {
     Flags(&'static [&'static str], Vec<bool>),
     Color(Entity<ColorPickerState>),
     Enum(Entity<SelectState<EnumOptions>>),
-    /// Whether the value is there, and the editor for it — drawn under the
+    /// Whether the value is there, and the editor for it, drawn under the
     /// present/absent checkbox only while it is. Built (and kept) either
     /// way, so the flag flipping is all that changes.
     Optional(bool, &'static str, Box<RowEditor>),
@@ -96,7 +95,7 @@ impl RowEditor {
         }
     }
 
-    /// The one `Input` holding this value whole — `"0, 5, 0"` beside the
+    /// The one `Input` holding this value whole, `"0, 5, 0"` beside the
     /// row's expander, the way Studio keeps a `Vector3`'s own field
     /// editable while its components are showing.
     ///
@@ -141,7 +140,7 @@ impl RowEditor {
     /// a single value to put on the row's own line, so the name goes above
     /// them instead.
     ///
-    /// Numeric values are not in the list any more — they keep the ordinary
+    /// Numeric values are not in the list any more, they keep the ordinary
     /// name/value row and hang their components off an expander (see
     /// [`Self::summary`] and `shell::rows::property_expandable`).
     pub(super) fn is_composite(&self) -> bool {
@@ -162,15 +161,14 @@ pub(super) struct RowEdit {
 }
 
 /// Every row currently open for editing, plus which category sections the
-/// user has manually collapsed. Bundled into one type — rather than adding
-/// a second field to `Shell` in `shell.rs`, which is off limits here (see
-/// `AGENTS.md`) — so `Shell::edits`' existing type alone carries both.
+/// user has manually collapsed. Bundled into one type, rather than adding
+/// a second field to `Shell` in `shell.rs`: so `Shell::edits`' existing type alone carries both.
 #[derive(Default)]
 pub(super) struct Edits {
     rows: HashMap<String, RowEdit>,
     collapsed: HashSet<String>,
     /// Which numeric rows are showing their components. Collapsed is the
-    /// default — a `BasePart` has five of these, and thirty extra fields
+    /// default, a `BasePart` has five of these, and thirty extra fields
     /// laid out and painted every frame is thirty too many on the hardware
     /// this editor is meant to stay usable on.
     expanded: HashSet<String>,
@@ -180,7 +178,7 @@ pub(super) struct Edits {
     /// it from what the DOM made of the value. That is exactly wrong here:
     /// the widget being dropped is the one holding the gesture, and the
     /// drag would end on its own first frame. So this names the row that
-    /// has to survive its own commits — and, since it is set before the
+    /// has to survive its own commits, and, since it is set before the
     /// first of them, doubles as "is this the step that opens the undo
     /// entry" (see `Shell::slide_row`).
     sliding: Option<String>,
@@ -191,7 +189,7 @@ pub(super) struct Edits {
     slide_pushed: bool,
     /// The open BrickColor picker's keyboard cursor, a cell of
     /// `shell::brick_color`'s honeycomb, and the handle its palette takes
-    /// focus through — kept here because the popover's content is rebuilt
+    /// focus through, kept here because the popover's content is rebuilt
     /// on every render.
     pub(super) brick_cursor: usize,
     pub(super) brick_focus: Option<FocusHandle>,
@@ -228,14 +226,14 @@ impl Edits {
 }
 
 /// Keeps a cached row widget's text in step with the DOM value that just
-/// produced `kind`. Without this, `edit_row`'s cache — needed so an
-/// in-progress keystroke survives the panel rebuilding around it — would
+/// produced `kind`. Without this, `edit_row`'s cache, needed so an
+/// in-progress keystroke survives the panel rebuilding around it, would
 /// also hide any value that changes from outside the row itself, such as
 /// `Shell::sync_camera_pose` writing a flying camera's `CFrame` on every
 /// throttle tick: once a row's widget existed at all, it would show
 /// whatever it was first seeded with forever, not "whatever the field
 /// currently editing it left behind" (which is the only case actually worth
-/// protecting — see `resync_field`).
+/// protecting, see `resync_field`).
 fn resync_row_widget(
     widget: &RowEditor,
     kind: &EditKind,
@@ -250,7 +248,7 @@ fn resync_row_widget(
             resync_field(input, seed, window, cx);
             // Not while the rail is the thing being dragged: it is already
             // showing where the pointer is, and the value coming back is
-            // its own, rounded to what the field prints — writing it back
+            // its own, rounded to what the field prints, writing it back
             // would drag the grip a fraction of a step backwards under the
             // pointer on every frame of the gesture.
             if !sliding {
@@ -270,8 +268,8 @@ fn resync_row_widget(
             resync_row_widget(inner, kind, sliding, mixed, window, cx);
         }
         // A part's colour also moves when its `BrickColor` row picks one,
-        // or an undo or a script sets it. Not while the picker is open —
-        // what it shows then is the colour being chosen — nor for a
+        // or an undo or a script sets it. Not while the picker is open,
+        // what it shows then is the colour being chosen, nor for a
         // multi-selection's differing colours, which show none.
         (RowEditor::Color(state), EditKind::Color { r, g, b }) if !mixed => {
             let picker = state.read(cx);
@@ -295,7 +293,7 @@ fn resync_row_widget(
     }
 }
 
-/// The whole value, for the field beside a row's expander — empty when any
+/// The whole value, for the field beside a row's expander, empty when any
 /// part is: a multi-selection's parts that differ are left empty (see
 /// `properties::common`), and `4, , 2` is not a value anyone could type.
 fn summary_text(values: &[String]) -> String {
@@ -308,7 +306,7 @@ fn summary_text(values: &[String]) -> String {
 
 /// Writes `seed` into `input` unless it currently holds focus (a keystroke
 /// in progress, which must win over an external update) or already shows
-/// `seed` — `InputState::set_value` unconditionally resets the caret and
+/// `seed`: `InputState::set_value` unconditionally resets the caret and
 /// scroll position, which would be visible jitter on every throttled sync if
 /// applied to a value that has not actually changed.
 pub(super) fn resync_field(
@@ -325,12 +323,12 @@ pub(super) fn resync_field(
 
 impl Shell {
     /// The row's live widget, created the first time this row is rendered
-    /// for its `EditKind` and reused on every render after that — this is
+    /// for its `EditKind` and reused on every render after that, this is
     /// what keeps a keystroke (or an open color/enum popover) from being
     /// wiped out by the panel rebuilding around it. Returns the widget to
     /// render and the last commit's error, if any.
     ///
-    /// `kind` must not be [`EditKind::Bool`] — a checkbox needs no
+    /// `kind` must not be [`EditKind::Bool`], a checkbox needs no
     /// persistent entity and is built directly where it renders (see
     /// `shell::panels::properties`).
     pub(super) fn edit_row(
@@ -383,7 +381,7 @@ impl Shell {
                 let mut subscriptions = vec![self.commit_on_change(&input, name.clone(), cx)];
 
                 // A rail only for a value that has one to run along, and
-                // only when the row is actually holding a number — the
+                // only when the row is actually holding a number, the
                 // same `EditKind::Text` carries an attribute's `BrickColor` and
                 // every string in the dump.
                 let bounded = slider_range(&name)
@@ -428,14 +426,14 @@ impl Shell {
                 Vec::new(),
             ),
             // Each flag commits the whole set, because the DOM's value is
-            // one bit field — there is no "set only this side" write.
+            // one bit field, there is no "set only this side" write.
             EditKind::Flags { labels, values } => {
                 (RowEditor::Flags(labels, values.clone()), Vec::new())
             }
             // The inner editor is built even while the value is absent: the
             // checkbox turning it on commits, which drops this whole row
             // editor (see `commit_row`) and rebuilds it against the value
-            // that write produced — so nothing here has to survive the flip.
+            // that write produced, so nothing here has to survive the flip.
             EditKind::Optional {
                 present,
                 label,
@@ -515,7 +513,7 @@ impl Shell {
         subscriptions.push(
             cx.subscribe(&summary, move |shell, input, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::PressEnter { .. } | InputEvent::Blur) {
-                    // Its own text, not the components' — the two hold the
+                    // Its own text, not the components', the two hold the
                     // same value and only one of them is being typed into.
                     let text = input.read(cx).value().to_string();
                     shell.commit_row(&whole, &text, cx);
@@ -610,7 +608,7 @@ impl Shell {
 
     /// Writes one row's text into the DOM and either drops the row's editor
     /// (so the next render rebuilds it from the freshly written, normalized
-    /// value — clamped colors, a resolved enum ordinal) or records the
+    /// value, clamped colors, a resolved enum ordinal) or records the
     /// error for that row to show.
     pub(super) fn commit_row(&mut self, name: &str, text: &str, cx: &mut Context<Self>) {
         self.commit_row_step(name, text, true, cx);
@@ -662,13 +660,13 @@ impl Shell {
             .selected()
             .ok_or_else(|| "nothing is selected".to_string())?;
 
-        // Not a DOM write — see `shell::folder_color`; skips undo history
+        // Not a DOM write, see `shell::folder_color`; skips undo history
         // and `WeakDom::set_property` entirely.
         if name == properties::edit::FOLDER_COLOR_PROPERTY {
             return self.commit_folder_color(reference, text, cx);
         }
 
-        // An attribute's value, not a real DOM property — see
+        // An attribute's value, not a real DOM property, see
         // `properties::attributes::row_name`. Reuses this exact push-history/
         // reflect/record sequence so it costs one undo step like any other
         // edit, but the write itself goes through the attribute blob rather
@@ -762,7 +760,7 @@ impl Shell {
 
     /// `RBX_STUDIO_EDIT='Prop=value'`: applied once, before the first frame,
     /// to whatever `RBX_STUDIO_SELECT` selected. A malformed spec (no `=`) or
-    /// a rejected value is silently ignored — this is a screenshot aid, not
+    /// a rejected value is silently ignored, this is a screenshot aid, not
     /// user input, and must never crash a debugging session.
     pub(super) fn apply_debug_edit(
         &mut self,
@@ -777,8 +775,7 @@ impl Shell {
         if self.apply_edit(&name, value.trim(), true, cx).is_ok() {
             // Narrows the panel to just this row, which a screenshot needs:
             // nothing can scroll the fixed-height list past however many
-            // properties sort before it alphabetically (see `AGENTS.md`'s ban
-            // on synthetic input).
+            // properties sort before it alphabetically.
             self.filter
                 .update(cx, |state, cx| state.set_value(name, window, cx));
         }
@@ -786,7 +783,7 @@ impl Shell {
     }
 }
 
-/// A stored sRGB byte triplet as the `Hsla` a `ColorPickerState` edits —
+/// A stored sRGB byte triplet as the `Hsla` a `ColorPickerState` edits,
 /// plain RGB↔HSL math, the same (non-linear-light) space the read-only
 /// column already displays these in (see `properties::color3`).
 pub(super) fn rgb_to_hsla(r: u8, g: u8, b: u8) -> Hsla {

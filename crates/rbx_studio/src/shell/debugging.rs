@@ -5,7 +5,7 @@
 //! debugger keys ([`Backend`]):
 //!
 //! - **Edit** (Studio's Edit context): the active script runs against the
-//!   place as it stands, the way the Command Bar runs a chunk — on a clone,
+//!   place as it stands, the way the Command Bar runs a chunk, on a clone,
 //!   on its own thread (see `crate::debugger::session`). The clone replaces
 //!   the place once the run is over, as one undo step, unless the place was
 //!   edited in the meantime; then the run's changes are dropped and the
@@ -94,7 +94,7 @@ struct Run {
     /// The Call Stack row the Watch dock is reading; 0, where the script
     /// stopped, at every pause.
     frame: usize,
-    /// Whether any pause has been reported yet — the first one opens the
+    /// Whether any pause has been reported yet, the first one opens the
     /// Watch dock.
     paused_once: bool,
 }
@@ -510,7 +510,7 @@ impl Shell {
     }
 
     /// A frame's variables and watch values. One that answers a frame no
-    /// longer selected — the answer crossed another click — is dropped.
+    /// longer selected, the answer crossed another click, is dropped.
     fn on_inspected(&mut self, inspection: Inspection) {
         let Some(run) = self.debug.run.as_mut() else {
             return;
@@ -576,7 +576,7 @@ impl Shell {
                 .push(&run.name, Feedback::Output(finished.output.join("\n")));
         }
         match finished.result {
-            // Asked for, so not an error — and its traceback would only
+            // Asked for, so not an error, and its traceback would only
             // point at wherever the script happened to be.
             Err(message) if message.contains(rbx_lua::STOPPED) => self
                 .output
@@ -619,8 +619,8 @@ impl Shell {
         }
     }
 
-    /// F5 / F9 / F10 / F11 and their Shift variants — Studio's debugger keys
-    /// — while the Script Editor has focus. `true` if the key was one.
+    /// F5 / F9 / F10 / F11 and their Shift variants, Studio's debugger keys
+    /// while the Script Editor has focus. `true` if the key was one.
     pub(super) fn handle_debug_key(
         &mut self,
         keystroke: &Keystroke,

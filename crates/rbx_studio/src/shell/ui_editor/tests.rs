@@ -4,8 +4,8 @@ use rbx_reflection::ReflectionDatabase;
 use super::{is_gui_object, root_of, takes_resolution};
 
 // What decides which root is on the canvas: the nearest the selection
-// is in, found from any depth — a part's `SurfaceGui` as much as a
-// `ScreenGui` — and whether the toolbar's resolution applies to it.
+// is in, found from any depth, a part's `SurfaceGui` as much as a
+// `ScreenGui`: and whether the toolbar's resolution applies to it.
 #[test]
 fn the_canvas_screen_is_the_screen_gui_the_selection_sits_in() {
     let database = ReflectionDatabase::embedded();

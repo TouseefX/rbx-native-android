@@ -15,7 +15,7 @@ pub(in crate::scene::gui) struct Context {
     /// which is what turns `ClipsDescendants` off.
     pub(in crate::scene::gui) rotated: bool,
     /// The ancestors' cumulative `AbsoluteRotation`, and the screen point it
-    /// turns about — the nearest rotated ancestor's own centre.
+    /// turns about, the nearest rotated ancestor's own centre.
     pub(in crate::scene::gui) angle: f32,
     pub(in crate::scene::gui) pivot: [f32; 2],
     /// `ZIndexBehavior.Global`, where siblings are emitted in tree order and
@@ -33,7 +33,7 @@ impl Context {
 }
 
 /// One box's worth of contents to place: the elements themselves, the layout
-/// arranging them, and the scopes any plain instances among them open — see
+/// arranging them, and the scopes any plain instances among them open, see
 /// [`Group`].
 #[derive(Clone, Copy)]
 pub(in crate::scene::gui) struct Scope<'a> {
@@ -53,7 +53,7 @@ impl<'a> Scope<'a> {
 }
 
 /// One element about to be emitted, with the rect its own layout scope gave
-/// it — and the cells a `UITableLayout` in that scope handed down.
+/// it, and the cells a `UITableLayout` in that scope handed down.
 struct Placed<'a> {
     node: &'a Node,
     rect: Rect,

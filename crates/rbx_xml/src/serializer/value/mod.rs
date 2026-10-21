@@ -24,7 +24,7 @@ use crate::value::STRING_TYPE_ID;
 ///
 /// `Unknown` blobs whose `type_id` is `STRING_TYPE_ID` are written as
 /// `BinaryString` (the only case `scalar::binary_string` round-trips losslessly,
-/// since XML's `BinaryString` carries no side channel for a wire type id — see
+/// since XML's `BinaryString` carries no side channel for a wire type id, see
 /// its doc comment). A SharedString (`type_id` 0x1C) never gets here: the
 /// caller writes it into the `SharedStrings` table. Any other `type_id`
 /// returns `Unsupported("Unknown")` rather than silently writing a blob that

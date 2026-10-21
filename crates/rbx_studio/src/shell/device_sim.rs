@@ -15,22 +15,21 @@
 //! Pixel density reaches no script (Roblox exposes no DPI, and Sober's
 //! `enable_hidpi` scales the window without reporting one), so its only
 //! observable effect is how big the screen looks: Display scaling draws the
-//! Edit screen at fit, 1:1 or physical size. Play stays 1:1 — a foreign
-//! window can be sized, never scaled — so a device larger than the 3D view
+//! Edit screen at fit, 1:1 or physical size. Play stays 1:1, a foreign
+//! window can be sized, never scaled, so a device larger than the 3D view
 //! is refused there.
 //!
 //! The on-screen keyboard is a cover we draw over the bottom of the screen:
 //! in Edit when the menu's toggle asks for it, in Play only while the client
 //! reports a focused TextBox (cut out of the client window); the client is
 //! never told,
-//! so `OnScreenKeyboardSize` stays 0 — no API sets it. The Android back
+//! so `OnScreenKeyboardSize` stays 0, no API sets it. The Android back
 //! button sends Escape to the embedded client (Linux only, `client`).
 //!
 //! `RBX_STUDIO_DEVICE=<device name>[,rotate][,keyboard][,fit|actual|physical]`
 //! picks a device at startup, with the keyboard cover shown and a display
-//! scaling for this run only, and shows the Test ribbon — a screenshot aid,
-//! since nothing else can open the Device menu on the editor's behalf (see
-//! `AGENTS.md`'s safety rules).
+//! scaling for this run only, and shows the Test ribbon, a screenshot aid,
+//! since nothing else can open the Device menu on the editor's behalf.
 
 mod client;
 mod options;

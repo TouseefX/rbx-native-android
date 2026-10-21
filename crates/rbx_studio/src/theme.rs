@@ -101,7 +101,7 @@ pub(crate) struct Background {
     pub(crate) over: bool,
 }
 
-/// How a background image fills the window — CSS's `object-fit`, minus
+/// How a background image fills the window, CSS's `object-fit`, minus
 /// the values that leave part of the window uncovered by accident.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Fit {
@@ -157,7 +157,7 @@ pub(crate) fn color(name: &str) -> Rgba {
         .unwrap_or_else(|| panic!("colour token {name:?} is missing from the default theme"))
 }
 
-/// A size token's unscaled value, in pixels — see [`color`].
+/// A size token's unscaled value, in pixels, see [`color`].
 pub(crate) fn size(name: &str) -> f32 {
     active()
         .sizes

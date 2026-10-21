@@ -1,6 +1,6 @@
-//! The floating bar along the bottom of the canvas: the drawing tools — a
+//! The floating bar along the bottom of the canvas: the drawing tools, a
 //! click arms one, and the canvas then draws that element where it is
-//! dragged out (see `ui_editor::draw`) — then the `+` for a screen or a
+//! dragged out (see `ui_editor::draw`), then the `+` for a screen or a
 //! modifier, inserted the Explorer's own way (`Shell::insert_instance_under`),
 //! then the switch for which half of a `UDim` the canvas writes.
 
@@ -18,7 +18,7 @@ use crate::tokens;
 use crate::ui_canvas::Unit;
 
 /// The elements a screen is built from, one tool each, and how each tool
-/// reads — its key, where it has one (see `draw::TOOL_KEYS`).
+/// reads, its key, where it has one (see `draw::TOOL_KEYS`).
 const ELEMENTS: [(&str, IconName, &str); 7] = [
     ("Frame", IconName::Square, "Frame (F)"),
     ("TextLabel", IconName::Type, "TextLabel (T)"),

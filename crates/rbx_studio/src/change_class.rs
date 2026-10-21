@@ -1,9 +1,9 @@
-//! Changing an instance's class in place — the decidable half of the
+//! Changing an instance's class in place, the decidable half of the
 //! Explorer's Change Class command (`shell::change_class` runs it).
 //!
 //! The instance keeps its referent (`WeakDom::set_class`), so everything
-//! that names it — a `Weld.Part0`, a `Model.PrimaryPart`, the selection, an
-//! open script tab — still does, with nothing to retarget. What it loses is
+//! that names it, a `Weld.Part0`, a `Model.PrimaryPart`, the selection, an
+//! open script tab, still does, with nothing to retarget. What it loses is
 //! decided one property at a time by [`plan`]; what the picker offers is
 //! [`choices`].
 
@@ -18,7 +18,7 @@ pub(crate) use choices::{choices, letters, rank_split, words, Choices, Tier};
 
 /// Whether anything can be changed *into* `class`: a class the dump knows,
 /// that `Instance.new` accepts and a class picker may show, and that is no
-/// service — Roblox makes exactly one of each of those itself.
+/// service, Roblox makes exactly one of each of those itself.
 pub(crate) fn is_target(database: &ReflectionDatabase, class: &str) -> bool {
     database.class(class).is_some()
         && database.is_creatable(class)
@@ -26,8 +26,8 @@ pub(crate) fn is_target(database: &ReflectionDatabase, class: &str) -> bool {
         && !database.is_service(class)
 }
 
-/// Whether `referent`'s own class may be changed. A service's may not —
-/// scripts reach it through `GetService` by that very class — and neither
+/// Whether `referent`'s own class may be changed. A service's may not,
+/// scripts reach it through `GetService` by that very class, and neither
 /// may a root the Explorer shows as one, which covers the few services the
 /// dump does not know (see `explorer::is_known_service`).
 pub(crate) fn changeable(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> bool {
@@ -88,8 +88,8 @@ pub(crate) struct Plan {
 /// - Anything else: kept.
 ///
 /// Keys are the file's own spelling (`size`, `Color3uint8`), so each is read
-/// through `ReflectionDatabase::canonical_name` — the same mapping scripts
-/// and the Properties panel use — before it is compared with the dump. `fill` is what a fresh `target` is
+/// through `ReflectionDatabase::canonical_name`: the same mapping scripts
+/// and the Properties panel use, before it is compared with the dump. `fill` is what a fresh `target` is
 /// given where the instance has no value at all, in that same spelling.
 pub(crate) fn plan(
     database: &ReflectionDatabase,
@@ -185,7 +185,7 @@ pub(crate) fn apply(dom: &mut WeakDom, referent: Ref, target: &str, plan: &Plan)
 const NAMED: usize = 3;
 
 /// The picker's one-line account of what a change would cost, from the
-/// [`plan`] of each instance it would convert — so a lossy conversion is
+/// [`plan`] of each instance it would convert, so a lossy conversion is
 /// visible before it happens rather than after.
 pub(crate) fn summary(plans: &[Plan]) -> String {
     let mut dropped: Vec<&str> = plans

@@ -1,18 +1,18 @@
-//! **Row C** — the ribbon: grouped commands for whichever category tab Row
+//! **Row C**: the ribbon: grouped commands for whichever category tab Row
 //! B has selected (Row B itself lives in `shell::chrome`, since it is a tab
 //! strip like Row A's, not ribbon content).
 //!
 //! Two button shapes, both the frame's:
 //!
-//! - a **tile** — 42px wide, icon over label, filling the ribbon's height —
+//! - a **tile**, 42px wide, icon over label, filling the ribbon's height,
 //!   for the commands worth aiming at;
-//! - a **stack** — 78px wide, three rows of icon-beside-label — for the
+//! - a **stack**, 78px wide, three rows of icon-beside-label, for the
 //!   ones that belong to the tile beside them (Copy's paste/cut/duplicate)
 //!   or that are really a readout (the snap increments).
 //!
 //! A tile is only clickable when this editor has a real handler behind it.
 //! Everything Studio's ribbon offers that this editor doesn't do yet stays
-//! visibly disabled with a tooltip saying so, rather than vanishing —
+//! visibly disabled with a tooltip saying so, rather than vanishing,
 //! seeing the shape of what belongs here is worth more than a shorter
 //! ribbon, and it's the same rule `menu_bar`'s greyed items already follow.
 
@@ -153,7 +153,7 @@ impl Shell {
             Tab::Plugins => self.plugin_ribbon_groups(cx),
         };
 
-        // One separator between groups, none at either end — the frame's own
+        // One separator between groups, none at either end, the frame's own
         // rhythm, and the reason the groups are built as a list of lists
         // rather than one flat row.
         let mut children: Vec<AnyElement> = Vec::new();
@@ -182,7 +182,7 @@ impl Shell {
             .items_stretch()
             // Scrolls rather than clips. At 2x the UI scale the Home page
             // is wider than the window, and a ribbon that simply loses its
-            // last buttons is WCAG 1.4.4's "loss of content" — the precise
+            // last buttons is WCAG 1.4.4's "loss of content", the precise
             // thing the scale exists to avoid.
             .overflow_x_scroll()
             .pt(px(9.))
@@ -209,7 +209,7 @@ impl Shell {
     /// increments they all obey.
     ///
     /// The tools, Local and Align sit inside one bordered cluster, icon
-    /// only — each still has its own tooltip, so nothing here loses its
+    /// only, each still has its own tooltip, so nothing here loses its
     /// accessible name by dropping a caption nobody needs to read twice.
     /// The snap readouts stay their own thing beside it: they are values,
     /// not tools.
@@ -266,9 +266,9 @@ impl Shell {
         ]
     }
 
-    /// §5.7 — the three insert menus. Every item routes through
+    /// §5.7, the three insert menus. Every item routes through
     /// `Shell::insert_instance` (or, for the Part menu's Block/Sphere/
-    /// Cylinder, `Shell::insert_part` — see `insert_item`), the same paths
+    /// Cylinder, `Shell::insert_part`: see `insert_item`), the same paths
     /// the Model menu already uses, so a ribbon click and a menu-bar click
     /// are the same code path.
     fn insert_tiles(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -317,8 +317,8 @@ impl Shell {
     }
 
     /// Home's Settings group, Studio's own: Game Settings.
-    /// The viewport's own real controls — quality, orthographic, the axis
-    /// indicator — are mostly in the viewport dock's settings menu, because
+    /// The viewport's own real controls, quality, orthographic, the axis
+    /// indicator, are mostly in the viewport dock's settings menu, because
     /// they belong to the open document rather than to a Studio-named ribbon
     /// group; Settings opens the same page, and Show UI is the one switch
     /// Studio keeps on its ribbon.
@@ -485,7 +485,7 @@ impl Shell {
 
     /// One toggle per dock, and the reason they exist: a dock closed from
     /// its own tab has no tab left to bring it back with. The View menu
-    /// carries the same toggles, through the same call — a window you can
+    /// carries the same toggles, through the same call, a window you can
     /// shut and not reopen is a window you have lost.
     fn panel_tiles(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let mut tiles = vec![
@@ -498,7 +498,7 @@ impl Shell {
         ];
         // Argon and Wally have no tab of their own to reopen from outside
         // the Script Editor, because they're nowhere to be seen outside it
-        // either — see `Shell::hidden_panels`.
+        // either, see `Shell::hidden_panels`.
         if self.document == Document::Scripts {
             tiles.push((Panel::Argon, IconName::RefreshCw, "Argon"));
             tiles.push((Panel::Wally, IconName::Package, "Wally"));
@@ -558,7 +558,7 @@ impl Shell {
     /// as `menu_bar`'s Edit menu and `Ctrl+X`/`C`/`V`/`D`.
     ///
     /// Each is greyed exactly while its own handler would return early
-    /// without doing anything — `clipboard::has_copyable` is that handler's
+    /// without doing anything, `clipboard::has_copyable` is that handler's
     /// own guard, so the button and the command cannot disagree about when
     /// there is something to act on. A control that is greyed is also out
     /// of the roving group (see `unavailable_tile`), so arrowing along the
@@ -908,7 +908,7 @@ fn tool_icon(tool: Tool) -> IconName {
         Tool::Scale => IconName::Scale3d,
         Tool::Rotate => IconName::Rotate3d,
         // Roblox's own glyph is a bounding box with a handle at each corner
-        // — this project ships no Roblox icon assets (see `AGENTS.md`), so a
+        // this project ships no Roblox icon assets (see `CONTRIBUTING.md`), so a
         // generic Lucide glyph standing for the same idea, a frame with its
         // own corner handles, is this editor's equivalent rather than a copy.
         Tool::Transform => IconName::SquareDashed,
@@ -939,7 +939,7 @@ pub(super) fn tool_accent(tool: Tool) -> Rgba {
 /// Three cues, not one: a wash of the tool's pastel, a 1.5px border in the
 /// same pastel, and the icon itself tinted. WCAG 1.4.1 forbids colour as
 /// the *only* means of conveying state, and the border is the part that
-/// survives grayscale and every kind of colour blindness — the tools
+/// survives grayscale and every kind of colour blindness, the tools
 /// already differ by icon shape, so between the two an active tool is
 /// identifiable with no hue perception at all.
 pub(super) fn selected(tile: Stateful<Div>, accent: Rgba) -> Stateful<Div> {
@@ -951,7 +951,7 @@ pub(super) fn selected(tile: Stateful<Div>, accent: Rgba) -> Stateful<Div> {
 
 /// A bare icon inside the transform-tools cluster: no fill or radius of its
 /// own at rest, so the icons read as members of one shared card rather than
-/// six tiles glued together — the border and the wash [`selected`] paints
+/// six tiles glued together, the border and the wash [`selected`] paints
 /// are what a hover or an active tool adds on top of this.
 /// A cluster icon whose tool can't be used right now: greyed, and a hover
 /// or press lights nothing. Its tooltip says why, and a click on it does
@@ -1123,7 +1123,7 @@ fn tile_frame(
 ///
 /// The spec asks for a 120ms 1.06x scale. GPUI has no element transform, so
 /// the lift is a size change on the icon's own fixed box rather than a
-/// transform — the label below it doesn't move, because the box the icon
+/// transform, the label below it doesn't move, because the box the icon
 /// fills is what grows. The vendored GPUI eases a hover's pixel sizes over
 /// `tokens::DURATION_HOVER` (the spec's 120ms), given an id to keep the blend
 /// in, and drops the easing under reduced motion; the lift itself is dropped

@@ -212,7 +212,7 @@ fn a_tint_multiplies_before_anything_is_added() {
     };
 
     // Red is killed by the tint, then lifted by brightness like every other
-    // channel — brightness after tint, not before.
+    // channel, brightness after tint, not before.
     assert!((tinted.apply(Vec3::ONE).x - 0.5).abs() < 1e-6);
     assert!((tinted.apply(Vec3::ONE).y - 1.5).abs() < 1e-6);
 }
@@ -342,7 +342,7 @@ fn a_disabled_blur_effect_lets_the_next_enabled_one_win() {
 }
 
 // Roblox documents this specifically for BlurEffect (create.roblox.com/docs,
-// BlurEffect.Size: "the instance with the greatest Size takes priority") —
+// BlurEffect.Size: "the instance with the greatest Size takes priority"),
 // unlike every other effect here, it is not "whichever is enabled first".
 #[test]
 fn among_several_enabled_blur_effects_the_greatest_size_wins() {
@@ -356,7 +356,7 @@ fn among_several_enabled_blur_effects_the_greatest_size_wins() {
 }
 
 // A disabled BlurEffect must lose the size comparison even when its own Size
-// is the largest number on the list — it never competes at all.
+// is the largest number on the list, it never competes at all.
 #[test]
 fn a_disabled_blur_effects_size_never_enters_the_comparison() {
     let effects = read_effects(&[
@@ -373,7 +373,7 @@ fn a_disabled_blur_effects_size_never_enters_the_comparison() {
     assert_eq!(effects.blur, Some(Blur { size: 8.0 }));
 }
 
-// `SunRaysEffect` and `DepthOfFieldEffect` parsing have their own files — purely
+// `SunRaysEffect` and `DepthOfFieldEffect` parsing have their own files, purely
 // to keep this one under the workspace's 400-line file guideline.
 #[path = "tests/sun_rays.rs"]
 mod sun_rays;

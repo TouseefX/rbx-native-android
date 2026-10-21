@@ -282,7 +282,7 @@ impl LocalDraft {
     }
 }
 
-/// The first root instance of `class` — services sit at the root.
+/// The first root instance of `class`: services sit at the root.
 pub(super) fn service(dom: &WeakDom, class: &str) -> Option<Ref> {
     dom.root_refs()
         .iter()

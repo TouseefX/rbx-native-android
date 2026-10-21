@@ -2,7 +2,7 @@
 //! light it bounces) is multiplied by, and when the stars come out.
 //!
 //! Roblox keeps one set of skybox images for the whole day and darkens them as
-//! the sun sets — a place with a noon panorama still reads as night at
+//! the sun sets, a place with a noon panorama still reads as night at
 //! `ClockTime = 0`. These two curves are that darkening, fitted by eye against
 //! Studio rather than to any published formula.
 
@@ -13,8 +13,8 @@ use glam::Vec3;
 /// finished brightening.
 const DAY_ELEVATION: f32 = 0.17;
 /// And below which it is fully night. Well under the horizon rather than at it:
-/// Roblox keeps a lit sky for a good while after sunset, and `ClockTime 18.4` —
-/// six degrees past it — is still plainly dusk in Studio rather than midnight.
+/// Roblox keeps a lit sky for a good while after sunset, and `ClockTime 18.4`,
+/// six degrees past it, is still plainly dusk in Studio rather than midnight.
 const NIGHT_ELEVATION: f32 = -0.25;
 
 /// What is left of the sky at midnight. Not zero: a Roblox night sky is dim but

@@ -1,5 +1,5 @@
 //! New template: a name (checked as it's typed), the class, and what the
-//! file starts from — empty, the class's built-in starter, or a copy of
+//! file starts from, empty, the class's built-in starter, or a copy of
 //! another template.
 
 use gpui_kit::component::input::{Input, InputEvent, InputState};

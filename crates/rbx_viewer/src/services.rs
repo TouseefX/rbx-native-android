@@ -3,7 +3,7 @@
 //! `rbxstudio`'s Explorer and the browser build's (see `web`).
 
 /// The services Studio's default Explorer view shows, in the order it lists
-/// them in — neither alphabetical nor the order the file stores them in.
+/// them in, neither alphabetical nor the order the file stores them in.
 pub const SERVICE_ORDER: [&str; 14] = [
     "Workspace",
     "Players",
@@ -54,8 +54,8 @@ const EXPLORER_ORDER: [&str; 19] = [
 /// Every root "service" class Roblox itself creates in a place file, whether
 /// or not Studio's default Explorer view shows it (verified against every
 /// root instance dump across this repo's fixtures). A root class absent from
-/// this list is some real, user-placed instance — never one of the
-/// deliberately-noisy internal ones — so the default filter below must never
+/// this list is some real, user-placed instance, never one of the
+/// deliberately-noisy internal ones, so the default filter below must never
 /// hide it.
 const KNOWN_SERVICES: [&str; 55] = [
     "AssetService",

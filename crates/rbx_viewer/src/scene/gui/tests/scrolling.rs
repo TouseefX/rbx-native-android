@@ -143,7 +143,7 @@ fn every_scrolling_property_is_read() {
     assert_eq!(scrolling.horizontal_inset, Inset::ScrollBar);
 }
 
-// "If `false`, no scroll bars will be rendered" — the same thing a zero
+// "If `false`, no scroll bars will be rendered", the same thing a zero
 // thickness comes to, so that is how it is read.
 #[test]
 fn scrolling_disabled_reads_as_no_bar_at_all() {
@@ -262,7 +262,7 @@ fn scale_sized_children_of_an_automatic_canvas_resolve_against_the_window() {
     let elements = resolve(&screens(&dom), VIEWPORT);
 
     // A zero canvas is no smaller than the window on either axis, so a row
-    // is 30% of the 300px window — and the whole 200px wide, though nothing
+    // is 30% of the 300px window, and the whole 200px wide, though nothing
     // is automatic along X.
     for row in 0..3 {
         assert_eq!(

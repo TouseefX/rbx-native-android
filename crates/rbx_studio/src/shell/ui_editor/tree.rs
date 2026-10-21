@@ -1,5 +1,5 @@
-//! Structural edits the canvas makes — an element drawn, a group made or
-//! undone, a stroke or a corner added or taken off — each as one undo step
+//! Structural edits the canvas makes, an element drawn, a group made or
+//! undone, a stroke or a corner added or taken off, each as one undo step
 //! with the values that finish it.
 
 use gpui_kit::*;

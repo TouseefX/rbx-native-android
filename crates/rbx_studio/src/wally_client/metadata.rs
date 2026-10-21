@@ -1,4 +1,4 @@
-//! `GET /v1/package-metadata/{scope}/{name}` — every published version of
+//! `GET /v1/package-metadata/{scope}/{name}`: every published version of
 //! one package, each with its manifest (`UpliftGames/wally@f578078:
 //! wally-registry-backend/src/main.rs:89-104`, `package_info`). Plain JSON,
 //! no auth, confirmed against the live registry: `{"versions": [{"package":

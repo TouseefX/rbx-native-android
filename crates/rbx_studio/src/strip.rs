@@ -1,8 +1,8 @@
-//! The editor-only data a place carries for this editor — layer membership
-//! and the layer table (`crate::layers`), the notes folder (`crate::notes`)
-//! — taken out of a copy before it leaves: Save/Publish to Roblox while
-//! Studio Settings' "Strip editor-only data on publish" is on (the
-//! default), and File › Export Clean Copy…. The open place and its local
+//! The editor-only data a place carries for this editor, taken out of a
+//! copy before it leaves: layer membership and the layer table
+//! (`crate::layers`) and the notes folder (`crate::notes`). It happens on
+//! Save/Publish to Roblox while Studio Settings' "Strip editor-only data
+//! on publish" is on (the default), and on File › Export Clean Copy…. The open place and its local
 //! file keep everything.
 
 use rbx_dom::{Ref, WeakDom};

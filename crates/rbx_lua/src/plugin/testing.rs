@@ -15,7 +15,7 @@ use crate::hooks::HookSlot;
 
 /// A VM over `dom` with the command bar's globals, `Env` app data (plugin
 /// 1, named "Test", its `CoreGui`/`PluginGuiService` folders created as
-/// roots of `dom`), `engine::install`, and — when `hooks` — the
+/// roots of `dom`), `engine::install`, and, when `hooks`, the
 /// `events::PluginHooks` hook slot. Not sandboxed. Returns the VM, its
 /// `Env`, and the DOM slot (borrow it to inspect what scripts did).
 pub(crate) fn test_vm(mut dom: WeakDom, hooks: bool) -> (Lua, Rc<Env>, Rc<RefCell<WeakDom>>) {

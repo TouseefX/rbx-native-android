@@ -52,7 +52,7 @@ pub(crate) fn replace_all(text: &str, query: &str, replacement: &str) -> Option<
 }
 
 /// The 1-based line number `offset` sits on, and that line's text with its
-/// leading indentation dropped — what a result row shows.
+/// leading indentation dropped, what a result row shows.
 pub(crate) fn line_at(text: &str, offset: usize) -> (usize, &str) {
     let start = text[..offset].rfind('\n').map_or(0, |at| at + 1);
     let end = text[offset..]
@@ -134,7 +134,7 @@ fn needle(text: &str, selections: &[Range<usize>]) -> Option<(Range<usize>, bool
 
 /// Exact-case matches of `needle`'s text that overlap no selection. A needle
 /// taken from a bare cursor matches whole words only, so Ctrl+D on `count`
-/// never picks up `counter` — the same rule VS Code and Studio follow.
+/// never picks up `counter`: the same rule VS Code and Studio follow.
 fn unselected(
     text: &str,
     needle: &Range<usize>,
