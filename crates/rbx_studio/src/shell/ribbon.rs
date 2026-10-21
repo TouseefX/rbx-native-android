@@ -511,6 +511,7 @@ impl Shell {
             ));
             tiles.push((Panel::Watch, IconName::Eye, "Watch"));
             tiles.push((Panel::CallStack, IconName::Layers, "Call Stack"));
+            tiles.push((Panel::Tests, IconName::CircleCheck, "Tests"));
         }
         tiles
             .into_iter()

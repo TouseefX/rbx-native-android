@@ -26,6 +26,7 @@ use crate::output::{LineKind, Output};
 use crate::LuaError;
 
 pub(crate) use globals::install_globals;
+pub(crate) use host::compile_in;
 use host::{CommandBar, CommandBarHooks};
 
 /// How long [`Runtime::run`] waits on a script's sleeping threads before
@@ -214,6 +215,15 @@ impl Runtime {
                 error,
             }),
         }
+    }
+
+    pub(crate) fn lua(&self) -> &Lua {
+        &self.lua
+    }
+
+    /// What scripts printed since the last resume returned.
+    pub(crate) fn pending_output(&self) -> Rc<RefCell<Output>> {
+        self.output.clone()
     }
 
     /// Borrows the DOM the scripts have been mutating.

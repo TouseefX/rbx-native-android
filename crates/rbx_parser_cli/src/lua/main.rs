@@ -1,8 +1,9 @@
 //! `rbxlua`: runs a Luau script against a place/model file and, optionally,
-//! writes the mutated DOM back out.
+//! writes the mutated DOM back out; `rbxlua test` runs the place's specs.
 
 mod args;
 mod dom_io;
+mod test;
 
 use std::process::ExitCode;
 
@@ -11,12 +12,25 @@ use rbx_lua::{LineKind, Runtime};
 fn main() -> ExitCode {
     let mut argv = std::env::args();
     let _program = argv.next();
+    let mut argv = argv.peekable();
+    if argv.peek().map(String::as_str) == Some("test") {
+        argv.next();
+        return match test::parse(argv) {
+            Ok(parsed) => test::run(&parsed),
+            Err(err) => {
+                eprintln!("error: {err}");
+                eprintln!("{}", test::USAGE);
+                ExitCode::from(2)
+            }
+        };
+    }
 
     let parsed = match args::parse(argv) {
         Ok(parsed) => parsed,
         Err(err) => {
             eprintln!("error: {err}");
             eprintln!("{}", args::usage());
+            eprintln!("{}", test::USAGE);
             return ExitCode::from(2);
         }
     };

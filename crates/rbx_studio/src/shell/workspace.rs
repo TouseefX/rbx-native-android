@@ -144,6 +144,7 @@ impl Shell {
             Panel::PluginWidgets => self.plugin_widgets_dock(window, cx),
             Panel::InputActions => self.input_actions_dock(window, cx),
             Panel::Playtests => self.playtests_dock(window, cx),
+            Panel::Tests => self.tests_dock(cx),
             Panel::Layers => self.layers_dock(window, cx),
             Panel::Loren => self.loren_dock(window, cx),
         }
