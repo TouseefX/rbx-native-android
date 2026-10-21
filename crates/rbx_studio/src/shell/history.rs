@@ -430,6 +430,53 @@ mod tests {
         }
     }
 
+    // The UI Editor's design panel, as `Shell::write_drag_with` runs it: a
+    // Tile click and a typed `Scale` each come with `first` set, so each is
+    // a step of its own, while a scrub of `Scale` pushes on its first step
+    // only and every later one rewrites that entry's log. Undo then walks
+    // back one edit at a time: the scrub, the typed value, the click.
+    #[test]
+    fn design_panel_edits_undo_one_at_a_time_and_a_scrub_as_one() {
+        let mut dom = WeakDom::new();
+        let gradient = dom.new_instance("UIGradient", "UIGradient", None);
+        dom.set_property(gradient, "TileMode", Variant::Float32(0.0))
+            .unwrap();
+        dom.set_property(gradient, "Scale", Variant::Float32(1.0))
+            .unwrap();
+        dom.take_changes();
+        let mut history = History::new(DEFAULT_CAP);
+        let mut step = |dom: &mut WeakDom, first: bool, property: &str, value: f32| {
+            if first {
+                history.push(dom.clone());
+            }
+            dom.set_property(gradient, property, Variant::Float32(value))
+                .unwrap();
+            history.record_changes(dom.take_changes());
+        };
+        step(&mut dom, true, "TileMode", 2.0); // Mirror clicked
+        step(&mut dom, true, "Scale", 0.4); // 0.4 typed, Enter
+        step(&mut dom, true, "Scale", 0.5); // scrub: first step
+        step(&mut dom, false, "Scale", 0.6);
+        step(&mut dom, false, "Scale", 0.7);
+
+        let read = |dom: &WeakDom| {
+            let properties = dom.get(gradient).unwrap().properties();
+            [properties.get("TileMode"), properties.get("Scale")].map(|v| v.cloned())
+        };
+        let mut expect = |tile: f32, scale: f32| {
+            let (previous, _) = history.undo(dom.clone()).expect("something to undo");
+            assert_eq!(
+                read(&previous),
+                [Some(Variant::Float32(tile)), Some(Variant::Float32(scale))]
+            );
+            dom = previous;
+        };
+        expect(2.0, 0.4); // the whole scrub
+        expect(2.0, 1.0); // the typed value, Mirror kept
+        expect(0.0, 1.0); // the click
+        assert!(history.undo(dom.clone()).is_none());
+    }
+
     #[test]
     fn undoing_a_script_source_edit_re_seeds_its_tab() {
         // Both halves of what an undo owes an open script tab, on the one
