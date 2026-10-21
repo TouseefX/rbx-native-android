@@ -177,7 +177,17 @@ pub(super) fn create_dock(
         float_size: info.float,
         min_size: info.min,
     };
-    Ok(create(lua, key, info.enabled, kind))
+    let env = env(lua);
+    let enabled = {
+        let mut shared = env.shared.borrow_mut();
+        let enabled = match shared.restored_widget(&env.name, &key) {
+            Some(restored) if !info.override_restore => restored,
+            _ => info.enabled,
+        };
+        shared.remember_widget(&env.name, &key, enabled);
+        enabled
+    };
+    Ok(create(lua, key, enabled, kind))
 }
 
 pub(super) fn create_floating(

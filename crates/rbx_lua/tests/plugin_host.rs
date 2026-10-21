@@ -543,3 +543,59 @@ fn waypoint_request() {
         .requests
         .contains(&Request::Waypoint("my step".to_string())));
 }
+
+/// Studio restores a dock widget's last `Enabled` on the next run unless
+/// the info overrides it; closing runs a `BindToClose` callback, then
+/// closes the widget anyway (both seen in Studio 0.743).
+#[test]
+fn dock_widgets_restore_and_bind_to_close() {
+    let src = r#"
+        local function make(id, override)
+            return plugin:CreateDockWidgetPluginGui(id, DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, override, 200, 100, 100, 50))
+        end
+        local a, b, c = make("a", false), make("b", true), make("c", false)
+        print("start", a.Enabled, b.Enabled, c.Enabled)
+        a.Enabled, b.Enabled, c.Enabled = true, true, true
+        c:BindToClose(function() print("asked to close") end)
+    "#;
+    let (mut f, out) = started("restore", src);
+    assert!(texts(&out, OutputKind::Print).contains(&"start false false false".to_string()));
+    let c = f
+        .host
+        .ui()
+        .widgets
+        .iter()
+        .find(|w| w.key == "c")
+        .unwrap()
+        .id;
+    let out = f.send(Input::WidgetClosed(c));
+    assert!(texts(&out, OutputKind::Print).contains(&"asked to close".to_string()));
+    assert!(
+        !f.host
+            .ui()
+            .widgets
+            .iter()
+            .find(|w| w.key == "c")
+            .unwrap()
+            .enabled
+    );
+
+    let mut next = PluginHost::new(ReflectionDatabase::embedded(), Some(f._dir.0.clone()));
+    next.add(roblox(src));
+    let ctx = f.context();
+    let out = next.dispatch(&mut f.dom, ctx, Input::Start);
+    assert!(texts(&out, OutputKind::Print).contains(&"start true false false".to_string()));
+}
+
+/// Selection To Camera plays a click sound from its widget; that must not
+/// stop its script.
+#[test]
+fn a_widget_sound_plays_without_error() {
+    let src = r#"
+        local s = Instance.new("Sound")
+        s:Play() s:Stop() s:Pause() s:Resume()
+        print("sound ok")
+    "#;
+    let (_f, out) = started("sound", src);
+    assert!(texts(&out, OutputKind::Print).contains(&"sound ok".to_string()));
+}
