@@ -445,8 +445,7 @@ impl Properties {
         Some(match value {
             // The only arm that needs `self`: resolving an enum's member
             // names is a reflection lookup, which `value_edit_kind` (shared
-            // with `attributes::edit_kind_for`, an attribute never being an
-            // `Enum`: see that module) has no database to make.
+            // with `attributes::edit_kind`) has no database to make.
             Variant::Enum(raw) => self.enum_kind(class, name, *raw, text),
             // Here rather than in `value_edit_kind`: an attribute can hold a
             // `BrickColor` too, and keeps its plain number field.
