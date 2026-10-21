@@ -80,6 +80,7 @@ That builds everything. The binaries you get:
 |---|---|---|
 | `rbxdump` | `rbx_parser_cli` | Prints the instance tree of a `.rbxm`/`.rbxl`/`.rbxlx`/`.rbxmx` file. `--roundtrip <file>` writes the file back out and diffs it against the original. |
 | `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`), or runs the place's TestEZ specs (`rbxlua test place.rbxl [--junit out.xml]`, see [`docs/testing.md`](docs/testing.md)). |
+| `rbxaudit` | `rbx_parser_cli` | Checks a place's scripts for remote security problems (`rbxaudit place.rbxl`). Prints one line per finding and exits 1 if any is High, so you can use it in CI. |
 | `rbxview` | `rbx_viewer` | A standalone 3D viewer (`rbxview place.rbxl [--screenshot out.png]`), and the server for the browser build (`rbxview --serve`, see below). |
 | `rbxstudio` | `rbx_studio` | The editor (`rbxstudio [--select <name-or-path>] [--run <script.luau>] [--verbose] <place>`, `--help` for the rest). |
 | `rbxcloud` | `rbx_cloud` | A small Open Cloud CLI (`whoami`, `list`, `download`, `asset`). |
@@ -126,7 +127,8 @@ otherwise. So yes, `cargo build` still takes a while for those two crates.
 | `rbx_loren` | Loren, the optional built-in game framework by fabi: the `rbxstudio loren` CLI, its vendored Luau runtime, and the project graph, place and spec runs the editor reads. |
 | `rbx_viewer` | The wgpu renderer and `rbxview` (desktop and WebGPU). |
 | `rbx_studio` | The editor (`rbxstudio`), built on GPUI Kit. |
-| `rbx_parser_cli` | The `rbxdump` and `rbxlua` tools. |
+| `rbx_audit` | A security audit of every script in a place: unchecked remote arguments, missing remotes, bad requires and so on. |
+| `rbx_parser_cli` | The `rbxdump`, `rbxlua`, `rbxmerge` and `rbxaudit` tools. |
 
 ## Testing
 

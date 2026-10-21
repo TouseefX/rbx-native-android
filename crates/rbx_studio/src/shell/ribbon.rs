@@ -494,6 +494,11 @@ impl Shell {
             (Panel::Output, IconName::Terminal, "Output"),
             (Panel::Viewport, IconName::MonitorCog, "Viewport"),
             (Panel::InputActions, IconName::Gamepad2, "Input Actions"),
+            (
+                Panel::SecurityAudit,
+                IconName::ShieldAlert,
+                "Security Audit",
+            ),
             (Panel::Playtests, IconName::Film, "Playtests"),
             (Panel::Layers, IconName::Layers, "Layers"),
             (Panel::Loren, IconName::Layers, "Loren"),

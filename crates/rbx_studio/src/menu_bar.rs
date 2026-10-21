@@ -116,6 +116,7 @@ actions!(
         MenuToggleViewport,
         MenuToggleCollaborators,
         MenuToggleInputActions,
+        MenuToggleSecurityAudit,
         MenuTogglePlaytests,
         MenuToggleLayers,
         MenuToggleLoren,
@@ -297,6 +298,7 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 // rbx-native. Shut by default, so it needs a way in.
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
+                MenuItem::action("Security Audit", MenuToggleSecurityAudit),
                 MenuItem::action("Playtests", MenuTogglePlaytests),
                 MenuItem::action("Layers", MenuToggleLayers),
                 MenuItem::action("Loren", MenuToggleLoren),

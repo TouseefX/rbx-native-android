@@ -9,6 +9,26 @@
 
 ## 2026-10-20
 
+- **A Security Audit dock, and `rbxaudit` for CI.** View › Security Audit
+  (also a ribbon toggle) audits every script in the place, something
+  Studio has no equivalent for: remote handlers that let a client's
+  arguments reach currency, `Health`, `CFrame`, `Parent`, `:Destroy()`,
+  `Instance.new`, data store writes, `MarketplaceService`, `require` or
+  `loadstring` unchecked (type checks, `tonumber`, `math.clamp`,
+  whitelist lookups and early returns count as checks); handlers that
+  treat the Player argument as data; remotes nothing on the server
+  listens on, and calls on remotes the place doesn't have; `require`
+  targets that aren't ModuleScripts; and server-only services reached
+  from the client, or `InvokeClient` on the server. Loren's client routes
+  (`Service.Client` methods, `ClientEvents` listeners, `Middleware`) are
+  audited like remote handlers, a notch lower when a `Spec` or `Middleware`
+  gates them. A number only counts as checked with both a lower and an
+  upper bound, and client data is followed into the script's own
+  functions. Each finding has a severity and opens its script scrolled to
+  the line. The audit runs in the background, so a big place doesn't stall
+  the editor. `rbxaudit place.rbxl` prints the same findings and exits 1 on
+  any high one. (@chteau)
+
 - **Recorded playtests, replayed in Edit mode.** Play now records each
   player's root part and camera (10 Hz by default; Off/5/10/20 in the new
   Playtests dock) plus joins, deaths, respawns, damage, chat, game
