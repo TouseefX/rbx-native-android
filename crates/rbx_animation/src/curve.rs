@@ -169,9 +169,23 @@ impl FloatCurve {
             Interpolation::Constant => k0.value,
             Interpolation::Linear => k0.value + (k1.value - k0.value) * u,
             Interpolation::Cubic => {
-                hermite(k0.value, k1.value, k0.tangents().1, k1.tangents().0, h, u)
+                hermite(k0.value, k1.value, self.slopes(i - 1).1, self.slopes(i).0, h, u)
             }
         })
+    }
+
+    /// The `(left, right)` slopes key `i` plays with. An unset tangent is
+    /// the slope to the next key (0 on the last one): that is what a file
+    /// stores for it (see [`values`]) and what real Studio's Animator plays,
+    /// matched within 1e-4 on a FACS curve (`tests/studio_graph.rs`), where
+    /// reading it as 0 was 0.22 off.
+    fn slopes(&self, i: usize) -> (f32, f32) {
+        let k = &self.keys[i];
+        let auto = self.keys.get(i + 1).map_or(0., |n| {
+            let h = n.time - k.time;
+            if h > 0. { (n.value - k.value) / h } else { 0. }
+        });
+        (k.left_tangent.unwrap_or(auto), k.right_tangent.unwrap_or(auto))
     }
 
     pub fn index_at(&self, time: f32) -> Option<usize> {

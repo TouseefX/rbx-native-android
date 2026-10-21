@@ -68,6 +68,18 @@ fn a_refused_upload_says_why_in_roblox_terms_and_keeps_the_raw_error() {
     assert!(said.unchanged);
     assert!(said.message.starts_with("Roblox rejected the place file."));
     assert!(said.message.contains("INVALID_ARGUMENT: bad place file"));
+
+    // A 409 while a Team Create session holds the place is not a wrong link.
+    let busy = describe(&CloudError::Refused {
+        status: 409,
+        message: "Conflict: Save failed. Server is busy and unable to process your upload request. Please try again in a couple minutes.".to_string(),
+    });
+    assert!(busy.starts_with("Roblox is busy with this place"), "{busy}");
+    let wrong = describe(&CloudError::Http {
+        status: 409,
+        url: "https://apis.roblox.com/x".to_string(),
+    });
+    assert!(wrong.starts_with("The place isn\u{2019}t part of that experience."));
 }
 
 #[test]
