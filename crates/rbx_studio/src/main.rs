@@ -113,6 +113,7 @@ mod pointer_lock;
 #[cfg(test)]
 mod probe;
 mod properties;
+mod query;
 mod recovery;
 mod render_image;
 mod save;

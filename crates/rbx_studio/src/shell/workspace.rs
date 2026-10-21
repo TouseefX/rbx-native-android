@@ -219,8 +219,18 @@ impl Shell {
                                 cx.stop_propagation();
                             }
                         }))
-                        .child(search_field(&self.tab_order, &self.search, cx)),
+                        .child(
+                            h_flex()
+                                .gap(px(4.))
+                                .child(div().flex_1().child(search_field(
+                                    &self.tab_order,
+                                    &self.search,
+                                    cx,
+                                )))
+                                .child(self.query_toggle(cx)),
+                        ),
                 )
+                .children(self.query_status(cx))
                 .child(
                     div()
                         .flex_1()
