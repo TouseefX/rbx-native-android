@@ -180,6 +180,7 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         (Panel::Collaborators, &MenuToggleCollaborators),
         (Panel::InputActions, &MenuToggleInputActions),
         (Panel::Layers, &MenuToggleLayers),
+        (Panel::Loren, &MenuToggleLoren),
     ] {
         toggle.install(panel, shell.clone(), cx);
     }
@@ -359,3 +360,4 @@ panel_toggle!(MenuToggleViewport);
 panel_toggle!(MenuToggleCollaborators);
 panel_toggle!(MenuToggleInputActions);
 panel_toggle!(MenuToggleLayers);
+panel_toggle!(MenuToggleLoren);

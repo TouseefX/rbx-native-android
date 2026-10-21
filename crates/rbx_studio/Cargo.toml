@@ -36,6 +36,9 @@ rbx_binary = { path = "../rbx_binary" }
 rbx_cloud = { path = "../rbx_cloud" }
 # Play/Test without Studio: probe, channel, tunnel, launcher, embedding.
 rbx_play = { path = "../rbx_play" }
+# Loren, the optional built-in framework: `rbxstudio loren`, Home's Loren
+# project, the Loren dock.
+rbx_loren = { path = "../rbx_loren" }
 rbx_animation = { path = "../rbx_animation" }
 rbx_autorig = { path = "../rbx_autorig" }
 rbx_dom = { path = "../rbx_dom" }

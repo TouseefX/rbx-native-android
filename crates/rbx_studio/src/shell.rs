@@ -38,6 +38,7 @@ mod layers;
 mod layers_panel;
 mod layout;
 mod light_guides;
+mod loren_panel;
 mod luau_lsp;
 mod menu;
 mod open_place;
@@ -51,6 +52,7 @@ mod play;
 mod plugins;
 mod property_element;
 mod quality;
+mod query_select;
 mod recovery;
 mod ref_pick;
 mod reparent;
@@ -281,6 +283,9 @@ pub(crate) struct Shell {
     /// What the Explorer's search field holds, trimmed; see
     /// `explorer::search`.
     explorer_query: String,
+    /// The search field's query mode and what its query last matched; see
+    /// `shell::query_select`.
+    query: query_select::QuerySearch,
     filter: Entity<InputState>,
     properties: Properties,
     /// One open `Input` per Properties row currently being edited, keyed by
@@ -331,6 +336,7 @@ pub(crate) struct Shell {
     /// `shell::style_panel`.
     style_edits: style_panel::StyleEdits,
     input_edits: input_panel::InputEdits,
+    loren: loren_panel::LorenState,
     style_scroll: ScrollHandle,
     /// The UI Editor document's own state, its sub-tab, the screen on the
     /// canvas, the pan and zoom, the gesture in flight. See
@@ -646,13 +652,19 @@ impl Shell {
             }
         });
 
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
-        let searched = cx.subscribe(&search, |shell, input, event: &InputEvent, cx| {
-            if matches!(event, InputEvent::Change) {
-                let query = input.read(cx).value().trim().to_owned();
-                shell.search_explorer(query, cx);
-            }
-        });
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(query_select::placeholder(false)));
+        let searched = cx.subscribe(
+            &search,
+            |shell, input, event: &InputEvent, cx| match event {
+                InputEvent::Change => {
+                    let query = input.read(cx).value().trim().to_owned();
+                    shell.search_explorer(query, cx);
+                }
+                InputEvent::PressEnter { .. } => shell.select_query_matches(cx),
+                _ => {}
+            },
+        );
 
         let wally_query = cx.new(|cx| InputState::new(window, cx).placeholder("Search Wally"));
         let wally_query_changed = cx.subscribe(&wally_query, |shell, _, event: &InputEvent, cx| {
@@ -797,6 +809,7 @@ impl Shell {
             strip_on_publish,
             search,
             explorer_query: String::new(),
+            query: query_select::QuerySearch::default(),
             filter,
             properties,
             edits: edit::Edits::default(),
@@ -817,6 +830,7 @@ impl Shell {
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
             layers: layers::LayerState::load(&path),
+            loren: loren_panel::LorenState::default(),
             style_scroll: ScrollHandle::new(),
             ui,
             anim: animation::Animation::new(cx).with_seams(anim_sheet_height, anim_names_width),
@@ -1087,6 +1101,7 @@ impl Shell {
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
         shell.apply_debug_layers(cx);
+        shell.apply_debug_loren(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.
@@ -1384,6 +1399,7 @@ impl Shell {
     /// Pushes the root rows the visibility settings and the search now call
     /// for into the tree.
     fn push_root_rows(&mut self, cx: &mut Context<Self>) {
+        self.refresh_query();
         let items = self.explorer_items();
         // Replacing the rows drops the tree's selection; putting it back in the
         // same update keeps the observer from ever seeing the gap. A selected
