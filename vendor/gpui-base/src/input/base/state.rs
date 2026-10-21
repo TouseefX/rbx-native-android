@@ -349,6 +349,8 @@ pub struct InputBaseState<M: InputModeKind> {
     pub(super) line_number_gutter: Option<(Pixels, Pixels)>,
     /// rbx-native addition — see [`Self::set_surface_colors`].
     surface_colors: Option<(gpui::Hsla, gpui::Hsla)>,
+    /// rbx-native addition — see [`Self::reveal_range`].
+    pub(super) pending_reveal: Option<usize>,
     /// Advances every time search is explicitly invoked. See
     /// [`InputBaseState::search_activation_revision`].
     pub(super) search_activation_revision: u64,
@@ -728,6 +730,7 @@ impl<M: InputModeKind> InputBaseState<M> {
             editor_scrollbar_snapshot: Cell::new(None),
             editor_paddings: Edges::default(),
             deferred_scroll_offset: None,
+            pending_reveal: None,
             placeholder: SharedString::default(),
             mask_pattern: MaskPattern::default(),
             mask_pattern_set: false,
@@ -2191,6 +2194,18 @@ impl<M: InputModeKind> InputBaseState<M> {
     /// onto the state every frame, so there is no other way to keep these.
     pub fn set_surface_colors(&mut self, background: gpui::Hsla, active_line: gpui::Hsla, cx: &mut Context<Self>) {
         self.surface_colors = Some((background, active_line));
+        cx.notify();
+    }
+
+    /// Selects `range` and scrolls its first line into view, with the
+    /// surrounding lines, on the next paint, so it also works on an editor
+    /// that has never been laid out (a tab opened this frame).
+    ///
+    /// rbx-native addition: `set_selected_range` only nudges the scroll one
+    /// line toward a selection off screen, and does nothing before a layout.
+    pub fn reveal_range(&mut self, range: Range<usize>, cx: &mut Context<Self>) {
+        self.pending_reveal = Some(range.start);
+        self.set_selected_range(range, cx);
         cx.notify();
     }
 

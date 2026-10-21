@@ -92,6 +92,7 @@ mod script_toolbar;
 mod scripts;
 mod scroll;
 mod scrub;
+mod security_audit;
 mod selection;
 mod settings_window;
 mod shortcuts_window;
@@ -349,6 +350,8 @@ pub(crate) struct Shell {
     /// `shell::style_panel`.
     style_edits: style_panel::StyleEdits,
     input_edits: input_panel::InputEdits,
+    /// The Security Audit dock's cached findings; see `shell::security_audit`.
+    audit: security_audit::AuditState,
     loren: loren_panel::LorenState,
     style_scroll: ScrollHandle,
     /// The UI Editor document's own state, its sub-tab, the screen on the
@@ -860,6 +863,7 @@ impl Shell {
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
+            audit: Default::default(),
             layers: layers::LayerState::load(&path),
             loren: loren_panel::LorenState::default(),
             style_scroll: ScrollHandle::new(),
@@ -1144,6 +1148,7 @@ impl Shell {
         // `StyleRule` they selected.
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
+        shell.apply_debug_security_audit(cx);
         if std::env::var_os(playtests::DEBUG_VARIABLE).is_some() {
             shell.set_panel_open(layout::Panel::Playtests, true, cx);
         }
