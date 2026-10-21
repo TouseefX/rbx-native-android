@@ -12,10 +12,13 @@ pub struct JournalPlain {
     pub name: String,
     pub path: String,
     pub property: String,
+    /// The edit's display value; older peers sealed none.
+    #[serde(default)]
+    pub value: String,
 }
 
 /// Seals `state` (clamped first) for `room`: `ct` is the state JSON, `j` one
-/// sealed journal entry per edit (value left out), `seen` 0.
+/// sealed journal entry per edit (its display value included), `seen` 0.
 pub fn seal_state(key: &[u8; 32], room: &str, state: &UserState) -> Sealed {
     let mut state = state.clone();
     state.clamp();
@@ -34,6 +37,7 @@ pub fn seal_state(key: &[u8; 32], room: &str, state: &UserState) -> Sealed {
                 name: state.name.clone(),
                 path: edit.path.clone(),
                 property: edit.property.clone(),
+                value: edit.value.clone(),
             };
             let json = serde_json::to_vec(&plain).expect("a JournalPlain always serializes");
             SealedEdit {
@@ -94,6 +98,7 @@ pub fn open_journal(
         name: plain.name,
         path: plain.path,
         property: plain.property,
+        value: plain.value,
         at: entry.at,
     })
 }
@@ -168,6 +173,7 @@ mod tests {
         let opened = open_journal(&key, "room", &entry).unwrap();
         assert_eq!(opened.name, "Ada");
         assert_eq!(opened.property, "Size");
+        assert_eq!(opened.value, "1, 2, 3");
         assert_eq!(opened.at, 1000);
         assert_eq!(open_journal(&key, "other", &entry), None);
         let later = SealedJournalEntry { at: 1001, ..entry };

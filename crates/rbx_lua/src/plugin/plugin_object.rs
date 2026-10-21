@@ -452,14 +452,12 @@ fn set_setting(lua: &Lua, key: String, value: Value) -> Result<()> {
     let json = arg_to_json(&arg::from_lua(&value))?;
     let env = env(lua);
     let mut shared = env.shared.borrow_mut();
-    let map = shared.settings.entry(env.name.clone()).or_default();
-    map.insert(key, json);
-    let text = serde_json::to_string_pretty(map).map_err(mlua::Error::external)?;
-    if let Some(dir) = shared.settings_dir.clone() {
-        std::fs::create_dir_all(&dir)
-            .and_then(|()| std::fs::write(dir.join(format!("{}.json", env.name)), text))
-            .map_err(|e| mlua::Error::runtime(format!("could not save plugin settings: {e}")))?;
-    }
+    shared
+        .settings
+        .entry(env.name.clone())
+        .or_default()
+        .insert(key, json);
+    shared.save_settings(&env.name);
     Ok(())
 }
 

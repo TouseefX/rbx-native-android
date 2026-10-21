@@ -74,6 +74,7 @@ enum Command {
     LookAt {
         eye: [f32; 3],
         target: [f32; 3],
+        fov: f32,
     },
     /// The renderer's tuned constants, see `Headless::set_calibration`.
     Calibration(Calibration),
@@ -260,8 +261,8 @@ impl Pump {
         let _ = self.commands.send(Command::CameraFeel(feel));
     }
 
-    pub(super) fn look_at(&self, eye: [f32; 3], target: [f32; 3]) {
-        let _ = self.commands.send(Command::LookAt { eye, target });
+    pub(super) fn look_at(&self, eye: [f32; 3], target: [f32; 3], fov: f32) {
+        let _ = self.commands.send(Command::LookAt { eye, target, fov });
     }
 
     pub(super) fn isolation(&self, roots: Option<Vec<rbx_dom::Ref>>) {
@@ -885,7 +886,7 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         Command::Orthographic(orthographic) => rendering.viewer.set_orthographic(orthographic),
         Command::CameraFeel(feel) => rendering.viewer.set_camera_feel(feel),
         // Studio's own default field of view.
-        Command::LookAt { eye, target } => rendering.viewer.open_at(eye, target, 70.0),
+        Command::LookAt { eye, target, fov } => rendering.viewer.open_at(eye, target, fov),
         Command::Isolation(roots) => rendering.viewer.set_isolation(roots),
         Command::LayerFilter(only, hidden) => rendering.viewer.set_layer_filter(only, hidden),
         Command::Calibration(calibration) => rendering.viewer.set_calibration(calibration),

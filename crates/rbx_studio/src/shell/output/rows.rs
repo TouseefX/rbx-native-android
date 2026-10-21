@@ -91,9 +91,19 @@ pub(super) fn output_row(
         result_label = result_label.text_color(color);
     }
 
-    row.child(div().flex_1().text_xs().child(entry.truncated_source()))
-        .child(result_label)
-        .into_any_element()
+    // The source is one line and gives way first; the result keeps up to
+    // 70% of the row and wraps inside it. A long source used to hold its
+    // full width and squeeze the result to nothing in a narrow dock.
+    row.child(
+        div()
+            .flex_1()
+            .min_w_0()
+            .truncate()
+            .text_xs()
+            .child(entry.truncated_source()),
+    )
+    .child(result_label.max_w(relative(0.7)))
+    .into_any_element()
 }
 
 /// A click that opens `location`'s script at its line (`Shell::play_reveal`).

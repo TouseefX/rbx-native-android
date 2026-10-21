@@ -53,12 +53,14 @@ mod place_merge;
 mod play;
 mod playtests;
 mod plugins;
+pub(crate) mod project;
 mod property_element;
 mod quality;
 mod query_select;
 mod recovery;
 mod ref_pick;
 mod reparent;
+mod reveal;
 mod ribbon;
 mod rig;
 mod roblox_login;
@@ -74,6 +76,7 @@ pub(crate) use layout::{edge_from_key, edge_key, Edge, Panel, SavedEdge, SavedGr
 pub(crate) use play::copy_name::DEFAULT as PLAY_COPY_NAME_DEFAULT;
 pub(crate) use playtests::DEFAULT_RATE_HZ as PLAYTEST_RATE_DEFAULT;
 pub(crate) use roving::install as install_key_bindings;
+pub(crate) use view_snap::PresetView;
 mod tree_keys;
 
 mod argon_dock;
@@ -102,6 +105,7 @@ mod theme_live;
 mod toolbar;
 pub(crate) mod tooltip;
 mod ui_editor;
+mod view_snap;
 mod viewport_dock;
 mod wally_dock;
 mod wally_sync;
@@ -540,7 +544,7 @@ pub(crate) struct Shell {
     /// is raised with it once rather than fought over every frame.
     window_was_active: bool,
     /// Kept only to stay subscribed: dropping these unregisters the listeners.
-    _subscriptions: [Subscription; 17],
+    _subscriptions: [Subscription; 18],
 }
 
 impl Shell {
@@ -771,6 +775,16 @@ impl Shell {
         let window_activated = cx.observe_window_activation(window, |shell, window, cx| {
             shell.discord_window_activation(window.is_window_active(), cx);
         });
+        // Every keystroke cancels a bare Alt tap, a bound one too: Alt+S runs
+        // its action before any key listener sees the S, and without this
+        // the Alt coming back up read as a tap and left the menu bar focused
+        // behind the Settings window it had just opened.
+        let alt_chorded = {
+            let menu_bar = menu_bar.downgrade();
+            cx.intercept_keystrokes(move |_, _, cx| {
+                let _ = menu_bar.update(cx, |bar, _| bar.interrupt_alt_tap());
+            })
+        };
 
         let mut shell = Shell {
             menu_bar,
@@ -948,6 +962,7 @@ impl Shell {
                 searched,
                 rig_user_entered,
                 window_activated,
+                alt_chorded,
             ],
         };
 

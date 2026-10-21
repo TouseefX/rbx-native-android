@@ -77,7 +77,8 @@ function Coedit.new(options: Options)
 		apply = Apply.new(state),
 		running = false,
 		connections = {} :: { RBXScriptConnection },
-		watched = {} :: { [Instance]: RBXScriptConnection },
+		watched = {} :: { [Instance]: { RBXScriptConnection } },
+		tagsHooked = {} :: { [string]: boolean },
 		roots = {} :: { [Instance]: boolean },
 		secret = nil :: Instance?,
 		added = {} :: { [Instance]: boolean },
@@ -86,6 +87,7 @@ function Coedit.new(options: Options)
 		removed = {} :: { { inst: Instance, id: string, p: string } },
 		resend = {} :: { any },
 		paths = setmetatable({}, { __mode = "k" }),
+		moved = setmetatable({}, { __mode = "k" }),
 		since = 0,
 		batchCount = 0,
 	}, Coedit)
@@ -98,7 +100,9 @@ end
 function Coedit.isTracked(self: any, inst: Instance): boolean
 	local current: Instance? = inst
 	while current ~= nil do
-		if current == self.secret then
+		-- The camera is each editor's own view, and holds the presence
+		-- markers: none of it is shared.
+		if current == self.secret or current:IsA("Camera") then
 			return false
 		end
 		if self.roots[current] then
@@ -118,6 +122,11 @@ function Coedit.onChanged(self: any, inst: Instance, prop: string)
 		return
 	end
 	if prop == "Name" or prop == "Parent" then
+		-- Peers find an instance whose id they don't know by its path, so a
+		-- rename or move is sent at the path it had before.
+		if self.moved[inst] == nil then
+			self.moved[inst] = self.paths[inst]
+		end
 		if inst.Parent ~= nil then
 			self.paths[inst] = Paths.pathOf(inst)
 		end
@@ -152,9 +161,14 @@ function Coedit.watch(self: any, inst: Instance)
 	if self.watched[inst] ~= nil or not self:isTracked(inst) then
 		return
 	end
-	self.watched[inst] = inst.Changed:Connect(function(prop: string)
-		self:onChanged(inst, prop)
-	end)
+	self.watched[inst] = {
+		inst.Changed:Connect(function(prop: string)
+			self:onChanged(inst, prop)
+		end),
+		inst.AttributeChanged:Connect(function(name: string)
+			self:onChanged(inst, "@" .. name)
+		end),
+	}
 	self.paths[inst] = Paths.pathOf(inst)
 	if inst:IsA("LuaSourceContainer") then
 		self.state.log:hash(self:scriptKey(inst), Apply.editorSource(inst))
@@ -162,9 +176,11 @@ function Coedit.watch(self: any, inst: Instance)
 end
 
 function Coedit.unwatch(self: any, inst: Instance)
-	local conn = self.watched[inst]
-	if conn ~= nil then
-		conn:Disconnect()
+	local conns = self.watched[inst]
+	if conns ~= nil then
+		for _, conn in conns do
+			conn:Disconnect()
+		end
 		self.watched[inst] = nil
 	end
 end
@@ -232,6 +248,31 @@ local function depth(inst: Instance): number
 	return n
 end
 
+-- Each class's scripting properties as a fresh `Instance.new` has them
+-- (encoded), so an add only carries what differs: a part is a handful of
+-- properties instead of a hundred, which matters when thousands are added.
+local defaults: { [string]: { [string]: string } } = {}
+
+local function defaultsOf(state: any, className: string): { [string]: string }
+	local found = defaults[className]
+	if found ~= nil then
+		return found
+	end
+	local made: { [string]: string } = {}
+	local ok, fresh = pcall(Instance.new, className)
+	if ok then
+		for prop in Apply.propsOf(className) do
+			local okEnc, encoded = pcall(Apply.encodeProp, state, fresh, prop)
+			if okEnc and encoded ~= nil then
+				made[prop] = encoded
+			end
+		end
+		fresh:Destroy()
+	end
+	defaults[className] = made
+	return made
+end
+
 function Coedit.collect(self: any): { any }
 	local state = self.state
 	local ops: { any } = {}
@@ -271,13 +312,23 @@ function Coedit.collect(self: any): { any }
 			state.byId[id] = inst
 		end
 		local props = {}
+		local default = defaultsOf(state, inst.ClassName)
 		for prop in Apply.propsOf(inst.ClassName) do
 			if prop ~= "Parent" then
 				local okEnc, encoded = pcall(Apply.encodeProp, state, inst, prop)
-				if okEnc and encoded ~= nil then
+				if okEnc and encoded ~= nil and encoded ~= default[prop] then
 					props[prop] = Json.decode(encoded)
 				end
 			end
+		end
+		for name in inst:GetAttributes() do
+			local encoded = Apply.encodeProp(state, inst, "@" .. name)
+			if encoded ~= nil and encoded ~= "null" then
+				props["@" .. name] = Json.decode(encoded)
+			end
+		end
+		for _, tag in inst:GetTags() do
+			props["#" .. tag] = { t = "Bool", v = true }
 		end
 		props.Name = { t = "String", v = inst.Name }
 		if inst:IsA("LuaSourceContainer") then
@@ -304,14 +355,35 @@ function Coedit.collect(self: any): { any }
 			continue
 		end
 		local at = targetOf(inst)
-		for prop in props do
+		local function emit(prop: string, path: string)
 			local encoded = Apply.encodeProp(state, inst, prop)
 			if encoded ~= nil then
-				table.insert(ops, { k = "set", id = at.id, p = at.p, n = prop, v = Json.decode(encoded), c = self:clock() })
+				table.insert(ops, { k = "set", id = at.id, p = path, n = prop, v = Json.decode(encoded), c = self:clock() })
 			end
+		end
+		-- Name, then Parent, each at the path the peers still have.
+		local before = self.moved[inst]
+		if before ~= nil then
+			if props.Name then
+				props.Name = nil
+				emit("Name", before)
+				local names = Paths.split(before)
+				if names ~= nil and #names > 0 then
+					names[#names] = inst.Name
+					before = Paths.join(names)
+				end
+			end
+			if props.Parent then
+				props.Parent = nil
+				emit("Parent", before)
+			end
+		end
+		for prop in props do
+			emit(prop, at.p)
 		end
 	end
 	self.dirty = {}
+	self.moved = setmetatable({}, { __mode = "k" })
 
 	for inst in self.dirtySrc do
 		if inst.Parent == nil or not self:isTracked(inst) then
@@ -382,8 +454,12 @@ end
 
 function Coedit.flush(self: any)
 	local ops = self:collect()
-	if #ops > 0 then
-		self:send(ops)
+	-- Unsent edits go out again with the next flush, to whichever host the
+	-- room has by then.
+	if #ops > 0 and not self:send(ops) then
+		for _, op in ops do
+			table.insert(self.resend, op)
+		end
 	end
 end
 
@@ -400,6 +476,17 @@ end
 
 function Coedit.poll(self: any)
 	local options = self.options
+	-- A new host is a new log, read from its start; what the old one
+	-- decided (last writer per property) is already in the place.
+	local base = options.relay.base
+	if base ~= nil and base ~= self.base then
+		if self.base ~= nil then
+			self.since = 0
+			self.reassembler = CoeditCore.Reassembler.new()
+			self.state.registers = CoeditCore.Registers.new()
+		end
+		self.base = base
+	end
 	local okPoll, result, err = pcall(options.relay.pollOps, options.relay, self.since)
 	if not okPoll or result == nil then
 		if not okPoll or err ~= nil then
@@ -490,6 +577,34 @@ function Coedit.start(self: any)
 			end
 		end))
 	end
+	local tags = game:GetService("CollectionService")
+	local function hookTag(tag: string)
+		if self.tagsHooked[tag] then
+			return nil
+		end
+		self.tagsHooked[tag] = true
+		local function changed(inst: Instance)
+			if self.running and self.watched[inst] ~= nil then
+				self:onChanged(inst, "#" .. tag)
+			end
+		end
+		table.insert(self.connections, tags:GetInstanceAddedSignal(tag):Connect(changed))
+		table.insert(self.connections, tags:GetInstanceRemovedSignal(tag):Connect(changed))
+		return changed
+	end
+	for _, tag in tags:GetAllTags() do
+		hookTag(tag)
+	end
+	-- A tag's first use fires TagAdded only after the instance has it, so
+	-- the instances already tagged are picked up here.
+	table.insert(self.connections, tags.TagAdded:Connect(function(tag: string)
+		local changed = hookTag(tag)
+		if changed ~= nil then
+			for _, inst in tags:GetTagged(tag) do
+				changed(inst)
+			end
+		end
+	end))
 	pcall(function()
 		local editor = game:GetService("ScriptEditorService")
 		table.insert(self.connections, editor.TextDocumentDidChange:Connect(function(document)
@@ -526,10 +641,13 @@ function Coedit.stop(self: any)
 		conn:Disconnect()
 	end
 	self.connections = {}
-	for _, conn in self.watched do
-		conn:Disconnect()
+	for _, conns in self.watched do
+		for _, conn in conns do
+			conn:Disconnect()
+		end
 	end
 	self.watched = {}
+	self.tagsHooked = {}
 	self.roots = {}
 	self.added = {}
 	self.dirty = {}

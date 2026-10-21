@@ -15,7 +15,7 @@ use gpui_kit::*;
 use rbx_dom::{Ref, Variant, WeakDom};
 use rbx_lua::plugin::{GuiEvent, GuiEventKind, Input, LayoutBox, UiId, WidgetKind};
 
-use super::render;
+use super::{float, render};
 use crate::shell::{Panel, Shell};
 use crate::tokens;
 
@@ -109,7 +109,9 @@ impl Shell {
             .ui
             .widgets
             .iter()
-            .filter(|w| w.enabled && matches!(w.kind, WidgetKind::Dock { .. }))
+            .filter(|w| {
+                w.enabled && matches!(w.kind, WidgetKind::Dock { .. }) && !float::is_float(&w.kind)
+            })
             .map(|w| (w.id, w.title.clone(), w.revision))
             .collect();
         let Some(first) = docked.first().map(|w| w.0) else {
@@ -270,7 +272,9 @@ impl Shell {
                 (
                     w.id,
                     w.revision,
-                    w.enabled && matches!(w.kind, WidgetKind::Dock { .. }),
+                    w.enabled
+                        && matches!(w.kind, WidgetKind::Dock { .. })
+                        && !float::is_float(&w.kind),
                 )
             })
             .collect();
@@ -432,7 +436,7 @@ impl Shell {
         pending
     }
 
-    fn widget_surface(&mut self, id: UiId, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn widget_surface(&mut self, id: UiId, cx: &mut Context<Self>) -> AnyElement {
         let area = self.plugins.widgets.areas.entry(id).or_default().clone();
         let measure = canvas(
             move |bounds, window, _| {

@@ -11,7 +11,7 @@ use gpui_kit::{App, Context, Entity, Global, WeakEntity, Window};
 use rbx_cloud::PublishMode;
 
 use crate::shell::import3d::ImportKind;
-use crate::shell::{Export, Panel, Shell};
+use crate::shell::{Export, Panel, PresetView, Shell};
 
 use super::*;
 
@@ -141,6 +141,11 @@ pub(super) fn install(shell: &Entity<Shell>, cx: &mut App) {
         }
     });
     cx.on_action({
+        move |_: &MenuExportProject, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.export_place(Export::Project, cx));
+        }
+    });
+    cx.on_action({
         move |_: &MenuExportClean, cx| {
             let _ = shell.update(cx, |shell, cx| shell.export_place(Export::CleanPlace, cx));
         }
@@ -212,6 +217,21 @@ pub(super) fn install(shell: &Entity<Shell>, cx: &mut App) {
     cx.on_action({
         move |_: &MenuLargeTargets, cx| {
             let _ = shell.update(cx, |shell, cx| shell.toggle_large_targets(cx));
+        }
+    });
+    cx.on_action({
+        move |_: &MenuTopView, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.preset_view(PresetView::Top, cx));
+        }
+    });
+    cx.on_action({
+        move |_: &MenuFrontView, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.preset_view(PresetView::Front, cx));
+        }
+    });
+    cx.on_action({
+        move |_: &MenuRightView, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.preset_view(PresetView::Right, cx));
         }
     });
     cx.on_action({
@@ -298,6 +318,16 @@ pub(super) fn install(shell: &Entity<Shell>, cx: &mut App) {
     cx.on_action({
         move |_: &MenuDeleteInstance, cx| {
             let _ = shell.update(cx, |shell, cx| shell.delete_selected(cx));
+        }
+    });
+    cx.on_action({
+        move |_: &MenuPasteAtOriginal, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.paste_at_original(cx));
+        }
+    });
+    cx.on_action({
+        move |_: &MenuPasteIntoAtOriginal, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.paste_into_at_original(cx));
         }
     });
     cx.on_action({

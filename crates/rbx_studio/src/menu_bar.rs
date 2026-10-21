@@ -62,6 +62,7 @@ actions!(
         MenuSaveToFile,
         MenuClosePlace,
         MenuExportGltf,
+        MenuExportProject,
         MenuExportClean,
         MenuSaveToRoblox,
         MenuPublishToRoblox,
@@ -92,6 +93,8 @@ actions!(
         MenuCopyInstance,
         MenuPasteInstance,
         MenuPasteIntoInstance,
+        MenuPasteAtOriginal,
+        MenuPasteIntoAtOriginal,
         MenuDuplicateInstance,
         MenuGroup,
         MenuUngroup,
@@ -99,6 +102,9 @@ actions!(
         MenuReduceMotion,
         MenuLargeTargets,
         MenuResetLayout,
+        MenuTopView,
+        MenuFrontView,
+        MenuRightView,
         MenuCommandPalette,
         MenuQuickOpen,
         /// One per dock, so the View menu can put back one that has been
@@ -215,6 +221,9 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Save to File", MenuSave),
                 MenuItem::action("Save to File As…", MenuSaveToFile),
                 MenuItem::action("Export as glTF…", MenuExportGltf),
+                // A folder Argon or Rojo syncs from; File › Open reads one
+                // back (a `*.project.json`).
+                MenuItem::action("Export as Project…", MenuExportProject),
                 // A copy without layers and 3D notes (`crate::strip`).
                 MenuItem::action("Export Clean Copy…", MenuExportClean),
                 MenuItem::separator(),
@@ -259,6 +268,10 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Copy", MenuCopyInstance),
                 MenuItem::action("Paste", MenuPasteInstance),
                 MenuItem::action("Paste Into", MenuPasteIntoInstance),
+                // Studio's own pair: the same pastes without lifting the
+                // copy off whatever it lands inside.
+                MenuItem::action("Paste at Original Location", MenuPasteAtOriginal),
+                MenuItem::action("Paste into at Original Location", MenuPasteIntoAtOriginal),
                 MenuItem::action("Duplicate", MenuDuplicateInstance),
                 MenuItem::separator(),
                 MenuItem::action("Delete", MenuDeleteInstance),
@@ -272,6 +285,12 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Output", MenuToggleOutput),
                 MenuItem::action("Viewport", MenuToggleViewport),
                 MenuItem::action("Command Bar", MenuToggleCommandBar),
+                MenuItem::separator(),
+                // Fixed camera views, the same snap a click on the
+                // orientation indicator's cube does.
+                MenuItem::action("Top View", MenuTopView),
+                MenuItem::action("Front View", MenuFrontView),
+                MenuItem::action("Right View", MenuRightView),
                 MenuItem::separator(),
                 MenuItem::action("Style Editor", MenuStyleEditor),
                 // Team presence: who else is in the place, from Studio or
