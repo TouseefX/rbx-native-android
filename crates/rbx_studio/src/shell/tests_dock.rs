@@ -5,7 +5,11 @@
 //! The tree comes from `rbx_lua::test_runner::plan`, which reads the specs
 //! without running them; runs go through the same runner `rbxlua test` uses, on a
 //! background thread over a copy of the place, so the editor never waits on a
-//! spec.
+//! spec. Loren's `return function(t)` specs go through `rbx_loren::specs`
+//! instead, Loren's own runner, and land in the same tree.
+//!
+//! Selecting a row shows what that test printed and how it failed in the
+//! pane under the tree; a file row shows everything the file printed.
 
 use std::collections::{HashMap, HashSet};
 
@@ -14,10 +18,14 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::{h_flex, v_flex, ActiveTheme, Icon, Sizable};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
-use rbx_dom::Ref;
+use rbx_dom::{Ref, WeakDom};
+use rbx_loren::specs as loren;
 use rbx_lua::test_runner::{
-    self, FilePlan, NodeKind, Options, PlanNode, SpecFile, Status as TestStatus, TestResult,
+    self, FilePlan, FileReport, NodeKind, Options, PlanNode, SpecFile, Status as TestStatus,
+    TestResult,
 };
+use rbx_lua::{LineKind, Output};
+use rbx_reflection::ReflectionDatabase;
 
 use crate::tokens;
 
@@ -38,7 +46,12 @@ pub(super) struct TestsDock {
     running: bool,
     rerun_on_save: bool,
     collapsed: HashSet<Key>,
+    /// What each file printed in its last run.
+    outputs: HashMap<Ref, Output>,
+    /// The row the output pane shows.
+    selected: Option<Key>,
     pub(super) scroll: ScrollHandle,
+    output_scroll: ScrollHandle,
     error: Option<String>,
 }
 
@@ -133,16 +146,20 @@ impl Shell {
                     .child("Run all"),
             );
 
-        let body = v_flex().size_full().child(header).child(
-            div()
-                .id("tests-list")
-                .flex_1()
-                .overflow_y_scroll()
-                .track_scroll(&self.tests.scroll)
-                .pr(chrome::SCROLLBAR_GUTTER)
-                .child(self.tests_tree(cx))
-                .scrollbar_y(&self.tests.scroll),
-        );
+        let body = v_flex()
+            .size_full()
+            .child(header)
+            .child(
+                div()
+                    .id("tests-list")
+                    .flex_1()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.tests.scroll)
+                    .pr(chrome::SCROLLBAR_GUTTER)
+                    .child(self.tests_tree(cx))
+                    .scrollbar_y(&self.tests.scroll),
+            )
+            .children(self.tests_output_pane());
         (
             Some(overflow.into_any_element()),
             Some(body.into_any_element()),
@@ -192,11 +209,13 @@ impl Shell {
                 file.name.clone(),
                 None,
                 dock.running,
+                dock.selected.as_ref() == Some(&file_key),
                 cx,
                 move |shell, _, cx| {
-                    let collapsed = &mut shell.tests.collapsed;
-                    if !collapsed.remove(&toggle_key) {
-                        collapsed.insert(toggle_key.clone());
+                    let dock = &mut shell.tests;
+                    dock.selected = Some(toggle_key.clone());
+                    if !dock.collapsed.remove(&toggle_key) {
+                        dock.collapsed.insert(toggle_key.clone());
                     }
                     cx.notify();
                 },
@@ -235,7 +254,10 @@ impl Shell {
                     Ok::<_, String>(
                         files
                             .iter()
-                            .map(|file| test_runner::plan(&dom, file, &database))
+                            .map(|file| match loren::is_loren_module(&dom, file.module) {
+                                true => loren::plan_file(&dom, file),
+                                false => test_runner::plan(&dom, file, &database),
+                            })
                             .collect::<Vec<_>>(),
                     )
                 })
@@ -276,16 +298,7 @@ impl Shell {
         let modules: Vec<Ref> = files.iter().map(|f| f.module).collect();
         cx.spawn(async move |this, cx| {
             let reports = cx
-                .background_spawn(async move {
-                    match (files.as_slice(), options.only.is_some()) {
-                        ([file], true) => {
-                            vec![test_runner::run_file(
-                                &dom, file, &database, &options, false,
-                            )]
-                        }
-                        _ => test_runner::run(&dom, &files, &database, &options).files,
-                    }
-                })
+                .background_spawn(async move { run_files(&dom, &files, &database, &options) })
                 .await;
             let _ = this.update(cx, |shell, cx| {
                 let dock = &mut shell.tests;
@@ -294,6 +307,7 @@ impl Shell {
                         || only.as_ref().is_some_and(|only| !path.starts_with(only))
                 });
                 for report in reports {
+                    dock.outputs.insert(report.file.module, report.output);
                     for result in report.results {
                         dock.results
                             .insert((report.file.module, result.path.clone()), result);
@@ -370,6 +384,8 @@ fn node_rows(
         ..Options::default()
     };
     let run_file = file.clone();
+    let key = (module, node.path.clone());
+    let selected = dock.selected.as_ref() == Some(&key);
     let mut rows = v_flex().w_full().child(row(
         n,
         depth,
@@ -378,8 +394,11 @@ fn node_rows(
         name,
         duration,
         dock.running,
+        selected,
         cx,
         move |shell, window, cx| {
+            shell.tests.selected = Some(key.clone());
+            cx.notify();
             if let Some(line) = line {
                 shell.reveal_spec_line(module, line, window, cx);
             }
@@ -442,6 +461,7 @@ fn row(
     name: String,
     millis: Option<u128>,
     busy: bool,
+    selected: bool,
     cx: &mut Context<Shell>,
     on_click: impl Fn(&mut Shell, &mut Window, &mut Context<Shell>) + 'static,
     on_run: impl Fn(&mut Shell, &mut Context<Shell>) + 'static,
@@ -459,6 +479,7 @@ fn row(
         .pr_2()
         .py_0p5()
         .text_size(tokens::text_xs())
+        .when(selected, |this| this.bg(tokens::accent_soft()))
         .hover(|this| tokens::hover_fx(this).bg(tokens::hover()))
         .on_click(cx.listener(move |shell, _, window, cx| on_click(shell, window, cx)))
         .children(chevron.map(|c| Icon::new(c).small().text_color(tokens::text3())))
@@ -488,6 +509,124 @@ fn row(
                     ),
             )
         })
+}
+
+/// Runs `files`: Loren specs one by one through Loren's runner, the rest
+/// through `test_runner`, honouring `FOCUS` across them; reports in `files`' order.
+fn run_files(
+    dom: &WeakDom,
+    files: &[SpecFile],
+    database: &ReflectionDatabase,
+    options: &Options,
+) -> Vec<FileReport> {
+    let (lorens, plain): (Vec<SpecFile>, Vec<SpecFile>) = files
+        .iter()
+        .cloned()
+        .partition(|f| loren::is_loren_module(dom, f.module));
+    let mut reports: Vec<FileReport> = match (plain.as_slice(), options.only.is_some()) {
+        ([], _) => Vec::new(),
+        ([file], true) => vec![test_runner::run_file(dom, file, database, options, false)],
+        _ => test_runner::run(dom, &plain, database, options).files,
+    };
+    reports.extend(lorens.iter().map(|f| loren::run_file(dom, f, options)));
+    reports.sort_by_key(|r| files.iter().position(|f| f.module == r.file.module));
+    reports
+}
+
+/// The selected row's title and what the pane shows for it: a test's
+/// failure and output, or a file's whole output.
+fn pane_contents(
+    dock: &TestsDock,
+    (module, path): &Key,
+) -> Option<(String, Option<String>, Output)> {
+    let file = dock.plans.iter().find(|p| p.file.module == *module)?;
+    if path.is_empty() {
+        let failure = file.error.clone().or_else(|| {
+            dock.results
+                .get(&(*module, Vec::new()))
+                .and_then(|r| r.message.clone())
+        });
+        let output = dock.outputs.get(module).cloned().unwrap_or_default();
+        return Some((file.file.name.clone(), failure, output));
+    }
+    let title = path.join(" › ");
+    match dock.results.get(&(*module, path.clone())) {
+        Some(result) => {
+            let failure = result.message.clone().map(|message| match &result.stack {
+                Some(stack) if !stack.is_empty() => format!("{message}\n{stack}"),
+                _ => message,
+            });
+            Some((title, failure, result.output.clone()))
+        }
+        None => Some((title, None, Output::default())),
+    }
+}
+
+impl Shell {
+    fn tests_output_pane(&self) -> Option<impl IntoElement> {
+        let dock = &self.tests;
+        let (title, failure, output) = pane_contents(dock, dock.selected.as_ref()?)?;
+        let empty = failure.is_none() && output.is_empty();
+        let lines =
+            output
+                .lines()
+                .iter()
+                .zip(output.kinds())
+                .enumerate()
+                .map(|(i, (text, kind))| {
+                    let color = match kind {
+                        LineKind::Print => tokens::text(),
+                        LineKind::Warn => tokens::warning(),
+                        LineKind::Error => tokens::text_error(),
+                    };
+                    div()
+                        .id(("tests-output-line", i))
+                        .text_color(color)
+                        .child(text.clone())
+                });
+        Some(
+            v_flex()
+                .id("tests-output")
+                .w_full()
+                .h(px(160.))
+                .flex_none()
+                .border_t_1()
+                .border_color(tokens::border())
+                .child(
+                    div()
+                        .px_2()
+                        .py_1()
+                        .text_size(tokens::text_xs())
+                        .text_color(tokens::text2())
+                        .child(format!("Output: {title}")),
+                )
+                .child(
+                    div()
+                        .id("tests-output-lines")
+                        .flex_1()
+                        .overflow_y_scroll()
+                        .track_scroll(&dock.output_scroll)
+                        .px_2()
+                        .pb_1()
+                        .pr(chrome::SCROLLBAR_GUTTER)
+                        .font_family(tokens::font_mono())
+                        .text_size(tokens::text_xs())
+                        .children(
+                            failure.map(|text| {
+                                div().text_color(tokens::text_error()).pb_1().child(text)
+                            }),
+                        )
+                        .children(lines)
+                        .when(empty, |this| {
+                            this.text_color(tokens::text3()).child(match dock.running {
+                                true => "Running…",
+                                false => "Nothing printed",
+                            })
+                        })
+                        .scrollbar_y(&dock.output_scroll),
+                ),
+        )
+    }
 }
 
 fn indent(depth: usize) -> Pixels {
@@ -533,7 +672,52 @@ fn summary(
 
 #[cfg(test)]
 mod tests {
-    use super::summary;
+    use rbx_dom::{Variant, WeakDom};
+    use rbx_lua::test_runner::{self, Options, Status};
+    use rbx_reflection::ReflectionDatabase;
+
+    use super::{run_files, summary};
+
+    #[test]
+    fn loren_specs_go_through_lorens_runner_beside_testez_ones() {
+        let mut dom = WeakDom::new();
+        let storage = dom.new_instance("ReplicatedStorage", "ReplicatedStorage", None);
+        for (name, source) in [
+            (
+                "A.spec",
+                "return function()\n\tdescribe(\"a\", function()\n\t\tit(\"passes\", function()\n\t\t\tprint(\"from testez\")\n\t\tend)\n\tend)\nend\n",
+            ),
+            (
+                "B.spec",
+                "return function(t)\n\tt.describe(\"b\", function()\n\t\tt.it(\"fails\", function()\n\t\t\tprint(\"from loren\")\n\t\t\tt.expect(1).toBe(2)\n\t\tend)\n\tend)\nend\n",
+            ),
+        ] {
+            let module = dom.new_instance("ModuleScript", name, Some(storage));
+            dom.set_property(module, "Source", Variant::String(source.into()))
+                .unwrap();
+        }
+        let files = test_runner::discover(&dom, &[]).unwrap();
+        let reports = run_files(
+            &dom,
+            &files,
+            ReflectionDatabase::shared(),
+            &Options::default(),
+        );
+        let names: Vec<_> = reports.iter().map(|r| r.file.name.as_str()).collect();
+        assert_eq!(
+            names,
+            ["ReplicatedStorage.A.spec", "ReplicatedStorage.B.spec"]
+        );
+        let a = &reports[0].results[0];
+        assert_eq!(
+            (a.status, a.output.lines()),
+            (Status::Passed, &["from testez".to_string()][..])
+        );
+        let b = &reports[1].results[0];
+        assert_eq!(b.path, ["b", "fails"], "{:?}", b.message);
+        assert_eq!(b.status, Status::Failed);
+        assert_eq!(b.output.lines(), ["from loren"]);
+    }
 
     #[test]
     fn the_summary_says_what_the_dock_is_doing_or_found() {
