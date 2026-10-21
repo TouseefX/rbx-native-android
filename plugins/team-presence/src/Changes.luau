@@ -3,9 +3,9 @@
 --! instance, its edited properties under it, each with who edited it and
 --! when last. Pure (no Studio services), so it runs in the Luau golden tests.
 --!
---! The journal never carries values, and records property edits only, so
---! every change here is an update; the window reads each property's current
---! value off the place itself.
+--! The journal records property edits only, so every change here is an
+--! update; each property keeps the value its newest edit set (display text,
+--! "" from an older peer, when the window reads the place instead).
 
 local Paths = require(script.Parent.Paths)
 
@@ -17,6 +17,7 @@ export type PropertyEdit = {
 	authors: { string },
 	edits: number,
 	at: number,
+	value: string,
 }
 
 export type Change = {
@@ -59,7 +60,7 @@ function Changes.fromJournal(entries: { any }): { Change }
 		local tally = tallies[entry.path][entry.property]
 		if not tally then
 			tally = {
-				edit = { property = entry.property, authors = {}, edits = 0, at = 0 },
+				edit = { property = entry.property, authors = {}, edits = 0, at = 0, value = "" },
 				latest = {},
 			}
 			tallies[entry.path][entry.property] = tally
@@ -67,7 +68,10 @@ function Changes.fromJournal(entries: { any }): { Change }
 		end
 		local t = tally :: Tally
 		t.edit.edits += 1
-		t.edit.at = math.max(t.edit.at, entry.at)
+		if entry.at >= t.edit.at then
+			t.edit.at = entry.at
+			t.edit.value = entry.value or ""
+		end
 		t.latest[entry.name] = math.max(t.latest[entry.name] or 0, entry.at)
 	end
 

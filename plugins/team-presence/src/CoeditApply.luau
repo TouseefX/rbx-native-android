@@ -14,7 +14,17 @@ local EXISTS = "\0exists"
 local Apply = {}
 Apply.__index = Apply
 
+-- Attributes travel as `@<name>` and tags as `#<tag>` (one property each,
+-- see crates/rbx_presence/src/coedit/attrs.rs); an absent one is `null`.
+function Apply.isEntry(prop: string): boolean
+	local first = string.sub(prop, 1, 1)
+	return first == "@" or first == "#"
+end
+
 function Apply.valueType(className: string, prop: string): string?
+	if Apply.isEntry(prop) then
+		return "Attribute"
+	end
 	local cls = CoeditClasses[className]
 	while cls ~= nil do
 		local t = cls.p and cls.p[prop]
@@ -77,12 +87,25 @@ function Apply.keyOf(target: any): string
 end
 
 -- The property's current value as a JSON string, the form echo marks hold.
-function Apply.encodeProp(state: any, inst: Instance, prop: string): string?
-	local ok, value = pcall(function()
+local function read(inst: Instance, prop: string): (boolean, any)
+	local first, rest = string.sub(prop, 1, 1), string.sub(prop, 2)
+	if first == "@" then
+		return pcall(inst.GetAttribute, inst, rest)
+	elseif first == "#" then
+		return true, if inst:HasTag(rest) then true else nil
+	end
+	return pcall(function()
 		return (inst :: any)[prop]
 	end)
+end
+
+function Apply.encodeProp(state: any, inst: Instance, prop: string): string?
+	local ok, value = read(inst, prop)
 	if not ok then
 		return nil
+	end
+	if value == nil and Apply.isEntry(prop) then
+		return "null"
 	end
 	local encoded = CoeditValue.encode(value, Apply.valueType(inst.ClassName, prop), function(i: Instance)
 		return Apply.targetOf(state, i)
@@ -134,21 +157,31 @@ function Apply.new(state: any)
 	return setmetatable({ state = state }, Apply)
 end
 
+local function assign(inst: Instance, prop: string, value: any): boolean
+	local first, rest = string.sub(prop, 1, 1), string.sub(prop, 2)
+	if first == "@" then
+		return pcall(inst.SetAttribute, inst, rest, value)
+	elseif first == "#" then
+		return pcall(if value then inst.AddTag else inst.RemoveTag, inst, rest)
+	end
+	return pcall(function()
+		(inst :: any)[prop] = value
+	end)
+end
+
 local function writeProp(state: any, inst: Instance, prop: string, json: any, notes: { string }): boolean
-	local current: any = nil
-	pcall(function()
-		current = (inst :: any)[prop]
-	end)
-	local ok, value = CoeditValue.decode(json, current, Apply.valueType(inst.ClassName, prop), function(t)
-		return Apply.resolve(state, t)
-	end)
+	local _, current = read(inst, prop)
+	local ok, value = true, nil
+	if not (Apply.isEntry(prop) and json == Json.null) then
+		ok, value = CoeditValue.decode(json, current, Apply.valueType(inst.ClassName, prop), function(t)
+			return Apply.resolve(state, t)
+		end)
+	end
 	if not ok then
 		table.insert(notes, string.format("Co-edit: could not read %s.%s", inst:GetFullName(), prop))
 		return false
 	end
-	local okSet = pcall(function()
-		(inst :: any)[prop] = value
-	end)
+	local okSet = assign(inst, prop, value)
 	if not okSet then
 		return false
 	end
