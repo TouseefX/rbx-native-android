@@ -152,6 +152,9 @@ impl Ctx<'_> {
                 self.reparent(r, parent)
             }
             _ => {
+                if let Some(changed) = super::attrs::write(self.dom, r, n, v) {
+                    return changed;
+                }
                 let Some(inst) = self.dom.get(r) else {
                     return false;
                 };

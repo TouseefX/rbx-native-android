@@ -1,13 +1,14 @@
-//! The offline catch-up summary: a value-less journal of property edits,
+//! The offline catch-up summary: a journal of property edits,
 //! recovered when a collaborator reconnects, aggregated per author and in
 //! total. Pinned by `plugins/team-presence/fixtures/catchup.json`.
 //!
-//! The journal is recovered differently per transport (neither carries edit
-//! *values*, and neither records instance add/remove, see the crate README):
+//! The journal is recovered differently per transport (each entry carries
+//! the edit's display value; neither records instance add/remove, see the
+//! crate README):
 //! - [`from_worker`] asks the relay's bounded Durable-Object journal
 //!   (`GET /journal`) for the entries it kept.
 //! - [`from_ntfy`] re-reads the topic's retained messages and lifts the
-//!   `edits` out of each one, dropping the value on the way in.
+//!   `edits` out of each one.
 
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -18,7 +19,7 @@ use crate::client::Config;
 use crate::relay::RelayKind;
 use crate::{auth, ntfy, relay};
 
-/// One property edit, without its value.
+/// One property edit.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JournalEntry {
@@ -26,6 +27,9 @@ pub struct JournalEntry {
     pub name: String,
     pub path: String,
     pub property: String,
+    /// The new value as the editor showed it ("" from an older peer).
+    #[serde(default)]
+    pub value: String,
     /// Unix milliseconds.
     pub at: u64,
 }
@@ -250,6 +254,7 @@ pub fn from_ntfy(config: &Config, since_ms: u64) -> Result<Summary, String> {
                     name: state.name.clone(),
                     path: edit.path.clone(),
                     property: edit.property.clone(),
+                    value: edit.value.clone(),
                     at: edit.at,
                 });
             }
@@ -294,6 +299,7 @@ mod tests {
             name: name.into(),
             path: "A".into(),
             property: "P".into(),
+            value: String::new(),
             at,
         };
         let summary = summarize(&[entry("New", 20), entry("Old", 10)]);

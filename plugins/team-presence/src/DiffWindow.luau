@@ -6,10 +6,11 @@
 --// and a table of the properties collaborators edited, with each one's
 --// current value, who edited it and when.
 --//
---// The journal holds no values (by design: nothing anyone typed leaves their
---// machine through the relay), so "Now" is read off this place, and an
---// instance that no longer resolves (renamed or deleted since) is listed as
---// "Not found".
+--// "Value" is the one the newest edit set, as the editor showed it (sealed
+--// in the journal), so an edit a collaborator never saved still shows what
+--// they set; an older peer's entry has none, and the place's own value is
+--// shown. An instance that no longer resolves (renamed or deleted since) is
+--// listed as "Not found".
 
 local Changes = require(script.Parent.Changes)
 local Paths = require(script.Parent.Paths)
@@ -19,7 +20,7 @@ local DiffWindow = {}
 DiffWindow.__index = DiffWindow
 
 local LIST_WIDTH = 300
-local FOOTER_NOTE = "Values are this place's current ones; who edited what comes from the presence journal."
+local FOOTER_NOTE = "Values are the ones collaborators set; who edited what comes from the presence journal."
 
 type Filter = "all" | "updated" | "missing"
 
@@ -567,7 +568,7 @@ function DiffWindow.renderDetail(self: DiffWindow)
 	Ui.pad(headRow, 0, 12)
 	Ui.list(headRow, 0, true)
 	local headCells = cells(headRow, 28)
-	for i, title in { "PROPERTY", "NOW", "EDITED BY", "WHEN" } do
+	for i, title in { "PROPERTY", "VALUE", "EDITED BY", "WHEN" } do
 		Ui.text(headCells[i], title, { size = Ui.TEXT_XXS, color = "text3", font = Ui.FONT_BOLD, wrap = false })
 	end
 
@@ -589,7 +590,9 @@ function DiffWindow.renderDetail(self: DiffWindow)
 		local cols = cells(row, 36)
 		Ui.text(cols[1], edit.property, { size = Ui.TEXT_SM, wrap = false })
 		local ok, value = read(instance, edit.property)
-		if ok then
+		if edit.value ~= "" then
+			Ui.chip(cols[2], edit.value)
+		elseif ok then
 			local text, swatch = format(value)
 			Ui.chip(cols[2], text, swatch)
 		else
