@@ -25,7 +25,9 @@
   path, points the copy's references out of it at the same path in the
   target, and never copies the source's `UniqueId`s. A place left off
   screen for 30 s drops its render scene and GPU device, and rebuilds it
-  when shown again. Save All and Publish All report per place.
+  when shown again. Save All and Publish All report per place. A
+  `.rbxlx` save now writes a string XML can't hold (Terrain's
+  `PhysicsGrid`) as `BinaryString`; as text it made Studio refuse the file.
   (@chteau)
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
