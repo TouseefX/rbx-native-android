@@ -858,18 +858,18 @@ impl PlaySandbox {
     }
 }
 
+/// Guards every test in the crate that mutates `XDG_CONFIG_HOME`/`APPDATA`:
+/// env vars are process-global and `cargo test` runs tests on threads of one
+/// process, so two such tests holding separate locks see each other's value.
+#[cfg(test)]
+pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
-    use std::sync::Mutex;
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    /// Guards every test below that mutates `XDG_CONFIG_HOME`/`APPDATA`: env
-    /// vars are process-global, and `cargo test` runs tests on separate
-    /// threads of the same process, so two such tests running concurrently
-    /// would each observe the other's value.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     /// A settings.json path under a fresh, never-created temp directory: each
     /// test gets its own, so tests never share (or need to clean up) state,
