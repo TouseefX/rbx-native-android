@@ -19,9 +19,15 @@
   treat the Player argument as data; remotes nothing on the server
   listens on, and calls on remotes the place doesn't have; `require`
   targets that aren't ModuleScripts; and server-only services reached
-  from the client, or `InvokeClient` on the server. Each finding has a
-  severity and opens its script at the line. `rbxaudit place.rbxl`
-  prints the same findings and exits 1 on any high one. (@chteau)
+  from the client, or `InvokeClient` on the server. Loren's client routes
+  (`Service.Client` methods, `ClientEvents` listeners, `Middleware`) are
+  audited like remote handlers, a notch lower when a `Spec` or `Middleware`
+  gates them. A number only counts as checked with both a lower and an
+  upper bound, and client data is followed into the script's own
+  functions. Each finding has a severity and opens its script scrolled to
+  the line. The audit runs in the background, so a big place doesn't stall
+  the editor. `rbxaudit place.rbxl` prints the same findings and exits 1 on
+  any high one. (@chteau)
 
 - **Select by query.** The Explorer's search field has a query mode (the
   `</>` toggle beside it): `Part where Material = Plastic and Anchored =

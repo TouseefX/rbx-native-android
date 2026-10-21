@@ -13,9 +13,19 @@
 //!    `Instance.new`, DataStore writes, `MarketplaceService`, `require`,
 //!    `loadstring`. A name mentioned in an `if`/`assert` condition counts as
 //!    validated inside that branch, and for the rest of the block when the
-//!    branch exits (`if not x then return end`); `tonumber`, `math.clamp`,
-//!    `typeof`/`type` and a lookup into a server table (`Items[id]`) produce
-//!    clean values.
+//!    branch exits (`if not x then return end`), except that a number needs
+//!    both a lower and an upper bound: `amount > 0` alone, a `typeof(x) ==
+//!    "number"` check or a nil check on `tonumber(x)` don't validate it.
+//!    `math.clamp`, `typeof`/`type` and a lookup into a server table
+//!    (`Items[id]`) produce clean values. Taint follows calls into the
+//!    script's own named functions (`giveCoins(player, amount)`).
+//!
+//!    Loren's client-reachable routes count as remote handlers too:
+//!    `rbx_loren::graph::remote_surface` lists them, and `Service.Client`
+//!    methods, `Service.ClientEvents.X:Connect` listeners and
+//!    `Service.Middleware` functions get their client arguments tainted. A
+//!    route with a `Spec` or a `Middleware` entry is gated before the
+//!    handler runs, so its findings drop one severity.
 //! 2. **Player-argument confusion**: a handler whose first parameter (always
 //!    the sending `Player`) is named or used as data, and a client passing
 //!    `LocalPlayer` as `FireServer`'s first argument.
@@ -26,8 +36,8 @@
 //! 5. **Server-only APIs on the client** (`DataStoreService`, `ServerStorage`,
 //!    `ServerScriptService`) and `RemoteFunction:InvokeClient` on the server.
 //!
-//! It is a heuristic, not a type checker: taint is per handler (it does not
-//! follow calls into other functions), bindings are one flat table per
+//! It is a heuristic, not a type checker: taint stops at another script's
+//! functions (a `require`d module's), bindings are one flat table per
 //! script, and a path that only exists at run time is unknown rather than
 //! missing — except a name some script assigns to `.Name`, which is assumed
 //! to be created at run time and never reported missing.
@@ -35,9 +45,10 @@
 mod resolve;
 mod walk;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use rbx_dom::{Ref, Variant, WeakDom};
+use rbx_dom::{Instance, Ref, Variant, WeakDom};
+use rbx_loren::graph::Route;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Severity {
@@ -155,6 +166,7 @@ pub fn audit(dom: &WeakDom) -> Vec<Finding> {
         }
     }
 
+    let loren = loren_services(dom);
     let runtime_names: HashSet<String> = scripts
         .iter()
         .flat_map(|(_, _, ast)| walk::runtime_names(ast))
@@ -168,6 +180,7 @@ pub fn audit(dom: &WeakDom) -> Vec<Finding> {
             *side,
             ast,
             &runtime_names,
+            loren.get(script),
             &mut usage,
         ));
     }
@@ -224,6 +237,88 @@ pub fn audit(dom: &WeakDom) -> Vec<Finding> {
     // its parameters tainted, where it's connected.
     findings.dedup();
     findings
+}
+
+/// A Loren Service module and the routes clients reach it through.
+pub(crate) struct LorenService {
+    pub name: String,
+    pub routes: Vec<Route>,
+}
+
+/// Loren's networked Services in the place, by their ModuleScript, from the
+/// same folders and the same route list Loren's own graph reads.
+fn loren_services(dom: &WeakDom) -> HashMap<Ref, LorenService> {
+    let mut out = HashMap::new();
+    let modules = rbx_loren::graph::dom_modules(dom);
+    if modules.is_empty() {
+        return out;
+    }
+    let routes = rbx_loren::graph::remote_surface(&rbx_loren::graph::analyze(&modules));
+    let folder = dom
+        .root_refs()
+        .iter()
+        .copied()
+        .find(|r| {
+            dom.get(*r)
+                .is_some_and(|i| i.class() == "ServerScriptService")
+        })
+        .and_then(|r| child(dom, r, "Server"))
+        .and_then(|r| child(dom, r, "Services"));
+    let Some(folder) = folder.and_then(|r| dom.get(r)) else {
+        return out;
+    };
+    for &module in folder.children() {
+        let Some(instance) = dom.get(module).filter(|i| i.class() == "ModuleScript") else {
+            continue;
+        };
+        let name = instance.name();
+        let mine: Vec<Route> = routes
+            .iter()
+            .filter(|r| r.service == name)
+            .cloned()
+            .collect();
+        if !mine.is_empty() {
+            out.insert(
+                module,
+                LorenService {
+                    name: name.to_string(),
+                    routes: mine,
+                },
+            );
+        }
+    }
+    out
+}
+
+fn child(dom: &WeakDom, parent: Ref, name: &str) -> Option<Ref> {
+    dom.get(parent)?
+        .children()
+        .iter()
+        .copied()
+        .find(|c| dom.get(*c).is_some_and(|i| i.name() == name))
+}
+
+/// A copy of `dom` with only what [`audit`] reads (the tree, classes, names,
+/// `Source` and `RunContext`) under the same refs, cheap enough to take on
+/// the UI thread and audit on another.
+pub fn slim_copy(dom: &WeakDom) -> WeakDom {
+    let mut copy = WeakDom::new();
+    let mut stack: Vec<(Ref, Option<Ref>)> = dom.root_refs().iter().map(|r| (*r, None)).collect();
+    while let Some((r, parent)) = stack.pop() {
+        let Some(instance) = dom.get(r) else { continue };
+        let mut slim = Instance::new(r, instance.class(), instance.name());
+        for key in ["Source", "RunContext"] {
+            if let Some(value) = instance.properties().get(key) {
+                slim.properties_mut().insert(key.to_string(), value.clone());
+            }
+        }
+        copy.insert(slim);
+        if parent.is_some() {
+            copy.set_parent(r, parent);
+        }
+        stack.extend(instance.children().iter().rev().map(|c| (*c, Some(r))));
+    }
+    copy
 }
 
 /// The side `r` runs on, or `None` when it isn't a script.

@@ -6,6 +6,8 @@ license.workspace = true
 
 [dependencies]
 rbx_dom = { path = "../rbx_dom" }
+# Loren's client routes (`graph::remote_surface`) are remote entry points too.
+rbx_loren = { path = "../rbx_loren" }
 # The Luau parser the editor's graph mode and the play sandbox already use;
 # already in Cargo.lock.
 full_moon = { version = "3", features = ["luau"] }
