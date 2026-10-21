@@ -74,10 +74,9 @@ impl PanelWindow {
                 shell,
                 panel,
                 grab: Rc::new(Cell::new(false)),
-                _moved: cx.observe_window_bounds(
-                    window,
-                    |this: &mut PanelWindow, window, cx| this.dock_if_dropped(window, cx),
-                ),
+                _moved: cx.observe_window_bounds(window, |this: &mut PanelWindow, window, cx| {
+                    this.dock_if_dropped(window, cx)
+                }),
             });
             cx.new(|cx| Root::new(view, window, cx))
         })
@@ -269,9 +268,18 @@ mod tests {
     #[::core::prelude::v1::test]
     fn a_window_brought_to_an_edge_docks_there_and_one_in_the_middle_floats() {
         let editor = Bounds::new(point(px(0.), px(0.)), size(px(1600.), px(1000.)));
-        assert_eq!(drop_edge(editor, point(px(20.), px(400.))), Some(Edge::Left));
-        assert_eq!(drop_edge(editor, point(px(1590.), px(400.))), Some(Edge::Right));
-        assert_eq!(drop_edge(editor, point(px(800.), px(980.))), Some(Edge::Bottom));
+        assert_eq!(
+            drop_edge(editor, point(px(20.), px(400.))),
+            Some(Edge::Left)
+        );
+        assert_eq!(
+            drop_edge(editor, point(px(1590.), px(400.))),
+            Some(Edge::Right)
+        );
+        assert_eq!(
+            drop_edge(editor, point(px(800.), px(980.))),
+            Some(Edge::Bottom)
+        );
         assert_eq!(drop_edge(editor, point(px(800.), px(400.))), None);
         assert_eq!(drop_edge(editor, point(px(1700.), px(400.))), None);
     }

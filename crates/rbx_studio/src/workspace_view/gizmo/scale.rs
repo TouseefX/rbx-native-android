@@ -152,7 +152,11 @@ pub(super) fn grab_face(
         axis,
         sphere: target.sphere && lock_shape,
         cylinder: target.cylinder && lock_shape,
-        slope: if lock_shape { target.slope } else { Slope::None },
+        slope: if lock_shape {
+            target.slope
+        } else {
+            Slope::None
+        },
         grabbed: gizmo::along_axis(origin, axis, ray)?,
         size: target.size(),
         component: grabbed as usize,
