@@ -62,7 +62,12 @@ pub(super) fn graph(dom: &mut WeakDom, parent: Option<Ref>, graph: &Graph) -> Re
                 .dom
                 .new_instance("AnimationNodeDefinition", &n.id, Some(definition));
             set(w.dom, r, "NodeType", Variant::Enum(n.kind.value()));
-            set(w.dom, r, "NodeId", Variant::String(guid((&graph.name, &n.id))));
+            set(
+                w.dom,
+                r,
+                "NodeId",
+                Variant::String(guid((&graph.name, &n.id))),
+            );
             r
         })
         .collect();

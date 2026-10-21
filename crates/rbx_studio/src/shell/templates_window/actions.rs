@@ -242,7 +242,9 @@ impl TemplatesWindow {
         let line = summary(&imported);
         let skipped = imported.ignored > 0 || !imported.refused.is_empty();
         self.shell.update(cx, |shell, _| {
-            shell.output.push("Script Templates", import_feedback(&line, skipped));
+            shell
+                .output
+                .push("Script Templates", import_feedback(&line, skipped));
         });
         self.notice = skipped.then_some(Notice::Info(line.clone()));
         self.reload(cx);

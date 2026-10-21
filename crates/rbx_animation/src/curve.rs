@@ -168,9 +168,14 @@ impl FloatCurve {
         Some(match k0.interpolation {
             Interpolation::Constant => k0.value,
             Interpolation::Linear => k0.value + (k1.value - k0.value) * u,
-            Interpolation::Cubic => {
-                hermite(k0.value, k1.value, self.slopes(i - 1).1, self.slopes(i).0, h, u)
-            }
+            Interpolation::Cubic => hermite(
+                k0.value,
+                k1.value,
+                self.slopes(i - 1).1,
+                self.slopes(i).0,
+                h,
+                u,
+            ),
         })
     }
 
@@ -183,9 +188,16 @@ impl FloatCurve {
         let k = &self.keys[i];
         let auto = self.keys.get(i + 1).map_or(0., |n| {
             let h = n.time - k.time;
-            if h > 0. { (n.value - k.value) / h } else { 0. }
+            if h > 0. {
+                (n.value - k.value) / h
+            } else {
+                0.
+            }
         });
-        (k.left_tangent.unwrap_or(auto), k.right_tangent.unwrap_or(auto))
+        (
+            k.left_tangent.unwrap_or(auto),
+            k.right_tangent.unwrap_or(auto),
+        )
     }
 
     pub fn index_at(&self, time: f32) -> Option<usize> {
