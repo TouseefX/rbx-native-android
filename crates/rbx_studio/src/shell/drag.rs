@@ -167,8 +167,11 @@ impl Shell {
         self.pose_out(posed);
         self.plugins.mouse = mouse;
 
-        self.viewport
-            .update(cx, |viewport, _| viewport.set_hover_target(target));
+        let readout = self.perf_readout(mouse.map(|(part, _)| part));
+        self.viewport.update(cx, |viewport, cx| {
+            viewport.set_hover_target(target);
+            viewport.set_heat_readout(readout, cx);
+        });
         if hovered == self.hovered {
             return;
         }
