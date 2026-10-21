@@ -319,18 +319,18 @@ mod tests {
         assert_eq!(drawn(&scene), [1, 1, 1]);
 
         // The beam and trail hang off part 3 but end on part 5's attachment.
-        scene.isolate(Some(&[Ref::new(5)]), |at| dom.parent(at));
+        scene.isolate(Some(&[Ref::new(5)]), &[], true, |at| dom.parent(at));
         assert_eq!(drawn(&scene), [0, 1, 1]);
         assert_eq!(scene.particle_emitters().len(), 1, "the full list is kept");
 
-        scene.isolate(Some(&[Ref::new(BASE)]), |at| dom.parent(at));
+        scene.isolate(Some(&[Ref::new(BASE)]), &[], true, |at| dom.parent(at));
         assert_eq!(drawn(&scene), [1, 0, 0]);
         // A replan keeps the answer.
         scene.replan_effect(&dom, &database, EffectKind::Particles);
         scene.replan_effect(&dom, &database, EffectKind::Beams);
         assert_eq!(drawn(&scene), [1, 0, 0]);
 
-        scene.isolate(None, |at| dom.parent(at));
+        scene.isolate(None, &[], false, |at| dom.parent(at));
         assert_eq!(drawn(&scene), [1, 1, 1]);
     }
 

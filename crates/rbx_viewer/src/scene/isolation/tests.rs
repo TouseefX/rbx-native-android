@@ -95,7 +95,11 @@ fn place() -> (WeakDom, Scene) {
 }
 
 fn isolate_rig(scene: &mut Scene, dom: &WeakDom) {
-    scene.isolate(Some(&[Ref::new(RIG)]), |at| dom.parent(at));
+    scene.isolate(Some(&[Ref::new(RIG)]), &[], true, |at| dom.parent(at));
+}
+
+fn filter_layers(scene: &mut Scene, dom: &WeakDom, only: Option<&[Ref]>, hidden: &[Ref]) {
+    scene.isolate(only, hidden, false, |at| dom.parent(at));
 }
 
 fn whole(scene: &Scene, referent: u32) -> Part {
@@ -282,7 +286,7 @@ fn lifting_the_isolation_restores_everything() {
 
     isolate_rig(&mut scene, &dom);
     assert!(scene.isolation().is_some());
-    scene.isolate(None, |at| dom.parent(at));
+    scene.isolate(None, &[], false, |at| dom.parent(at));
 
     assert!(scene.isolation().is_none());
     assert_eq!(scene.parts(), &before[..]);
@@ -304,6 +308,74 @@ fn the_stage_is_the_drawn_rig_and_the_floor_around_it() {
     assert_eq!(stage.min, Vec3::new(-STAGE_REACH, -1.0, -STAGE_REACH));
     assert_eq!(stage.max, Vec3::new(STAGE_REACH, 1.0, STAGE_REACH));
 
-    scene.isolate(None, |at| dom.parent(at));
+    scene.isolate(None, &[], false, |at| dom.parent(at));
+    assert!(scene.stage_bounds().is_none());
+}
+
+#[test]
+fn a_hidden_part_is_not_drawn_and_not_picked() {
+    let (dom, mut scene) = place();
+    let database = ReflectionDatabase::embedded();
+    let ray = Ray::new(Vec3::new(-5.0, 0.0, 0.0), Vec3::X);
+
+    filter_layers(&mut scene, &dom, None, &[Ref::new(WALL)]);
+
+    assert!(!whole(&scene, WALL).is_drawn());
+    assert!(whole(&scene, TORSO).is_drawn());
+    let meshes = Meshes::of(&scene);
+    let hits = parts_along(&dom, &database, &meshes, ray);
+    assert!(hits.contains(&Ref::new(TORSO)));
+    assert!(!hits.contains(&Ref::new(WALL)));
+    assert!(!meshes.shows(&dom, Ref::new(WALL)));
+}
+
+#[test]
+fn a_hidden_subtree_hides_everything_beneath_it() {
+    let (dom, mut scene) = place();
+
+    filter_layers(&mut scene, &dom, None, &[Ref::new(RIG)]);
+
+    assert!(!whole(&scene, TORSO).is_drawn());
+    assert!(!instance_drawn(&scene, HEAD));
+    assert!(whole(&scene, WALL).is_drawn());
+    assert!(instance_drawn(&scene, STATUE));
+    assert!(!Meshes::of(&scene).shows(&dom, Ref::new(HEAD)));
+}
+
+#[test]
+fn hidden_and_only_combine() {
+    let (dom, mut scene) = place();
+
+    filter_layers(&mut scene, &dom, Some(&[Ref::new(RIG)]), &[Ref::new(HEAD)]);
+
+    assert!(whole(&scene, TORSO).is_drawn());
+    assert!(!instance_drawn(&scene, HEAD));
+    assert!(!whole(&scene, WALL).is_drawn());
+    let meshes = Meshes::of(&scene);
+    assert!(meshes.shows(&dom, Ref::new(TORSO)));
+    assert!(!meshes.shows(&dom, Ref::new(HEAD)));
+    assert!(!meshes.shows(&dom, Ref::new(WALL)));
+}
+
+#[test]
+fn clearing_the_layer_filter_restores_everything() {
+    let (dom, mut scene) = place();
+    let before: Vec<Part> = scene.parts().to_vec();
+
+    filter_layers(&mut scene, &dom, None, &[Ref::new(WALL)]);
+    filter_layers(&mut scene, &dom, None, &[]);
+
+    assert!(scene.isolation().is_none());
+    assert_eq!(scene.parts(), &before[..]);
+    assert!(Meshes::of(&scene).shows(&dom, Ref::new(WALL)));
+}
+
+#[test]
+fn a_layer_filter_does_not_set_stage_bounds() {
+    let (dom, mut scene) = place();
+
+    filter_layers(&mut scene, &dom, Some(&[Ref::new(RIG)]), &[Ref::new(WALL)]);
+
+    assert!(scene.isolation().is_some());
     assert!(scene.stage_bounds().is_none());
 }
