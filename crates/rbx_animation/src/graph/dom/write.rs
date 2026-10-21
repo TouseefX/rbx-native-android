@@ -62,6 +62,7 @@ pub(super) fn graph(dom: &mut WeakDom, parent: Option<Ref>, graph: &Graph) -> Re
                 .dom
                 .new_instance("AnimationNodeDefinition", &n.id, Some(definition));
             set(w.dom, r, "NodeType", Variant::Enum(n.kind.value()));
+            set(w.dom, r, "NodeId", Variant::String(guid((&graph.name, &n.id))));
             r
         })
         .collect();
@@ -103,6 +104,12 @@ impl Writer<'_> {
                 self.dom
                     .new_instance("AnimationValueNodeDefinition", &e.name, Some(definition));
             set(self.dom, node, "NodeType", Variant::Enum(1));
+            set(
+                self.dom,
+                node,
+                "NodeId",
+                Variant::String(guid((&self.graph.name, &e.name))),
+            );
             let mut a = Attrs::default();
             a.insert("Expression", Variant::String(e.source.clone()));
             a.write(self.dom, node);

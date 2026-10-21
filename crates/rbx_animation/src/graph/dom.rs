@@ -6,8 +6,9 @@
 //!   (`RBX_SourceAssetId`, `RBX_GraphDirty`, `RBX_GraphVersion`), which is
 //!   never a parameter.
 //! - Each node is an `AnimationNodeDefinition` named `ClipNode`, `ClipNode1`,
-//!   … with its `NodeType`. `NodeId` is script-locked and left unset, as the
-//!   editor leaves it. Its properties are attributes named as the engine
+//!   … with its `NodeType` and a GUID `NodeId` (stable per graph and node name), which
+//!   Studio's runtime needs: a node without one fails to play with "Missing
+//!   Node Id". Its properties are attributes named as the engine
 //!   names them, enums as `EnumItem` attributes. A `Configuration` child
 //!   holds the editor's `AnimGraph_Position`, `AnimGraph_Size`,
 //!   `AnimGraph_Collapsed`, `AnimGraph_DisplayName` and `AnimGraph_ZIndex`.
