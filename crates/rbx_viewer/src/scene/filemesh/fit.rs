@@ -74,7 +74,7 @@ pub(crate) fn of(
 }
 
 /// A `MeshPart`'s own `MeshId`, fitted to its `size`.
-pub(super) fn mesh_part(
+pub(crate) fn mesh_part(
     database: &ReflectionDatabase,
     instance: &Instance,
 ) -> Option<(AssetRef, Fit)> {
@@ -105,7 +105,7 @@ pub(super) fn mesh_part(
 /// the child itself so the scene builder can read the texture and tint only
 /// it cares about. Only the FileMesh case answers: every other `MeshType`
 /// already has a procedural stand-in built in `scene::shape::resolve`.
-pub(super) fn special_mesh<'a>(
+pub(crate) fn special_mesh<'a>(
     dom: &'a WeakDom,
     part: &Instance,
 ) -> Option<(&'a Instance, AssetRef, Fit)> {
