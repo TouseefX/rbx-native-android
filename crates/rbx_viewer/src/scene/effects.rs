@@ -1,5 +1,5 @@
 //! The Properties-panel fast path for the effects a [`Scene`] keeps beside its
-//! parts — `ParticleEmitter`s, `Beam`s, `Trail`s and `Highlight`s — which the
+//! parts, `ParticleEmitter`s, `Beam`s, `Trail`s and `Highlight`s, which the
 //! renderer draws from static definitions rather than from the instance
 //! buffers `Scene::resync_part` writes into, so an edit to one is a re-plan of
 //! its list, not a rewrite of one GPU slot.
@@ -16,13 +16,13 @@ pub(crate) enum EffectKind {
     Beams,
     Trails,
     Highlights,
-    /// The `Handles`/`*Adornment`/`Selection*` family — see
+    /// The `Handles`/`*Adornment`/`Selection*` family, see
     /// `scene::adornment`.
     Adornments,
 }
 
 impl EffectKind {
-    /// `None` for anything that is not one of the four — the caller's cue
+    /// `None` for anything that is not one of the four, the caller's cue
     /// that this fast path does not apply. The preconfigured `Fire`,
     /// `Smoke` and `Sparkles` classes are emitters like any other here: they
     /// are planned into the very same list (see `scene::particles::legacy`),
@@ -30,7 +30,7 @@ impl EffectKind {
     /// not here even though moving one moves a beam's or trail's endpoint:
     /// an attachment can be the endpoint of any number of effects of either
     /// kind at once, and a full reload is the only path that re-reads them all.
-    /// A `Highlight`'s *adornee* is the same case — editing the model a
+    /// A `Highlight`'s *adornee* is the same case, editing the model a
     /// highlight covers is a part edit, which `Scene::resync_part` handles,
     /// not a re-plan of this list.
     pub(crate) fn of(database: &ReflectionDatabase, class: &str) -> Option<Self> {
@@ -52,7 +52,7 @@ impl EffectKind {
 
 impl Scene {
     /// Re-reads every effect of `kind` from `dom`, exactly as
-    /// [`Scene::from_dom`] did — for an edit on an emitter/beam/trail, or on
+    /// [`Scene::from_dom`] did, for an edit on an emitter/beam/trail, or on
     /// the part or attachment one hangs off, which `Headless::apply_changes`
     /// turns into a re-plan of that kind's list.
     ///
@@ -334,7 +334,7 @@ mod tests {
         assert_eq!(drawn(&scene), [1, 1, 1]);
     }
 
-    // A disabled trail is still listed (its history keeps drawing — see
+    // A disabled trail is still listed (its history keeps drawing, see
     // `scene::trail::Trail::enabled`), so the re-plan carries the flag rather
     // than dropping the trail the way it drops a disabled emitter.
     #[test]

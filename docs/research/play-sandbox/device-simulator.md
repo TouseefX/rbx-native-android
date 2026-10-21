@@ -13,9 +13,9 @@ and `UserInputService` class pages (**Verified**, via `gh api`). Sober's come
 from vinegarhq.org's Configuration, Tips and Tricks and FAQ pages
 (**Verified**).
 
-## 1. Live test of the Play half — built: the client reports itself
+## 1. Live test of the Play half: built: the client reports itself
 
-**Verdict:** done — run live on 2026-10-17 (Linux, Sober 1.8.0 embedded in
+**Verdict:** done, run live on 2026-10-17 (Linux, Sober 1.8.0 embedded in
 the editor on a nested Xephyr display, results under "Live run" below).
 Every claim of the Play half holds; each Play also leaves a record in
 Output, so a later run can be read back the same way.
@@ -242,7 +242,7 @@ Screenshots: `device-simulator/play-iphone15pro-portrait.png`,
 `play-pixel8-back.png`,
 `play-ipadpro-doesnt-fit.png`.
 
-## 2. Input modes on Windows — not possible from outside the client
+## 2. Input modes on Windows: not possible from outside the client
 
 **Verdict:** there is no switch. Nothing was built.
 
@@ -271,7 +271,7 @@ Screenshots: `device-simulator/play-iphone15pro-portrait.png`,
 - So on Windows, Play runs in the machine's own input mode. The Edit preview
   is unaffected.
 
-## 3. Pixel density — built as display scaling in Edit
+## 3. Pixel density: built as display scaling in Edit
 
 **Verdict:** density reaches no script. Roblox exposes no DPI member: the
 `GuiService`, `UserInputService` and `GuiBase2d` pages have none
@@ -297,7 +297,7 @@ screen looks, so that is what was built.
 - Play stays 1:1, because a foreign window can be sized but not scaled
   (item 6).
 
-## 4. A headset in Play — not possible on Linux; Windows untested
+## 4. A headset in Play: not possible on Linux; Windows untested
 
 **Verdict:** Edit preview only, as before.
 
@@ -313,7 +313,7 @@ screen looks, so that is what was built.
   - No one has reported running the Roblox client against it, so this is
     **Unknown**. Its licence terms and account needs are also **Unknown**.
 
-## 5. On-screen keyboard and Android back button — built, with limits
+## 5. On-screen keyboard and Android back button: built, with limits
 
 ### Keyboard cover
 
@@ -386,10 +386,10 @@ screen looks, so that is what was built.
   still undocumented, but Escape gives Back's effect.
 - Linux only. The item is disabled with a hint elsewhere.
 
-## 6. A Play client larger than the 3D view — measured: not viable for Play
+## 6. A Play client larger than the 3D view: measured: not viable for Play
 
 The client is a foreign window. Embedding reparents it at 1:1, so a device
-that does not fit is refused ("Doesn't fit — enlarge the 3D view"). The
+that does not fit is refused ("Doesn't fit, enlarge the 3D view"). The
 alternative is to let the client render at full size off-screen, capture it
 with XComposite and draw it scaled in our view. A throwaway prototype was
 run on the real desktop (GNOME/Mutter, X11, RTX 4070, python-xlib, plain

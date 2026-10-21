@@ -8,7 +8,7 @@
 //!
 //! - [`CloudField`]: read from and saved to the live experience.
 //! - [`LocalField`]: an instance property in the open place file, saved
-//!   with the file — Studio's dialog writes the same property, but here it
+//!   with the file, Studio's dialog writes the same property, but here it
 //!   reaches Roblox only when the place is published.
 //! - [`Unreachable`]: listed with the reason, never pretended to.
 

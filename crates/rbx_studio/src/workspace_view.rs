@@ -1,13 +1,13 @@
 //! The 3D view: the wgpu viewer rendered offscreen and shown as a plain image.
 //! It opens on the viewpoint the place was saved at, the way Studio does, and
 //! flies from there with the same free-flight camera the standalone viewer's
-//! window has (right button to look, WASD positions to move, wheel to step or —
-//! with the button held — to change speed).
+//! window has (right button to look, WASD positions to move, wheel to step or,
+//! with the button held, to change speed).
 //!
 //! GPUI draws on its own wgpu device, which cannot be shared with the viewer's,
 //! so every frame travels through system memory: render, read back, upload. All
 //! of that but the upload happens on a thread of its own (see [`pump`]); this
-//! module is the UI half — events in, finished frames out.
+//! module is the UI half, events in, finished frames out.
 
 mod canvas;
 mod changes;
@@ -73,7 +73,7 @@ const SPEED_LABEL: Duration = Duration::from_millis(1500);
 const POLLS_PER_FRAME: u32 = 2;
 
 /// The render thread's latest free-flight pose, throttled and deduplicated
-/// already (see `pump::due_pose`) — emitted at most a few times a second while
+/// already (see `pump::due_pose`), emitted at most a few times a second while
 /// the camera is actually moving, never on every drawn frame. `Shell`
 /// subscribes to mirror it into `Workspace.CurrentCamera.CFrame` (see
 /// `crate::camera::write_pose`), through a write that deliberately never goes
@@ -84,7 +84,7 @@ pub(crate) struct PoseSynced(pub(crate) Pose);
 impl EventEmitter<PoseSynced> for WorkspaceView {}
 
 /// Asset-fetch/decode warnings drained off the render thread this tick,
-/// oldest first — see `pump::Ready::warnings`. `Shell` subscribes to append
+/// oldest first, see `pump::Ready::warnings`. `Shell` subscribes to append
 /// each one to the Output dock (`shell::output::OutputLog::push_warning`),
 /// the same way it mirrors `PoseSynced` into the camera.
 pub(crate) struct AssetWarnings(pub(crate) Vec<String>);
@@ -97,14 +97,14 @@ impl EventEmitter<AssetWarnings> for WorkspaceView {}
 /// undo stack. Everything the left mouse button does in the viewport therefore
 /// arrives here rather than being carried out on the spot.
 pub(crate) enum ViewportAction {
-    /// A click, as the world ray under it — `Shell` resolves what that ray
+    /// A click, as the world ray under it, `Shell` resolves what that ray
     /// actually hits (see `rbx_viewer::pick::from_click`). `extend` is
     /// `Shift`/`Ctrl`/`Cmd` held: add the hit to the selection (or drop it, if
     /// it was already in) rather than replacing the selection with it.
     ///
     /// `held`: the view has a Move body-drag ready for this same click, to
     /// start only if what is actually under the cursor is already selected
-    /// (see [`WorkspaceView::confirm_grab`]) — the view sees the selection's
+    /// (see [`WorkspaceView::confirm_grab`]), the view sees the selection's
     /// boxes, not whatever unselected part may stand in front of them, and a
     /// click on that part must select it, not drag the selection behind it.
     Pick {
@@ -113,7 +113,7 @@ pub(crate) enum ViewportAction {
         extend: bool,
         held: bool,
     },
-    /// A drag moved every part it carries to a new position — more than one
+    /// A drag moved every part it carries to a new position, more than one
     /// when the gesture grabbed a multi-part selection's gizmo, each keeping
     /// its offset from the others (see `transform::Targets::translate`).
     /// `first` marks the move that began the gesture, which is the single
@@ -121,7 +121,7 @@ pub(crate) enum ViewportAction {
     /// the rest of the history in a fraction of a second.
     ///
     /// A cursor drag on a single part also carries a [`Settle`], asking
-    /// `Shell` to rest it on whatever the cursor is over instead — the move
+    /// `Shell` to rest it on whatever the cursor is over instead, the move
     /// already computed is then only the fallback for a cursor over nothing.
     /// A group drag never settles: cursor dragging is Move's own one-part
     /// body-grab gesture (see `gizmo::Drag::Plane`), and a multi-part
@@ -133,16 +133,16 @@ pub(crate) enum ViewportAction {
     },
     /// A Scale drag resized the part. The centre travels with it: the face
     /// opposite the grabbed one holds still, so growing the part by a stud
-    /// moves its middle by half of one — or, with `Ctrl` held, the middle
+    /// moves its middle by half of one, or, with `Ctrl` held, the middle
     /// holds still and both faces move.
     Resized {
-        /// Each part's new size and centre — one entry for a lone part's
+        /// Each part's new size and centre, one entry for a lone part's
         /// own Scale, every selected part for a group scaled as a whole (see
         /// `transform::Targets::scale_about`).
         parts: Vec<(Ref, Vec3, Vec3)>,
-        /// Where the drag put the selection's pivot — scaled about the same
+        /// Where the drag put the selection's pivot, scaled about the same
         /// point as its parts, which carrying it rigidly would not (a lone
-        /// part's `PivotOffset` stretches with its `Size`) — written as is,
+        /// part's `PivotOffset` stretches with its `Size`), written as is,
         /// so the pivot does not jump when the drag ends and the view reads
         /// it back.
         pivot: Option<Mat4>,
@@ -151,14 +151,14 @@ pub(crate) enum ViewportAction {
     /// A Rotate drag turned the part about its centre, which is where the
     /// rings stand. Only the `CFrame`'s rotation changes.
     Rotated {
-        /// Each part's new orientation and centre — the centre unchanged for
+        /// Each part's new orientation and centre, the centre unchanged for
         /// a lone part turning about itself, swung round the selection's
         /// centre for every part of a group (see
         /// `transform::Targets::rotate_about`).
         parts: Vec<(Ref, Mat3, Vec3)>,
         first: bool,
     },
-    /// An Edit Pivot drag put the selection's pivot on `to` (rigid — no
+    /// An Edit Pivot drag put the selection's pivot on `to` (rigid, no
     /// `Size` in its columns), the geometry left where it is. `first` opens
     /// the gesture's one undo step, as for every other drag.
     Pivot { to: Mat4, first: bool },
@@ -171,7 +171,7 @@ pub(crate) enum ViewportAction {
     /// A transform-toolbar shortcut typed over the view.
     Tool(transform::Action),
     /// Cursor motion with nothing held: `Shell` resolves what is under the
-    /// ray and outlines it, distinctly from the selection outline — Studio's
+    /// ray and outlines it, distinctly from the selection outline, Studio's
     /// "about to click" cue (see `rbx_viewer::renderer::hover`). `alt` is the
     /// selection-cycling modifier held, so the outline previews what a click
     /// would land on: the whole enclosing `Model` plain, the single part
@@ -182,8 +182,8 @@ pub(crate) enum ViewportAction {
     /// broken.
     Hover { ray: Option<Ray>, alt: bool },
     /// The wheel rolled over a `ScrollingFrame` of a `ScreenGui`: `Shell`
-    /// moves its `CanvasPosition` (see `shell::scroll`). Not an edit —
-    /// Studio's own scroll is not undoable either — so it never goes near
+    /// moves its `CanvasPosition` (see `shell::scroll`). Not an edit,
+    /// Studio's own scroll is not undoable either, so it never goes near
     /// the undo stack, the way a camera pose does not.
     Scrolled(Scroll),
     /// The Terrain Editor's input: a brush or region gesture's press, steps
@@ -218,7 +218,7 @@ impl EventEmitter<ViewportAction> for WorkspaceView {}
 
 /// What a view opens on: the viewer, and the tree it was built from, which
 /// the render thread keeps as its own copy of the editor's DOM from then on
-/// — see `pump::Command::Changes`.
+/// see `pump::Command::Changes`.
 pub(crate) struct Opened {
     pub(crate) viewer: Headless,
     pub(crate) dom: WeakDom,
@@ -226,7 +226,7 @@ pub(crate) struct Opened {
 
 pub(crate) struct WorkspaceView {
     /// The render thread. It owns the viewer, which is why no camera state is
-    /// readable from here — only what it reports back with each frame.
+    /// readable from here, only what it reports back with each frame.
     pump: Pump,
     plugin_handles: plugin_handles::PluginHandles,
     /// Keys only reach the camera while the viewport holds focus, so clicking it
@@ -242,7 +242,7 @@ pub(crate) struct WorkspaceView {
     cursor: Option<Point<Pixels>>,
     lock: PointerLock,
     /// Whether a look gesture (right-button orbit) is in progress right now
-    /// — independent of whether `PointerLock` actually captured the OS
+    /// independent of whether `PointerLock` actually captured the OS
     /// pointer, which it never does on Wayland (see `pointer_lock`'s module
     /// doc). What hover resolution gates on instead of `PointerLock::holds`
     /// (see `hover::suppressed`).
@@ -250,16 +250,16 @@ pub(crate) struct WorkspaceView {
     /// The latest un-resolved cursor position from an ordinary move,
     /// waiting for `advance` to decide it's due (see `hover::due`) and cast
     /// a ray against the DOM. Cleared, not just left to resolve stale, at
-    /// every place that already emits `ViewportAction::Hover(None)` — a drag
+    /// every place that already emits `ViewportAction::Hover(None)`: a drag
     /// starting (`gizmo::press`), a look starting (`begin_look`), and the
-    /// cursor leaving the panel (`render`'s `on_hover`) — or a throttled
+    /// cursor leaving the panel (`render`'s `on_hover`), or a throttled
     /// move would otherwise un-clear it a moment later.
     hover_pending: Option<(Point<Pixels>, Modifiers)>,
     /// The part under the cursor as of the last hover `Shell` resolved, which
     /// a summon outlines a mesh face from (see `summon::onto_edges`).
     hover_part: Option<PartSurface>,
     /// The cursor's latest position and modifiers while a drag is held, not
-    /// yet applied to the part — applied by `advance` at most once per
+    /// yet applied to the part, applied by `advance` at most once per
     /// frame, and by the release (see `gizmo::WorkspaceView::end_drag`).
     drag_pending: Option<(Point<Pixels>, Modifiers)>,
     /// When the drag in progress last stepped, for that once-per-frame gate.
@@ -276,12 +276,12 @@ pub(crate) struct WorkspaceView {
     viewport: Rc<Cell<Viewport>>,
     /// The size the render thread was last told to draw at.
     sized: (u32, u32),
-    /// The device screen the view emulates, if any — see
+    /// The device screen the view emulates, if any, see
     /// `frame::Viewport::letterboxed`.
     screen: Option<(u32, u32)>,
-    /// The device whose screen `screen` is, if it is one — see [`device`].
+    /// The device whose screen `screen` is, if it is one, see [`device`].
     device: Option<device::Simulated>,
-    /// A Play client is embedded over the view — see [`device`].
+    /// A Play client is embedded over the view, see [`device`].
     playing: bool,
     /// Which page of the device's keyboard cover shows, and its shift.
     keyboard_page: device::KeyboardPage,
@@ -292,7 +292,7 @@ pub(crate) struct WorkspaceView {
     /// `advance`, which runs on a plain timer of its own and keeps firing
     /// whether or not the dock currently mounts this panel. The dock renders
     /// only the active tab of a group (see `gpui_component::dock::tab_panel`),
-    /// so a viewport switched away from stops calling `render` entirely — this
+    /// so a viewport switched away from stops calling `render` entirely, this
     /// is the only signal that tells `advance` so, since the panel's last known
     /// size otherwise just sits there unchanged forever.
     painted: Rc<Cell<bool>>,
@@ -301,22 +301,22 @@ pub(crate) struct WorkspaceView {
     /// [`presence`].
     visible: bool,
     missed_paints: u32,
-    /// Whether the render thread was resting at the last tick — see
+    /// Whether the render thread was resting at the last tick, see
     /// `Pump::resting`.
     resting: bool,
     frame: Option<Arc<RenderImage>>,
     /// One display refresh: the budget a frame is given while the window is
-    /// focused. Fixed for the life of the view — see `pacing` for the
+    /// focused. Fixed for the life of the view, see `pacing` for the
     /// unfocused cap this and the window's focus state combine into.
     full_interval: Duration,
     /// What the render loop is currently paced to: `full_interval` while
-    /// focused, or the capped unfocused rate otherwise — see [`pacing::FocusPacing`].
+    /// focused, or the capped unfocused rate otherwise, see [`pacing::FocusPacing`].
     /// Drives the UI thread's own poll delay (`advance`'s return value) and
     /// the hover/drag gates below; pushed to the render thread itself
     /// through `Pump::set_interval` whenever `pacing` says it changed.
     interval: Duration,
     /// Whether the window currently has OS focus, and the unfocused fps
-    /// preset — see [`pacing::FocusPacing`].
+    /// preset, see [`pacing::FocusPacing`].
     pacing: pacing::FocusPacing,
     speed: f32,
     speed_shown_until: Option<Instant>,
@@ -328,10 +328,10 @@ pub(crate) struct WorkspaceView {
     /// The projection mode the user last picked from the Viewport panel's
     /// overflow menu (see `Shell::set_orthographic`).
     orthographic: bool,
-    /// Whether the top-right orientation indicator draws at all — the
+    /// Whether the top-right orientation indicator draws at all, the
     /// Viewport panel's overflow menu again (see `Shell::set_axis_indicator`).
     axis_indicator: bool,
-    /// Whether a part in front of the selection hides its outline box — the
+    /// Whether a part in front of the selection hides its outline box, the
     /// Viewport panel's overflow menu again (see
     /// `Shell::set_selection_occluded`).
     selection_occluded: bool,
@@ -350,18 +350,18 @@ pub(crate) struct WorkspaceView {
     /// selection changes rather than read per move: only the dragged part is
     /// moving, so its neighbours stand still for the length of a gesture.
     neighbours: Vec<Mat4>,
-    /// The camera the last frame was drawn from — see `pump::Ready::view`.
+    /// The camera the last frame was drawn from, see `pump::Ready::view`.
     /// Everything screen-to-world unprojects against this, so a click resolves
     /// against the view it was aimed at.
     view: Option<Pose>,
     /// The file meshes resident on the render thread, as of the last scene it
-    /// built — see `pump::Ready::meshes`. What `Shell` picks a `MeshPart`
+    /// built, see `pump::Ready::meshes`. What `Shell` picks a `MeshPart`
     /// against, so a click resolves against the triangles on screen rather
     /// than a box around them; a handle onto the renderer's own data, not a
     /// copy of it.
     meshes: Meshes,
     drag: Option<Drag>,
-    /// Whether `B` is held — the Terrain Editor's brush dial key.
+    /// Whether `B` is held, the Terrain Editor's brush dial key.
     terrain_b: bool,
     /// Where the cursor last stood across the view, for `B`-drag's dial.
     terrain_dial_x: Option<f32>,
@@ -389,7 +389,7 @@ pub(crate) struct WorkspaceView {
     /// what tells `Shell` which move opens the gesture's one undo step.
     dragged: bool,
     /// Where the live stud-count readout sits and what it reads, as of the
-    /// current drag's last step — see `gizmo::WorkspaceView::drag_to` and
+    /// current drag's last step, see `gizmo::WorkspaceView::drag_to` and
     /// `readout.rs`. Reset to `None` at the start of every drag (`gizmo::
     /// WorkspaceView::begin`) so a stale number never survives into the next
     /// gesture; `render` only ever shows it while `dragging()` is true, so a
@@ -398,12 +398,12 @@ pub(crate) struct WorkspaceView {
     /// Studio's dragger guides: what they show now, and what they keep
     /// between one event and the next (see [`guides`]).
     guides: guides::State,
-    /// `Tab`'s summoned handles — see [`summon`].
+    /// `Tab`'s summoned handles, see [`summon`].
     summon: summon::Summon,
-    /// The hotspot an Edit Pivot drag has snapped onto — see [`pivot`].
+    /// The hotspot an Edit Pivot drag has snapped onto, see [`pivot`].
     snapped: Option<Vec3>,
     /// The UI editor's canvas: the request last forwarded, and the last
-    /// frame drawn for it — see [`canvas`].
+    /// frame drawn for it, see [`canvas`].
     canvas_request: Option<CanvasRequest>,
     canvas: Option<Canvas>,
     /// Kept only to stay subscribed: dropping these unregisters the listeners.
@@ -471,7 +471,7 @@ impl WorkspaceView {
             view.release_summon();
         });
         // Alt-tabbing away never blurs the focus handle, so the window's own
-        // activation is watched too — and, since it's the authoritative OS
+        // activation is watched too, and, since it's the authoritative OS
         // focus signal (unlike the in-app `focus` handle above), it's also
         // what drives the render-rate throttle (see `pacing`).
         let deactivated = cx.observe_window_activation(window, |view, window, _| {
@@ -550,7 +550,7 @@ impl WorkspaceView {
         }
     }
 
-    /// The file meshes the render thread last reported drawing — see the
+    /// The file meshes the render thread last reported drawing, see the
     /// field. `Shell` reads this when it resolves a click, since the DOM it
     /// picks against lives there and the geometry lives here.
     /// The 3D panel's last laid-out rect in its window, device pixels:
@@ -574,9 +574,9 @@ impl WorkspaceView {
         // switched away to another tab: `viewport`'s size would otherwise sit
         // stale at whatever it last was, so this is the only way to catch it.
         // A single miss is not enough on its own, and a run of them is not
-        // conclusive either — see `presence`.
+        // conclusive either, see `presence`.
         // A render thread resting on a still picture sends no frames, so
-        // nothing repaints and a missed paint means nothing — counted, it
+        // nothing repaints and a missed paint means nothing, counted, it
         // would probe a repaint of the whole window every frame. A tab
         // switched away meanwhile is caught by the next frame that is drawn,
         // and until then there is no drawing to stop.
@@ -597,7 +597,7 @@ impl WorkspaceView {
         if presence.probe {
             // Nothing else will repaint this panel while the render thread is
             // stalled, and its own silence is the only evidence that it might
-            // be hidden — see `presence`.
+            // be hidden, see `presence`.
             cx.notify();
         }
 
@@ -691,7 +691,7 @@ impl WorkspaceView {
             }
         }
         // Same gate as the hover above: the latest cursor position wins,
-        // once per frame — see the `on_mouse_move` handler in `render`.
+        // once per frame, see the `on_mouse_move` handler in `render`.
         if self.drag_pending.is_some() {
             let elapsed = self
                 .drag_stepped_at
@@ -747,7 +747,7 @@ impl WorkspaceView {
         // hovered stuck on screen for the whole gesture: `mouse_moved` feeds
         // this same motion to the camera instead of resolving a new hover
         // while a look is in progress (see `hover::suppressed`, and
-        // `self.looking` above rather than `self.lock.holds()` — the lock
+        // `self.looking` above rather than `self.lock.holds()`: the lock
         // never actually engages on Wayland), so nothing else would clear it.
         self.hover_pending = None;
         cx.emit(ViewportAction::Hover {
@@ -763,8 +763,8 @@ impl WorkspaceView {
         }
     }
 
-    /// Ends the look however it ended — button up inside or outside the panel,
-    /// lost focus, window deactivated — because each of those otherwise leaves
+    /// Ends the look however it ended, button up inside or outside the panel,
+    /// lost focus, window deactivated, because each of those otherwise leaves
     /// the cursor hidden with the camera still turning.
     fn end_look(&mut self) {
         self.lock.release();
@@ -806,7 +806,7 @@ impl WorkspaceView {
             // Only while a part is actually held by its body, and only then:
             // with nothing in hand these are ordinary keys, and swallowing
             // them would take `r` away from whatever binds it next. First,
-            // so that `Alt` — the drag's Hold Orientation — with `R` turns
+            // so that `Alt`, the drag's Hold Orientation, with `R` turns
             // the part rather than jumping to the rotate increment field.
             if self.turn_key(&keystroke.key, keystroke.modifiers, cx) {
                 return;
@@ -822,7 +822,7 @@ impl WorkspaceView {
             }
         }
 
-        // A chord — Ctrl+Z, Ctrl+S, Ctrl+Y — is a command for whichever
+        // A chord, Ctrl+Z, Ctrl+S, Ctrl+Y, is a command for whichever
         // handler up the tree binds it, never a camera key: `z` sits on the
         // W position of an AZERTY keyboard, and undo must not also fly the
         // camera forward. Releases are always honoured, so a key pressed
@@ -842,7 +842,7 @@ impl WorkspaceView {
         }
     }
 
-    /// Switches transform tool, or its world/local orientation — pushed down
+    /// Switches transform tool, or its world/local orientation, pushed down
     /// from the toolbar, which owns the choice.
     pub(crate) fn set_transform(&mut self, transform: Transform) {
         if transform == self.transform {
@@ -882,7 +882,7 @@ impl WorkspaceView {
         cx.notify();
     }
 
-    /// How the free camera turns, flies and eases — the render thread owns
+    /// How the free camera turns, flies and eases, the render thread owns
     /// the viewer, so it takes the change between two frames.
     pub(crate) fn set_camera_feel(&self, feel: rbx_viewer::CameraFeel) {
         self.pump.camera_feel(feel);
@@ -934,11 +934,11 @@ impl WorkspaceView {
         cx.notify();
     }
 
-    /// Shows or hides the top-right orientation indicator — purely a local
+    /// Shows or hides the top-right orientation indicator, purely a local
     /// draw toggle, unlike `set_orthographic`: nothing about the camera or
     /// the render thread changes, so this never touches `self.pump`.
     /// Emulates a `screen`-pixel device in the view: the scene letterboxed
-    /// to its shape, the GUI laid out at its size — or neither, with `None`.
+    /// to its shape, the GUI laid out at its size, or neither, with `None`.
     pub(crate) fn set_screen(&mut self, screen: Option<(u32, u32)>, cx: &mut Context<Self>) {
         if screen == self.screen {
             return;
@@ -964,7 +964,7 @@ impl WorkspaceView {
         cx.notify();
     }
 
-    /// Starts or stops the frame-rate sampling both threads do — on only
+    /// Starts or stops the frame-rate sampling both threads do, on only
     /// while the Viewport dock is on screen (see `Shell::sync_stats`). Takes
     /// `&self`: the switch is an atomic the render thread reads per frame.
     pub(crate) fn set_stats_sampling(&self, on: bool) {
@@ -972,7 +972,7 @@ impl WorkspaceView {
     }
 
     /// What the Viewport dock lists about the view: the frame rate, then the
-    /// quality level — each as a name and a value.
+    /// quality level, each as a name and a value.
     pub(crate) fn readout(&self) -> [(&'static str, SharedString); 2] {
         [
             (
@@ -983,13 +983,13 @@ impl WorkspaceView {
         ]
     }
 
-    /// The 3D view's own keyboard focus — where the tool keys and the
-    /// camera's WASD are bound — for the command palette to hand it on to.
+    /// The 3D view's own keyboard focus, where the tool keys and the
+    /// camera's WASD are bound, for the command palette to hand it on to.
     pub(crate) fn focus_handle(&self) -> FocusHandle {
         self.focus.clone()
     }
 
-    /// Switches which unfocused preset `pacing` caps the render loop to —
+    /// Switches which unfocused preset `pacing` caps the render loop to,
     /// see `Shell::set_unfocused_fps`. No visible effect while focused, so
     /// unlike `set_quality`/`set_orthographic` this never needs `cx.notify`.
     pub(crate) fn set_unfocused_fps(&mut self, unfocused: pacing::UnfocusedFps) {
@@ -999,7 +999,7 @@ impl WorkspaceView {
     }
 
     /// Any keyboard or mouse input reaching the viewport counts as regaining
-    /// the user's attention — see `pacing::FocusPacing::mark_input`. Called
+    /// the user's attention, see `pacing::FocusPacing::mark_input`. Called
     /// from every input handler in `render` below, so the throttle from
     /// before an unfocused window's activation event lands doesn't also
     /// delay the very input that's supposed to end it.
@@ -1012,7 +1012,7 @@ impl WorkspaceView {
     /// Recomputes the render loop's target interval from the current focus
     /// state and pushes it to both halves of the loop: `self.interval` (read
     /// by `advance`'s own poll delay and the hover/drag gates) and the render
-    /// thread itself (the actual throttle — see `Pump::set_interval`).
+    /// thread itself (the actual throttle, see `Pump::set_interval`).
     fn retarget_pacing(&mut self) {
         let next = self.pacing.interval(self.full_interval);
         if next != self.interval {
@@ -1024,7 +1024,7 @@ impl WorkspaceView {
 
 impl Render for WorkspaceView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Only called while the dock actually mounts this panel — see
+        // Only called while the dock actually mounts this panel, see
         // `advance` and the `painted` field.
         self.painted.set(true);
         let viewport = self.viewport.clone();
@@ -1049,7 +1049,7 @@ impl Render for WorkspaceView {
 
         div()
             // Only `on_hover` (used below, to clear the hover outline when
-            // the cursor leaves the panel) actually needs an id — it is
+            // the cursor leaves the panel) actually needs an id, it is
             // `StatefulInteractiveElement`'s alone, unlike every other
             // handler here.
             .id("workspace-viewport")
@@ -1133,7 +1133,7 @@ impl Render for WorkspaceView {
                 // `WorkspaceView::step_drag`), the way a hover is. A mouse
                 // reports far more moves than the display draws, and each
                 // step writes every carried part into the DOM and reflects
-                // it — for a large Model, milliseconds the UI thread cannot
+                // it, for a large Model, milliseconds the UI thread cannot
                 // spend a thousand times a second.
                 if view.dragging() {
                     view.drag_pending = Some((event.position, event.modifiers));
@@ -1145,7 +1145,7 @@ impl Render for WorkspaceView {
                 // the camera above, not the cursor: there is nothing new
                 // under it to resolve a hover against, and the last one
                 // already stands cleared (see `begin_look`). Gated on
-                // `looking`, not `view.lock.holds()` — the lock never
+                // `looking`, not `view.lock.holds()`: the lock never
                 // actually engages on Wayland (see `hover::suppressed`).
                 // Recording the position is cheap; the raycast itself is
                 // throttled in `advance` (see `hover::due`), not run here.
@@ -1154,8 +1154,8 @@ impl Render for WorkspaceView {
                 }
             }))
             // The cursor leaving the panel altogether never fires another
-            // `on_mouse_move` to say so — bounds-scoped, like every handler
-            // above — so a stale hover box would otherwise outlive it; `false`
+            // `on_mouse_move` to say so, bounds-scoped, like every handler
+            // above, so a stale hover box would otherwise outlive it; `false`
             // is exactly that transition (see `Interactivity::on_hover`).
             // Hit-tested whatever the last input was: GPUI's default reads a
             // key press as the cursor leaving, and a key typed over the view
@@ -1186,7 +1186,7 @@ impl Render for WorkspaceView {
             }))
             .on_key_down(cx.listener(|view, event: &KeyDownEvent, window, cx| {
                 view.note_input();
-                // Typed into the measurement box: its, not the view's —
+                // Typed into the measurement box: its, not the view's,
                 // but `Escape` hands the keyboard back.
                 if view.typing(window, cx) {
                     if event.keystroke.key == "escape" {
@@ -1283,7 +1283,7 @@ impl Render for WorkspaceView {
                 .absolute()
                 // Pinned rather than left to `absolute`'s default: with no inset
                 // an absolute child takes its static position, which here is
-                // below the image it follows — and a viewport whose origin is a
+                // below the image it follows, and a viewport whose origin is a
                 // panel too low is one the pointer lock pins the cursor outside
                 // of.
                 .top_0()
@@ -1310,7 +1310,7 @@ impl Render for WorkspaceView {
                     )
                 },
             )
-            // Only while a drag is actually moving something — see
+            // Only while a drag is actually moving something, see
             // `drag_readout`'s own doc for why a stale value never leaks
             // into a gesture that hasn't stepped yet. Empty is a Sun step
             // `Shell` has not answered yet.
@@ -1342,7 +1342,7 @@ impl Render for WorkspaceView {
                 this.child(measure)
             })
             // No pose yet (the very first frame or two, before the render
-            // thread's first `Ready` lands — see `self.view`'s own doc) draws
+            // thread's first `Ready` lands, see `self.view`'s own doc) draws
             // nothing rather than a widget with no orientation to show.
             .when_some(self.view.filter(|_| self.axis_indicator), |this, pose| {
                 this.child(orientation_indicator(pose))
@@ -1353,7 +1353,7 @@ impl Render for WorkspaceView {
 /// The top-right orientation indicator: a translucent sphere with the three
 /// world axes' orbital rings through it and a small cube at its centre.
 ///
-/// Still a flat 2D overlay rather than a 3D mesh — see `orientation`'s
+/// Still a flat 2D overlay rather than a 3D mesh, see `orientation`'s
 /// module doc. The depth cue is entirely in the drawing order and the
 /// dimming: each ring's far half is painted first and faded, then the
 /// sphere's own wash, then the cube, then each ring's near half at full
@@ -1362,7 +1362,7 @@ impl Render for WorkspaceView {
 ///
 /// Placed opposite the speed toast (bottom-left) rather than colliding with
 /// it.
-/// Half the indicator's own square, in px — where a face's unit-radius
+/// Half the indicator's own square, in px, where a face's unit-radius
 /// centre/corner offsets (see `orientation::Face`) land once scaled and
 /// re-centred inside the widget.
 const CUBE_SIZE: f32 = 96.0;
@@ -1456,7 +1456,7 @@ fn orientation_sphere(
                 builder.add_polygon(&corners, true);
                 // A face that landed exactly edge-on (see
                 // `orientation::visible_faces`'s doc) tessellates to nothing
-                // rather than erroring — degenerate input, not invalid input.
+                // rather than erroring, degenerate input, not invalid input.
                 if let Ok(path) = builder.build() {
                     window.paint_path(path, cube_face(face));
                 }
@@ -1475,7 +1475,7 @@ fn orientation_sphere(
 /// is and tinted a little toward its own axis colour.
 ///
 /// Pale rather than fully axis-coloured, because the rings around it now
-/// carry the axis colours — three saturated faces inside three saturated
+/// carry the axis colours, three saturated faces inside three saturated
 /// rings turned the whole thing into a smudge. The tint is just enough that
 /// the top face still reads as the green one.
 fn cube_face(face: &orientation::Face) -> Rgba {

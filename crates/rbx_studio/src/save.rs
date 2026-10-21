@@ -1,21 +1,21 @@
 //! Ctrl+S: writes the current DOM back to the file it was opened from, in the
-//! format that file was already in — binary or XML, sniffed once at load and
+//! format that file was already in, binary or XML, sniffed once at load and
 //! never re-guessed afterwards (see [`Format::sniff`], called from
 //! `main::load`; the Shell-facing wiring lives in `shell::save`).
 //!
 //! The write never touches the original file until the new content is fully
 //! on disk: it lands in a sibling `<name>.tmp-<pid>` file first, and only a
 //! fully written temp file is renamed over the original. A serializer error
-//! — e.g. `rbx_binary::SerializeError::InconsistentProperty` from a
+//! e.g. `rbx_binary::SerializeError::InconsistentProperty` from a
 //! script-created instance with a property the binary format cannot express
-//! — returns before that rename ever happens, so a bad DOM never corrupts a
+//! returns before that rename ever happens, so a bad DOM never corrupts a
 //! file that was fine before the save was attempted.
 //!
 //! `RBX_STUDIO_SAVE_AS=<path>` redirects one save to a scratch path instead of
 //! the file the place was opened from, applied once at startup right after
-//! any `RBX_STUDIO_INSERT` mutation — a debugging aid for a headless
+//! any `RBX_STUDIO_INSERT` mutation, a debugging aid for a headless
 //! save/reload round trip, since nothing else can send Ctrl+S to the editor
-//! on its own (see `AGENTS.md`'s safety rules).
+//! on its own.
 
 use std::path::Path;
 
@@ -27,7 +27,7 @@ use rbx_reflection::ReflectionDatabase;
 /// module's doc comment.
 pub(crate) const SAVE_AS_VARIABLE: &str = "RBX_STUDIO_SAVE_AS";
 
-/// Which serializer a place's file was read with — the one a save must use
+/// Which serializer a place's file was read with, the one a save must use
 /// again, since Ctrl+S never changes a file's format under the user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Format {
@@ -79,7 +79,7 @@ impl Format {
     }
 }
 
-/// What Ctrl+S does — the only window-level shortcut this module owns.
+/// What Ctrl+S does, the only window-level shortcut this module owns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Action {
     Save,
@@ -105,7 +105,7 @@ pub(crate) fn save(dom: &WeakDom, format: Format, path: &Path) -> Result<(), Str
 
 /// Writes `bytes` to `path` without ever leaving a half-written file behind:
 /// the new content lands in a sibling temp file first, and only a fully
-/// written temp file is renamed over the original — mirrors
+/// written temp file is renamed over the original, mirrors
 /// `rbx_assets::native`'s own `write_atomic`, which is private to that crate
 /// and so duplicated here rather than shared across a crate boundary for one
 /// small helper.
@@ -167,7 +167,7 @@ mod tests {
     }
 
     /// A binary file holds a value for every instance of a class; one an
-    /// instance never had must come back as Roblox's default, not a zero —
+    /// instance never had must come back as Roblox's default, not a zero,
     /// `archivable = false` would make Studio drop a part from its next
     /// save.
     #[test]
@@ -297,7 +297,7 @@ mod tests {
 
     /// A place opened as binary must be saved back as binary even after a
     /// round trip through a fresh in-memory DOM built the same way
-    /// `main::load` builds one — the "remembers its format" contract this
+    /// `main::load` builds one, the "remembers its format" contract this
     /// module exists for.
     #[test]
     fn a_place_opened_as_binary_saves_as_binary_again() {
@@ -345,7 +345,7 @@ mod tests {
     // Mirrors `rbx_binary::serialize`'s own
     // `a_kind_with_no_neutral_value_is_still_rejected_when_missing` test: two
     // instances of the same class disagree on a property with neither a
-    // class default nor a neutral fallback — one the reflection data does
+    // class default nor a neutral fallback, one the reflection data does
     // not know, of a type with no neutral value.
     #[test]
     fn a_failed_serialize_never_touches_the_existing_file() {

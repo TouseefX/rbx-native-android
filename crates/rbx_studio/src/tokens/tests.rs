@@ -17,7 +17,7 @@ fn contrast(a: Rgba, b: Rgba) -> f32 {
     (a.max(b) + 0.05) / (a.min(b) + 0.05)
 }
 
-/// `foreground` (with its own alpha) painted over an opaque `background` —
+/// `foreground` (with its own alpha) painted over an opaque `background`,
 /// which is how every text token in this design is specified.
 fn composite(foreground: Rgba, background: Rgba) -> Rgba {
     let mix = |f: f32, b: f32| f * foreground.a + b * (1. - foreground.a);
@@ -49,7 +49,7 @@ const SURFACES: [Named; 6] = [
 #[test]
 fn meaningful_text_clears_aa_on_every_surface() {
     // `text_placeholder` is out: it now aliases `text3`, the reference's own
-    // tertiary/placeholder tier, exempt the same way `text_disabled` is —
+    // tertiary/placeholder tier, exempt the same way `text_disabled` is,
     // see `disabled_text_stays_visible_without_reading_as_available`.
     let tokens: [Named; 4] = [
         ("text-full", text_full),
@@ -73,7 +73,7 @@ fn meaningful_text_clears_aa_on_every_surface() {
 /// disabled controls), but it still has to be *there*: dim enough to read
 /// as unavailable, not so dim it looks like a rendering fault.
 ///
-/// Its *value* is not dimmed to match — that is real data, and it goes
+/// Its *value* is not dimmed to match, that is real data, and it goes
 /// through `text_muted`, which the AA test above covers.
 #[test]
 fn disabled_text_stays_visible_without_reading_as_available() {
@@ -91,11 +91,11 @@ fn disabled_text_stays_visible_without_reading_as_available() {
 }
 
 /// A dock has to be visibly a dock, and a field visibly a place data goes
-/// in — the reference's own two real steps, off a ground everything else
+/// in, the reference's own two real steps, off a ground everything else
 /// (a tile, a ribbon body, a dock, an inactive dock tab) sits on at the
 /// exact same tone as its neighbours. `chrome`/`tile`/`menu_bar` being
-/// aliases of `dock`/`black` is asserted structurally, not measured here —
-/// see their own doc comments — so this checks only the two tones that are
+/// aliases of `dock`/`black` is asserted structurally, not measured here,
+/// see their own doc comments, so this checks only the two tones that are
 /// genuinely different from each other.
 ///
 /// Measured as a **luminance difference**, not a contrast ratio. Down here
@@ -125,8 +125,8 @@ fn a_dock_and_a_field_are_each_a_visible_step_above_the_ground() {
     }
 }
 
-/// The toolkit's own components — the menu bar, the inputs, the buttons in
-/// the Output strip — are painted from `assets/themes/default/widgets.json`, not
+/// The toolkit's own components, the menu bar, the inputs, the buttons in
+/// the Output strip, are painted from `assets/themes/default/widgets.json`, not
 /// from this module. That is two copies of one palette, which is exactly
 /// the arrangement that drifts: a colour is changed here, the JSON keeps
 /// the old one, and half the window quietly stops matching the other half.
@@ -174,7 +174,7 @@ fn the_toolkit_theme_paints_the_same_palette_this_module_does() {
     );
 }
 
-/// `#RRGGBB`, or `#RRGGBBAA` when the colour is not opaque — the spelling
+/// `#RRGGBB`, or `#RRGGBBAA` when the colour is not opaque, the spelling
 /// `widgets.json` uses.
 fn hex(color: Rgba) -> String {
     let byte = |channel: f32| (channel * 255.).round() as u8;
@@ -192,7 +192,7 @@ fn hex(color: Rgba) -> String {
 }
 
 /// [`field_size`] exists to force a toolkit widget's text to [`text_md`],
-/// and the 0.875 factor it compensates for is the toolkit's, not ours — so
+/// and the 0.875 factor it compensates for is the toolkit's, not ours, so
 /// this is what catches a toolkit upgrade that changes it.
 #[test]
 fn a_toolkit_field_is_set_at_the_same_size_as_its_label() {
@@ -209,7 +209,7 @@ fn a_toolkit_field_is_set_at_the_same_size_as_its_label() {
 }
 
 /// WCAG 2.4.13's other half: the ring has to clear 3:1 against the
-/// component it outlines *and* against whatever is behind that — otherwise
+/// component it outlines *and* against whatever is behind that, otherwise
 /// a 2px ring is technically present and practically invisible, which is
 /// the failure mode the criterion exists to catch.
 #[test]
@@ -242,7 +242,7 @@ fn the_focus_ring_clears_three_to_one_on_a_selected_row() {
 }
 
 /// WCAG 1.4.11 for the per-tool pastels. They only ever appear on a ribbon
-/// tile, so that is the surface they are measured against — but an active
+/// tile, so that is the surface they are measured against, but an active
 /// tool is also identifiable by its icon shape and its border, so this
 /// checking out is a floor rather than the whole story (WCAG 1.4.1).
 #[test]
@@ -258,7 +258,7 @@ fn every_tool_accent_clears_three_to_one_on_a_ribbon_tile() {
 
 /// An unticked checkbox is a control whose entire job is to show a state,
 /// so its outline is "visual information required to identify the
-/// component" — 3:1 on both surfaces a dock can put it on. The design frame
+/// component", 3:1 on both surfaces a dock can put it on. The design frame
 /// gives it no border at all; this is the override.
 #[test]
 fn an_unticked_checkbox_has_a_visible_edge_on_both_dock_surfaces() {
@@ -273,12 +273,12 @@ fn an_unticked_checkbox_has_a_visible_edge_on_both_dock_surfaces() {
 
 /// WCAG 2.5.8: 24x24 is the floor for a pointer target. These are the three
 /// smallest things in the shell, and the frame drew two of them well under
-/// it — the checkbox at 10px and the panel buttons at 20px.
+/// it, the checkbox at 10px and the panel buttons at 20px.
 /// WCAG 2.5.8: 24x24 is the floor for a pointer target.
 ///
 /// Checked **at every scale**, not just at 1.0x. The previous version of
 /// this test ran only at the default, which is the one setting where none
-/// of these tokens can fail — at 0.5x they were 13, 14 and 15px, and the
+/// of these tokens can fail, at 0.5x they were 13, 14 and 15px, and the
 /// test still passed. A floor that is only asserted where it cannot be
 /// crossed is not a floor.
 #[test]
@@ -332,7 +332,7 @@ fn primary_targets_are_44_by_default_at_every_scale() {
 }
 
 /// The scale is a process-wide atomic, and `cargo test` runs these on
-/// threads of one process — so the two tests that move it take turns.
+/// threads of one process, so the two tests that move it take turns.
 static SCALE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// The other half of the scale's contract: everything that is *not* a
@@ -399,7 +399,7 @@ fn the_viewport_font_size_scales_viewport_text_only_and_the_ui_scale_multiplies_
 }
 
 /// The UI scale is the app's whole answer to WCAG 1.4.4's 200%, so the top
-/// of its range has to actually reach 200% — and the bottom has to stop
+/// of its range has to actually reach 200%, and the bottom has to stop
 /// somewhere usable rather than at zero.
 #[test]
 fn the_ui_scale_range_reaches_two_hundred_percent() {

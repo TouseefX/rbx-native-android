@@ -1,4 +1,4 @@
-//! Builds one `Beam`'s final world-space vertices — the CPU half of the pass;
+//! Builds one `Beam`'s final world-space vertices, the CPU half of the pass;
 //! see `pipeline` for the GPU half.
 
 use glam::Vec3;
@@ -35,7 +35,7 @@ pub(super) fn vertices(beam: &Beam, eye: Vec3, elapsed: f32) -> Vec<VertexRaw> {
         // samples, and the width has to stay square to that straight line. The
         // analytic tangent at an endpoint points along the attachment's own
         // axis (see `Curve::tangent`), which for a low-segment curved beam is
-        // nowhere near the chord — taking it would twist the ribbon and bend a
+        // nowhere near the chord, taking it would twist the ribbon and bend a
         // beam that should read straight.
         let tangent = polyline_tangent(&centers, i);
         let width_dir = if beam.face_camera {
@@ -58,9 +58,9 @@ pub(super) fn vertices(beam: &Beam, eye: Vec3, elapsed: f32) -> Vec<VertexRaw> {
         // which reads as the texture advancing past it in the other direction.
         //
         // Roblox samples a `Beam`'s texture along its **row** axis (`v`) for
-        // the beam's length — confirmed against real `Beam` textures (e.g.
+        // the beam's length, confirmed against real `Beam` textures (e.g.
         // asset 5209125673's tick marks are stacked down the image, not
-        // across it) — and its column axis (`u`) across the width. A texture
+        // across it), and its column axis (`u`) across the width. A texture
         // authored the other way around renders its repeating pattern
         // squashed into one end of the beam instead of running its length,
         // which is the "rotate my beam texture 90°" fix developers reach for
@@ -123,8 +123,8 @@ fn face_camera_width(tangent: Vec3, to_camera: Vec3) -> Vec3 {
 }
 
 /// Width axis for `FaceCamera = false`: the attachments' own **Y** axis
-/// (`SecondaryAxis`), blended along the curve — see the `Beam` docs' "plane
-/// given by the attachments' secondary axes" — then projected perpendicular
+/// (`SecondaryAxis`), blended along the curve, see the `Beam` docs' "plane
+/// given by the attachments' secondary axes", then projected perpendicular
 /// to the curve's own tangent.
 ///
 /// That projection is the fix: `secondary0`/`secondary1` are each only
@@ -132,7 +132,7 @@ fn face_camera_width(tangent: Vec3, to_camera: Vec3) -> Vec3 {
 /// chord between the two attachments, so the raw blend can carry a component
 /// along `tangent`. Used as-is, that component doesn't widen the ribbon (it
 /// stretches it lengthwise instead, invisibly, since only the *magnitude*
-/// perpendicular to the strip reads as width) — for a straight beam this
+/// perpendicular to the strip reads as width), for a straight beam this
 /// projection is a no-op whenever the blend is already perpendicular
 /// (the common case: a `SecondaryAxis` deliberately set across the beam's
 /// direction), so it changes nothing there; it only ever removes the
@@ -143,9 +143,9 @@ fn fixed_width(secondary0: Vec3, secondary1: Vec3, tangent: Vec3, t: f32) -> Vec
     if projected != Vec3::ZERO {
         return projected;
     }
-    // The blended axis is (nearly) parallel to `tangent` — including the
+    // The blended axis is (nearly) parallel to `tangent`: including the
     // case where `secondary0`/`secondary1` point opposite ways and the raw
-    // lerp cancels to zero — so it cannot build a basis with it: same
+    // lerp cancels to zero, so it cannot build a basis with it: same
     // degenerate case `face_camera_width` guards, with the same fallback.
     let fallback = if tangent.x.abs() < 0.9 {
         Vec3::X
@@ -155,11 +155,11 @@ fn fixed_width(secondary0: Vec3, secondary1: Vec3, tangent: Vec3, t: f32) -> Vec
     tangent.cross(fallback).normalize_or_zero()
 }
 
-/// Sum of consecutive sample distances — a piecewise-linear approximation of
+/// Sum of consecutive sample distances, a piecewise-linear approximation of
 /// the curve's true length, accurate enough for tiling a texture by since a
 /// beam's `Segments` is already the resolution its curve is drawn at.
 /// The direction of the ribbon at sample `i`, from the samples on either side
-/// of it — the average of the segments it joins, or the one segment at an end.
+/// of it, the average of the segments it joins, or the one segment at an end.
 /// A degenerate run (two coincident samples) falls back to the whole chord.
 fn polyline_tangent(centers: &[(f32, Vec3)], i: usize) -> Vec3 {
     let prev = centers.get(i.wrapping_sub(1)).map(|&(_, p)| p);

@@ -1,5 +1,5 @@
 //! The frame sheet: one `ViewportFrame`'s own editing surface, a sheet over
-//! the canvas — its contents drawn large through the frame's own camera, a
+//! the canvas, its contents drawn large through the frame's own camera, a
 //! camera to fly, orbit and pan, framing, the frame's lighting, and models
 //! and parts cloned in from `Workspace`.
 //!
@@ -10,7 +10,7 @@
 //! Like the rest of the canvas it holds no copy of the place. The pose is
 //! read out of the frame's camera every step and written straight back
 //! (`crate::viewport_frame`), through the one history: a fit, an insert, a
-//! removal or a typed field is one undo step, and so is a whole flight —
+//! removal or a typed field is one undo step, and so is a whole flight,
 //! its first step pushes (creating and wiring the `Camera` if the frame has
 //! none) and every later one folds into that entry, the way a canvas drag
 //! does (`Shell::write_drag_after`).
@@ -39,7 +39,7 @@ use crate::workspace_view::FrameRequest;
 
 /// Read once at startup: `1` opens the sheet on the selected
 /// `ViewportFrame`, `picker`/`picker:<query>`/`fit` with one of its
-/// popovers up — what a capture of each state needs, documented in
+/// popovers up, what a capture of each state needs, documented in
 /// `main`'s module doc comment.
 const FRAME_SHEET_VARIABLE: &str = "RBX_STUDIO_FRAME_SHEET";
 
@@ -63,8 +63,8 @@ pub(super) struct FrameSheet {
     pub(super) frame: Ref,
     flight: Flight,
     gesture: Gesture,
-    /// The log of the step that opened the gesture in flight — the
-    /// `Camera` it created, when it did — kept at the head of every later
+    /// The log of the step that opened the gesture in flight, the
+    /// `Camera` it created, when it did, kept at the head of every later
     /// step's log so the one entry still undoes it.
     opened: Vec<Change>,
     /// The history's revision just after the gesture's opening step: any
@@ -74,7 +74,7 @@ pub(super) struct FrameSheet {
     /// When the flight last stepped; `None` while nothing steers.
     ticked: Option<Instant>,
     pub(super) tool: Tool,
-    /// The left drag in flight, and where the pointer last was — for the
+    /// The left drag in flight, and where the pointer last was, for the
     /// look button's mouse-look as well.
     pointer: Option<Point<Pixels>>,
     dragging: bool,
@@ -85,7 +85,7 @@ pub(super) struct FrameSheet {
     /// Where the stage area was laid out, in window pixels: what the
     /// picture's size is fitted to.
     pub(super) area: Rc<Cell<Bounds<Pixels>>>,
-    /// The frame drawn alone, as the canvas request asks for it — set while
+    /// The frame drawn alone, as the canvas request asks for it, set while
     /// rendering, from the area and the frame's own size.
     pub(super) request: Cell<Option<FrameRequest>>,
     pub(super) focus: FocusHandle,
@@ -94,7 +94,7 @@ pub(super) struct FrameSheet {
 }
 
 impl Shell {
-    /// The `ViewportFrame` the selection is, alone — what the Edit button
+    /// The `ViewportFrame` the selection is, alone, what the Edit button
     /// and a double-click open the sheet on.
     pub(super) fn selected_viewport_frame(&self) -> Option<Ref> {
         match self.selected_all() {
@@ -169,8 +169,8 @@ impl Shell {
         }
     }
 
-    /// The frame's pose as the DOM holds it, or — for a frame not yet
-    /// looked through — a three-quarter fit of what it holds.
+    /// The frame's pose as the DOM holds it, or, for a frame not yet
+    /// looked through, a three-quarter fit of what it holds.
     pub(super) fn frame_pose(&self, target: Ref, cx: &App) -> Pose {
         frame::pose_of(&self.dom, &self.database, target)
             .unwrap_or_else(|| self.fitted(target, THREE_QUARTER, 70.0, cx))
@@ -247,7 +247,7 @@ impl Shell {
         }
     }
 
-    /// A one-off camera edit — a fit, a reset, a typed field of view — as
+    /// A one-off camera edit, a fit, a reset, a typed field of view, as
     /// its own undo step, ending whatever gesture was in flight.
     fn set_frame_pose(&mut self, pose: Pose, cx: &mut Context<Self>) {
         if let Some(sheet) = &mut self.ui.sheet {
@@ -330,7 +330,7 @@ impl Shell {
         }
     }
 
-    /// Clones `source` into the frame, one undo step — and, for a frame not
+    /// Clones `source` into the frame, one undo step, and, for a frame not
     /// yet looked through, gives it a camera on what just landed in that
     /// same step, so the first insert is already on the stage.
     pub(super) fn insert_into_frame(&mut self, source: Ref, cx: &mut Context<Self>) {

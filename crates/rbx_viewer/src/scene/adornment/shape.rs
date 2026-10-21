@@ -18,7 +18,7 @@ use crate::textures::asset_uri;
 const FULL_TURN: f32 = 360.0;
 
 /// The pieces `class` draws, or `None` when it is not one of these shapes at
-/// all — the caller's cue to try the other adornment families.
+/// all, the caller's cue to try the other adornment families.
 pub(super) fn pieces(
     database: &ReflectionDatabase,
     class: &str,

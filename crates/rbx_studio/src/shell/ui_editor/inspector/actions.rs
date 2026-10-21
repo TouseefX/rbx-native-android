@@ -1,4 +1,4 @@
-//! The inspector's one-click edits — everything that is not a number: show
+//! The inspector's one-click edits, everything that is not a number: show
 //! and hide, clip, a quarter turn, the anchor grid, the auto layout flow
 //! and its alignment, the aspect lock, and a fill, a stroke, a shadow, a
 //! gradient or a constraint put on or taken off.
@@ -25,7 +25,7 @@ const GRID: &str = "UIGridLayout";
 pub(super) const ASPECT: &str = "UIAspectRatioConstraint";
 
 /// `HorizontalAlignment` and `VerticalAlignment` item names, left to right
-/// and top to bottom — the auto layout grid's columns and rows.
+/// and top to bottom, the auto layout grid's columns and rows.
 const ACROSS: [&str; 3] = ["Left", "Center", "Right"];
 const DOWN: [&str; 3] = ["Top", "Center", "Bottom"];
 
@@ -63,7 +63,29 @@ impl Shell {
         }
     }
 
-    /// Whether `property` is on for every inspected element — `None` where
+    /// The first inspected element's `UIGradient` enum `property`, by item name.
+    pub(super) fn gradient_choice(&self, property: &str, enum_name: &str) -> Option<String> {
+        let gradient = self.anchor_child("UIGradient")?;
+        self.enum_name(gradient, property, enum_name)
+    }
+
+    /// Sets `property` of every inspected element's `UIGradient` to `item`.
+    pub(super) fn set_gradient_choice(
+        &mut self,
+        property: &'static str,
+        item: &'static str,
+        cx: &mut Context<Self>,
+    ) {
+        let writes = self
+            .inspected()
+            .into_iter()
+            .filter_map(|r| self.child_of(r, "UIGradient"))
+            .map(|gradient| (gradient, property, item.to_owned()))
+            .collect();
+        self.write_all(writes, cx);
+    }
+
+    /// Whether `property` is on for every inspected element, `None` where
     /// they disagree.
     pub(super) fn flag(&self, property: &str) -> Option<bool> {
         let mut flags = self.inspected().into_iter().map(|r| {
@@ -284,7 +306,7 @@ impl Shell {
     }
 
     /// Hides every inspected element's `n`th shadow, or shows it where it is
-    /// hidden on the first — one step, as a flag's toggle is.
+    /// hidden on the first, one step, as a flag's toggle is.
     pub(super) fn toggle_shadow(&mut self, n: usize, cx: &mut Context<Self>) {
         let shadows: Vec<Ref> = self
             .inspected()

@@ -13,7 +13,7 @@
 @group(1) @binding(3) var material_roughness: texture_2d_array<f32>;
 @group(1) @binding(4) var material_sampler: sampler;
 
-// The scene as it stood after the opaque pass — what a `Glass` surface bends
+// The scene as it stood after the opaque pass, what a `Glass` surface bends
 // out of shape behind itself, and what terrain water shows its bed and
 // reflections from (`water.wgsl`). One unread texel where the place holds
 // neither (see `renderer::post::Post::refraction`), which is why nothing but
@@ -29,8 +29,8 @@ const KIND_GLASS: u32 = 4u;
 const KIND_WATER: u32 = 5u;
 
 // Neon is unlit and over-bright. Roblox writes the part's own colour into the
-// frame and a far brighter value into the glow it blooms from — two outputs one
-// render target cannot carry — so this is the glow, and the frame gets whatever
+// frame and a far brighter value into the glow it blooms from, two outputs one
+// render target cannot carry, so this is the glow, and the frame gets whatever
 // is left after the tone map clamps it.
 //
 // Calibrated to clear a bloom threshold and lift adjacent surfaces by ~18 sRGB
@@ -60,7 +60,7 @@ const GLASS_REFRACTION: f32 = 0.06;
 // window of currently 'visible' range of values). The alpha channel controls
 // how visible the texture pattern is." Its motion was described by the same
 // engineer as "some pseudorandom smooth change of values with pretty big
-// period". A plain part does not animate and carries no pattern — only the
+// period". A plain part does not animate and carries no pattern, only the
 // mesh-with-texture case does.
 //
 // What is not published, and is therefore this renderer's own: how opaque
@@ -68,7 +68,7 @@ const GLASS_REFRACTION: f32 = 0.06;
 // glow, the window's width (community measurements put the opaque share
 // near 10% at any moment, which a window 0.1 wide gives on an image with
 // evenly spread red values), the path the window takes, and how wide the
-// depth-driven glow is where the shell cuts through other geometry — which
+// depth-driven glow is where the shell cuts through other geometry, which
 // Roblox only draws above quality level 15 (see
 // `QualityProfile::force_field_intersections`).
 const FORCE_FIELD_RIM_GLOW: f32 = 2.2;
@@ -105,7 +105,7 @@ struct MaterialInput {
     studs_per_tile: f32,
     kind: u32,
     // How much of a `ForceField` mesh's own image is showing here, from
-    // `force_field_window`. Left zeroed — no pattern — by every pass with no
+    // `force_field_window`. Left zeroed, no pattern, by every pass with no
     // image of its own, which is every plain part.
     pattern: f32,
     // How much of an edge a `ForceField` fragment has beyond its Fresnel one:
@@ -115,7 +115,7 @@ struct MaterialInput {
 }
 
 /// The extent the model matrix scales its unit mesh to, i.e. the part's own
-/// size in studs — its columns are a rotation times that scale, and the only
+/// size in studs, its columns are a rotation times that scale, and the only
 /// scale a part or a placed mesh carries is its own.
 fn model_extent(model: mat4x4<f32>) -> vec3<f32> {
     return vec3<f32>(length(model[0].xyz), length(model[1].xyz), length(model[2].xyz));
@@ -257,7 +257,7 @@ fn mapped_shade(mapped: Mapped) -> vec3<f32> {
     // Plastic's strength, `lighting.calibration.y` (see `lighting.wgsl`):
     // every textured material is scaled from Plastic's own strength so the two
     // never look like they belong to different renderers. The two used to
-    // drift — this file kept its own stale copy of the number.
+    // drift, this file kept its own stale copy of the number.
     surface.spec_strength = lighting.calibration.y * (1.0 - mapped.roughness);
     // A metal reflects its own colour where a dielectric reflects white, and
     // the smoother it is the more of the sky it shows.
@@ -386,7 +386,7 @@ fn triplanar_weights(normal: vec3<f32>) -> vec3<f32> {
 }
 
 /// What one surface fragment writes: its shaded colour and the alpha it
-/// blends with — except for `Glass`, which replaces the pixel outright with
+/// blends with, except for `Glass`, which replaces the pixel outright with
 /// the scene behind it displaced, plus its own shading over the top.
 ///
 /// Only the *opaque* scene is there to bend: the copy is taken when the
@@ -425,7 +425,7 @@ fn material_output(input: MaterialInput, in_alpha: f32, frag: vec4<f32>) -> vec4
 
     // The *mapped* normal, not the geometric one: a flat pane facing the eye
     // bends nothing at all (light through it is not displaced), and what
-    // gives real glass its wobble is the surface itself — which for this
+    // gives real glass its wobble is the surface itself, which for this
     // material is its own normal map.
     let clip_normal = uniforms.view_projection * vec4<f32>(shaded.normal, 0.0);
     let offset = vec2<f32>(clip_normal.x, -clip_normal.y) * GLASS_REFRACTION;
@@ -433,7 +433,7 @@ fn material_output(input: MaterialInput, in_alpha: f32, frag: vec4<f32>) -> vec4
     let texel = clamp(vec2<i32>(uv * vec2<f32>(source)), vec2<i32>(0), source - vec2<i32>(1));
     let behind = textureLoad(refraction_source, texel, 0).rgb;
 
-    // Exactly the blend the pipeline would have done — `dst * (1 - alpha) +
+    // Exactly the blend the pipeline would have done, `dst * (1 - alpha) +
     // src * alpha` — with the bent copy standing in for `dst`, which is what
     // makes this refraction rather than a second layer of haze.
     return vec4<f32>(behind * (1.0 - alpha) + shaded.color * alpha, 1.0);
@@ -465,7 +465,7 @@ fn material_mapped(input: MaterialInput) -> Mapped {
     let weights = triplanar_weights(input.object_normal);
     let max_weight = max(weights.x, max(weights.y, weights.z));
 
-    // Axis-aligned face — every ordinary `Part` — stays on the original
+    // Axis-aligned face, every ordinary `Part`, stays on the original
     // single-sample path: same axis, same UV, same cost and output as before
     // triplanar blending existed.
     if max_weight >= TRIPLANAR_FAST_PATH {

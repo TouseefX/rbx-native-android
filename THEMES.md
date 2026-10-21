@@ -1,11 +1,11 @@
 # Themes
 
 A theme is a folder that restyles the whole editor: its palette, its size and
-type scale, the toolkit's own widgets, the class icons, and a few effects —
+type scale, the toolkit's own widgets, the class icons, and a few effects,
 a transparent or blurred window, a glow on hover, a background image. The
 editor's own look is itself a theme, **Default** (by @chteau), built in and
 impossible to uninstall. Every other theme is layered over it, so a theme
-only has to name what it changes — the two other built-in themes, **Light**
+only has to name what it changes, the two other built-in themes, **Light**
 and **High contrast** ([`assets/themes/`](assets/themes)), are written that
 way too.
 
@@ -19,8 +19,8 @@ Themes live in the config directory, one folder each:
 ```
 
 Put a theme's folder in `themes/` and name it in `appearance.json` (`"default"`
-goes back to Default). The editor picks the change up within a second — no
-restart — and re-applies the active theme whenever one of its files is
+goes back to Default). The editor picks the change up within a second, no
+restart, and re-applies the active theme whenever one of its files is
 saved, which is also how to preview a theme while writing it. A theme that
 fails to load is named in the Output dock with what is wrong, and the
 current one stays on screen.
@@ -68,7 +68,7 @@ folder.
 ### `theme.json`
 
 [`assets/themes/default/theme.json`](assets/themes/default/theme.json) is the
-complete list of tokens with Default's values — copy it as a starting point,
+complete list of tokens with Default's values, copy it as a starting point,
 then delete what you don't change.
 
 ```json
@@ -144,8 +144,8 @@ is Default's.
 
 The Script Editor's code area and syntax colours come from that theme's
 `highlight` block; without one, the toolkit's own dark or light palette is
-used. The code area's colour is `highlight.editor_background` — spelled with
+used. The code area's colour is `highlight.editor_background`: spelled with
 an underscore, not Zed's `editor.background`, which this build of the
-toolkit ignores — and the gutter follows it.
+toolkit ignores, and the gutter follows it.
 [`assets/themes/high-contrast/widgets.json`](assets/themes/high-contrast/widgets.json)
 has a complete example.

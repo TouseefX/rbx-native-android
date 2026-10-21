@@ -1,15 +1,15 @@
-//! The three preconfigured particle classes — `Fire`, `Smoke` and `Sparkles`
-//! — read into the same [`Emitter`] definition a `ParticleEmitter` produces,
+//! The three preconfigured particle classes, `Fire`, `Smoke` and `Sparkles`
+//! read into the same [`Emitter`] definition a `ParticleEmitter` produces,
 //! so everything downstream (the budget, the simulation, the billboards, the
 //! Properties-panel re-plan) treats them identically.
 //!
 //! Each is documented as "a preconfigured particle emitter": the class
 //! exposes a handful of knobs and the engine supplies the rest. Roblox
-//! publishes the knobs and the *shape* of each effect — a `Fire` is two
+//! publishes the knobs and the *shape* of each effect, a `Fire` is two
 //! emitters, its inner one longer-lived, faster-rising and at
 //! `LightEmission` 1; a `Smoke`'s particles are "more than twice" their
 //! `Size` in studs; a `Sparkles`' colour "very faintly animate[s] between a
-//! subtle green and red" — but not the underlying emitter parameters. What
+//! subtle green and red", but not the underlying emitter parameters. What
 //! the docs state is applied here as stated and marked as such; every other
 //! number is this renderer's own, picked to read as the effect at its
 //! documented ranges, and marked as that instead.
@@ -18,7 +18,7 @@
 //! among them: it is a one-shot that plays when it is parented into the
 //! world and destroys itself afterwards (its `BlastRadius` and
 //! `BlastPressure` are a physics impulse, not a standing effect), so an
-//! `Explosion` sitting in a place file has nothing to draw — the same
+//! `Explosion` sitting in a place file has nothing to draw, the same
 //! reading this project already takes of `VideoFrame` playback.
 
 use glam::Vec3;
@@ -56,13 +56,13 @@ const SMOKE_SIZE_RANGE: (f32, f32) = (0.1, 100.0);
 /// figure itself is this renderer's.
 const FIRE_STUDS: f32 = 0.6;
 /// The inner flame, which the docs describe as the "smaller, secondary"
-/// emitter — how much smaller is not published.
+/// emitter, how much smaller is not published.
 const FIRE_INNER_SCALE: f32 = 0.55;
 /// Studs per unit of `Smoke.Size`. The docs pin this one down twice over:
 /// "more than twice as large" as the size in studs, and "at the largest size"
-/// — 100 — "smoke particles can render larger than 200 studs wide".
+/// 100, "smoke particles can render larger than 200 studs wide".
 const SMOKE_STUDS: f32 = 2.2;
-/// How much brighter than `Color` a flame draws — see [`Emitter::gain`],
+/// How much brighter than `Color` a flame draws, see [`Emitter::gain`],
 /// which explains why one is needed at all. Chosen so a default `Fire` over
 /// Roblox's own dark flame image reads as a flame; the inner one is brighter
 /// still, being the hotter of the two.
@@ -79,9 +79,9 @@ pub(super) fn is_legacy(class: &str) -> bool {
     matches!(class, FIRE | SMOKE | SPARKLES)
 }
 
-/// Appends whatever emitters `class` is documented as being — two for a
+/// Appends whatever emitters `class` is documented as being, two for a
 /// `Fire`, one each for a `Smoke` and a `Sparkles`, none for any of them
-/// while `Enabled` is false — to `into`.
+/// while `Enabled` is false, to `into`.
 pub(super) fn build(
     class: &str,
     properties: &Properties,
@@ -127,7 +127,7 @@ fn fire(
     let size = float_of_any(properties, &["size_xml", "Size", "size"], 5.0)
         .clamp(FIRE_SIZE_RANGE.0, FIRE_SIZE_RANGE.1);
     let heat = float_of_any(properties, &["heat_xml", "Heat"], 9.0).clamp(-MAX_RISE, MAX_RISE);
-    // Positive `Heat` is up, negative is down — documented — and how fast is
+    // Positive `Heat` is up, negative is down, documented, and how fast is
     // "the velocity at which particles are emit", with no studs-per-second
     // conversion published. This renderer reads it as a fraction of a stud
     // per unit: enough that a default `Heat` lifts the flame clear of the
@@ -245,7 +245,7 @@ fn sparkles(properties: &Properties, origin: Origin, referent: Ref, budget: &mut
     let tint = color3_of_any(properties, &["SparkleColor", "Color"], [1.0, 1.0, 1.0]);
     let rate = 40.0;
     // Long enough, and quick enough, to carry a sparkle clear of the part
-    // it spawns in the middle of — every one of these classes emits from
+    // it spawns in the middle of, every one of these classes emits from
     // the centre, so an effect that travels less than half a part never
     // shows at all.
     let lifetime = (1.0, 1.6);
@@ -288,7 +288,7 @@ fn sparkles(properties: &Properties, origin: Origin, referent: Ref, budget: &mut
 /// The documented "natural color sequence" a `Sparkles` applies on top of its
 /// own colour: "sparkles very faintly animate between a subtle green and
 /// red". Faint is the whole of what is published, so the shift is a small
-/// one — the two off-channels dip rather than the named one rising, which
+/// one, the two off-channels dip rather than the named one rising, which
 /// keeps a white `SparkleColor` from clipping.
 fn twinkle(tint: [f32; 3]) -> rbx_dom::ColorSequence {
     const DIP: f32 = 0.85;

@@ -237,7 +237,7 @@ fn a_corner_wedge_mesh_type_maps_to_the_corner_wedge_shape() {
 }
 
 /// A Cylinder part's cross-section is a circle as wide as the smaller of Y
-/// and Z — the extent Studio's own bake gives a union holding one.
+/// and Z, the extent Studio's own bake gives a union holding one.
 #[test]
 fn part_shape_cylinder_keeps_a_circular_cross_section() {
     let mut dom = WeakDom::new();
@@ -325,4 +325,30 @@ fn an_unresolved_mesh_part_head_reads_as_a_ball_but_other_mesh_parts_stay_boxes(
     };
     assert_eq!(kind(&dom, head), ShapeKind::Ball);
     assert_eq!(kind(&dom, torso), ShapeKind::Box);
+}
+
+fn set_enum(dom: &mut WeakDom, referent: Ref, property: &str, raw: u32) {
+    dom.get_mut(referent)
+        .unwrap()
+        .properties_mut()
+        .insert(property.to_string(), Variant::Enum(raw));
+}
+
+#[test]
+fn an_out_of_range_part_shape_is_reported_once_per_value() {
+    let mut dom = WeakDom::new();
+    let unknown = part(&mut dom, "Part");
+    set_enum(&mut dom, unknown, "shape", 7);
+    let known = part(&mut dom, "Part");
+    set_enum(&mut dom, known, "shape", 2);
+
+    assert_eq!(unknown_part_types(&dom), BTreeSet::from([7]));
+}
+
+#[test]
+fn a_dom_without_any_shape_property_reports_no_unknown_part_types() {
+    let mut dom = WeakDom::new();
+    part(&mut dom, "Part");
+
+    assert!(unknown_part_types(&dom).is_empty());
 }

@@ -1,10 +1,10 @@
-//! The panel's rows for a selection: one instance's own, or — for several —
+//! The panel's rows for a selection: one instance's own, or, for several,
 //! the properties every one of them has, the way Studio's panel shows a
 //! multi-selection.
 //!
 //! A value every instance shares shows as usual. One that differs shows
 //! Studio's mixed state: an empty field, an indeterminate checkbox (see
-//! [`PropertyRow::mixed`]) — and, for a value made of parts, only the parts
+//! [`PropertyRow::mixed`]), and, for a value made of parts, only the parts
 //! that differ left empty, so a row of parts differing only in height still
 //! shows the X and Z they share. Typing into a mixed row writes to all of
 //! them (see `edit::commit_all`).
@@ -20,7 +20,7 @@ impl Properties {
     /// Every row for `selection`, sorted by name; nothing for an empty one.
     /// `folder_color` is the tag `crate::folder_colors::FolderColors` holds
     /// for a lone selected `Folder` (see `shell::folder_color`), used only to
-    /// seed its synthetic colour row — which a multi-selection never gets,
+    /// seed its synthetic colour row, which a multi-selection never gets,
     /// since that store is written one folder at a time.
     ///
     /// A multi-selection's rows are kept until the selection changes or
@@ -82,8 +82,8 @@ impl Properties {
         rows
     }
 
-    /// The anchor's rows that every other instance has too — the same
-    /// property, declared by the same class — mixed where their values
+    /// The anchor's rows that every other instance has too, the same
+    /// property, declared by the same class, mixed where their values
     /// differ.
     fn common(
         &self,
@@ -121,7 +121,7 @@ impl Properties {
     }
 }
 
-/// `row` as it shows when `values` — every selected instance's — are not
+/// `row` as it shows when `values`, every selected instance's, are not
 /// all the same.
 fn mixed(mut row: PropertyRow, values: &[&Variant]) -> PropertyRow {
     row.value.clear();

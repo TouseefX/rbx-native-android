@@ -2,9 +2,9 @@
 //!
 //! Roblox's own engine never rebuilds its scene: the DataModel is the live
 //! picture, and every property write is an event the renderer applies to
-//! that one instance. `Headless::apply_changes` is that model here — it
+//! that one instance. `Headless::apply_changes` is that model here, it
 //! takes the `Change` log a mutation produced and patches only the instances
-//! it names — and this module is the vocabulary it needs: the log folded by
+//! it names, and this module is the vocabulary it needs: the log folded by
 //! instance ([`fold`]), each instance's part in the picture ([`Role`]), and
 //! what the call reports back ([`Applied`]).
 
@@ -65,7 +65,7 @@ impl std::fmt::Display for Rebuild {
 }
 
 /// One instance a change log names, with everything the log said about it
-/// folded together — see [`fold`].
+/// folded together, see [`fold`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Touched {
     pub(crate) referent: Ref,
@@ -74,7 +74,7 @@ pub(crate) struct Touched {
     /// `Model` moved into `Workspace` brings every part under it), a
     /// property write reaches the one instance and what hangs off it.
     pub(crate) structural: bool,
-    /// The parent it left, for the first `Change::Parent` in the log — the
+    /// The parent it left, for the first `Change::Parent` in the log, the
     /// part a `SpecialMesh` was just taken away from is drawn differently
     /// too, and nothing in the DOM as it stands now still points at it.
     pub(crate) old_parent: Option<Ref>,
@@ -82,8 +82,8 @@ pub(crate) struct Touched {
 
 /// Folds a change log into the instances it names, each once, in the order
 /// first named. A `Change` is a hint about *which* instance may differ
-/// between the scene and the DOM, never a record of the value — the patch
-/// reads the truth back from the DOM — so an instance written ten times is
+/// between the scene and the DOM, never a record of the value, the patch
+/// reads the truth back from the DOM, so an instance written ten times is
 /// patched once, and whether a referent is being created or destroyed is
 /// decided by whether the DOM still has it, not by which variant said so.
 /// That last point is what lets an undo hand over the very log its mutation

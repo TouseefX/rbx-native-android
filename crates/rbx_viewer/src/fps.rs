@@ -1,7 +1,7 @@
 //! A per-second frame rate for the title bar (and the web page's readout).
 //!
 //! Fed the same wall-clock timestamp `Viewer::redraw` already takes every
-//! frame for `dt` — not a second stopwatch: this just counts how many of
+//! frame for `dt`: not a second stopwatch: this just counts how many of
 //! those already-happening redraws land inside a rolling one-second window,
 //! the same technique `rbxstudio`'s own `workspace_view::stats` uses to drive
 //! its Viewport dock's readout, minus the render/readback/upload split that has
@@ -32,7 +32,7 @@ impl FrameRate {
     }
 
     /// One frame drawn. Returns whether this call closed a one-second window
-    /// and refreshed [`FrameRate::latest`] — the title bar only needs to
+    /// and refreshed [`FrameRate::latest`], the title bar only needs to
     /// redraw itself then, not on every single frame.
     pub(crate) fn record(&mut self, now: Instant) -> bool {
         self.frames += 1;
@@ -54,7 +54,7 @@ impl FrameRate {
 }
 
 /// The one-line fps/frame-time format both `rbxview`'s title and `rbxstudio`'s
-/// Viewport dock read the same way — `rbx_studio` depends on `rbx_viewer`, never
+/// Viewport dock read the same way, `rbx_studio` depends on `rbx_viewer`, never
 /// the other way round, so this lives here and `workspace_view::label` calls it
 /// rather than keeping its own copy of the format string.
 pub fn readout(fps: f32) -> String {

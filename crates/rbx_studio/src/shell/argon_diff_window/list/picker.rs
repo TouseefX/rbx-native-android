@@ -1,4 +1,4 @@
-//! Narrow: the picker bar that stands in for the list pane — previous
+//! Narrow: the picker bar that stands in for the list pane, previous
 //! and next, the select showing the current change, the position.
 
 use gpui_kit::assets::IconName;

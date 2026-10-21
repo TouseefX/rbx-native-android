@@ -81,7 +81,7 @@ impl SerializeError {
 /// `deserialize(&serialize(&dom)?)` reconstructs an equivalent tree.
 ///
 /// A property some instances of a class hold and others don't is written
-/// with a neutral value for the others — see [`serialize_with_defaults`],
+/// with a neutral value for the others, see [`serialize_with_defaults`],
 /// which a caller that knows each class's defaults should use instead.
 pub fn serialize(dom: &WeakDom) -> Result<Vec<u8>, SerializeError> {
     serialize_with_defaults(dom, |_, _| None)
@@ -91,7 +91,7 @@ pub fn serialize(dom: &WeakDom) -> Result<Vec<u8>, SerializeError> {
 /// instance of `class` that holds no `property` has: the binary format
 /// stores one value per instance for every property any instance of the
 /// class holds, and whatever fills the gap is what Studio loads. The class
-/// default is the only honest fill — a zero turns a pasted part's
+/// default is the only honest fill, a zero turns a pasted part's
 /// `archivable` column into `false` for every other part, and Studio drops
 /// non-archivable instances from its next save. A property the lookup
 /// cannot answer for falls back to the neutral value.

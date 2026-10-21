@@ -34,7 +34,7 @@ pub(crate) enum Mapping {
 /// hovering in front of it as a flat rectangle.
 ///
 /// The one exception is a wedge's slope, which the shader hands to the Front
-/// face whichever axis its 45° normal leans on — see [`projection`].
+/// face whichever axis its 45° normal leans on, see [`projection`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Projection {
     pub(crate) normal: Vec3,
@@ -109,7 +109,7 @@ impl NormalId {
 
 /// The face an object-space surface normal belongs to: the axis it leans on most.
 ///
-/// This is what splits a curved surface between the six faces — the upper
+/// This is what splits a curved surface between the six faces, the upper
 /// quarter of a cylinder's side is Top, the rest of the ring belongs to the four
 /// horizontal faces. Ties go to Y, then X, so a `WedgePart`'s 45° slope reads as
 /// Top rather than as one of its sides; `renderer/textured.wgsl` hands that Top
@@ -166,7 +166,7 @@ pub(crate) fn projection(
 /// How many studs of surface the image spans, along `u` then `v`.
 ///
 /// A face's own width and height are the part's size measured along the two axes
-/// the image runs on, whatever their sign — except on a wedge's slope, which is
+/// the image runs on, whatever their sign, except on a wedge's slope, which is
 /// longer than the part is tall. Roblox lays the image on the slope itself, so a
 /// 13x11 wedge fits sqrt(13² + 11²) studs of image on it rather than 13.
 fn extent(face: NormalId, kind: ShapeKind, size: Vec3, u: Vec3, v: Vec3) -> (f32, f32) {

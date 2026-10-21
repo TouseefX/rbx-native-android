@@ -25,7 +25,7 @@ const SYSNAME_LEN: usize = 64;
 const UI_GET_SYSNAME: Ioctl = libc::_IOR::<[c_char; SYSNAME_LEN]>(U, 44);
 const BUS_USB: u16 = 0x03;
 
-/// How to let this user open `/dev/uinput` — the editor never runs sudo.
+/// How to let this user open `/dev/uinput`: the editor never runs sudo.
 const ALLOW_UINPUT: &str = "Allow it with a udev rule: put \
     KERNEL==\"uinput\", SUBSYSTEM==\"misc\", TAG+=\"uaccess\", OPTIONS+=\"static_node=uinput\" \
     in /etc/udev/rules.d/60-uinput.rules, run `sudo udevadm control --reload && sudo udevadm \

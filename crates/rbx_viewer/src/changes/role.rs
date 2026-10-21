@@ -1,4 +1,4 @@
-//! What each instance is to the picture — see [`Role`] — and the memory of
+//! What each instance is to the picture, see [`Role`], and the memory of
 //! it that outlives the instance, see [`Roles`].
 
 use std::collections::HashMap;
@@ -24,7 +24,7 @@ pub(crate) enum Role {
     /// `Lighting` itself, an `Atmosphere`, `Clouds` or a `PostEffect`: the
     /// per-frame lighting uniform and the post chain's settings.
     Lighting,
-    /// The `Sky` — see [`Rebuild::Sky`].
+    /// The `Sky`: see [`Rebuild::Sky`].
     Sky,
     /// A `ParticleEmitter`, `Beam` or `Trail`: one of the three effect
     /// lists, re-planned whole (see `scene::effects`).
@@ -43,15 +43,15 @@ pub(crate) enum Role {
     Clothing,
     /// A `ScreenGui`/`BillboardGui`/`SurfaceGui` or anything inside one.
     Gui,
-    /// A `MaterialVariant` or `MaterialService` — see [`Rebuild::Materials`].
+    /// A `MaterialVariant` or `MaterialService`: see [`Rebuild::Materials`].
     Material,
-    /// `Workspace.Terrain`: its voxels, material colours and water look —
+    /// `Workspace.Terrain`: its voxels, material colours and water look,
     /// see `scene::terrain`. Never a part (see `scene::EXCLUDED_CLASS`).
     Terrain,
     /// Nothing the renderer draws from: a `Script`, a `Model`, a `Folder`, a
     /// value object.
-    /// A container is still walked when it moves — its subtree is what
-    /// moved — but the container itself has no picture to update.
+    /// A container is still walked when it moves, its subtree is what
+    /// moved, but the container itself has no picture to update.
     Inert,
 }
 
@@ -99,8 +99,8 @@ impl Role {
         }
         // The styling family (`StyleBase` covers `StyleSheet`/`StyleRule`;
         // `StyleDerive`/`StyleLink` hang off `Instance` directly) never
-        // draws, but every GUI tree is planned through it — see
-        // `scene::gui::style` — so an edit to a rule has to reach the same
+        // draws, but every GUI tree is planned through it, see
+        // `scene::gui::style`: so an edit to a rule has to reach the same
         // pass an edit to the styled `Frame` would. A sheet lives outside
         // any `ScreenGui`, so `gui_changed`'s walk up from it finds no
         // canvas and replans them all, which is what a sheet's reach
@@ -135,7 +135,7 @@ impl Role {
 /// one (see `scene::gui::plan::Group`), so a `Folder` of frames dragged out
 /// of an overlay leaves that overlay still drawing them unless it is
 /// re-planned too. The walk stops at the first element found, which for a
-/// container that holds no GUI at all is the price of the whole subtree —
+/// container that holds no GUI at all is the price of the whole subtree,
 /// paid only on a reparent, and only for a class the renderer draws nothing
 /// from.
 pub(crate) fn holds_gui(dom: &WeakDom, database: &ReflectionDatabase, referent: Ref) -> bool {
@@ -148,7 +148,7 @@ pub(crate) fn holds_gui(dom: &WeakDom, database: &ReflectionDatabase, referent: 
 /// One instance the scene was built from, as remembered for the moment it
 /// leaves the DOM: a `Change::Removed` carries nothing but a referent, and
 /// by the time it is applied the instance's class and parent are gone with
-/// it — yet which pass to take it out of, and which part to redraw without
+/// it, yet which pass to take it out of, and which part to redraw without
 /// it, depend on exactly those two.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Known {
@@ -157,7 +157,7 @@ pub(crate) struct Known {
 }
 
 /// Every instance's [`Known`] as of the DOM the scene was last built or
-/// patched from — kept in step by `Headless::apply_changes`, rebuilt by a
+/// patched from, kept in step by `Headless::apply_changes`, rebuilt by a
 /// full reload.
 #[derive(Debug, Default)]
 pub(crate) struct Roles {
@@ -289,7 +289,7 @@ mod tests {
     }
 
     // The GUI plan walks through plain containers, so one of them leaving a
-    // `ScreenGui` takes a whole overlay's worth of elements with it — which
+    // `ScreenGui` takes a whole overlay's worth of elements with it, which
     // `Headless::left` can only know by looking inside.
     #[test]
     fn a_container_that_holds_gui_elements_says_so() {

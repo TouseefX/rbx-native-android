@@ -1,6 +1,6 @@
 //! A trail's segment history: what `Trail.MinLength` and `Trail.Lifetime`
 //! actually mean, kept apart from appearance sampling ([`super::ribbon`]) so
-//! it is testable with nothing but positions and a clock — no DOM, no GPU.
+//! it is testable with nothing but positions and a clock, no DOM, no GPU.
 
 use std::collections::VecDeque;
 
@@ -19,7 +19,7 @@ pub(crate) struct Sample {
 /// The running history one `Trail` keeps between frames.
 ///
 /// Oldest first: [`Recorder::record`] pushes onto the back,
-/// [`Recorder::expire`] drops from the front — `renderer::trail` owns one
+/// [`Recorder::expire`] drops from the front, `renderer::trail` owns one
 /// instance per live `Trail`, the same way `renderer::beam::Beams` owns its
 /// wall clock.
 #[derive(Debug, Clone, Default)]
@@ -63,7 +63,7 @@ impl Recorder {
         }
     }
 
-    /// Drops every sample whose age relative to `now` exceeds `lifetime` —
+    /// Drops every sample whose age relative to `now` exceeds `lifetime`,
     /// `Trail.Lifetime`'s per-segment expiry. Oldest-first storage means this
     /// is always a prefix.
     pub(crate) fn expire(&mut self, now: f32, lifetime: f32) {
@@ -84,7 +84,7 @@ impl Recorder {
 /// Either attachment moved at least `min_length` studs since `last`.
 ///
 /// Perfectly stationary attachments (`delta == 0.0` on both) never start a
-/// new segment, whatever `min_length` is — even at its allowed floor of 0
+/// new segment, whatever `min_length` is, even at its allowed floor of 0
 /// studs, a zero-length segment adds nothing to the trail's shape, only
 /// churn, and this is exactly the case a viewer with no scripted motion hits
 /// every single frame (see `scene::trail`'s module doc): treating it as "no

@@ -18,8 +18,8 @@
 //!
 //! `RBX_STUDIO_NETWORK=<preset>[,open]` applies a built-in preset (by its
 //! pill or its name) at startup and shows the Test ribbon, with the popover
-//! open under `,open` — a screenshot aid, since nothing else can click the
-//! ribbon on the editor's behalf (see `AGENTS.md`'s safety rules).
+//! open under `,open`: a screenshot aid, since nothing else can click the
+//! ribbon on the editor's behalf.
 
 mod menu;
 mod popover;

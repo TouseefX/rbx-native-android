@@ -61,8 +61,8 @@ impl Runtime {
         }
     }
 
-    /// Runs what is due on the runtime's clock — a run's chunk, threads
-    /// whose wait is over, deferred threads — then fires the instance events
+    /// Runs what is due on the runtime's clock, a run's chunk, threads
+    /// whose wait is over, deferred threads, then fires the instance events
     /// the DOM changes they made call for, and says what comes next.
     ///
     /// The run gets a fresh time budget (10 seconds) each resume: time spent

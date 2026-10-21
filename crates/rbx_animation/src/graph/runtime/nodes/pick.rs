@@ -1,5 +1,5 @@
-//! The nodes that pick one input at a time — Select, PrioritySelect,
-//! Sequence and RandomSequence — and the blend they share with the state
+//! The nodes that pick one input at a time, Select, PrioritySelect,
+//! Sequence and RandomSequence, and the blend they share with the state
 //! machine.
 //!
 //! A transition into input i takes i's `TransitionOverride*` settings where

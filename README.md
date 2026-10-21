@@ -37,6 +37,13 @@ animate rigs and playtest. A lot is still approximated or missing though.
 [ROADMAP.md](ROADMAP.md) has the full list of what's done, what's faked and
 what's out of scope on purpose.
 
+## About AI
+
+I use AI coding tools a lot on this project, and I'd rather say it than hide
+it. That said, nothing lands without me going through the code myself, and
+every PR gets tested against real Roblox Studio before it's merged. If
+something's broken anyway, open an issue.
+
 ## Platform support
 
 | Platform | State |
@@ -116,6 +123,7 @@ otherwise. So yes, `cargo build` still takes a while for those two crates.
 | `rbx_materials` | The texture packs (colour, normal, metalness, roughness) behind each `Enum.Material`. |
 | `rbx_import` | Reads `.fbx`/`.obj`/`.gltf`/`.glb`, checks the triangle count against Roblox's limit and gets the file ready for upload. |
 | `rbx_cloud` | The Open Cloud client and the `rbxcloud` CLI. |
+| `rbx_loren` | Loren, the optional built-in game framework by fabi: the `rbxstudio loren` CLI, its vendored Luau runtime, and the project graph, place and spec runs the editor reads. |
 | `rbx_viewer` | The wgpu renderer and `rbxview` (desktop and WebGPU). |
 | `rbx_studio` | The editor (`rbxstudio`), built on GPUI Kit. |
 | `rbx_parser_cli` | The `rbxdump` and `rbxlua` tools. |
@@ -283,48 +291,13 @@ include, how to report a bug, and the rules about Roblox assets.
   and dock layout rules for anything that changes how `rbx_studio` looks.
 - [THEMES.md](THEMES.md): installing and making editor themes. Folder
   layout, `manifest.json`, every token, effects and icon packs.
+- [docs/](docs/): design notes and research behind some of the bigger
+  features.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to propose a change.
 - [CHANGELOG.md](CHANGELOG.md): a log of what landed and why.
 - [BENCHMARKS.md](BENCHMARKS.md): load, reload and frame timings, the
   machine they were measured on, and how `./scripts/bench.sh` reproduces
   them.
-- [agents/](agents/): rules for coding agents working in this repo, plus a
-  step by step workflow
-  ([agents/workflows/roadmap-task.md](agents/workflows/roadmap-task.md)) for
-  picking up a `ROADMAP.md` item on their own.
-
-## Using a coding agent
-
-Code written with a coding agent is fine here, even a fully autonomous one
-that picks a roadmap item and opens the pull request itself. It's held to the
-same bar as everything else:
-
-- `./scripts/check.sh` has to pass. No exceptions.
-- It follows [GUIDELINES.md](GUIDELINES.md) and [SPECS.md](SPECS.md) like any
-  other change.
-- Someone who didn't write it has to be able to maintain it. Comments explain
-  *why*, not what the code already says. No magic numbers nobody explains, no
-  abstraction that's only there to look smart.
-- I review every pull request before it merges, however it was written.
-
-If you want to point an agent at the repo, clone it, `cd` into it and give
-it something like this:
-
-```
-Read agents/AGENTS.md in this repository for the standing rules, then
-follow agents/workflows/roadmap-task.md end to end: pick one concrete
-📋 item from ROADMAP.md's "What's planned" section, check for an existing
-branch or open PR on the same item first, implement it with real tests,
-verify with ./scripts/check.sh, and open a pull request that quotes the
-exact ROADMAP.md bullet you picked and includes a screenshot or short
-recording per the PR template. Work through this autonomously without
-asking me to confirm each step, but stop and ask if you hit a genuine
-ambiguity the roadmap and the linked docs don't resolve.
-```
-
-The actual rules are in [`agents/AGENTS.md`](agents/AGENTS.md), and the
-workflow is in
-[`agents/workflows/roadmap-task.md`](agents/workflows/roadmap-task.md).
 
 ## Thanks
 
@@ -369,6 +342,16 @@ workflow is in
   Its Roblox API definitions, and Roblox's API reference text from
   [Roblox-Client-Tracker](https://github.com/MaximumADHD/Roblox-Client-Tracker),
   are downloaded at run time, not shipped.
+- **fabi** for [Loren](https://github.com/fabideveloper/Loren-Framework)
+  (MIT), the game framework rbx-native offers as its optional built-in one.
+  Services and Controllers start in dependency order, networking is packed
+  with typed specs and middleware, and there's `Loren.Testing`. Its Luau
+  runtime, project template and unit specs are vendored unchanged, apart
+  from the documented performance patches (`vendor/loren/`, with fabi's
+  licence and the bundled Promise's own). Its `loren` CLI is ported to Rust
+  as `rbxstudio loren` (`crates/rbx_loren`). If you build on Loren, use
+  fabi's framework and docs:
+  [fabideveloper.github.io/Loren-Framework](https://fabideveloper.github.io/Loren-Framework/).
 - **Twitter and jdecked** for the [Twemoji](https://github.com/jdecked/twemoji)
   graphics (CC-BY 4.0) on the Device Simulator's keyboard cover. They're
   shipped unmodified in `assets/twemoji/` with their licence.
@@ -381,9 +364,3 @@ workflow is in
 ## License
 
 MIT, see [LICENSE](LICENSE).
-
----
-
-> If you're a coding agent working in this repo, read
-> [`agents/AGENTS.md`](agents/AGENTS.md) first. It has the rules every
-> automated change here has to follow.

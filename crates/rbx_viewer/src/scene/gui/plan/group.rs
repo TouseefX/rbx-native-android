@@ -1,6 +1,6 @@
 //! Reads a `CanvasGroup`'s tint: `GroupColor3` and `GroupTransparency`,
 //! which the docs apply "to the rendered result" of the whole subtree rather
-//! than to each child — a distinction only the renderer can honour, by
+//! than to each child, a distinction only the renderer can honour, by
 //! flattening the subtree first (see `renderer::gui::group`).
 
 use std::collections::BTreeMap;

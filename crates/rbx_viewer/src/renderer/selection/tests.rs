@@ -26,7 +26,7 @@ fn cube(centre: Vec3) -> Placement {
 
 /// A `Model` holding `parts` `Part`s (and one `Folder`, which is not drawable
 /// and must not reach the outline), resolved through the very
-/// `pick::parts_of` the editor resolves a selection with — so these cover the
+/// `pick::parts_of` the editor resolves a selection with, so these cover the
 /// real descent rather than a hand-written list of descendants.
 fn model_holding(parts: usize) -> Selected {
     let mut dom = WeakDom::new();
@@ -39,7 +39,7 @@ fn model_holding(parts: usize) -> Selected {
 }
 
 // The box-edge math itself (`edges`, `EDGES`) now lives in `super::outline`
-// and is tested there — this file tests only what selection.rs still owns:
+// and is tested there, this file tests only what selection.rs still owns:
 // container resolution, aggregation and the O(N) redraw bookkeeping.
 
 #[test]
@@ -92,8 +92,8 @@ fn a_model_is_outlined_by_one_box_around_every_part_beneath_it() {
     assert!((model.z_axis.length() - 2.0).abs() < 1e-4);
 }
 
-/// A container holding no geometry — an empty `Model`, a `Folder` of scripts,
-/// a service — has nothing to draw a box around, and still draws none.
+/// A container holding no geometry, an empty `Model`, a `Folder` of scripts,
+/// a service, has nothing to draw a box around, and still draws none.
 #[test]
 fn a_model_with_no_parts_beneath_it_draws_nothing() {
     let selected = model_holding(0);
@@ -153,7 +153,7 @@ fn several_parts_anchor_at_the_first_one_in_selection_order() {
 }
 
 /// Scale and Rotate transform the anchor, and a `Model` has no `Size` or
-/// `CFrame` of its own to write one into — so a selected model anchors on the
+/// `CFrame` of its own to write one into, so a selected model anchors on the
 /// first real part beneath it, exactly as `transform::Targets::read` does on
 /// the editor's side.
 #[test]
@@ -173,7 +173,7 @@ fn a_model_anchors_on_the_first_part_beneath_it() {
     assert_eq!(anchor.w_axis.truncate(), Vec3::X);
 }
 
-/// A referent with nothing drawn under it must not hide the gizmo — the
+/// A referent with nothing drawn under it must not hide the gizmo, the
 /// search skips it for the next one that does have something.
 #[test]
 fn a_referent_with_no_placement_is_skipped_rather_than_hiding_the_gizmo() {
@@ -199,7 +199,7 @@ fn model_in(dom: &mut WeakDom, parts: usize) -> Ref {
     model
 }
 
-/// The box a `BasePart` gets is its own, hugging it however it is turned —
+/// The box a `BasePart` gets is its own, hugging it however it is turned,
 /// not the loose world-axis-aligned box a container gets, even where parts
 /// are parented under it (a welded assembly, a `Tool`'s `Handle`).
 #[test]
@@ -216,8 +216,8 @@ fn a_part_with_parts_under_it_keeps_its_own_oriented_box() {
     placements.insert(handle, placement(turned));
     placements.insert(sight, cube(Vec3::new(9.0, 0.0, 0.0)));
 
-    // Still the part's own oriented box — which is what the gizmo takes
-    // its frame from — even though the cue drawn around it is the
+    // Still the part's own oriented box, which is what the gizmo takes
+    // its frame from, even though the cue drawn around it is the
     // silhouette rather than this box.
     assert_eq!(outline::box_of(&placements, &selected), Some(turned));
     assert!(outline::box_edges(&placements, &[selected]).is_empty());
@@ -267,8 +267,8 @@ fn a_group_drag_rebuilds_the_outline_once_however_many_parts_moved() {
     );
 }
 
-/// A part the selection does not cover moves constantly — every other
-/// instance a script or a drag touches — and must not cost the outline a
+/// A part the selection does not cover moves constantly, every other
+/// instance a script or a drag touches, and must not cost the outline a
 /// rebuild.
 #[test]
 fn a_part_outside_the_selection_owes_the_outline_nothing() {
@@ -300,7 +300,7 @@ fn the_box_follows_a_part_that_moved_under_it() {
 }
 
 /// A reload that parents another `Part` under the selected model widens the
-/// box and moves the gizmo with it — the renderer holds no DOM to notice on
+/// box and moves the gizmo with it, the renderer holds no DOM to notice on
 /// its own, so it is told by being sent the selection again (see
 /// `rbxstudio`'s `Shell::sync_viewport_selection`).
 #[test]
@@ -335,7 +335,7 @@ fn a_model_that_gained_a_part_is_outlined_around_it_once_resent() {
 /// A `Model` inside a `Model` is not a second box: the outer one's aggregate
 /// spans every part at every depth, because `pick::parts_of` descends the
 /// whole subtree rather than stopping at the first container it meets. The
-/// nested model itself contributes nothing of its own — it is a `PVInstance`
+/// nested model itself contributes nothing of its own, it is a `PVInstance`
 /// but not a `BasePart`, so it has no `Size` to union in, and its parts are
 /// already counted.
 #[test]
@@ -360,7 +360,7 @@ fn a_model_nested_in_a_model_is_spanned_by_the_outer_ones_box() {
     assert!((model.w_axis.truncate() - Vec3::new(3.0, 0.0, 0.0)).length() < 1e-4);
     assert_eq!(outline::box_edges(&placements, &[selected]).len(), 72);
 
-    // And selecting the nested model alone is its own, smaller box — the
+    // And selecting the nested model alone is its own, smaller box, the
     // outer one's extent is never inherited downwards.
     let inside = Selected::read(&dom, &database, inner);
     let model = outline::box_of(&placements, &inside).expect("the buried part is placed");

@@ -21,7 +21,7 @@ use crate::printed;
 const TIMEOUT: &str = "Script timeout: exhausted allowed execution time";
 
 /// A sandboxed Luau VM for one plugin: the command bar's globals
-/// (`runtime::install_globals` — `print` there is replaced so output goes
+/// (`runtime::install_globals`: `print` there is replaced so output goes
 /// to `Shared::output` as the plugin's `Print` lines), plus `warn`
 /// (`Warn`), `require`, `typeof`-compatible datatypes,
 /// `engine::install`, `plugin_object::install`,

@@ -278,7 +278,7 @@ impl Options {
         self.gui
     }
 
-    /// Whether to force `StarterGui.ShowDevelopmentGui` on — see
+    /// Whether to force `StarterGui.ShowDevelopmentGui` on, see
     /// `crate::load::show_development_gui`.
     pub(crate) fn show_development_gui(&self) -> bool {
         self.show_development_gui

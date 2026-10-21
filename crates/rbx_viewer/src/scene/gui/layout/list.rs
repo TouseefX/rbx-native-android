@@ -52,7 +52,7 @@ pub(super) fn stacked(
     };
     // The lines are spread across the other axis by the same arithmetic, each
     // asking for the tallest (widest) item on it. Roblox names no separate
-    // property for the gap between lines, so `Padding` serves for both — its
+    // property for the gap between lines, so `Padding` serves for both, its
     // scale "a percentage of the parent's size in the current direction",
     // which between lines is the cross axis.
     let line_padding = list.padding.0 * extent[across] + list.padding.1;
@@ -182,7 +182,7 @@ fn wrap(
     let mut used = 0.0;
     for &index in order {
         // Wrapping is decided on the basis sizes, since the docs phrase it as
-        // siblings whose "default size exceeds the width/height" — the flexed
+        // siblings whose "default size exceeds the width/height", the flexed
         // sizes are not known until the line is closed.
         let size = basis[index][along];
         match lines.last_mut() {

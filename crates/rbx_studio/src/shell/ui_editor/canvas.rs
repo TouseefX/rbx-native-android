@@ -1,5 +1,5 @@
 //! The canvas element: the chosen screen as the renderer drew it, placed by
-//! the pan and zoom, and every overlay over it — the screen's edge, the
+//! the pan and zoom, and every overlay over it, the screen's edge, the
 //! hover and selection outlines, the handles and the size under them, the
 //! guides a drag snapped onto, the marquee, an element being drawn, the
 //! Alt distance readout, and what `canvas::extras` adds.
@@ -225,7 +225,7 @@ impl Shell {
             shapes.push(Shape::Outline(corners(rect, *degrees), accent, 1.0));
         }
         // The frame the handles stand on: where a resize or a turn has it,
-        // or round the selection as it stands — one element's own box, the
+        // or round the selection as it stands, one element's own box, the
         // box round several (see `gesture::frame_of`).
         let frame = self
             .ui
@@ -287,7 +287,7 @@ impl Shell {
     }
 
     /// Alt held with something selected: the distances from the selection
-    /// to what the pointer is over — or, over nothing or over the
+    /// to what the pointer is over, or, over nothing or over the
     /// selection itself, to the selection's parent.
     fn measurement(
         &self,

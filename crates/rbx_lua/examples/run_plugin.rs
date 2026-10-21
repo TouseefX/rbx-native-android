@@ -1,7 +1,7 @@
 //! Runs plugins against a place without the editor, printing what they say:
 //! `cargo run -p rbx_lua --example run_plugin -- place.rbxl plugin.rbxmx…`.
 //! Starts every plugin, ticks for a simulated second, then clicks each
-//! toolbar button once — enough to see whether a real plugin loads and what
+//! toolbar button once, enough to see whether a real plugin loads and what
 //! of the API it reaches for that is missing.
 //!
 //! Two optional steps follow, set through the environment:
