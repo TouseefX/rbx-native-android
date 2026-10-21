@@ -37,6 +37,7 @@ fn key(label: &str) -> Option<String> {
         "Rotate increment" => "snap.rotate",
         "Show all services" => "show_all_services",
         "Increment names" => "increment_names",
+        "Strip editor-only data on publish" => "strip_on_publish",
         "Expand to selection" => "expand_on_select",
         "Default services" => "service_overrides",
         "Timestamps" => "output_timestamps",

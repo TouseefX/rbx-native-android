@@ -395,6 +395,41 @@ mod tests {
         );
     }
 
+    // `Shell::apply_edit` snapshots once, writes every selected instance
+    // through `properties::edit::commit_all`, then records the whole log:
+    // one Properties edit over a multi-selection is one undo step.
+    #[test]
+    fn undoing_a_property_edit_over_a_multi_selection_restores_every_instance_at_once() {
+        let database = rbx_reflection::ReflectionDatabase::embedded();
+        let mut dom = WeakDom::new();
+        let workspace = dom.new_instance("Workspace", "Workspace", None);
+        let parts: Vec<Ref> = ["A", "B", "C"]
+            .iter()
+            .map(|name| dom.new_instance("Part", name, Some(workspace)))
+            .collect();
+        dom.take_changes();
+
+        let mut history = History::new(DEFAULT_CAP);
+        history.push(dom.clone());
+        crate::properties::edit::commit_all(&mut dom, &database, &parts, "Transparency", "0.5")
+            .unwrap();
+        history.record_changes(dom.take_changes());
+        for &part in &parts {
+            let properties = dom.get(part).unwrap().properties();
+            assert_eq!(properties.get("Transparency"), Some(&Variant::Float32(0.5)));
+        }
+
+        let (previous, _) = history.undo(dom.clone()).expect("something to undo");
+        assert!(
+            history.undo(previous.clone()).is_none(),
+            "the edit was one step"
+        );
+        for &part in &parts {
+            let properties = previous.get(part).unwrap().properties();
+            assert_eq!(properties.get("Transparency"), None);
+        }
+    }
+
     // The UI Editor's design panel, as `Shell::write_drag_with` runs it: a
     // Tile click and a typed `Scale` each come with `first` set, so each is
     // a step of its own, while a scrub of `Scale` pushes on its first step

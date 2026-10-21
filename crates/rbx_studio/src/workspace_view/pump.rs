@@ -80,6 +80,9 @@ enum Command {
     /// Draws only these instances on a plain backdrop, or everything again
     /// see `Headless::set_isolation`.
     Isolation(Option<Vec<rbx_dom::Ref>>),
+    /// The editor layers' hidden roots, and the isolated layer's, see
+    /// `Headless::set_layer_filter`.
+    LayerFilter(Option<Vec<rbx_dom::Ref>>, Vec<rbx_dom::Ref>),
     /// Whether a part in front of the selection hides its outline box, see
     /// `Headless::set_selection_occluded`.
     SelectionOccluded(bool),
@@ -257,6 +260,10 @@ impl Pump {
 
     pub(super) fn isolation(&self, roots: Option<Vec<rbx_dom::Ref>>) {
         let _ = self.commands.send(Command::Isolation(roots));
+    }
+
+    pub(super) fn layer_filter(&self, only: Option<Vec<rbx_dom::Ref>>, hidden: Vec<rbx_dom::Ref>) {
+        let _ = self.commands.send(Command::LayerFilter(only, hidden));
     }
 
     pub(super) fn calibration(&self, calibration: Calibration) {
@@ -804,6 +811,7 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         // Studio's own default field of view.
         Command::LookAt { eye, target } => rendering.viewer.open_at(eye, target, 70.0),
         Command::Isolation(roots) => rendering.viewer.set_isolation(roots),
+        Command::LayerFilter(only, hidden) => rendering.viewer.set_layer_filter(only, hidden),
         Command::Calibration(calibration) => rendering.viewer.set_calibration(calibration),
         Command::SelectionOccluded(occluded) => rendering.viewer.set_selection_occluded(occluded),
         Command::Selection(selected) => rendering.viewer.set_selection(&selected),

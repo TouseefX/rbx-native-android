@@ -1,0 +1,22 @@
+[package]
+name = "rbx_loren"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# The CLI's name, repo-spec and manifest checks are regular expressions in
+# the Node original; the same patterns keep the port's behaviour identical.
+regex = "1"
+# `loren add` downloads a GitHub repository's zipball (the Node CLI uses
+# degit's tarball); both already in Cargo.lock.
+ureq = "3"
+zip = { version = "8", default-features = false, features = ["deflate"] }
+# A Loren project read into a place (Home's "Loren project" template).
+rbx_dom = { path = "../rbx_dom" }
+# Loren's own Luau specs, and a project's, run in the editor's Luau sandbox.
+rbx_lua = { path = "../rbx_lua" }
+rbx_reflection = { path = "../rbx_reflection", features = ["embedded-dump"] }
+
+[dev-dependencies]
+tempfile = "3"

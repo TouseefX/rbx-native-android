@@ -26,6 +26,17 @@
   can't be read stays in the list with the reason and a Delete button.
   Studio has nothing like it. (@chteau)
 
+- **Select by query.** The Explorer's search field has a query mode (the
+  `</>` toggle beside it): `Part where Material = Plastic and Anchored =
+  false`, `BasePart where Size.Y < 1`, `* where Name ~ "Door" under
+  Workspace.Map`, `has tag Lava`, `attr Health > 50`. Classes match their
+  subclasses, components (`Size.Y`, `Color.R`) and enum names work, the
+  tree narrows to the matches with a count under the field, and Enter
+  selects them all, the viewport outlines them and one Properties edit
+  changes every one as a single undo step. A query that doesn't parse says
+  what and where, and a misspelt enum item suggests the closest one. The
+  Command Bar takes `:select <query>` too. (@chteau)
+
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
   through Open Cloud: stores, scopes and keys, each entry with its
@@ -42,6 +53,39 @@
   the label off centre. They use `trash` now; a debug build asserts every
   icon it draws exists, and a test checks every icon name written in the
   editor's source. (@chteau)
+
+- **Editor layers and 3D notes.** A Layers dock (View › Layers) groups
+  instances into named, coloured layers, assigned from the dock, the
+  Explorer row menu or Ctrl+Alt+L, and hides, locks, solos or isolates
+  each one in the edit viewport only. Hidden parts are neither drawn nor
+  clickable, locked ones can't be clicked or dragged and dim in the
+  Explorer, and nothing ever writes `Transparency`, `Locked` or `Parent`.
+  Notes pinned to a point or an instance float over the viewport as
+  labels and are listed in the dock; clicking one points the camera at it.
+  Pin Note sits a note on top of the part and opens its text right away.
+  Layers and notes are plain attributes and an `ObjectValue` folder, so
+  they travel with the place through both file formats, co-editing and
+  merge, while who hides what stays in each user's own editor data.
+  Save/Publish to Roblox upload a copy without them (a Studio Settings
+  toggle, on by default), and File › Export Clean Copy… writes one to
+  disk. (@chteau)
+
+- **Loren, by fabi, as the optional built-in framework.** rbx-native now
+  ships [Loren](https://github.com/fabideveloper/Loren-Framework), fabi's
+  Roblox framework (Services and Controllers booted in dependency order,
+  packed networking with typed specs and middleware, `Loren.Testing`), for
+  anyone who wants one; a place that ignores it changes in nothing. Its
+  runtime, template and unit specs are vendored from 2.0.0-beta.2 with his
+  MIT licence (`vendor/loren`), and its `loren` CLI is ported to Rust as
+  `rbxstudio loren` (init, make, inject, add, refresh, serve, migrate,
+  update, types, doctor): the same files and messages as the Node CLI,
+  checked side by side, with its test suite ported too. `serve` runs Argon,
+  the protocol the editor's live sync speaks. Home › New gains a Loren
+  project, and a Loren dock shows the place's Services and Controllers in
+  boot order with their dependencies, cycles and Loren's own "Did you
+  mean" checks. Loren's 1,061 unit specs run in the Luau sandbox as a
+  test, and one measured speed-up to its Codec is kept as a patch to
+  offer upstream. Thanks, fabi. (@chteau)
 
 ## 2026-10-19
 

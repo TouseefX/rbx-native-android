@@ -34,8 +34,11 @@ mod history;
 pub(crate) mod import3d;
 mod input_panel;
 mod keys;
+mod layers;
+mod layers_panel;
 mod layout;
 mod light_guides;
+mod loren_panel;
 mod luau_lsp;
 mod menu;
 mod open_place;
@@ -50,6 +53,7 @@ mod playtests;
 mod plugins;
 mod property_element;
 mod quality;
+mod query_select;
 mod recovery;
 mod ref_pick;
 mod reparent;
@@ -273,10 +277,17 @@ pub(crate) struct Shell {
     /// persisted, see `shell::explorer_edit::picker`.
     increment_names: bool,
     expand_on_select: bool,
+    /// See `Settings::strip_on_publish`.
+    strip_on_publish: bool,
+    /// Editor layers and 3D notes; see `shell::layers`.
+    layers: layers::LayerState,
     search: Entity<InputState>,
     /// What the Explorer's search field holds, trimmed; see
     /// `explorer::search`.
     explorer_query: String,
+    /// The search field's query mode and what its query last matched; see
+    /// `shell::query_select`.
+    query: query_select::QuerySearch,
     filter: Entity<InputState>,
     properties: Properties,
     /// One open `Input` per Properties row currently being edited, keyed by
@@ -327,6 +338,7 @@ pub(crate) struct Shell {
     /// `shell::style_panel`.
     style_edits: style_panel::StyleEdits,
     input_edits: input_panel::InputEdits,
+    loren: loren_panel::LorenState,
     style_scroll: ScrollHandle,
     /// The UI Editor document's own state, its sub-tab, the screen on the
     /// canvas, the pan and zoom, the gesture in flight. See
@@ -557,6 +569,7 @@ impl Shell {
             optimize_graph_on_open,
             increment_names,
             expand_on_select,
+            strip_on_publish,
             dragger,
             controls,
             argon_address: argon_address_setting,
@@ -644,13 +657,19 @@ impl Shell {
             }
         });
 
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
-        let searched = cx.subscribe(&search, |shell, input, event: &InputEvent, cx| {
-            if matches!(event, InputEvent::Change) {
-                let query = input.read(cx).value().trim().to_owned();
-                shell.search_explorer(query, cx);
-            }
-        });
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(query_select::placeholder(false)));
+        let searched = cx.subscribe(
+            &search,
+            |shell, input, event: &InputEvent, cx| match event {
+                InputEvent::Change => {
+                    let query = input.read(cx).value().trim().to_owned();
+                    shell.search_explorer(query, cx);
+                }
+                InputEvent::PressEnter { .. } => shell.select_query_matches(cx),
+                _ => {}
+            },
+        );
 
         let wally_query = cx.new(|cx| InputState::new(window, cx).placeholder("Search Wally"));
         let wally_query_changed = cx.subscribe(&wally_query, |shell, _, event: &InputEvent, cx| {
@@ -792,8 +811,10 @@ impl Shell {
             explorer_edit: explorer_edit::ExplorerEdit::default(),
             increment_names,
             expand_on_select,
+            strip_on_publish,
             search,
             explorer_query: String::new(),
+            query: query_select::QuerySearch::default(),
             filter,
             properties,
             edits: edit::Edits::default(),
@@ -813,6 +834,8 @@ impl Shell {
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
+            layers: layers::LayerState::load(&path),
+            loren: loren_panel::LorenState::default(),
             style_scroll: ScrollHandle::new(),
             ui,
             anim: animation::Animation::new(cx).with_seams(anim_sheet_height, anim_names_width),
@@ -929,6 +952,7 @@ impl Shell {
         shell.sync_snap_neighbours(cx);
         // Its light guides, for the same reason.
         shell.sync_light_guides(cx);
+        shell.sync_layers(cx);
         // And the screen it sits in, for the UI editor's canvas.
         shell.ui_follow_selection();
 
@@ -1085,6 +1109,8 @@ impl Shell {
         if std::env::var_os(playtests::DEBUG_VARIABLE).is_some() {
             shell.set_panel_open(layout::Panel::Playtests, true, cx);
         }
+        shell.apply_debug_layers(cx);
+        shell.apply_debug_loren(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.
@@ -1382,6 +1408,7 @@ impl Shell {
     /// Pushes the root rows the visibility settings and the search now call
     /// for into the tree.
     fn push_root_rows(&mut self, cx: &mut Context<Self>) {
+        self.refresh_query();
         let items = self.explorer_items();
         // Replacing the rows drops the tree's selection; putting it back in the
         // same update keeps the observer from ever seeing the gap. A selected
@@ -1796,6 +1823,7 @@ impl Shell {
             output_display: self.output_display,
             optimize_graph_on_open: self.optimize_graph_on_open,
             increment_names: self.increment_names,
+            strip_on_publish: self.strip_on_publish,
             expand_on_select: self.expand_on_select,
             dragger: self.dragger,
             controls: crate::settings::Controls {
