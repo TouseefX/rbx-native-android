@@ -1,0 +1,53 @@
+diff --git a/cli/project/loren/shared/Codec.luau b/cli/project/loren/shared/Codec.luau
+index b3974c1..03213e6 100644
+--- a/cli/project/loren/shared/Codec.luau
++++ b/cli/project/loren/shared/Codec.luau
+@@ -347,7 +347,11 @@ local function writeStr(w: Writer, s: string)
+ 		end
+ 		local b = w.buf
+ 		buffer.writeu8(b, n, T_STR)
+-		putVarint(b, n + 1, len)
++		if len < 0x80 then
++			buffer.writeu8(b, n + 1, len)
++		else
++			putVarint(b, n + 1, len)
++		end
+ 		buffer.writestring(b, n + 1 + hl, s)
+ 		w.n = need
+ 	else
+@@ -788,10 +792,17 @@ local function readValue(b: buffer, o: number, lim: number, ctx: ReadCtx, depth:
+ 		end
+ 		return v, o + 8
+ 	elseif tag == T_STR then
+-		local len, p = readVarint(b, o, lim)
+-		if len < 0 then
+-			failVarint(ctx, o, lim)
+-			return nil, o
++		-- A length under 128 is one byte; readVarint takes every other case, malformed ones included.
++		local len, p = 0, o + 1
++		local b0 = if o < lim then buffer.readu8(b, o) else 0x80
++		if b0 < 0x80 then
++			len = b0
++		else
++			len, p = readVarint(b, o, lim)
++			if len < 0 then
++				failVarint(ctx, o, lim)
++				return nil, o
++			end
+ 		end
+ 		if len > lim - p then
+ 			fail(ctx, D_OVERRUN)
+@@ -857,7 +868,12 @@ local function readValue(b: buffer, o: number, lim: number, ctx: ReadCtx, depth:
+ 			local klen = 0
+ 			local q = 0
+ 			if kt == T_STR then
+-				klen, q = readVarint(b, p + 1, lim)
++				local k0 = if p + 1 < lim then buffer.readu8(b, p + 1) else 0x80
++				if k0 < 0x80 then
++					klen, q = k0, p + 2
++				else
++					klen, q = readVarint(b, p + 1, lim)
++				end
+ 				if klen < 0 then
+ 					failVarint(ctx, p + 1, lim)
+ 					return nil, p
