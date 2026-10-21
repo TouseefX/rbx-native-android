@@ -176,6 +176,13 @@ fn main() {
     }
     // Before anything can ask whether a beta feature is on.
     beta::init();
+    // The downloaded-asset cache only grows otherwise. Off the main thread:
+    // walking a large cache takes a moment, and nothing waits on it.
+    std::thread::spawn(|| {
+        if let Ok(cache) = rbx_assets::AssetCache::new(None) {
+            cache.trim_to_default();
+        }
+    });
     // Loaded once, up front: the CLI's `--quality` still wins when given (see
     // `parse`), and the Explorer's initial visibility set comes straight from
     // here since nothing on the command line can express it.
