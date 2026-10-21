@@ -212,3 +212,90 @@ fn inspect_instance_returns_every_sibling_a_path_names() {
     assert_eq!(many["totalFound"], 27);
     assert!(many["warning"].is_string());
 }
+
+#[test]
+fn inspect_instance_lists_what_a_script_reads_in_studios_formats() {
+    use rbx_dom::{CFrameData, Variant, Vector3Data, WeakDom};
+
+    // A part as a place file stores it: `size`, `Color3uint8`, a raw
+    // `Material` ordinal and serialization-only fields.
+    let mut dom = WeakDom::new();
+    let workspace = dom.new_instance("Workspace", "Workspace", None);
+    let part = dom.new_instance("Part", "Baseplate", Some(workspace));
+    let set = |dom: &mut WeakDom, name: &str, value: Variant| {
+        dom.set_property(part, name, value).unwrap();
+    };
+    set(
+        &mut dom,
+        "size",
+        Variant::Vector3(Vector3Data {
+            x: 2048.0,
+            y: 16.0,
+            z: 2048.0,
+        }),
+    );
+    set(
+        &mut dom,
+        "CFrame",
+        Variant::CFrame(CFrameData {
+            position: Vector3Data {
+                x: 0.0,
+                y: -8.0,
+                z: 0.0,
+            },
+            rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        }),
+    );
+    set(
+        &mut dom,
+        "Color3uint8",
+        Variant::Color3uint8 {
+            r: 91,
+            g: 91,
+            b: 91,
+        },
+    );
+    set(&mut dom, "Material", Variant::Enum(256));
+    set(
+        &mut dom,
+        "AttributesSerialize",
+        Variant::String(String::new()),
+    );
+
+    // Every value below is what real Studio answered for TestPlace's
+    // Baseplate.
+    let report = json_of(
+        &dom,
+        "inspect_instance",
+        json!({ "path": "Workspace.Baseplate" }),
+    );
+    let properties = &report["properties"];
+    assert_eq!(properties["Size"], "2048, 16, 2048");
+    assert!(
+        properties.get("size").is_none(),
+        "named as a script reads it"
+    );
+    assert_eq!(properties["CFrame.Position"], "0, -8, 0");
+    assert_eq!(properties["CFrame.Rotation"], "1, 0, 0, 0, 1, 0, 0, 0, 1");
+    assert!(properties.get("CFrame").is_none());
+    assert_eq!(properties["Material"], "Enum.Material.Plastic");
+    assert_eq!(
+        properties["Color"],
+        "0.35686275362968445, 0.35686275362968445, 0.35686275362968445"
+    );
+    assert!(
+        properties.get("AttributesSerialize").is_none(),
+        "a field only the file holds is not a property"
+    );
+    // Defaults a script reads even though the file never wrote them.
+    assert_eq!(properties["Archivable"], true);
+    // What Studio leaves out: the identity given above, what cannot be set,
+    // and empty tags and attributes.
+    assert!(properties.get("Name").is_none() && properties.get("Parent").is_none());
+    assert!(properties.get("Mass").is_none(), "read-only");
+    assert!(
+        properties.get("Origin.Position").is_none(),
+        "the panel's pivot row is not a property"
+    );
+    assert!(report.get("tags").is_none() && report.get("attributes").is_none());
+}
