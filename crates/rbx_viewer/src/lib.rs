@@ -70,7 +70,7 @@ pub use gizmo::Gizmo;
 // produced them; nothing in the render path itself asks for this.
 pub use gpu::describe_adapter;
 #[cfg(not(target_arch = "wasm32"))]
-pub use headless::{GuiCanvas, Headless};
+pub use headless::{GuiCanvas, Headless, Parked};
 pub use input::{CameraInput, CameraKey};
 pub use joints::JointSolver;
 pub use lighting::light_guides;

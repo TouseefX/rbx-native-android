@@ -127,6 +127,12 @@ rbx_eyedropper = { path = "../rbx_eyedropper" }
 
 # The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and
 # hide. Already in the tree (under `mio`, `rustix`, …) at this version.
+# Linux only: `malloc_trim`, so a parked place's freed scene goes back to
+# the system rather than staying in the render thread's arena. Already in
+# Cargo.lock through rbx_play.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",

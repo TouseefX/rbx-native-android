@@ -14,7 +14,11 @@
   per place. Model › Mark as Shared tags a Model, Folder or ModuleScript
   with an `RbxNativeSharedId` attribute, and Sync Shared copies the active
   place's version to every place holding the same id, with each asset's
-  diff and a per-place switch. Save All and Publish All report per place.
+  diff and a per-place switch. Sync keeps references into the asset by
+  path, points the copy's references out of it at the same path in the
+  target, and never copies the source's `UniqueId`s. A place left off
+  screen for 30 s drops its render scene and GPU device, and rebuilds it
+  when shown again. Save All and Publish All report per place.
   — @chteau
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
