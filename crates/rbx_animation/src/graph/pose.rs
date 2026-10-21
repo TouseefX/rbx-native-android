@@ -259,21 +259,33 @@ mod tests {
         let y90 = turned("A", Frame::angles(0., std::f32::consts::FRAC_PI_2, 0.));
         let z45 = turned("A", Frame::angles(0., 0., std::f32::consts::FRAC_PI_4));
         let o = over(&y90, &z45, 0.3);
-        let studio = [0.39558, -0.2075, 0.89468, 0.2075, 0.96915, 0.13303, -0.89468, 0.13303, 0.42644];
+        let studio = [
+            0.39558, -0.2075, 0.89468, 0.2075, 0.96915, 0.13303, -0.89468, 0.13303, 0.42644,
+        ];
         assert!(near(rows(&o, "A"), studio), "{:?}", rows(&o, "A"));
         let s = subtract(&z45, &y90, 0.7);
         let r = std::f32::consts::FRAC_1_SQRT_2;
-        let studio = [0.32098, -0.321, -0.89103, r, r, 0., 0.63006, -0.63004, 0.45395];
+        let studio = [
+            0.32098, -0.321, -0.89103, r, r, 0., 0.63006, -0.63004, 0.45395,
+        ];
         assert!(near(rows(&s, "A"), studio), "{:?}", rows(&s, "A"));
     }
 
     #[test]
     fn blend_sums_quaternions_as_studio_does() {
         let b = blend(&[
-            (turned("A", Frame::angles(0., std::f32::consts::FRAC_PI_2, 0.)), 0.75),
-            (turned("A", Frame::angles(std::f32::consts::FRAC_PI_2, 0., 0.)), 0.25),
+            (
+                turned("A", Frame::angles(0., std::f32::consts::FRAC_PI_2, 0.)),
+                0.75,
+            ),
+            (
+                turned("A", Frame::angles(std::f32::consts::FRAC_PI_2, 0., 0.)),
+                0.25,
+            ),
         ]);
-        let studio = [0.30764, 0.23079, 0.92309, 0.23079, 0.92307, -0.3077, -0.92309, 0.3077, 0.23072];
+        let studio = [
+            0.30764, 0.23079, 0.92309, 0.23079, 0.92307, -0.3077, -0.92309, 0.3077, 0.23072,
+        ];
         assert!(near(rows(&b, "A"), studio), "{:?}", rows(&b, "A"));
     }
 

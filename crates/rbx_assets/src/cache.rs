@@ -103,8 +103,9 @@ impl AssetCache {
 }
 
 /// How much the downloaded-asset cache may hold before the least recently
-/// used entries go: 4 GiB.
-pub const DEFAULT_LIMIT: u64 = 4 * 1024 * 1024 * 1024;
+/// used entries go: 32 GiB, roomy enough that an existing cache isn't cut
+/// down the first time this runs. `RBX_NATIVE_ASSET_CACHE_MB` sets a tighter one.
+pub const DEFAULT_LIMIT: u64 = 32 * 1024 * 1024 * 1024;
 
 /// Marks a cache entry as just used, by its modified time, which is what
 /// [`AssetCache::trim`] evicts by. Best effort: a read-only cache still reads.
