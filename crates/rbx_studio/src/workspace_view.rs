@@ -897,6 +897,12 @@ impl WorkspaceView {
         self.pump.camera_feel(feel);
     }
 
+    /// Drops the viewer while the place is off screen, or brings it back;
+    /// see `Pump::park`.
+    pub(crate) fn park(&self, parked: bool) {
+        self.pump.park(parked);
+    }
+
     /// Moves the free camera to `eye`, looking at `target`: the Animation
     /// Editor framing the rig it binds.
     pub(crate) fn look_at(&self, eye: [f32; 3], target: [f32; 3]) {

@@ -405,7 +405,7 @@ pub(crate) fn put_attribute(
     }
 }
 
-fn write_attributes(
+pub(crate) fn write_attributes(
     dom: &mut WeakDom,
     reference: Ref,
     attributes: &BTreeMap<String, Variant>,

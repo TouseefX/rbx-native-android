@@ -30,6 +30,8 @@ rbx_reflection = { path = "../rbx_reflection", features = ["embedded-dump"] }
 rbx_lua = { path = "../rbx_lua" }
 # rbxaudit only: the whole-place script security audit it prints.
 rbx_audit = { path = "../rbx_audit" }
+# rbxlua test only: Loren's `return function(t)` specs and Rojo project folders.
+rbx_loren = { path = "../rbx_loren" }
 # rbxmerge only: the sidecar conflict file it leaves for the editor; both
 # already in Cargo.lock via other crates.
 serde_json = "1"

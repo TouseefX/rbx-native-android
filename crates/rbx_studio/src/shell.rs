@@ -28,6 +28,7 @@ mod explorer_edit;
 mod export;
 mod folder_color;
 mod freeze;
+pub(crate) mod game;
 mod group;
 mod guides;
 mod history;
@@ -95,6 +96,7 @@ mod sun;
 mod templates_live;
 mod templates_window;
 mod terrain;
+mod tests_dock;
 mod theme_live;
 mod toolbar;
 pub(crate) mod tooltip;
@@ -335,6 +337,8 @@ pub(crate) struct Shell {
     /// `luau-lsp` behind the script editor and Script Analysis; see
     /// `shell::luau_lsp`.
     lsp: luau_lsp::Session,
+    /// The Tests dock's specs and last results; see `shell::tests_dock`.
+    tests: tests_dock::TestsDock,
     properties_scroll: ScrollHandle,
     /// The Style Editor panel's open fields and last error; see
     /// `shell::style_panel`.
@@ -444,6 +448,9 @@ pub(crate) struct Shell {
     rig_user_focus: bool,
     /// This editor's window, which Close Place removes from outside it.
     window_handle: AnyWindowHandle,
+    /// The game this place belongs to, when its window holds several (see
+    /// `shell::game`): leaving and the Places bar go through it.
+    game: Option<WeakEntity<game::GameWorkspace>>,
     /// This place's `Folder` colour tags; see `shell::folder_color`.
     folder_colors: FolderColors,
     /// Which transform tool the toolbar has active, and whether its draggers
@@ -833,6 +840,7 @@ impl Shell {
             graphs: std::collections::HashMap::new(),
             debug: debugging::Debugging::default(),
             lsp: luau_lsp::Session::default(),
+            tests: tests_dock::TestsDock::default(),
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
@@ -868,6 +876,7 @@ impl Shell {
             rig_user,
             rig_user_focus: false,
             window_handle: window.window_handle(),
+            game: None,
             argon_ui: argon_dock::ArgonDock::new(&argon_address_setting, window, cx),
             wally_ui: wally_dock::WallyDock::new(cx),
             viewport_ui: viewport_dock::ViewportDock::new(),
@@ -1119,6 +1128,7 @@ impl Shell {
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
         shell.apply_debug_security_audit(cx);
+        shell.apply_debug_tests(cx);
         shell.apply_debug_layers(cx);
         shell.apply_debug_loren(cx);
 
@@ -2025,6 +2035,7 @@ impl Render for Shell {
             .children(self.theme_background(false))
             .child(self.topbar(cx))
             .child(crate::menu_bar::bar(&self.menu_bar))
+            .children(self.places_bar(cx))
             .child(self.document_tabs(cx))
             .child(self.ribbon_tabs(cx))
             .child(self.ribbon(cx))
