@@ -694,6 +694,14 @@ pub fn run_file(dom: &WeakDom, file: &SpecFile, options: &Options) -> FileReport
         }
         results.push(one);
     }
+    // In declaration order, a whole-file failure first.
+    results.sort_by_key(|r| match r.path.is_empty() {
+        true => 0,
+        false => nodes
+            .iter()
+            .position(|n| n.path == r.path)
+            .map_or(usize::MAX, |i| i + 1),
+    });
     FileReport {
         file: file.clone(),
         results,

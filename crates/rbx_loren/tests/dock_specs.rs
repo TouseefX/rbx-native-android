@@ -78,6 +78,8 @@ fn a_loren_spec_plans_and_runs_test_by_test() {
         "{failed:?}"
     );
     assert_eq!(status("later").0, Status::Skipped);
+    let order: Vec<_> = report.results.iter().map(|r| r.path[1].as_str()).collect();
+    assert_eq!(order, ["adds", "waits a beat", "later"]);
     assert_eq!(report.output.lines(), ["count is 2"]);
 
     let only = Options {
