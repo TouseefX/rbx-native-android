@@ -22,6 +22,7 @@ mod device_sim;
 mod discord;
 mod dock_drag;
 mod docks;
+mod documents;
 mod drag;
 mod edit;
 mod explorer_edit;
@@ -493,6 +494,8 @@ pub(crate) struct Shell {
     /// Which editor the centre column shows (Row A). Switching it swaps
     /// *only* that column's contents, see `shell::workspace`.
     document: Document,
+    /// Which editors have a tab in Row A, see `shell::documents`.
+    documents: documents::OpenDocuments,
     /// Which dropdown is open, if any. Held here rather than inside each
     /// popover so that opening one closes the last, and so a menu item can
     /// close the menu it was clicked in (see `shell::menu`).
@@ -604,6 +607,7 @@ impl Shell {
             device_custom,
             device_scaling,
             device_keyboard_layout,
+            closed_documents,
         } = settings;
         // Before anything renders: every size token is read through these,
         // so a scale or target floor applied after the first frame would
@@ -919,6 +923,7 @@ impl Shell {
             terrain_scroll: ScrollHandle::new(),
             ribbon_tab: ribbon::Tab::default(),
             document: Document::default(),
+            documents: documents::OpenDocuments::restore(&closed_documents),
             open_menu: None,
             recovery,
             menu_nav: menu::MenuNav::new(cx),
@@ -1891,6 +1896,7 @@ impl Shell {
             device_custom: self.device_sim.custom,
             device_scaling: self.device_sim.scaling,
             device_keyboard_layout: self.device_sim.layout,
+            closed_documents: self.documents.saved(),
         };
         let _ = settings.save();
 
