@@ -133,13 +133,16 @@ pub(crate) enum Panel {
     /// The place's editor layers and 3D notes (`shell::layers_panel`). Shut
     /// until asked for.
     Layers,
+    /// The place's Loren Services and Controllers as a boot graph
+    /// (`shell::loren_panel`). Shut until asked for.
+    Loren,
 }
 
 impl Panel {
     /// In the order a fresh layout seats them, which is what makes the
     /// Viewport, Argon and Wally docks tabs beside Output rather than
     /// docks of their own.
-    pub(crate) const ALL: [Panel; 14] = [
+    pub(crate) const ALL: [Panel; 15] = [
         Panel::Explorer,
         Panel::Properties,
         Panel::Output,
@@ -154,6 +157,7 @@ impl Panel {
         Panel::PluginWidgets,
         Panel::InputActions,
         Panel::Layers,
+        Panel::Loren,
     ];
 
     /// Where this panel lives in a layout nobody has rearranged, also
@@ -172,7 +176,8 @@ impl Panel {
             | Panel::ScriptAnalysis
             | Panel::Watch
             | Panel::CallStack
-            | Panel::InputActions => Edge::Bottom,
+            | Panel::InputActions
+            | Panel::Loren => Edge::Bottom,
         }
     }
 
@@ -194,6 +199,7 @@ impl Panel {
             Panel::PluginWidgets => "Plugin Widgets",
             Panel::InputActions => "Input Actions",
             Panel::Layers => "Layers",
+            Panel::Loren => "Loren",
         }
     }
 
@@ -208,6 +214,7 @@ impl Panel {
                 | Panel::PluginWidgets
                 | Panel::InputActions
                 | Panel::Layers
+                | Panel::Loren
         )
     }
 

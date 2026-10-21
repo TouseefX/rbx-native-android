@@ -1,6 +1,24 @@
 # Changelog
 
+## 2026-10-21
+
+- **`SurfaceAppearance.Color` tints the colour map only.** Where an
+  `Overlay` map is clear, the part's own colour now shows as it is, like in
+  Studio, instead of tinted too. An emissive face cut into a tinted pumpkin
+  glows white again, not orange. Exports bake it the same way. (@chteau)
+
 ## 2026-10-20
+
+- **Select by query.** The Explorer's search field has a query mode (the
+  `</>` toggle beside it): `Part where Material = Plastic and Anchored =
+  false`, `BasePart where Size.Y < 1`, `* where Name ~ "Door" under
+  Workspace.Map`, `has tag Lava`, `attr Health > 50`. Classes match their
+  subclasses, components (`Size.Y`, `Color.R`) and enum names work, the
+  tree narrows to the matches with a count under the field, and Enter
+  selects them all, the viewport outlines them and one Properties edit
+  changes every one as a single undo step. A query that doesn't parse says
+  what and where, and a misspelt enum item suggests the closest one. The
+  Command Bar takes `:select <query>` too. (@chteau)
 
 - **A Data Stores window.** File › Data Stores… (also on Home's ribbon
   and in the palette) browses and edits the experience's data stores
@@ -35,7 +53,35 @@
   toggle, on by default), and File › Export Clean Copy… writes one to
   disk. (@chteau)
 
+- **Loren, by fabi, as the optional built-in framework.** rbx-native now
+  ships [Loren](https://github.com/fabideveloper/Loren-Framework), fabi's
+  Roblox framework (Services and Controllers booted in dependency order,
+  packed networking with typed specs and middleware, `Loren.Testing`), for
+  anyone who wants one; a place that ignores it changes in nothing. Its
+  runtime, template and unit specs are vendored from 2.0.0-beta.2 with his
+  MIT licence (`vendor/loren`), and its `loren` CLI is ported to Rust as
+  `rbxstudio loren` (init, make, inject, add, refresh, serve, migrate,
+  update, types, doctor): the same files and messages as the Node CLI,
+  checked side by side, with its test suite ported too. `serve` runs Argon,
+  the protocol the editor's live sync speaks. Home › New gains a Loren
+  project, and a Loren dock shows the place's Services and Controllers in
+  boot order with their dependencies, cycles and Loren's own "Did you
+  mean" checks. Loren's 1,061 unit specs run in the Luau sandbox as a
+  test, and one measured speed-up to its Codec is kept as a patch to
+  offer upstream. Thanks, fabi. (@chteau)
+
 ## 2026-10-19
+
+- **Creator Roadmap catch-up against the live API dump.** Checked the
+  Renderer and GUI items against API dump version-4f087c32742644ab (the
+  live one, already embedded) and real Studio. `UIGradient` now draws the
+  `Elliptical` type the dump added, and the UI Editor's Fill section gets
+  type and tile toggles and a `Scale` field for a gradient, which Studio's
+  own Properties window hides. `SurfaceAppearance` draws its emissive mask,
+  strength and tint. A part `shape` this build does not know says so once
+  in Output instead of silently drawing as a block. The orthographic
+  `Camera` properties, `UIBlur` and `ParticleEmitter2D` are in the dump
+  but Studio does nothing with them yet, so they stay planned. (@chteau)
 
 - **Two tests no longer collide when suites run side by side.** The
   viewer's XML sniffing test and the graph probe's save test wrote a fixed

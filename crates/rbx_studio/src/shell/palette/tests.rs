@@ -250,6 +250,7 @@ fn focus_moves_into_every_dock_that_can_hold_it() {
             (Panel::PluginWidgets, None),
             (Panel::InputActions, None),
             (Panel::Layers, None),
+            (Panel::Loren, None),
         ]
     );
 }

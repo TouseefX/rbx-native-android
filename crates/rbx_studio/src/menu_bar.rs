@@ -104,6 +104,7 @@ actions!(
         MenuToggleCollaborators,
         MenuToggleInputActions,
         MenuToggleLayers,
+        MenuToggleLoren,
         /// Shared by every item below that has no real handler yet; always
         /// paired with `.disabled(true)` (see `menus`), so `PopupMenu` never
         /// lets a click reach it, `actions::install` still gives it a no-op
@@ -256,6 +257,7 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
                 MenuItem::action("Layers", MenuToggleLayers),
+                MenuItem::action("Loren", MenuToggleLoren),
                 MenuItem::separator(),
                 // The accessibility settings the reference guidance calls
                 // for a native app to expose itself rather than inherit
