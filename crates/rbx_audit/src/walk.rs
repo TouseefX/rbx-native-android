@@ -1263,7 +1263,7 @@ fn is_name(expr: &Expression, name: &str) -> bool {
     matches!(expr, Expression::Var(Var::Name(n)) if ident(n) == name)
 }
 
-/// The variable names an expression reads — identifiers not after `.` or `:`.
+/// The variable names an expression reads, identifiers not after `.` or `:`.
 fn names(expr: &Expression) -> HashSet<String> {
     let mut out = HashSet::new();
     let mut after_access = false;
