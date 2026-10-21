@@ -378,7 +378,34 @@ pub(crate) fn set_attribute_value(
     write_attributes(dom, reference, &current)
 }
 
-fn write_attributes(
+/// `SetAttribute`'s own semantics, for code rather than the panel: writes
+/// `value` over whatever `name` held, or drops it with `None` (a no-op when
+/// it is absent). The blob itself goes once the last attribute does, so an
+/// instance that only ever carried editor data saves exactly as before.
+pub(crate) fn put_attribute(
+    dom: &mut WeakDom,
+    reference: Ref,
+    name: &str,
+    value: Option<Variant>,
+) -> Result<(), String> {
+    validate_attribute_name(name)?;
+    dom.get(reference).ok_or_else(gone)?;
+    let mut current = attributes(dom, reference);
+    let changed = match value {
+        Some(value) => current.insert(name.to_owned(), value.clone()) != Some(value),
+        None => current.remove(name).is_some(),
+    };
+    match (changed, current.is_empty()) {
+        (false, _) => Ok(()),
+        (true, true) => dom
+            .remove_property(reference, ATTRIBUTES_PROPERTY)
+            .map(|_| ())
+            .map_err(|err| err.to_string()),
+        (true, false) => write_attributes(dom, reference, &current),
+    }
+}
+
+pub(crate) fn write_attributes(
     dom: &mut WeakDom,
     reference: Ref,
     attributes: &BTreeMap<String, Variant>,

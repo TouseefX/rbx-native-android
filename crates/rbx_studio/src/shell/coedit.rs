@@ -58,6 +58,8 @@ pub(super) struct Coedit {
     /// `(history revision, DOM change count)` when `shadow` was taken.
     trigger: (u64, u64),
     link: Option<Link>,
+    /// Batches a relay we left never got, for the next one.
+    held: Vec<rbx_presence::coedit::Batch>,
     /// The warnings said once per session.
     told_gap: bool,
     told_transport: bool,
@@ -83,6 +85,7 @@ impl Shell {
             shadow: self.dom.clone(),
             trigger: (self.history.revision(), self.dom.mutations()),
             link: None,
+            held: Vec::new(),
             told_gap: false,
             told_transport: false,
         };
@@ -98,12 +101,18 @@ impl Shell {
         let url = match route {
             Route::Hosting(url) | Route::Joined(url) => url.trim_end_matches('/').to_owned(),
             Route::Waiting => {
-                coedit.link = None;
+                if let Some(link) = coedit.link.take() {
+                    coedit.held.extend(link.channel.close());
+                }
                 return;
             }
         };
         if coedit.link.as_ref().is_some_and(|link| link.url == url) {
             return;
+        }
+        // What the old relay never got goes to the new one.
+        if let Some(link) = coedit.link.take() {
+            coedit.held.extend(link.channel.close());
         }
         let (channel, events) = Channel::start(channel::Config {
             relay_url: url.clone(),
@@ -113,6 +122,9 @@ impl Shell {
             user_id: coedit.seed.user_id,
             client: Editor::RbxNative,
         });
+        for batch in coedit.held.drain(..) {
+            channel.send(batch);
+        }
         coedit.link = Some(Link {
             url,
             channel,

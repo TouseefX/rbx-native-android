@@ -4,12 +4,17 @@
 
 Unmodified crates.io 0.6.1 source (its `tests/` and `benches/` dropped, and
 their `[[test]]`/`[[bench]]` entries with them), patched in through the
-root `Cargo.toml`'s `[patch.crates-io]`, plus two public methods on the
+root `Cargo.toml`'s `[patch.crates-io]`, plus three public methods on the
 editor state in `src/input/base/state.rs`, each marked "rbx-native
 addition":
 
 - `selected_ranges` — every selection's range, primary first.
 - `add_selection` — add a secondary selection from outside the widget.
+- `reveal_range` — select a range and scroll it into view on the next paint
+  (applied in `src/input/base/element.rs`, marked the same way), since
+  `set_selected_range` only scrolls one line toward it, and not at all in a
+  tab that hasn't been laid out yet. Script Analysis, the Security Audit and
+  the debugger open scripts at a line with it.
 
 And one fix in `src/input/editor/highlighting.rs`, marked the same way:
 `InputEditorStyle::resolved` fills unset (transparent) diagnostic colours

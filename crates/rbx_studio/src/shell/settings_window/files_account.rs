@@ -217,7 +217,21 @@ impl SettingsWindow {
                 .update(cx, |state, cx| state.set_value(value, window, cx));
         }
         let copy_input = self.recovery.copy_name.clone();
+        let strip = self.shell.read(cx).strip_on_publish();
         vec![
+            Section::new(
+                "Publishing",
+                vec![Row::new(
+                    "Strip editor-only data on publish",
+                    toggle(
+                        "strip-on-publish",
+                        strip,
+                        self.set(move |shell, cx| shell.set_strip_on_publish(!strip, cx)),
+                    ),
+                )
+                .describe("Save and Publish to Roblox upload a copy without layers and 3D notes. The local file keeps them.")
+                .changed(!strip, |shell, cx| shell.set_strip_on_publish(true, cx))],
+            ),
             Section::new(
                 "Auto-Recovery",
                 vec![

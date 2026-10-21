@@ -86,7 +86,8 @@ fn rename_and_reparent() {
         Op::Set { n, v, at, .. } => {
             assert_eq!(n, "Parent");
             assert_eq!(v["v"]["p"], "Workspace.S");
-            assert_eq!(at.p, "Workspace.S.P");
+            // Where a path-only peer still has it.
+            assert_eq!(at.p, "Workspace.P");
         }
         other => panic!("unexpected {other:?}"),
     }
@@ -218,4 +219,156 @@ fn undo_reverts() {
     modified.new_instance("Part", "New", Some(f.ws));
     let mut older = f.dom.clone();
     converge(&modified, &mut older);
+}
+
+#[test]
+fn attributes_and_tags_go_one_by_one() {
+    use crate::coedit::attrs;
+    let f = fixture();
+    let mut cur = f.dom.clone();
+    attrs::write(
+        &mut cur,
+        f.part,
+        "@Speed",
+        &json!({"t": "Float64", "v": 16.0}),
+    );
+    attrs::write(&mut cur, f.part, "#Lava", &json!({"t": "Bool", "v": true}));
+    let ops = diff(&f.dom, &mut cur).0;
+    let names: Vec<&str> = ops
+        .iter()
+        .map(|op| match op {
+            Op::Set { n, .. } => n.as_str(),
+            other => panic!("unexpected {other:?}"),
+        })
+        .collect();
+    assert_eq!(names, ["#Lava", "@Speed"]);
+
+    let shadow = cur.clone();
+    attrs::write(&mut cur, f.part, "#Lava", &Value::Null);
+    let ops = diff(&shadow, &mut cur).0;
+    assert!(matches!(&ops[..], [Op::Set { n, v, .. }] if n == "#Lava" && v.is_null()));
+
+    let m = cur.new_instance("Model", "M", Some(f.ws));
+    attrs::write(&mut cur, m, "@Team", &json!({"t": "String", "v": "red"}));
+    let ops = diff(&f.dom, &mut cur).0;
+    let add = ops.iter().find_map(|op| match op {
+        Op::Add { props, .. } => Some(props),
+        _ => None,
+    });
+    let add = add.unwrap();
+    assert_eq!(add["@Team"]["v"], "red");
+    assert!(!add.contains_key("AttributesSerialize"));
+}
+
+#[test]
+fn an_add_leaves_out_class_defaults() {
+    let f = fixture();
+    let mut cur = f.dom.clone();
+    let p = cur.new_instance("Part", "New", Some(f.ws));
+    cur.set_property(p, "Transparency", Variant::Float32(0.0))
+        .unwrap();
+    cur.set_property(p, "Reflectance", Variant::Float32(0.5))
+        .unwrap();
+    let ops = diff(&f.dom, &mut cur).0;
+    let Some(Op::Add { props, .. }) = ops.first() else {
+        panic!("unexpected {ops:?}");
+    };
+    assert!(!props.contains_key("Transparency"));
+    assert_eq!(props["Reflectance"]["v"], 0.5);
+}
+
+#[test]
+fn a_rename_and_move_go_to_the_paths_peers_still_have() {
+    let f = fixture();
+    let mut cur = f.dom.clone();
+    cur.set_name(f.part, "Q").unwrap();
+    cur.set_parent(f.part, Some(f.script));
+    let ops = diff(&f.dom, &mut cur).0;
+    let targets: Vec<(&str, &str)> = ops
+        .iter()
+        .map(|op| match op {
+            Op::Set { n, at, .. } => (n.as_str(), at.p.as_str()),
+            other => panic!("unexpected {other:?}"),
+        })
+        .collect();
+    assert_eq!(
+        targets,
+        [("Name", "Workspace.P"), ("Parent", "Workspace.Q")]
+    );
+
+    // Applied in that order to a DOM that only knows paths, both land.
+    let mut peer = f.dom.clone();
+    let mut ids = IdMap::default();
+    let mut eng = Engine::new("2:studio".into());
+    let stripped: Vec<Op> = ops
+        .into_iter()
+        .map(|op| match op {
+            Op::Set { at, n, v, c } => Op::Set {
+                at: Target {
+                    id: String::new(),
+                    p: at.p,
+                },
+                n,
+                v,
+                c,
+            },
+            other => other,
+        })
+        .collect();
+    eng.apply(
+        &mut peer,
+        &mut ids,
+        &Batch {
+            a: "1:studio".into(),
+            ops: stripped,
+        },
+    );
+    assert_eq!(
+        paths::path_of(&peer, f.part).as_deref(),
+        Some("Workspace.S.Q")
+    );
+}
+
+/// 12,000 parts, one of them edited: what one co-edit tick costs.
+/// `cargo test --release -p rbx_presence big_place_tick -- --ignored --nocapture`
+#[test]
+#[ignore]
+fn big_place_tick() {
+    let mut dom = WeakDom::new();
+    let ws = dom.new_instance("Workspace", "Workspace", None);
+    let folder = dom.new_instance("Folder", "Big", Some(ws));
+    for i in 0..12_000 {
+        let p = dom.new_instance("Part", &format!("P{i}"), Some(folder));
+        for (n, v) in [
+            ("Anchored", Variant::Bool(true)),
+            ("Transparency", Variant::Float32(0.0)),
+            (
+                "Size",
+                Variant::Vector3(Vector3Data {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                }),
+            ),
+        ] {
+            dom.set_property(p, n, v).unwrap();
+        }
+    }
+    let shadow = dom.clone();
+    let mut ids = IdMap::build(&shadow);
+    let mut eng = Engine::new("1:x".into());
+    let target = dom.get(folder).unwrap().children()[7000];
+    dom.set_property(target, "Transparency", Variant::Float32(0.5))
+        .unwrap();
+    let t = std::time::Instant::now();
+    let ops = local_ops(&shadow, &mut dom, &mut ids, &mut eng);
+    let diffed = t.elapsed();
+    let t = std::time::Instant::now();
+    let _copy = dom.clone();
+    println!(
+        "diff {diffed:?} ({} ops), clone {:?}",
+        ops.len(),
+        t.elapsed()
+    );
+    assert_eq!(ops.len(), 1);
 }

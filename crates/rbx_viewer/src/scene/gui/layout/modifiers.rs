@@ -54,8 +54,12 @@ pub(crate) struct GradientPx {
     /// dot product with (position − origin) moves `t` by exactly the box's
     /// extent along it, `t` being 0.5 at the origin; `Radial`, `1 / radius`
     /// in `x`; `Conical`, the start angle in radians in `x` and the sweep's
-    /// reciprocal in `y`.
+    /// reciprocal in `y`; `Elliptical`, the reciprocals of the two radii
+    /// (half the box's width and height, times `Scale`).
     pub(crate) axis: [f32; 2],
+    /// `(cos, sin)` of `Rotation`, set for every kind; only `Elliptical`
+    /// reads it, to turn the ellipse's axes.
+    pub(crate) turn: [f32; 2],
     pub(crate) kind: GradientKind,
     pub(crate) tile: Tile,
 }
@@ -134,12 +138,20 @@ pub(super) fn gradient(gradient: &Gradient, size: [f32; 2]) -> GradientPx {
         // `Scale` shrinks the sweep below a full turn but, per the docs,
         // never stretches it past one.
         GradientKind::Conical => [radians, 1.0 / gradient.scale.min(1.0)],
+        // The radii are half the box's sides, so the ellipse fits the box;
+        // `Scale` "affects both radii".
+        GradientKind::Elliptical => {
+            let rx = (size[0] * 0.5 * gradient.scale).max(f32::EPSILON);
+            let ry = (size[1] * 0.5 * gradient.scale).max(f32::EPSILON);
+            [1.0 / rx, 1.0 / ry]
+        }
     };
     GradientPx {
         color: gradient.color.clone(),
         transparency: gradient.transparency.clone(),
         origin: [gradient.offset[0] * size[0], gradient.offset[1] * size[1]],
         axis,
+        turn: [cos, sin],
         kind: gradient.kind,
         tile: gradient.tile,
     }

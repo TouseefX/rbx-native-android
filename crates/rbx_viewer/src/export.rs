@@ -282,9 +282,9 @@ struct Textures {
 #[derive(PartialEq, Eq, Hash)]
 enum Key {
     Image(*const Image),
-    /// A colour map baked over a part colour (see `surface::overlay`), by
-    /// the colour's bits.
-    Overlay(*const Image, [u32; 3]),
+    /// A colour map baked, tinted, over a part colour (see
+    /// `surface::overlay`), by the bits of the colour and the tint.
+    Overlay(*const Image, [u32; 6]),
     /// Metalness and roughness packed (see `surface::pack`), null for a map
     /// the set does not carry.
     Packed(*const Image, *const Image),

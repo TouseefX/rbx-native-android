@@ -371,23 +371,27 @@ pub(super) fn intercept_arrows<E: gpui_kit::InteractiveElement>(
     cx: &mut Context<Shell>,
 ) -> E {
     element
-        .capture_action(cx.listener(|shell, _: &SelectUp, _, cx| {
+        .capture_action(cx.listener(|shell, _: &SelectUp, window, cx| {
             if shell.handle_tree_arrow("up", cx) {
+                super::tooltip::rehover(window);
                 cx.stop_propagation();
             }
         }))
-        .capture_action(cx.listener(|shell, _: &SelectDown, _, cx| {
+        .capture_action(cx.listener(|shell, _: &SelectDown, window, cx| {
             if shell.handle_tree_arrow("down", cx) {
+                super::tooltip::rehover(window);
                 cx.stop_propagation();
             }
         }))
-        .capture_action(cx.listener(|shell, _: &SelectLeft, _, cx| {
+        .capture_action(cx.listener(|shell, _: &SelectLeft, window, cx| {
             if shell.handle_tree_arrow("left", cx) {
+                super::tooltip::rehover(window);
                 cx.stop_propagation();
             }
         }))
-        .capture_action(cx.listener(|shell, _: &SelectRight, _, cx| {
+        .capture_action(cx.listener(|shell, _: &SelectRight, window, cx| {
             if shell.handle_tree_arrow("right", cx) {
+                super::tooltip::rehover(window);
                 cx.stop_propagation();
             }
         }))

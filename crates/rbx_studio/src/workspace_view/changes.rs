@@ -17,6 +17,9 @@ const STAGE_GRID: usize = 3;
 const SKELETON: usize = 4;
 /// Collaborators' selections and cameras (see `shell::team_presence`).
 const TEAM_PRESENCE: usize = 6;
+/// Replayed playtests: ghosts, trails, markers and heat cells (see
+/// `shell::playtests`).
+const PLAYTESTS: usize = 7;
 
 impl WorkspaceView {
     /// Forwards the Explorer's selection, forcing one frame even at rest.
@@ -82,6 +85,13 @@ impl WorkspaceView {
     /// clears them.
     pub(crate) fn set_presence(&mut self, segments: Vec<Segment>) {
         self.pump.lines(TEAM_PRESENCE, segments);
+    }
+
+    /// Replayed playtests' lines and dots, and the heat map's cells. Empty
+    /// lists clear them.
+    pub(crate) fn set_playtests(&mut self, segments: Vec<Segment>, fills: Vec<rbx_viewer::Fill>) {
+        self.pump.lines(PLAYTESTS, segments);
+        self.pump.fills(PLAYTESTS, fills);
     }
 
     /// Draws only `roots` (the Animation Editor's rig) on a plain backdrop,

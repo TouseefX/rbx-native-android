@@ -157,7 +157,10 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   `ColorCorrectionEffect`/`ColorGradingEffect`/`BlurEffect`/
   `SunRaysEffect`/`DepthOfFieldEffect`.
 - [x] 43 official Roblox materials (`rbx_materials`) with real texture
-  packs, `MaterialVariant`, `SurfaceAppearance`. `Glass` refracts what is
+  packs, `MaterialVariant`, `SurfaceAppearance` (with its emissive mask,
+  `EmissiveStrength` and `EmissiveTint`: the mask's grey level times the
+  tinted strength is added to the lighting before the albedo multiplies it,
+  as the docs describe; no mask, no glow). `Glass` refracts what is
   behind it, the scene is copied when the opaque pass ends and a pane
   reads it back displaced along its own mapped normal, which is the
   surface detail that gives real glass its wobble (Roblox documents the
@@ -267,7 +270,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     under any rotation, per the docs' default
     `ClipsDescendantsSupportsRotation` mode.
   - `UIGradient`: `Color`/`Transparency` sequences, `Rotation`, `Offset`,
-    `Scale`, `Type` (`Linear`/`Radial`/`Conical`) and `TileMode`, applied
+    `Scale`, `Type` (`Linear`/`Radial`/`Elliptical`/`Conical`) and
+    `TileMode`, applied
     to the background, the image and the text alike through a gradient
     ramp texture the GUI shader samples.
   - `UICorner` (per-corner radii, an anti-aliased rounded-box SDF in the
@@ -1361,6 +1365,32 @@ both the plain fetch failure and the silent fall back to a default
     `ImageColor3` and `ImageTransparency` as the design panel's own fields,
     with the picture following live, the viewer now re-plans a frame's
     tree when anything inside it changes, which it did not before.
+- [x] **Upgraded UI gradients** (Creator Roadmap, Late 2026). Checked
+  against API dump version-4f087c32742644ab on 2026-10-19: `UIGradient.Type`
+  (`Enum.GradientType`: `Linear`, `Radial`, `Conical`, `Elliptical`),
+  `TileMode` (`Enum.GradientTileMode`: `Clamp`, `Repeat`, `Mirror`) and
+  `Scale` are there, serialized, and tagged `NotBrowsable`, so Studio's own
+  Properties window hides them. The names the renderer already read were
+  right. `Elliptical`, which the dump added, is now drawn: radii of half the
+  box's width and height times `Scale`, turned by `Rotation`, as the docs
+  say. The design panel's Fill section shows a gradient's type and tile mode
+  as icon toggles and its `Scale` as a field, written through the normal
+  DOM edit and undo path, one undo step per edit and one per scrub.
+  Defaults (`Linear`, `Clamp`, 1) were read off a fresh `UIGradient` in
+  Studio. Studio 0.743 itself still draws all four types as `Linear` and
+  ignores `TileMode` and `Scale` (same file opened in both on 2026-10-21),
+  so the docs are what this follows until Roblox turns it on.
+  ![Linear, Radial, Elliptical at 30°, Conical, Elliptical mirrored at scale 0.4, Radial repeated at 0.3](docs/screenshots/creator-roadmap/ui-gradient-types.png)
+  ![The design panel's Fill section with an elliptical gradient set to Mirror at scale 0.4](docs/screenshots/creator-roadmap/ui-editor-gradient-mirror.png)
+- [x] **Emissive `SurfaceAppearance`** (Creator Roadmap, Late 2026: emissive
+  textures on UGC avatars, clothing and accessories). `EmissiveMaskContent`,
+  `EmissiveStrength` and `EmissiveTint` are in API dump version-4f087c32742644ab; Studio's
+  defaults are 1, white and no mask. The renderer samples the mask beside
+  the four PBR maps, and bloom carries the glow. Checked on 2026-10-21
+  against Studio with a free creator-store model ("Pumpkins with emissive
+  textures", 88988847004674), which also showed that `Color` tints the
+  colour map only: where an `Overlay` map is clear the part's own colour
+  shows untinted, and so does the glow it lights.
 - [x] **Effects (drop shadows) in the UI Editor's design panel.** Figma's
   Effects section, and Sketch's, is a drop shadow per element, which Roblox
   now does with `UIShadow`. The embedded API dump is Roblox's current one
@@ -3132,19 +3162,26 @@ in the API dump and a real place file carrying it can be read. Until then
 these bullets hold the idea so it isn't lost. They are grouped by the part of
 this project each one would touch, not by Roblox's headings. The items that
 give a Studio replacement nothing to build are listed at the end, so it is
-clear they were considered and not missed.
+clear they were considered and not missed. On 2026-10-19 the Renderer and
+GUI items were checked against API dump version-4f087c32742644ab and real
+Studio: upgraded UI gradients and emissive `SurfaceAppearance` have shipped
+and moved to "What's been implemented". Several others are in the dump but
+not yet honoured by the engine, which each bullet notes.
 
 #### Renderer
 - [ ] 📋 **New primitive shapes: Capsule, Cone, Disc and rounded
   primitives** (Early 2027). These are new `Enum.PartType` values, and
   `scene::shape::part_type` sends any value it does not know to
-  `ShapeKind::Box`. A place using one would draw as a block today without a
-  word. Each shape needs its own mesh generator and has to go through the
+  `ShapeKind::Box`. A place using one would draw as a block. Each shape needs its own mesh generator and has to go through the
   silhouette selection cue. Each also needs a decision on the Scale gizmo's
   `Alt` lock: a Capsule, a Cone and a Disc all have a round cross-section,
   like a Cylinder does. Which local axis is the length has to come from
   Roblox's own geometry once it ships, the way the Cylinder's did, and not
-  from a guess.
+  from a guess. Checked against API dump version-4f087c32742644ab on 2026-10-19: not
+  shipped yet (`Enum.PartType` is still Ball, Block, Cylinder, Wedge,
+  CornerWedge, confirmed in Studio). A `shape` value outside those is no
+  longer silent: it still draws as a block, and the first load that meets
+  it says so once in Output.
 - [ ] 📋 **An in-game orthographic `Camera` projection** (Late 2026), for
   2D, isometric and precision games. This is different from the editor's
   own Orthographic viewport toggle (see "What's been implemented" →
@@ -3152,7 +3189,14 @@ clear they were considered and not missed.
   a property a place's `Camera` carries. Once it exists, the Properties
   panel shows it as an ordinary row, and anything that draws from the
   place's own camera honours it through the same
-  `Camera::orthographic_projection` path.
+  `Camera::orthographic_projection` path. Checked against API dump version-4f087c32742644ab on 2026-10-19: the names are
+  in (`Camera.ProjectionType` with `Enum.ProjectionType`
+  `Perspective`/`Orthographic`, `OrthographicSize`, default 300, and
+  `OrthographicMode` `Vertical`/`Horizontal`/`Diagonal`/`MaxAxis`), but the
+  engine does not honour them yet: in Studio, writes are ignored and read
+  back `Perspective`/300 in edit and in Play, and neither the edit camera
+  nor a `ViewportFrame`'s camera draws orthographically. With no behaviour
+  to measure what `OrthographicSize` spans, nothing is built on it yet.
 - [ ] 📋 **Material layering and finer PBR response** (Mid 2027): PBR
   textures layered under custom masks, plus controls for specular response
   and more accurate scattering and reflection. This lands in the material
@@ -3160,10 +3204,6 @@ clear they were considered and not missed.
   `MaterialVariant`, `SurfaceAppearance`). It needs new captures from real
   Studio once it ships, the same discipline the lighting model was built
   under, and not a stretch of today's constants.
-- [ ] 📋 **Emissive textures on UGC avatars, clothing and accessories**
-  (Late 2026): a glow controlled by a texture. `SurfaceAppearance` is drawn
-  today with no emissive term at all. Bloom already exists to carry the
-  glow once the property does.
 - [ ] 📋 **CSG on meshes** (moved from Late 2025 to Late 2026 in the same
   post). The from-scratch boolean (`scene::union::csg`) works on primitives. A
   `MeshPart` operand means feeding it `rbx_mesh` geometry instead. A saved
@@ -3171,18 +3211,14 @@ clear they were considered and not missed.
   question is how its operation tree stores the mesh operand.
 
 #### GUI (renderer and UI Editor)
-- [ ] 📋 **Upgraded UI gradients** (Late 2026): radial and conic
-  gradients, tile modes and scale controls. **Already drawn**: the GUI
-  renderer reads `UIGradient.Type` (`Linear`/`Radial`/`Conical`),
-  `TileMode` and `Scale` (see "What's been implemented" → Renderer). Two
-  things are left. The UI Editor design panel's Fill gradient has no type or
-  tile choice. And the property names should be checked against the dump
-  once Roblox ships them, since the renderer reads them ahead of the
-  embedded dump.
 - [ ] 📋 **UI backdrop blur** (Early 2027): blur whatever is behind a GUI
   element, at a chosen strength or colour. The 3D `BlurEffect` pass already
   exists. A backdrop blur is that pass run over the region under the element
-  before the element is composited on top, inside the GUI renderer.
+  before the element is composited on top, inside the GUI renderer. Checked against API dump version-4f087c32742644ab on 2026-10-19: the class is in
+  (`UIBlur`, a `UIComponent` with `Strength` `Light`/`Medium`/`Heavy`,
+  `Color`, `Transparency`, `Enabled`), but Studio draws nothing for it yet,
+  in edit or in Play, so there is no blur width or tint rule to match.
+  Not shipped yet.
 - [ ] 📋 **Animated image containers and direct sprite sheet import** (both
   Late 2026). Containers group frames into named clips and play them as
   native 2D animation. Import brings a sprite sheet in with its loops and
@@ -3194,11 +3230,16 @@ clear they were considered and not missed.
   only in the UI Editor's preview. Import is an upload through `rbx_cloud`,
   like the 3D asset import item. The nearest existing relative is
   `ParticleEmitter`'s `Flipbook*` properties, which the particle renderer
-  does not read yet either.
+  does not read yet either. Checked against API dump version-4f087c32742644ab on 2026-10-19: not shipped
+  yet. Only an `AnimatedImageService` with `RobloxScriptSecurity` members
+  is there; no image property or class a place could carry.
 - [ ] 📋 **2D particles** (Late 2026): sparks, smoke and fireworks in screen
   space, on UI surfaces. The CPU particle simulation behind
   `ParticleEmitter` already exists in 3D. A GUI emitter would reuse it in
-  screen space, with the same still-frame question as above.
+  screen space, with the same still-frame question as above. Checked against API dump version-4f087c32742644ab on 2026-10-19: the class is in
+  (`ParticleEmitter2D`, tagged `NotBrowsable`, with the 3D emitter's
+  properties in 2D form), but Studio renders none of its particles yet, in
+  edit or in Play. Not shipped yet.
 - [ ] 📋 **Input action label** (Early 2027): UI that shows the right
   hotkey or button hint for the player's device. In the viewer and the UI
   Editor, the device picked by the Screen setting (the one both of them
@@ -3410,9 +3451,10 @@ engine, just as an escape hatch.
 
 - [ ] 📋 **Co-editing without an rbx-native host, and at scale**, only the
   hosted relay (an rbx-native user's own) keeps the op log, so Studio users
-  alone cannot co-edit, and a new host starts with an empty log. Attributes
-  and tags are not sent from Studio, and large places (tens of thousands of
-  instances) are untested.
+  alone cannot co-edit, and a new host starts with an empty log (peers read
+  it from the start, and unsent edits move to it). Attributes and tags go
+  both ways; a 12,000 part place was tested live against Studio (the adds
+  land in about a minute, single edits in under 2 s).
 
 Neither replaces **Team Create**, Roblox's actual real-time multi-user
 editing, that stays proprietary with no public protocol to build against
