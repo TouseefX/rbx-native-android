@@ -301,6 +301,131 @@ fn patching_a_reparent_into_the_workspace_adds_the_part() {
     assert!(metrics.report(Metric::Density).readout(part).is_some());
 }
 
+/// A blank PNG of `side`², all `image_dimensions` needs to size it.
+fn png(side: u32) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut encoder = png::Encoder::new(&mut out, side, side);
+    encoder.set_color(png::ColorType::Grayscale);
+    let mut writer = encoder.write_header().unwrap();
+    writer
+        .write_image_data(&vec![0; (side * side) as usize])
+        .unwrap();
+    writer.finish().unwrap();
+    out
+}
+
+/// Serves `rbxassetid://<id>` as a square PNG `id` pixels on a side.
+fn squares(asset: &AssetRef) -> Option<Vec<u8>> {
+    match asset {
+        AssetRef::Id(id) => Some(png(*id as u32)),
+        _ => None,
+    }
+}
+
+fn uri(id: u32) -> Variant {
+    Variant::String(format!("rbxassetid://{id}"))
+}
+
+fn textures(metrics: &Metrics, part: Ref) -> f32 {
+    value(&metrics.report(Metric::TextureMemory), part)
+}
+
+#[test]
+fn a_material_variants_maps_are_texture_memory() {
+    let (mut dom, workspace, _) = world();
+    let service = dom.new_instance("MaterialService", "MaterialService", None);
+    let moss = dom.new_instance("MaterialVariant", "Moss", Some(service));
+    dom.set_property(moss, "ColorMap", uri(64)).unwrap();
+    dom.set_property(moss, "NormalMap", uri(32)).unwrap();
+    let named = (
+        "MaterialVariantSerialized",
+        Variant::String("Moss".to_string()),
+    );
+    let a = add(&mut dom, workspace, "Part", vec![at(0.0), named.clone()]);
+    let b = add(&mut dom, workspace, "Part", vec![at(1.0), named]);
+    let plain = block(&mut dom, workspace, 2.0);
+    dom.take_changes();
+    let mut metrics = Metrics::new(&dom, &mut squares);
+
+    // Both maps, split between the two parts drawing with the variant.
+    let both = (64.0 * 64.0 + 32.0 * 32.0) * 4.0;
+    assert_eq!(textures(&metrics, a), both / 2.0);
+    assert_eq!(textures(&metrics, b), both / 2.0);
+    assert_eq!(textures(&metrics, plain), 0.0);
+
+    // Editing the variant re-reads the parts that use it.
+    dom.set_property(moss, "ColorMap", uri(128)).unwrap();
+    let changes = dom.take_changes();
+    metrics.patch(&dom, &changes, &mut squares);
+    assert_eq!(
+        textures(&metrics, a),
+        (128.0 * 128.0 + 32.0 * 32.0) * 4.0 / 2.0
+    );
+
+    // And removing it leaves the built-in material, which counts nothing.
+    dom.remove(moss);
+    let changes = dom.take_changes();
+    metrics.patch(&dom, &changes, &mut squares);
+    assert_eq!(textures(&metrics, a), 0.0);
+}
+
+#[test]
+fn a_material_substituted_service_wide_counts_too() {
+    let (mut dom, workspace, _) = world();
+    let service = dom.new_instance("MaterialService", "MaterialService", None);
+    dom.set_property(service, "PlasticName", Variant::String("Shiny".to_string()))
+        .unwrap();
+    let shiny = dom.new_instance("MaterialVariant", "Shiny", Some(service));
+    dom.set_property(shiny, "ColorMap", uri(16)).unwrap();
+    let part = block(&mut dom, workspace, 0.0);
+    dom.take_changes();
+    let metrics = Metrics::new(&dom, &mut squares);
+    assert_eq!(textures(&metrics, part), 16.0 * 16.0 * 4.0);
+}
+
+#[test]
+fn clothing_is_texture_memory_of_the_limbs_that_wear_it() {
+    let (mut dom, workspace, _) = world();
+    let rig = dom.new_instance("Model", "Rig", Some(workspace));
+    let shirt = add(&mut dom, rig, "Shirt", vec![("ShirtTemplate", uri(64))]);
+    add(&mut dom, rig, "Pants", vec![("PantsTemplate", uri(32))]);
+    let limb = |dom: &mut WeakDom, name: &str, x: f32| {
+        let part = dom.new_instance("Part", name, Some(rig));
+        let (key, value) = at(x);
+        dom.set_property(part, key, value).unwrap();
+        part
+    };
+    let torso = limb(&mut dom, "Torso", 0.0);
+    let arm = limb(&mut dom, "Left Arm", 1.0);
+    let leg = limb(&mut dom, "Left Leg", 2.0);
+    let head = limb(&mut dom, "Head", 3.0);
+    dom.take_changes();
+    let mut metrics = Metrics::new(&dom, &mut squares);
+
+    // The shirt covers the torso and arm, the pants the torso and leg.
+    let (shirt_bytes, pants_bytes) = (64.0 * 64.0 * 4.0, 32.0 * 32.0 * 4.0);
+    assert_eq!(
+        textures(&metrics, torso),
+        shirt_bytes / 2.0 + pants_bytes / 2.0
+    );
+    assert_eq!(textures(&metrics, arm), shirt_bytes / 2.0);
+    assert_eq!(textures(&metrics, leg), pants_bytes / 2.0);
+    assert_eq!(textures(&metrics, head), 0.0);
+
+    // Taking the shirt off re-reads the limbs it was on.
+    dom.remove(shirt);
+    let changes = dom.take_changes();
+    metrics.patch(&dom, &changes, &mut squares);
+    assert_eq!(textures(&metrics, arm), 0.0);
+    assert_eq!(textures(&metrics, torso), pants_bytes / 2.0);
+
+    // And putting one on does too.
+    add(&mut dom, rig, "Shirt", vec![("ShirtTemplate", uri(16))]);
+    let changes = dom.take_changes();
+    metrics.patch(&dom, &changes, &mut squares);
+    assert_eq!(textures(&metrics, arm), 16.0 * 16.0 * 4.0 / 2.0);
+}
+
 /// What measuring costs on a real place: `marked.rbxl` from the fixtures
 /// repository `RBX_FIXTURES` names, read against the real asset cache, then
 /// the same place with its parts copied `PERF_COPIES` times over (default
@@ -356,6 +481,12 @@ fn bench(label: &str, mut dom: WeakDom) {
         AssetRef::Native(path) => cache.get_native(path),
         _ => None,
     };
+    // What copying the whole DOM in one go costs: what the editor would
+    // stall its UI thread for if it did not hand the copy over in slices.
+    let started = Instant::now();
+    let copy = dom.clone();
+    println!("[{label}] whole-DOM clone: {:?}", started.elapsed());
+    drop(copy);
     let started = Instant::now();
     let mut metrics = Metrics::new(&dom, &mut fetch);
     println!(

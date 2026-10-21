@@ -12,7 +12,9 @@
 //!   union's `TriangleCount` (or its baked mesh), a primitive's unit mesh.
 //!   Terrain is left out: it is meshed per chunk, not per instance.
 //! - **Texture memory**: decoded RGBA8 bytes (width × height × 4, before any
-//!   mip chain) of every image the part samples, each image split evenly
+//!   mip chain) of every image the part samples (its decals and textures,
+//!   mesh or `SurfaceAppearance` maps, the maps of the `MaterialVariant` it
+//!   draws with, and the clothing a character limb wears), each image split evenly
 //!   between the parts sharing it, so the parts' figures add up to every
 //!   image counted once.
 //! - **Collision**: a relative score — 1 for a primitive or a `Box`
@@ -40,10 +42,12 @@ use rbx_dom::{Change, Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
 use super::filemesh::{appearance_of, mesh_part_asset, special_mesh_asset};
+use super::material::{service as material_service, Service};
 use super::props::{bool_or, cframe_or};
 use super::shape::{resolve as resolve_shape, ShapeKind};
 use super::{is_drawable, srgb_to_linear, union_triangles, WORKSPACE_CLASS};
 use crate::textures::asset_uri;
+use crate::textures::clothing::{Limb, Wardrobe};
 
 /// Reads an asset's bytes out of a local cache, `None` when it is not there.
 pub type Fetch<'a> = dyn FnMut(&AssetRef) -> Option<Vec<u8>> + 'a;
@@ -56,6 +60,13 @@ pub const WORST: usize = 20;
 /// The heat ramp, coolest first: viridis, sampled at eight even steps —
 /// perceptually uniform and readable with every common colour-vision
 /// deficiency, which a red-to-green ramp is not.
+///
+/// Steps rather than a continuous ramp on purpose. Each step is one
+/// fill-only `Highlight` on the heat mask (see `renderer::cue`), and a
+/// highlight carries one colour, so a smooth ramp would need a per-part
+/// colour the mask pass doesn't have. And a step is a range the legend can
+/// name ("≥ 201"): a tint read off a gradient is a guess at a position, and
+/// eight is about as many swatches as the eye still tells apart on a part.
 pub const RAMP: [[u8; 3]; 8] = [
     [0x44, 0x01, 0x54],
     [0x46, 0x32, 0x7e],
@@ -80,6 +91,10 @@ const JOINT_CLASSES: [&str; 8] = [
     "Glue",
     "RigidConstraint",
 ];
+
+/// The classic clothing a character model's limbs wear — see
+/// `textures::clothing`.
+const GARMENT_CLASSES: [&str; 3] = ["Shirt", "Pants", "ShirtGraphic"];
 
 /// One way of costing a part.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -262,18 +277,25 @@ pub struct Metrics {
     shapes: Vec<(ShapeKind, u32)>,
     /// Union triangle counts by bake — see `union::triangles`.
     unions: HashMap<AssetRef, Option<u32>>,
+    /// `MaterialService`, for the variant maps a part samples.
+    materials: Service,
+    /// Every garment in the `Workspace`, by the model it dresses.
+    garments: HashMap<Ref, Ref>,
 }
 
 impl Metrics {
     pub fn new(dom: &WeakDom, fetch: &mut Fetch<'_>) -> Self {
+        let database = ReflectionDatabase::shared();
         let mut metrics = Metrics {
-            database: ReflectionDatabase::shared(),
+            database,
             entries: HashMap::new(),
             joints: HashMap::new(),
             meshes: HashMap::new(),
             images: HashMap::new(),
             shapes: Vec::new(),
             unions: HashMap::new(),
+            materials: material_service(dom, database),
+            garments: HashMap::new(),
         };
         let all: Vec<Ref> = super::workspace_descendants(dom, metrics.database).collect();
         for referent in all {
@@ -286,11 +308,35 @@ impl Metrics {
     /// the tree as it stands after it. Only what the log names is re-read:
     /// the instance itself, the part it hangs under (whose instance count,
     /// mesh or textures it may be), and — for an instance that arrived,
-    /// moved or changed class — everything beneath it.
+    /// moved or changed class — everything beneath it. A garment's edit
+    /// re-reads the limbs of the model it dresses, and an edit to
+    /// `MaterialService` or a variant in it every part, since any of them
+    /// may draw with it.
     pub fn patch(&mut self, dom: &WeakDom, changes: &[Change], fetch: &mut Fetch<'_>) {
         let mut shallow = HashSet::new();
         let mut deep = HashSet::new();
+        let mut materials = false;
         for change in changes {
+            let (Change::Property { referent, .. }
+            | Change::Parent { referent, .. }
+            | Change::Added(referent)
+            | Change::Removed(referent)
+            | Change::Class(referent)) = *change;
+            let class = dom.get(referent).map(|i| i.class());
+            materials |= self.materials.referents.contains(&referent)
+                || matches!(class, Some("MaterialService" | "MaterialVariant"));
+            if let Some(model) = self.garments.remove(&referent) {
+                shallow.extend(dom.get(model).into_iter().flat_map(|m| m.children()));
+            }
+            if class.is_some_and(|class| GARMENT_CLASSES.contains(&class)) {
+                let model = dom.parent(referent);
+                shallow.extend(
+                    model
+                        .and_then(|m| dom.get(m))
+                        .into_iter()
+                        .flat_map(|m| m.children()),
+                );
+            }
             match change {
                 Change::Property { referent, .. } => {
                     shallow.insert(*referent);
@@ -326,6 +372,13 @@ impl Metrics {
         }
         for referent in shallow.into_iter().chain(owners) {
             self.read(dom, referent, false, fetch);
+        }
+        if materials {
+            self.materials = material_service(dom, self.database);
+            let parts: Vec<Ref> = self.entries.keys().copied().collect();
+            for part in parts {
+                self.read(dom, part, true, fetch);
+            }
         }
     }
 
@@ -717,6 +770,12 @@ impl Metrics {
                 _ => self.joints.remove(&referent),
             };
         }
+        if GARMENT_CLASSES.contains(&instance.class()) {
+            match (inside, dom.parent(referent)) {
+                (true, Some(model)) => self.garments.insert(referent, model),
+                _ => self.garments.remove(&referent),
+            };
+        }
         if inside && is_drawable(dom, self.database, referent) {
             let entry = self.entry(dom, referent, fetch);
             self.entries.insert(referent, entry);
@@ -768,6 +827,20 @@ impl Metrics {
         } else {
             Geometry::Shape(resolve_shape(dom, database, instance, size).kind)
         };
+        textures.extend(self.materials.variant_maps(properties, database));
+        let limb = Limb::r6(instance.name()).or_else(|| Limb::r15(instance.name()));
+        if let Some(wardrobe) = limb
+            .zip(dom.parent(referent))
+            .and_then(|(limb, model)| Wardrobe::of(dom, model).map(|wardrobe| (limb, wardrobe)))
+        {
+            let (limb, wardrobe) = wardrobe;
+            textures.extend(
+                wardrobe
+                    .for_limb(limb)
+                    .into_iter()
+                    .map(|(_, layer)| layer.image.clone()),
+            );
+        }
         textures.sort_by_key(|asset| format!("{asset:?}"));
         textures.dedup();
 
