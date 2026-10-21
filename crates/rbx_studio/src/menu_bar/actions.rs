@@ -77,6 +77,12 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
     });
     cx.on_action({
         let shell = shell.clone();
+        move |_: &MenuExportClean, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.export_place(Export::CleanPlace, cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
         move |_: &MenuSaveToRoblox, cx| {
             let _ = shell.update(cx, |shell, cx| {
                 shell.upload_to_roblox(PublishMode::Saved, cx)
@@ -173,6 +179,7 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         (Panel::Viewport, &MenuToggleViewport),
         (Panel::Collaborators, &MenuToggleCollaborators),
         (Panel::InputActions, &MenuToggleInputActions),
+        (Panel::Layers, &MenuToggleLayers),
         (Panel::Loren, &MenuToggleLoren),
     ] {
         toggle.install(panel, shell.clone(), cx);
@@ -352,4 +359,5 @@ panel_toggle!(MenuToggleOutput);
 panel_toggle!(MenuToggleViewport);
 panel_toggle!(MenuToggleCollaborators);
 panel_toggle!(MenuToggleInputActions);
+panel_toggle!(MenuToggleLayers);
 panel_toggle!(MenuToggleLoren);
