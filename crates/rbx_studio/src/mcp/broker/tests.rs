@@ -58,7 +58,7 @@ impl Editor {
                     if let Some(edit) = session.planned.take() {
                         apply_edit(&mut dom, &edit);
                     }
-                    request.answer(reply);
+                    request.answer(reply.map(protocol::Reply::wait));
                 }
                 std::thread::sleep(Duration::from_millis(2));
             }
@@ -237,4 +237,15 @@ fn an_editor_that_closed_or_never_was_is_reported_and_its_file_cleared() {
     std::fs::write(file_of(&dir, &stale.studio_id), stale.to_json()).unwrap();
     assert_eq!(studios(&mut broker), json!([]));
     assert!(!file_of(&dir, &stale.studio_id).exists());
+}
+
+#[test]
+fn a_call_that_timed_out_is_reported_as_possibly_still_applying() {
+    let timed_out = super::unanswered(
+        "a1",
+        Some(std::io::Error::from(std::io::ErrorKind::WouldBlock)),
+    );
+    assert!(timed_out.contains("may still apply"), "{timed_out}");
+    let closed = super::unanswered("a1", None);
+    assert_eq!(closed, "studio a1 stopped answering: it closed");
 }

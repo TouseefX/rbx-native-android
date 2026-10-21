@@ -71,18 +71,40 @@ pub(crate) fn parse(line: &str) -> Message {
     }
 }
 
+/// What one line from the client gets back.
+pub(crate) enum Reply {
+    Now(String),
+    /// A tool's [`super::Deferred`] work, which gives the reply once run.
+    Later(Box<dyn FnOnce() -> String + Send>),
+}
+
+impl Reply {
+    /// The reply, running deferred work on the calling thread.
+    pub(crate) fn wait(self) -> String {
+        match self {
+            Reply::Now(text) => text,
+            Reply::Later(work) => work(),
+        }
+    }
+}
+
 /// The reply to one line from the client, or `None` when it needs none.
-pub(crate) fn handle(line: &str, session: &mut Session) -> Option<String> {
+pub(crate) fn handle(line: &str, session: &mut Session) -> Option<Reply> {
     let (id, method, params) = match parse(line) {
         Message::Request { id, method, params } => (id, method, params),
         Message::Silent => return None,
-        Message::Invalid(reply) => return Some(reply),
+        Message::Invalid(reply) => return Some(Reply::Now(reply)),
     };
     let outcome = match method.as_str() {
         "tools/call" => tools::call(&params, session),
         _ => session_free(&method, &params),
     };
-    Some(reply(id, outcome))
+    if let Some(work) = session.deferred.take() {
+        return Some(Reply::Later(Box::new(move || {
+            reply(id, Ok(tools::finished(work())))
+        })));
+    }
+    Some(Reply::Now(reply(id, outcome)))
 }
 
 /// What is answered the same by every editor, so the broker can answer it
@@ -119,8 +141,10 @@ fn initialize(params: &Value) -> Value {
         "protocolVersion": version,
         "capabilities": { "tools": {} },
         "serverInfo": { "name": "rbx-native", "version": env!("CARGO_PKG_VERSION") },
-        "instructions": "Reads the place open in the rbx-native editor. Instances are \
-            named by dotted paths from the DataModel, as in game.Workspace.Model.Part.",
+        "instructions": "Reads the place open in the rbx-native editor and edits its scripts: \
+            browse and inspect instances, read, search and grep scripts, and change or create \
+            them with multi_edit, each call one undo step. Instances are named by dotted paths \
+            from the DataModel, as in game.Workspace.Model.Part.",
     })
 }
 

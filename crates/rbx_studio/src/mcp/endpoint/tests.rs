@@ -124,3 +124,74 @@ fn every_editor_has_its_own_file_and_takes_only_its_own_back() {
     drop(second);
     assert!(!file_of(&dir, &second_id).exists());
 }
+
+#[test]
+fn an_id_that_is_not_hex_is_not_an_endpoint() {
+    // The id names the file a dead editor's endpoint is removed by.
+    for id in ["../x", "a1.json", "", "a 1"] {
+        let text = format!(r#"{{"studio_id":"{id}","port":1,"token":"x"}}"#);
+        assert_eq!(Endpoint::from_json(&text), None, "{id}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn only_the_owner_can_read_the_token() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = scratch("private");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o775)).unwrap();
+    let server = Server::start(&dir).unwrap();
+    let mode =
+        |path: &std::path::Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode(&dir), 0o700);
+    assert_eq!(mode(&file_of(&dir, &server.endpoint().studio_id)), 0o600);
+}
+
+/// What a connection that never shows the token gets back: nothing, and
+/// the connection closed.
+fn hung_up(mut stream: std::net::TcpStream) -> bool {
+    stream
+        .set_read_timeout(Some(Duration::from_secs(20)))
+        .unwrap();
+    let mut rest = Vec::new();
+    match stream.read_to_end(&mut rest) {
+        Ok(_) => rest.is_empty(),
+        // Data left unread when the editor closes makes it a reset rather
+        // than an orderly end; only waiting out the timeout is not hung up.
+        Err(err) => !matches!(
+            err.kind(),
+            std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+        ),
+    }
+}
+
+#[test]
+fn a_first_line_longer_than_any_token_is_refused_unread() {
+    let dir = scratch("long");
+    let server = Server::start(&dir).unwrap();
+    let mut stream = std::net::TcpStream::connect(("127.0.0.1", server.endpoint().port)).unwrap();
+    // Far past the limit and without a newline, as an endless line would be.
+    let _ = stream.write_all(&[b'a'; 4096]);
+    assert!(hung_up(stream));
+    assert!(server.drain().is_empty());
+}
+
+#[test]
+fn a_connection_that_never_shows_the_token_is_dropped() {
+    let dir = scratch("idle");
+    let server = Server::start(&dir).unwrap();
+    let stream = std::net::TcpStream::connect(("127.0.0.1", server.endpoint().port)).unwrap();
+    let started = Instant::now();
+    assert!(hung_up(stream));
+    assert!(started.elapsed() < Duration::from_secs(15));
+}
+
+#[test]
+fn a_token_that_differs_anywhere_or_in_length_is_not_the_token() {
+    assert!(super::same(b"abc", b"abc"));
+    assert!(!super::same(b"abc", b"abd"));
+    assert!(!super::same(b"abc", b"xbc"));
+    assert!(!super::same(b"abc", b"abcd"));
+    assert!(!super::same(b"", b"a"));
+}

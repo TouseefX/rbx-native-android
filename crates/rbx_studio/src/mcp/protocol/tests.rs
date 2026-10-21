@@ -16,7 +16,7 @@ fn reply(line: &str) -> Option<Value> {
         play: PlayState::Edit,
     };
     let mut session = Session::new(&dom, &properties, &studio);
-    handle(line, &mut session).map(|text| serde_json::from_str(&text).unwrap())
+    handle(line, &mut session).map(|reply| serde_json::from_str(&reply.wait()).unwrap())
 }
 
 #[test]

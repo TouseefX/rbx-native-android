@@ -126,18 +126,80 @@ fn rank(name: &str, query: &str) -> Option<u32> {
     }
 }
 
-pub(super) fn grep(arguments: &Value, session: &Session) -> Outcome {
+/// Matching is left to [`Session::deferred`]: a Luau pattern backtracks, and
+/// Luau's matcher cannot be interrupted, so one call can take far longer
+/// than the UI thread may be held. Its own answer is a placeholder.
+pub(super) fn grep(arguments: &Value, session: &mut Session) -> Outcome {
     let query = required_text(arguments, "query")?;
     if query.is_empty() {
         return Err("the query is empty".to_owned());
     }
-    let pattern = Pattern::new(query)?;
+    let wildcards = repeated_wildcards(query);
+    if wildcards > MAX_REPEATED_WILDCARDS {
+        return Err(format!(
+            "the pattern repeats `.` {wildcards} times (with *, + or -); more than \
+             {MAX_REPEATED_WILDCARDS} can take minutes to match a single long line. Narrow it \
+             with a character class such as %w or [^\"], or grep for fewer parts at once"
+        ));
+    }
     let dom = session.dom;
+    let sources: Vec<(String, String)> = scripts(dom, session.properties.db())
+        .into_iter()
+        .filter_map(|reference| Some((path_of(dom, reference), source::read(dom, reference)?)))
+        .collect();
+    let query = query.to_owned();
+    session.deferred = Some(Box::new(move || grep_sources(&query, &sources)));
+    Ok(Value::Null)
+}
+
+/// More than this many `.*`, `.+` or `.-` in one pattern is refused. Each one
+/// multiplies the ways a line can be tried by about its length: on a 120
+/// character line with no match, three took 0.07 s and four 1.9 s, and five
+/// would take about a minute. Matching runs off the UI thread, but a call
+/// that never ends still holds a core until the editor closes.
+const MAX_REPEATED_WILDCARDS: usize = 3;
+
+/// How many times `pattern` repeats `.`, the item that matches anything and
+/// so backtracks over everything. A `.` escaped as `%.` or inside a `[set]`
+/// is the dot itself.
+fn repeated_wildcards(pattern: &str) -> usize {
+    let bytes = pattern.as_bytes();
+    let mut count = 0;
+    let mut at = 0;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'%' => at += 2,
+            b'[' => {
+                at += 1;
+                // A `^` and then a `]` right after the bracket are members.
+                if bytes.get(at) == Some(&b'^') {
+                    at += 1;
+                }
+                if bytes.get(at) == Some(&b']') {
+                    at += 1;
+                }
+                while at < bytes.len() && bytes[at] != b']' {
+                    at += if bytes[at] == b'%' { 2 } else { 1 };
+                }
+                at += 1;
+            }
+            b'.' => {
+                if matches!(bytes.get(at + 1), Some(b'*' | b'+' | b'-')) {
+                    count += 1;
+                }
+                at += 1;
+            }
+            _ => at += 1,
+        }
+    }
+    count
+}
+
+/// `script_grep`'s answer over `(path, Source)` pairs, in Explorer order.
+fn grep_sources(query: &str, sources: &[(String, String)]) -> Outcome {
+    let pattern = Pattern::new(query)?;
     let mut matches = Vec::new();
-    'scripts: for reference in scripts(dom, session.properties.db()) {
-        let Some(text) = source::read(dom, reference) else {
-            continue;
-        };
+    'scripts: for (path, text) in sources {
         for (index, line) in text.lines().enumerate() {
             if !pattern.is_in(line)? {
                 continue;
@@ -146,11 +208,7 @@ pub(super) fn grep(arguments: &Value, session: &Session) -> Outcome {
                 matches.push(format!("Note: stopped at {MAX_GREP_MATCHES} matches"));
                 break 'scripts;
             }
-            matches.push(format!(
-                "Path: {} | Line: {} | {line}",
-                path_of(dom, reference),
-                index + 1
-            ));
+            matches.push(format!("Path: {path} | Line: {} | {line}", index + 1));
         }
     }
     Ok(Value::String(lines_or_none(matches)))

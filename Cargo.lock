@@ -6700,6 +6700,7 @@ dependencies = [
  "chrono",
  "flate2",
  "full_moon",
+ "getrandom 0.3.4",
  "glam",
  "gpui-base",
  "gpui-kit",

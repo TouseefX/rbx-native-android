@@ -126,3 +126,47 @@ fn script_grep_matches_luau_patterns_line_by_line() {
     assert!(failed);
     assert!(text.contains("malformed pattern"), "{text}");
 }
+
+#[test]
+fn repeated_wildcards_are_counted_and_escaped_or_set_dots_are_not() {
+    use super::repeated_wildcards;
+    assert_eq!(repeated_wildcards("print"), 0);
+    assert_eq!(repeated_wildcards("a.c"), 0, "a single `.` does not repeat");
+    assert_eq!(repeated_wildcards(".-.*.+"), 3);
+    assert_eq!(repeated_wildcards("%.*%.-"), 0, "`%.` is the dot itself");
+    assert_eq!(repeated_wildcards("[.]*[^.]-"), 0, "so is a `.` in a set");
+    assert_eq!(
+        repeated_wildcards("[]].*"),
+        1,
+        "a `]` first in a set is a member"
+    );
+    assert_eq!(repeated_wildcards("[%]].-x.-"), 2);
+}
+
+#[test]
+fn script_grep_refuses_a_pattern_that_would_backtrack_for_minutes() {
+    let dom = place();
+    let (failed, text) = run(&dom, "script_grep", json!({ "query": ".-.-.-.-x" }));
+    assert!(failed);
+    assert!(text.contains("4 times"), "{text}");
+    let (failed, _) = run(&dom, "script_grep", json!({ "query": "local.-=.-%d.-$" }));
+    assert!(!failed);
+}
+
+#[test]
+fn script_grep_matches_off_the_calling_thread_over_a_copy() {
+    use crate::mcp::Session;
+    use crate::properties::Properties;
+    use rbx_reflection::ReflectionDatabase;
+
+    let dom = place();
+    let properties = Properties::new(ReflectionDatabase::embedded());
+    let studio = super::super::tests::studio();
+    let mut session = Session::new(&dom, &properties, &studio);
+    super::grep(&json!({ "query": "rounds" }), &mut session).unwrap();
+    let work = session.deferred.take().expect("matching is deferred");
+    // The place is free to change before the work runs.
+    drop(dom);
+    let found = std::thread::spawn(work).join().unwrap().unwrap();
+    assert_eq!(found.as_str().unwrap().lines().count(), 2, "{found}");
+}

@@ -2,7 +2,7 @@ use rbx_dom::{Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Value};
 
-use super::{call, resolve};
+use super::{call, finished, resolve};
 use crate::mcp::{PlayState, Session, Studio};
 use crate::properties::Properties;
 
@@ -46,11 +46,14 @@ pub(super) fn run(dom: &WeakDom, tool: &str, arguments: Value) -> (bool, String)
     let properties = Properties::new(ReflectionDatabase::embedded());
     let studio = studio();
     let mut session = Session::new(dom, &properties, &studio);
-    let result = call(
+    let mut result = call(
         &json!({ "name": tool, "arguments": arguments }),
         &mut session,
     )
     .unwrap();
+    if let Some(work) = session.deferred.take() {
+        result = finished(work());
+    }
     (
         result["isError"].as_bool().unwrap(),
         result["content"][0]["text"].as_str().unwrap().to_owned(),

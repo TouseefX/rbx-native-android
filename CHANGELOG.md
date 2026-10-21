@@ -11,28 +11,24 @@
 
 - **An MCP server for the open place (beta).** With Settings › Beta
   features › MCP server on, an AI client pointed at `rbxstudio --mcp` can
-  read the place the editor has open, through the tools Roblox's own
-  Studio MCP server names: `search_game_tree`, `inspect_instance`,
-  `script_read`, `script_search` and `script_grep`. The bridge forwards
-  stdio to the running editor over a loopback port guarded by a random
-  token in `mcp.json`, and every answer is read on the UI thread, so it
-  matches what the Explorer shows. Read-only for now: editing, running
-  Luau and Play are the roadmap's next step for it. (@Vikmanou)
-
-- **The MCP server edits scripts, reaches every open editor, and answers
-  like Studio's.** `multi_edit` applies several exact-text replacements to
-  one script all or none, as a single undo step through the same write a
-  script tab makes, and creates the script when nothing is at the path yet.
-  Each editor session now has its own id and endpoint file, so
-  `rbxstudio --mcp` serves all of them at once: `list_roblox_studios` lists
-  them, `get_studio_state` reports the play state, and every other tool
-  takes a `studio_id`, which can be left out with only one editor open.
-  Every tool now takes the arguments real Studio's `StudioMCP` lists and
-  answers in the shape it answers with, checked against it side by side, so
-  a client or prompt written for Studio works here unchanged; `script_grep`
-  matches Luau patterns through Luau's own `string.find`. The bridge now
-  starts with no editor open and says so in a tool's result instead of
-  exiting. (@Vikmanou)
+  read and edit the place the editor has open, through the tools Roblox's
+  own Studio MCP server names: `search_game_tree`, `inspect_instance`,
+  `script_read`, `script_search`, `script_grep` and `multi_edit`. Every tool
+  takes the arguments real Studio's `StudioMCP` lists and answers in the
+  shape it answers with, checked against it side by side, so a client or
+  prompt written for Studio works here unchanged. `multi_edit` applies
+  several exact-text replacements to one script all or none, as a single
+  undo step through the same write a script tab makes, and creates the
+  script when nothing is at the path yet. Each editor session has its own
+  id, so `rbxstudio --mcp` serves all of them at once: `list_roblox_studios`
+  lists them, `get_studio_state` reports the play state, and every other
+  tool takes a `studio_id`, which can be left out with only one editor
+  open. The bridge reaches each editor over a loopback port guarded by a
+  random token in that editor's own file under `<config>/mcp/`, readable by
+  its owner alone. Answers are read on the UI thread, so they match what
+  the Explorer shows, except `script_grep`'s Luau pattern matching, which
+  runs on a copy of the scripts so a slow pattern cannot freeze the editor.
+  (@Vikmanou)
 
 - **A Security Audit dock, and `rbxaudit` for CI.** View › Security Audit
   (also a ribbon toggle) audits every script in the place, something
