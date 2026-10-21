@@ -51,7 +51,12 @@ fn terrain_ref(dom: &WeakDom) -> rbx_dom::Ref {
 }
 
 fn blob(dom: &WeakDom, property: &str) -> Vec<u8> {
-    match dom.get(terrain_ref(dom)).unwrap().properties().get(property) {
+    match dom
+        .get(terrain_ref(dom))
+        .unwrap()
+        .properties()
+        .get(property)
+    {
         Some(Variant::String(text)) => text.as_bytes().to_vec(),
         Some(Variant::Unknown { raw, .. }) => raw.clone(),
         other => panic!("{property} is {other:?}"),
@@ -59,7 +64,9 @@ fn blob(dom: &WeakDom, property: &str) -> Vec<u8> {
 }
 
 fn out_dir() -> std::path::PathBuf {
-    std::env::var("RBX_TERRAIN_OUT").expect("RBX_TERRAIN_OUT").into()
+    std::env::var("RBX_TERRAIN_OUT")
+        .expect("RBX_TERRAIN_OUT")
+        .into()
 }
 
 /// Lua for Studio's command bar: reads every voxel in our bounds and stores
@@ -100,8 +107,16 @@ fn write_place_for_studio() {
         dom.set_property(terrain, name, Variant::Unknown { type_id: 1, raw })
             .unwrap();
     };
-    set(&mut dom, "SmoothGrid", rbx_terrain::smooth_grid::encode(&grid));
-    set(&mut dom, "PhysicsGrid", rbx_terrain::physics_grid::encode(&grid));
+    set(
+        &mut dom,
+        "SmoothGrid",
+        rbx_terrain::smooth_grid::encode(&grid),
+    );
+    set(
+        &mut dom,
+        "PhysicsGrid",
+        rbx_terrain::physics_grid::encode(&grid),
+    );
     // Above the hills, looking down at them: the stock camera sits inside one.
     let camera = (0..dom.next_ref())
         .map(rbx_dom::Ref::new)
@@ -109,14 +124,26 @@ fn write_place_for_studio() {
         .expect("TestPlace has a Camera");
     let (c, s) = (0.8575, 0.5145);
     let view = rbx_dom::CFrameData {
-        position: rbx_dom::Vector3Data { x: 0.0, y: 70.0, z: 100.0 },
+        position: rbx_dom::Vector3Data {
+            x: 0.0,
+            y: 70.0,
+            z: 100.0,
+        },
         rotation: [1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c],
     };
-    dom.set_property(camera, "CFrame", Variant::CFrame(view)).unwrap();
+    dom.set_property(camera, "CFrame", Variant::CFrame(view))
+        .unwrap();
     let dir = out_dir();
-    std::fs::write(dir.join("terrain154.rbxl"), rbx_binary::serialize(&dom).unwrap()).unwrap();
+    std::fs::write(
+        dir.join("terrain154.rbxl"),
+        rbx_binary::serialize(&dom).unwrap(),
+    )
+    .unwrap();
     std::fs::write(dir.join("terrain154_dump.lua"), dump_lua()).unwrap();
-    eprintln!("{} voxels written", grid.voxels().filter(|(_, c)| !c.is_air()).count());
+    eprintln!(
+        "{} voxels written",
+        grid.voxels().filter(|(_, c)| !c.is_air()).count()
+    );
 }
 
 #[test]
