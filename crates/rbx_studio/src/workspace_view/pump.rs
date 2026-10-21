@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use rbx_dom::{Change, Ref, Snapshot, WeakDom};
 use rbx_viewer::pick::{Meshes, Selected};
 use rbx_viewer::{
-    Applied, Calibration, CameraFeel, CameraInput, Gizmo, Headless, JointSolver, Pose,
+    Applied, Calibration, CameraFeel, CameraInput, Gizmo, Headless, JointSolver, Parked, Pose,
     QualityLevel, Segment,
 };
 
@@ -133,6 +133,9 @@ enum Command {
     /// The UI editor's canvas to draw, or `None` once it is off screen,
     /// see [`canvas`].
     Canvas(Option<canvas::Request>),
+    /// Lets go of the viewer (`true`) or rebuilds it from the mirror
+    /// (`false`); see [`Pump::park`].
+    Park(bool),
     Stop,
 }
 
@@ -366,6 +369,14 @@ impl Pump {
         let _ = self.commands.send(Command::Canvas(request));
     }
 
+    /// Drops the viewer (scene, GPU device, decoded assets) while the place
+    /// is not on screen, keeping the mirror, camera and view; unparking
+    /// rebuilds it from the mirror. Every command sent meanwhile waits and
+    /// is applied, in order, once it is back.
+    pub(super) fn park(&self, parked: bool) {
+        let _ = self.commands.send(Command::Park(parked));
+    }
+
     /// The next message waiting, without ever blocking the UI thread.
     pub(super) fn poll(&self) -> Option<Ready> {
         self.ready.try_recv().ok()
@@ -443,9 +454,12 @@ fn run(
     let mut joints = JointSolver::new();
     let mut overlay: Option<rbx_viewer::OverlayColors> = None;
     let mut plugin_adornments = Vec::new();
+    let mut park = false;
+    // Commands that arrived while parked, applied once the viewer is back.
+    let mut held = Vec::new();
 
     loop {
-        let wait = idle.then_some(if visible { interval } else { IDLE_WAIT });
+        let wait = (idle && held.is_empty()).then_some(if visible { interval } else { IDLE_WAIT });
         if !drain(
             commands,
             Rendering {
@@ -461,10 +475,25 @@ fn run(
                 canvas: &mut canvas,
                 owed: &mut owed,
                 plugin_adornments: &mut plugin_adornments,
+                park: &mut park,
             },
             wait,
+            std::mem::take(&mut held),
         ) {
             return;
+        }
+        if std::mem::take(&mut park) {
+            match parked(viewer.park(), &mirror, commands, resting) {
+                Some((resumed, waiting)) => {
+                    viewer = resumed;
+                    held = waiting;
+                    rebuilt = true;
+                    owed = true;
+                    overlay = None;
+                    continue;
+                }
+                None => return,
+            }
         }
 
         // Polled because a theme switch happens on the UI thread and sends
@@ -697,6 +726,8 @@ struct Rendering<'a> {
     /// The plugin adornments the mirror holds, see
     /// [`Command::PluginAdornments`].
     plugin_adornments: &'a mut Vec<Ref>,
+    /// Set by [`Command::Park`]; `run` parks once the batch is through.
+    park: &'a mut bool,
 }
 
 /// Applies everything the UI thread has asked for, blocking for up to `idle`
@@ -706,6 +737,7 @@ fn drain(
     commands: &Receiver<Command>,
     mut rendering: Rendering<'_>,
     idle: Option<Duration>,
+    held: Vec<Command>,
 ) -> bool {
     if let Some(wait) = idle {
         match commands.recv_timeout(wait) {
@@ -720,7 +752,7 @@ fn drain(
         }
     }
 
-    let mut queued = Vec::new();
+    let mut queued = held;
     loop {
         match commands.try_recv() {
             Ok(command) => queued.push(command),
@@ -737,6 +769,42 @@ fn drain(
         }
     }
     true
+}
+
+/// Holds every command until the viewer is asked back, then rebuilds it
+/// from `mirror` and hands the held commands back to be applied in order.
+/// `None` once the view is gone or the rebuild fails.
+fn parked(
+    parked: Parked,
+    mirror: &WeakDom,
+    commands: &Receiver<Command>,
+    resting: &AtomicBool,
+) -> Option<(Headless, Vec<Command>)> {
+    resting.store(true, Ordering::Relaxed);
+    // glibc keeps what a thread frees in that thread's arena; a parked scene
+    // is hundreds of megabytes nobody will ask for until it is rebuilt.
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    // SAFETY: `malloc_trim` only releases free memory; it touches nothing
+    // still allocated.
+    unsafe {
+        libc::malloc_trim(0);
+    }
+    let mut held = Vec::new();
+    loop {
+        match commands.recv().ok()? {
+            Command::Park(false) => break,
+            Command::Park(true) => {}
+            Command::Stop => return None,
+            command => held.push(command),
+        }
+    }
+    match parked.resume(mirror) {
+        Ok(viewer) => Some((viewer, held)),
+        Err(err) => {
+            eprintln!("rbxstudio: the scene could not be rebuilt: {err}");
+            None
+        }
+    }
 }
 
 /// Folds every run of consecutive [`Command::Changes`] into one, keeping
@@ -864,6 +932,8 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
         }
         Command::Visible(new) => *rendering.visible = new,
         Command::Canvas(request) => rendering.canvas.set(request),
+        // The last word wins: shown again in the same batch is not parked.
+        Command::Park(parked) => *rendering.park = parked,
         Command::Stop => return false,
     }
 

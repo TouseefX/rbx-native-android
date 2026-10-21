@@ -26,6 +26,27 @@
   can't be read stays in the list with the reason and a Delete button.
   Studio has nothing like it. (@chteau)
 
+- **Every place of a game in one window.** Roblox Studio edits one place
+  per window; File › Open Game… (or a card's new "Open every place as one
+  game" on Home, which downloads the experience's places) opens them all
+  together, listed in a `.rbxgame` manifest beside the place files,
+  nothing about the game is written into a place file. A Places bar swaps
+  the place on screen at once, each keeping its own undo history,
+  selection, camera and script tabs, and a place is only read when first
+  shown. Find in Game searches every script of every place (place ›
+  script › line, click to open) and replaces with a preview, one undo step
+  per place. Model › Mark as Shared tags a Model, Folder or ModuleScript
+  with an `RbxNativeSharedId` attribute, and Sync Shared copies the active
+  place's version to every place holding the same id, with each asset's
+  diff and a per-place switch. Sync keeps references into the asset by
+  path, points the copy's references out of it at the same path in the
+  target, and never copies the source's `UniqueId`s. A place left off
+  screen for 30 s drops its render scene and GPU device, and rebuilds it
+  when shown again. Save All and Publish All report per place. A
+  `.rbxlx` save now writes a string XML can't hold (Terrain's
+  `PhysicsGrid`) as `BinaryString`; as text it made Studio refuse the file.
+  (@chteau)
+
 - **A built-in Luau test runner.** A place's TestEZ specs (ModuleScripts
   named `*.spec`/`*.test`) run headlessly in the command bar's sandbox,
   each file over its own fresh copy of the place, on a simulated clock so

@@ -83,6 +83,57 @@ impl HomeWindow {
         .detach();
     }
 
+    /// A card's "Open every place as one game": each place's local copy
+    /// (downloaded when missing) in one game window. In the game picker it
+    /// is an ordinary pick.
+    pub(super) fn open_whole_game(&mut self, experience: Experience, cx: &mut Context<Self>) {
+        if self.pick.is_some() {
+            return self.open_experience(experience, cx);
+        }
+        self.serial += 1;
+        let serial = self.serial;
+        self.dialog = Some(Dialog::Downloading {
+            experience: experience.clone(),
+        });
+        cx.notify();
+        let Some(key) = ApiKey::from_env_or_config() else {
+            return;
+        };
+        let client = Client::new(Some(key));
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_spawn({
+                    let experience = experience.clone();
+                    async move { home::open_whole_game(&client, &experience) }
+                })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.serial != serial {
+                    return;
+                }
+                match result {
+                    Ok(path) => {
+                        this.dialog = None;
+                        this.open_path_later(path, cx);
+                    }
+                    Err(OpenError { status, message }) => {
+                        this.dialog = Some(Dialog::Error {
+                            title: format!(
+                                "Couldn\u{2019}t open every place of {}",
+                                experience.name
+                            ),
+                            experience: None,
+                            status,
+                            reason: download_reason(status, &message),
+                        })
+                    }
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+
     pub(super) fn cancel_dialog(&mut self, cx: &mut Context<Self>) {
         self.serial += 1;
         self.dialog = None;

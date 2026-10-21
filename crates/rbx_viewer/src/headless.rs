@@ -24,6 +24,9 @@ use crate::scene::{Bounds, ScrollTarget};
 use crate::view::View;
 
 mod assets;
+mod park;
+
+pub use park::Parked;
 
 /// One [`Headless::render_gui`] frame.
 pub struct GuiCanvas {
@@ -143,21 +146,45 @@ impl Headless {
             clock_time: None,
             show_development_gui: false,
         };
-        let database = ReflectionDatabase::embedded();
+        Headless::build(
+            dom,
+            toggles,
+            ReflectionDatabase::embedded(),
+            View::default(),
+        )
+    }
+
+    /// [`Headless::from_dom`] with the toggles, database and view given,
+    /// at the default quality and calibration.
+    fn build(
+        dom: &WeakDom,
+        toggles: Toggles,
+        database: ReflectionDatabase,
+        view: View,
+    ) -> Result<Self, String> {
         let mut resident = Resident::streaming();
         let mut loaded = Loaded::from_dom(dom, &database, toggles, &mut resident)
             .map_err(|err| format!("nothing to show: {err}"))?;
-        let warnings = loaded.take_warnings();
+        let mut warnings = loaded.take_warnings();
+        if view.filters_scene() {
+            warnings.extend(loaded.isolate(
+                view.scene_roots(),
+                &view.layer_hidden,
+                view.isolated(),
+                |at| dom.parent(at),
+                &mut resident,
+            ));
+        }
         let roles = Roles::of_dom(dom, &database);
 
         let bounds = *loaded.world().scene.bounds();
         let uploaded_material_layers = loaded.scene().materials().layers();
         let quality = QualityLevel::default();
         let mut headless = Headless {
-            offscreen: Offscreen::new(loaded.world(), &quality.profile(), &View::default())?,
+            offscreen: Offscreen::new(loaded.world(), &quality.profile(), &view)?,
             quality,
             calibration: crate::lighting::Calibration::default(),
-            view: View::default(),
+            view,
             bounds,
             controller: Controller::new(Start::Orbit, &bounds, None, DEFAULT_SENSITIVITY),
             feel: CameraFeel::default(),
