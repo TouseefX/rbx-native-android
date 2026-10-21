@@ -2,7 +2,7 @@
 //! drawn as a billboard in the edit viewport and listed in the Layers dock.
 //!
 //! Each note is an `ObjectValue` in a `Folder` named [`FOLDER_NAME`] under
-//! `ServerStorage` — a container no game script reads by convention, and
+//! `ServerStorage`, a container no game script reads by convention, and
 //! that the publish path removes (see `crate::strip`). The `ObjectValue`'s
 //! own `Value` is the instance a note is pinned to, so a pin follows its
 //! instance through renames, reparenting, merges and both file formats as

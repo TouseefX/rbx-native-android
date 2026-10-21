@@ -3,7 +3,7 @@
 //! GPUI performs the gesture itself: `on_drag` on the row a drag starts from,
 //! `can_drop`/`on_drop` on the row under the cursor, `drag_over` for the
 //! highlight, and a ghost it paints at the cursor every frame. What lives here
-//! is the two halves it cannot know about — what a dragged row carries, and
+//! is the two halves it cannot know about, what a dragged row carries, and
 //! what a drop does to the DOM. Which drops are legal at all is
 //! `explorer::reparent`'s question, asked from both `can_drop` (so an illegal
 //! target never lights up) and the drop itself (so nothing else can slip
@@ -11,7 +11,7 @@
 //!
 //! There is deliberately no "drop between two rows" here: real Studio has
 //! none either, because a place has no user-orderable sibling order to
-//! rearrange — see `explorer::reparent`'s own module comment.
+//! rearrange, see `explorer::reparent`'s own module comment.
 
 use gpui_kit::component::ActiveTheme;
 use gpui_kit::*;
@@ -36,7 +36,7 @@ pub(super) struct DraggedInstances {
 
 impl DraggedInstances {
     /// What dragging the row for `reference` picks up, given what is currently
-    /// selected. A row outside the selection drags only itself — pressing it
+    /// selected. A row outside the selection drags only itself, pressing it
     /// replaced the selection anyway, and carrying the old one would move
     /// instances the user never touched. Pressing any row inside it keeps the
     /// selection whole (see `defers_press`), so any of them carries it all.
@@ -82,7 +82,7 @@ fn press_modifiers(event: &ClickEvent) -> Modifiers {
 /// once it grows into a drag, so a plain click that still finds `target`
 /// inside a multi-selection is that deferred press's release, landing here
 /// instead. On a double-click inside the selection this only holds for the
-/// first click — by the second, the first has already narrowed the
+/// first click, by the second, the first has already narrowed the
 /// selection down to one row, so `defers_press` no longer applies and the
 /// click is free to open it instead.
 fn narrows_on_click(selected: &[Ref], target: Ref, modifiers: Modifiers) -> bool {
@@ -117,7 +117,7 @@ impl Render for DragPreview {
 /// The wrapper carries its own `id` because `on_drag` is only offered on a
 /// stateful element, and GPUI needs somewhere to keep the pending mouse-down
 /// a drag grows out of. It sits *inside* the tree widget's own row div, whose
-/// mouse-down already selects — so pressing a row still selects it, and only
+/// mouse-down already selects, so pressing a row still selects it, and only
 /// a press that then moves becomes a drag.
 pub(super) fn draggable_row(
     shell: &Entity<Shell>,
@@ -180,9 +180,9 @@ pub(super) fn draggable_row(
             cx.new(|_| DragPreview { label })
         })
         // Gates the highlight below as well as the drop itself (GPUI skips
-        // every `drag_over` style when this says no), so an illegal target —
+        // every `drag_over` style when this says no), so an illegal target,
         // the dragged instance itself, its own subtree, the parent it already
-        // has — simply never lights up.
+        // has, simply never lights up.
         .can_drop({
             let shell = shell.clone();
             move |payload, _, cx| {
@@ -198,7 +198,7 @@ pub(super) fn draggable_row(
         // already selected by the time a second click arrives, so opening and
         // selecting do not compete. A row that is not a script ignores this
         // (see `Shell::open_script`), which is why no class check happens
-        // here — the DOM is the thing that knows.
+        // here, the DOM is the thing that knows.
         //
         // A single click is also where a deferred plain press lands (GPUI
         // fires no click once the press became a drag): it narrows the
@@ -229,7 +229,7 @@ pub(super) fn draggable_row(
             }
         })
         // Right-click opens the row's own menu at the pointer. On mouse
-        // *down*, the way every desktop context menu opens — waiting for the
+        // *down*, the way every desktop context menu opens, waiting for the
         // release would leave the press with no feedback at all.
         .on_mouse_down(MouseButton::Right, {
             let shell = shell.clone();
@@ -255,7 +255,7 @@ impl Shell {
     /// What a plain press on a row would have done had it not been deferred
     /// to the release: selects the row alone, synchronously like
     /// [`Shell::select`] (the tree may already point at it, so its observer
-    /// would see no change), without `select`'s reveal — the row is under
+    /// would see no change), without `select`'s reveal, the row is under
     /// the pointer, and scrolling it to the centre would move it away.
     fn select_row(&mut self, target: Ref, cx: &mut Context<Self>) {
         let item = self.explorer.item(target);
@@ -267,7 +267,7 @@ impl Shell {
         }
     }
 
-    /// Whether dropping `dragged` onto `target` would move anything — asked
+    /// Whether dropping `dragged` onto `target` would move anything, asked
     /// once per visible row per frame while a drag is in flight, which is why
     /// `explorer::reparent` walks parents rather than subtrees.
     pub(super) fn accepts_drop(&self, dragged: &DraggedInstances, target: Ref) -> bool {
@@ -297,8 +297,8 @@ impl Shell {
             self.dom.set_parent(*reference, Some(target));
         }
         // One `Change::Parent` per moved reference: each subtree is re-read
-        // where it landed — nothing new to draw for a move within
-        // `Workspace`, built or taken out for one across its boundary — and
+        // where it landed, nothing new to draw for a move within
+        // `Workspace`, built or taken out for one across its boundary, and
         // undoing the drag reflects the same log from the other end.
         let changes = self.dom.take_changes();
 

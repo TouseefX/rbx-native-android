@@ -172,7 +172,7 @@ impl Firing<'_> {
 ///
 /// `Property` → `Changed(name)` and `Changed:<name>` (and
 /// `AttributeChanged`/`AttributeChanged:<n>` for `Attributes`, comparing
-/// nothing — every attribute name present fires); `Parent` → the child's
+/// nothing, every attribute name present fires); `Parent` → the child's
 /// `AncestryChanged(child, parent)` (and its descendants'), the old
 /// parent's `ChildRemoved`, the new one's `ChildAdded`, and
 /// `DescendantRemoving`/`DescendantAdded` up both ancestor chains;

@@ -1,5 +1,5 @@
 //! `StarterGui.ShowDevelopmentGui`: the service's own switch for whether
-//! anything under it is drawn — see [`super::super::plan::starter`].
+//! anything under it is drawn, see [`super::super::plan::starter`].
 
 use super::*;
 

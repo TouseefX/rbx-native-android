@@ -3,7 +3,7 @@
 //! A paused script is a Luau VM blocked inside its step hook (see
 //! `rbx_lua`'s debugger), so it cannot share the UI thread: the run gets its
 //! own OS thread and a clone of the place, and talks to the editor over two
-//! channels — [`Event`]s out, [`Command`]s in — the same `std::sync::mpsc`
+//! channels, [`Event`]s out, [`Command`]s in, the same `std::sync::mpsc`
 //! shape `argon_client::thread` uses. The editor decides what to do with
 //! the mutated clone once the run is over.
 
@@ -65,7 +65,7 @@ pub(crate) enum Event {
 
 #[derive(Debug)]
 pub(crate) struct Finished {
-    /// The clone as the script left it — `None` only if the VM itself could
+    /// The clone as the script left it, `None` only if the VM itself could
     /// not be built, which leaves nothing worth keeping.
     pub(crate) dom: Option<WeakDom>,
     /// Printed since the last pause.

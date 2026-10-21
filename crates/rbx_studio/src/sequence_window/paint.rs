@@ -2,7 +2,7 @@
 //! ramp, the curve and its envelope band, the grid behind them and the
 //! handles on top.
 //!
-//! The same two painters serve the panel and the row's own preview strip —
+//! The same two painters serve the panel and the row's own preview strip,
 //! a preview is this drawing with the grid and the handles turned off, so a
 //! row and the graph it opens can never disagree about the shape of a
 //! sequence.
@@ -26,8 +26,8 @@ const STEPS: usize = 128;
 const GRID: usize = 4;
 
 /// Breathing room above and below a curve, as a fraction of the plot's
-/// height and capped in pixels. Without it a keypoint at value 0 — which
-/// every transparency curve has — draws half outside the box, and the axis
+/// height and capped in pixels. Without it a keypoint at value 0, which
+/// every transparency curve has, draws half outside the box, and the axis
 /// ceiling is unreachable by pointer because it is the top edge itself. A
 /// ramp takes none: a gradient is meant to bleed to its own edges.
 const CURVE_PAD: f32 = 0.1;
@@ -54,7 +54,7 @@ impl Look {
     }
 }
 
-/// The plot element. `report` — when the caller wants it — is handed the
+/// The plot element. `report`, when the caller wants it, is handed the
 /// laid-out rectangle every frame, which is what turns a later pointer
 /// position into a `(time, value)` (see `sequence_editor::Rect`).
 pub(crate) fn plot(

@@ -1,5 +1,5 @@
 //! GPU presentation of `crate::scene::trail`: unlike a `Beam`'s ribbon, a
-//! trail's shape is not rebuilt from a static definition every frame — it is
+//! trail's shape is not rebuilt from a static definition every frame, it is
 //! *accumulated*, so this is where each live `Trail` keeps its own
 //! [`crate::scene::TrailRecorder`] between frames and feeds it
 //! `Attachment0`/`Attachment1`'s current world position every [`Trails::draw`]
@@ -40,7 +40,7 @@ use crate::scene::{Trail, TrailRecorder};
 use pipeline::{CameraRaw, VertexRaw};
 
 /// One distinct texture's upload, kept alive beside the bind group that views
-/// it — identical role to `renderer::beam::Slot`.
+/// it, identical role to `renderer::beam::Slot`.
 struct Slot {
     bind_group: wgpu::BindGroup,
     #[allow(dead_code)]
@@ -60,29 +60,29 @@ pub(super) struct Trails {
     camera_bind_group: wgpu::BindGroup,
     image_layout: wgpu::BindGroupLayout,
     /// Index 0 is always the flat-white fallback, both for `AssetRef::Empty`
-    /// and a texture that failed to download — see `renderer::beam::Beams`'s
+    /// and a texture that failed to download, see `renderer::beam::Beams`'s
     /// identical field, empty until the first scene with a trail in it for
     /// the same reason.
     textures: Vec<Slot>,
     /// Each live trail's static definition, paired with the running history
-    /// only `Trails` (not `crate::scene::Scene`) has any business owning —
+    /// only `Trails` (not `crate::scene::Scene`) has any business owning,
     /// see this module's doc.
     live: Vec<(Trail, TrailRecorder, usize)>,
-    /// Whether the quality profile draws trails at all — `false` keeps `live`
+    /// Whether the quality profile draws trails at all, `false` keeps `live`
     /// empty, [`Trails::replace`] included. Re-read from the profile by every
     /// [`Trails::rebuild`], so a level switched between two scenes takes.
     enabled: bool,
     /// The slot in `textures` every reference [`Trails::new`] tried resolved
     /// to (0 where the download failed); a reference missing here was never
-    /// attempted — see [`Trails::replace`].
+    /// attempted, see [`Trails::replace`].
     slots: HashMap<AssetRef, usize>,
     vertices: Option<wgpu::Buffer>,
-    /// Grown, never shrunk — same reasoning as `renderer::beam::Beams::vertex_capacity`.
+    /// Grown, never shrunk, same reasoning as `renderer::beam::Beams::vertex_capacity`.
     vertex_capacity: usize,
     last_tick: Option<Instant>,
     /// Wall-clock seconds since the first [`Trails::draw`]; what every
     /// `Recorder` times its samples against. `None` for the very first call
-    /// keeps a `--screenshot` deterministic — see
+    /// keeps a `--screenshot` deterministic, see
     /// `renderer::beam::Beams::elapsed`.
     elapsed: f32,
 }
@@ -158,7 +158,7 @@ impl Trails {
         }
 
         // U repeats by `TextureLength`, V does not: a trail's texture never
-        // tiles across its width — same sampler settings as `renderer::beam`.
+        // tiles across its width, same sampler settings as `renderer::beam`.
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("rbxview trail sampler"),
             address_mode_u: wgpu::AddressMode::Repeat,
@@ -219,13 +219,13 @@ impl Trails {
             .collect();
     }
 
-    /// Rebuilds the pipeline for a new sample count — see `renderer::switch`.
+    /// Rebuilds the pipeline for a new sample count, see `renderer::switch`.
     pub(super) fn set_target(&mut self, device: &wgpu::Device, target: Target) {
         self.pipeline =
             pipeline::create_pipeline(device, target, &self.camera_layout, &self.image_layout);
     }
 
-    /// Whether anything is drawn at all — every live one moves with the
+    /// Whether anything is drawn at all, every live one moves with the
     /// clock, so a host that only draws on change has to keep drawing.
     pub(super) fn is_live(&self) -> bool {
         !self.live.is_empty()
@@ -233,7 +233,7 @@ impl Trails {
 
     /// Advances every trail's recorder by one frame, rebuilds every ribbon,
     /// uploads them and draws one run per texture group over `targets`'s
-    /// existing colour and depth attachments — same pass shape as
+    /// existing colour and depth attachments, same pass shape as
     /// `renderer::beam::Beams::draw`, run right after it.
     pub(super) fn draw(
         &mut self,
@@ -265,7 +265,7 @@ impl Trails {
 
         for (trail, recorder, _) in &mut self.live {
             // `Enabled = false` stops new segments but not existing ones
-            // ageing out — see `crate::scene::Trail::enabled`'s doc — so
+            // ageing out, see `crate::scene::Trail::enabled`'s doc, so
             // `expire` always runs, `record` only when enabled.
             if trail.enabled {
                 recorder.record(
@@ -326,7 +326,7 @@ impl Trails {
 
     /// One ribbon per trail with at least two recorded samples, concatenated
     /// into groups by texture (first-seen order) and bridged within each
-    /// group with degenerate triangles — identical grouping to
+    /// group with degenerate triangles, identical grouping to
     /// `renderer::beam::Beams::build`.
     fn build(&self, eye: Vec3) -> (Vec<VertexRaw>, Vec<Run>) {
         let mut order: Vec<usize> = Vec::new();
@@ -388,7 +388,7 @@ impl Trails {
 }
 
 /// A 1x1 white texture: what `AssetRef::Empty` and a download failure both
-/// draw through — identical role to `renderer::beam::white_slot`.
+/// draw through, identical role to `renderer::beam::white_slot`.
 fn white_slot(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -410,7 +410,7 @@ fn white_slot(
 }
 
 /// Every distinct non-empty texture the given trails need, in first-seen
-/// order — kept stable so re-running the same file draws the same
+/// order, kept stable so re-running the same file draws the same
 /// texture-to-slot mapping.
 fn texture_refs(trails: &[Trail]) -> Vec<AssetRef> {
     let mut seen = Vec::new();

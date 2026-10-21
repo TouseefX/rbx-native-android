@@ -18,7 +18,7 @@ use support::all_refs;
 const MESH_DATA_TYPE_ID: u8 = 0x1C;
 
 /// A real, richly-populated place file, read only by the one test that needs
-/// one — never baked into the binary, so the crate still builds for anyone
+/// one, never baked into the binary, so the crate still builds for anyone
 /// without it. Set `RBX_ROUND_TRIP_FIXTURE` to opt in.
 fn real_place() -> Vec<u8> {
     let path = std::env::var("RBX_ROUND_TRIP_FIXTURE")

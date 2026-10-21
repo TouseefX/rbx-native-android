@@ -10,7 +10,7 @@ const SHADER: &str = include_str!("../lines.wgsl");
 const HANDLE_SHADER: &str = include_str!("../gizmo.wgsl");
 /// What a multisampled scene depth buffer changes in [`SHADER`]: WGSL types
 /// it differently, and it has more than one depth per pixel to reach the
-/// farthest of — the substitution `renderer::post` makes for its resolve,
+/// farthest of, the substitution `renderer::post` makes for its resolve,
 /// plus the loop.
 const DEPTH_BINDING: &str = "var scene_depth: texture_depth_2d";
 const MULTISAMPLED_DEPTH_BINDING: &str = "var scene_depth: texture_depth_multisampled_2d";
@@ -25,8 +25,8 @@ pub(super) const STENCIL_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Sten
 /// What a handle leaves in the stencil, and what a guide must not find there.
 pub(super) const HANDLE: u32 = 1;
 
-/// The pipelines for one target format and one scene sample count — lines
-/// then dots, each depth-tested then drawn through — the handle stamp, and
+/// The pipelines for one target format and one scene sample count, lines
+/// then dots, each depth-tested then drawn through, the handle stamp, and
 /// the layout the scene's depth buffer is bound through.
 pub(super) struct Gpu {
     pub(super) format: wgpu::TextureFormat,

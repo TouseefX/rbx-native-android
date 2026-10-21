@@ -18,7 +18,7 @@ use crate::scene::Placement;
 /// the decoded asset the loader keeps across reloads (see `load::Resident`),
 /// shared rather than copied into every scene built from it.
 pub(crate) struct Group {
-    /// The asset `image` was decoded from. Not drawn from — the renderer keeps
+    /// The asset `image` was decoded from. Not drawn from, the renderer keeps
     /// its uploads keyed by this, so a scene rebuild (see
     /// `renderer::textured::Textured::rebuild`) can tell an image it already
     /// holds on the GPU from one it has to upload.
@@ -30,7 +30,7 @@ pub(crate) struct Group {
 
 /// One skybox panel and the image pasted on it.
 pub(crate) struct Panel {
-    /// The asset `image` came from — the same role as [`Group::reference`]:
+    /// The asset `image` came from, the same role as [`Group::reference`]:
     /// six unchanged references mean an unchanged environment probe and
     /// skybox, which a rebuild then keeps rather than prefilters again.
     pub(crate) reference: AssetRef,
@@ -40,7 +40,7 @@ pub(crate) struct Panel {
 
 /// The sun or the moon, with its disc image.
 pub(crate) struct Celestial {
-    /// The asset `image` came from — see [`Group::reference`].
+    /// The asset `image` came from, see [`Group::reference`].
     pub(crate) reference: AssetRef,
     pub(crate) image: Arc<Image>,
     pub(crate) body: Body,
@@ -63,7 +63,7 @@ impl Decor {
     /// or nothing, since five panels and a hole reads as a bug rather than as a
     /// sky.
     ///
-    /// `drawn` is the scene's placements as they stand — a face whose part is
+    /// `drawn` is the scene's placements as they stand, a face whose part is
     /// not among them is dropped. A plan is made while every part still draws
     /// its box (there is no other moment a streaming load could make one), and
     /// this is where a part whose real mesh has since arrived stops carrying

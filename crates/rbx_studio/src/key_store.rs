@@ -1,6 +1,6 @@
-//! The Open Cloud API key at rest: the OS credential store — the macOS
+//! The Open Cloud API key at rest: the OS credential store, the macOS
 //! Keychain, Windows' Credential Manager, or the Secret Service (GNOME
-//! Keyring, KWallet) on Linux — through GPUI's own credentials API, never a
+//! Keyring, KWallet) on Linux, through GPUI's own credentials API, never a
 //! plaintext file.
 //!
 //! What that buys, honestly: the key is encrypted on disk under the user's
@@ -12,7 +12,7 @@
 //! what make a stolen key useless elsewhere.
 //!
 //! The key found here is handed to `rbx_cloud::ApiKey::install`, so every
-//! `Client` built afterwards — the viewer's asset fetches included — uses
+//! `Client` built afterwards, the viewer's asset fetches included, uses
 //! it. `RBX_API_KEY` still wins over it, for scripted launches.
 
 pub(crate) mod accounts;
@@ -26,7 +26,7 @@ const ACCOUNT: &str = "open-cloud-api-key";
 
 /// Loads the stored key into `rbx_cloud` at startup, moving a key still in
 /// the old plaintext `api_key` file into the store first. Returns whether
-/// any key is available now — `false` sends a launch to the setup wizard.
+/// any key is available now, `false` sends a launch to the setup wizard.
 pub(crate) async fn restore(cx: &mut AsyncApp) -> bool {
     match read(cx).await {
         Ok(Some(key)) => {

@@ -16,7 +16,7 @@ impl Rect {
 
     /// This box carried `degrees` clockwise around `pivot`: its centre turns,
     /// its extent does not, which is all an axis-aligned box can say about
-    /// a rotation — the element's own turn about that centre is
+    /// a rotation, the element's own turn about that centre is
     /// [`Element::rotation`]'s.
     pub(crate) fn turned(&self, degrees: f32, pivot: [f32; 2]) -> Rect {
         if degrees == 0.0 {
@@ -34,7 +34,7 @@ impl Rect {
         }
     }
 
-    /// The overlap of two boxes, empty (zero-sized) where they do not meet —
+    /// The overlap of two boxes, empty (zero-sized) where they do not meet,
     /// which is what a scissor rect has to become for a child clipped away
     /// entirely.
     pub(crate) fn intersect(&self, other: &Rect) -> Rect {

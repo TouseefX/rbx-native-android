@@ -31,7 +31,7 @@ pub fn read_place(path: &Path) -> Result<WeakDom, String> {
     parse_place(&bytes, path)
 }
 
-/// [`read_place`] for bytes already in memory — what a browser, which has a
+/// [`read_place`] for bytes already in memory, what a browser, which has a
 /// dropped file's contents but no path to read, starts from. `path` only
 /// names the file in an error.
 pub fn parse_place(bytes: &[u8], path: &Path) -> Result<WeakDom, String> {
@@ -39,7 +39,7 @@ pub fn parse_place(bytes: &[u8], path: &Path) -> Result<WeakDom, String> {
     // Both parsers keep a property under whatever name the file used, and a
     // hand-written place may say `Color` or `Size` where Studio saves
     // `Color3uint8` and `size`. Renamed once here, so nothing that reads the
-    // tree needs to know both — for a binary place by the names its
+    // tree needs to know both, for a binary place by the names its
     // per-class property chunks carry, rather than by visiting every
     // instance.
     let mut dom = if rbx_xml::is_xml(bytes) {
@@ -62,7 +62,7 @@ pub fn parse_place(bytes: &[u8], path: &Path) -> Result<WeakDom, String> {
     };
     // A parser builds the tree through the same `insert`/`set_parent` an edit
     // uses, so the DOM comes back with a change log of its own construction
-    // — one entry per instance in the file. The log is what happened *since*
+    // one entry per instance in the file. The log is what happened *since*
     // the tree stood, and to a caller feeding it to `Headless::apply_changes`
     // a whole place's worth of "new" instances would be an edit of the whole
     // place; it starts empty here instead.
@@ -78,7 +78,7 @@ pub(crate) struct Toggles {
     pub(crate) materials: bool,
     pub(crate) lights: bool,
     pub(crate) clock_time: Option<f32>,
-    /// Force every `StarterGui.ShowDevelopmentGui` on — see
+    /// Force every `StarterGui.ShowDevelopmentGui` on, see
     /// [`show_development_gui`]. Only [`Loaded::read`] can honour it: it is
     /// an edit of the tree, and every other entry point owns the DOM it
     /// hands in and shows the place as saved.
@@ -86,7 +86,7 @@ pub(crate) struct Toggles {
 }
 
 /// Turns `ShowDevelopmentGui` on for every `StarterGui` in `dom`, so a place
-/// that saved the flag off still shows its screens — what `rbxview`'s
+/// that saved the flag off still shows its screens, what `rbxview`'s
 /// `--show-development-gui` asks for, since the flag is a Studio view toggle
 /// and a screenshot is often wanted of what a player would see.
 pub(crate) fn show_development_gui(dom: &mut WeakDom) {
@@ -112,7 +112,7 @@ pub(crate) fn show_development_gui(dom: &mut WeakDom) {
 /// It also owns the *plans* those pieces were joined from, not just the
 /// result. A streaming loader (see [`Resident`]) answers a first build with
 /// whatever happened to be decoded already and fetches the rest in the
-/// background, so the join has to be redoable — and redoable without the DOM,
+/// background, so the join has to be redoable, and redoable without the DOM,
 /// which is sixty milliseconds to clone on a real place and is gone by the
 /// time an asset lands. See [`Loaded::resolve`].
 pub(crate) struct Loaded {
@@ -124,8 +124,8 @@ pub(crate) struct Loaded {
     decor_plan: textures::Plan,
     lighting: Lighting,
     lights: Vec<LocalLight>,
-    /// Every image the renderer's own passes fetch for themselves —
-    /// `ParticleEmitter`, `Beam` and `Trail` textures and the GUI atlas — as
+    /// Every image the renderer's own passes fetch for themselves,
+    /// `ParticleEmitter`, `Beam` and `Trail` textures and the GUI atlas, as
     /// far as the loader has an answer for them. They are asked for here
     /// rather than inside those passes so that no pass ever resolves an asset
     /// on the thread that draws.
@@ -140,7 +140,7 @@ pub(crate) struct Loaded {
     /// result for an asset the place stopped naming is filed and ignored.
     wanted: Vec<AssetRef>,
     /// Asset-fetch/decode warnings collected while building this `Loaded`,
-    /// still empty until [`Loaded::take_warnings`] drains them — see
+    /// still empty until [`Loaded::take_warnings`] drains them, see
     /// `Headless`, which accumulates them across reloads for the Output dock.
     warnings: Vec<String>,
 }
@@ -167,14 +167,14 @@ impl Loaded {
     }
 
     /// The same pipeline as [`Loaded::read`], starting from a DOM and a
-    /// reflection database already in memory instead of a path — what the
+    /// reflection database already in memory instead of a path, what the
     /// command bar's reload takes after a script mutates the tree, since
     /// re-serializing it to disk just to re-parse it would be wasted work.
     ///
     /// `resident` is where every asset this decodes stays: hand the same one
     /// to every reload of the same place and only an asset the place never
-    /// showed before — or whose fetch failed for a reason that may since
-    /// have passed — is fetched and decoded again; see [`Resident`]. A
+    /// showed before, or whose fetch failed for a reason that may since
+    /// have passed, is fetched and decoded again; see [`Resident`]. A
     /// streaming one makes this return without waiting for any of them; see
     /// [`Loaded::resolve`] for what finishes the job afterwards.
     pub(crate) fn from_dom(
@@ -214,7 +214,7 @@ impl Loaded {
         Ok(loaded)
     }
 
-    /// Drains the asset warnings this `Loaded` collected while it was built —
+    /// Drains the asset warnings this `Loaded` collected while it was built,
     /// see the struct's `warnings` field. Left empty by a second call: a
     /// caller that keeps several `Loaded`s alive (`Headless::reload` replaces
     /// its own) takes each exactly once.
@@ -225,7 +225,7 @@ impl Loaded {
     /// Whether any of `references` is something this place actually draws
     /// through.
     ///
-    /// The whole of the "an asset landed — is it worth re-resolving?"
+    /// The whole of the "an asset landed, is it worth re-resolving?"
     /// decision. A background fetch cannot be cancelled, so an edit that
     /// moves on (a `MeshId` typed, corrected and typed again) leaves results
     /// arriving for references nothing names any more; answering `false` for
@@ -237,7 +237,7 @@ impl Loaded {
             .any(|reference| self.wanted.contains(reference))
     }
 
-    /// Records that the place is now also waiting on `references` — what a
+    /// Records that the place is now also waiting on `references`, what a
     /// single-instance edit adds when it names an asset the scene has never
     /// asked for, so [`Loaded::wants_any`] recognises the landing when it
     /// comes.
@@ -249,7 +249,7 @@ impl Loaded {
         }
     }
 
-    /// The parts an edit patches in place — see `Headless::apply_changes`.
+    /// The parts an edit patches in place, see `Headless::apply_changes`.
     pub(crate) fn scene_mut(&mut self) -> &mut Scene {
         &mut self.scene
     }
@@ -259,7 +259,7 @@ impl Loaded {
     }
 
     /// Re-reads every `Decal`/`Texture` hanging off `part` into the decor
-    /// plan, against the placement this scene now draws that part at —
+    /// plan, against the placement this scene now draws that part at,
     /// keeping the plan in step the way `Renderer::sync_part` keeps the GPU
     /// in step.
     ///
@@ -269,7 +269,7 @@ impl Loaded {
     /// renderer is patched with the face there and then, but the *plan* is
     /// what every later asset landing re-assembles the decals from, so a
     /// plan left as the file was read would quietly undo the edit the moment
-    /// anything else lands — including the very image the edit just asked
+    /// anything else lands, including the very image the edit just asked
     /// for. A part this scene draws no box for has nothing to project onto
     /// and keeps whatever the plan holds, exactly as `Decor::assemble`
     /// already drops such a face.
@@ -291,7 +291,7 @@ impl Loaded {
     /// limit with `None`, and joins the decals again against what is drawn
     /// now: a face is assembled only onto a part `Scene::placements` keeps,
     /// so this is what takes the decals of a hidden part out of the picture
-    /// — and puts them back. Every image is already resident by then, so
+    /// and puts them back. Every image is already resident by then, so
     /// nothing is fetched; the warnings are whatever the join reports.
     pub(crate) fn isolate(
         &mut self,
@@ -305,7 +305,7 @@ impl Loaded {
         self.resolve_decor(resident)
     }
 
-    /// Replaces the constant lighting terms wholesale — what
+    /// Replaces the constant lighting terms wholesale, what
     /// `Headless::apply_changes` recomputes off a mutated DOM for a
     /// `Lighting` edit, without touching `self.scene`/`self.decor` at all.
     pub(crate) fn set_lighting(&mut self, lighting: Lighting) {
@@ -316,7 +316,7 @@ impl Loaded {
         &self.lights
     }
 
-    /// Replaces the local lights wholesale — the same, for a `Light` (or the
+    /// Replaces the local lights wholesale, the same, for a `Light` (or the
     /// part one hangs off) that changed.
     pub(crate) fn set_lights(&mut self, lights: Vec<LocalLight>) {
         self.lights = lights;

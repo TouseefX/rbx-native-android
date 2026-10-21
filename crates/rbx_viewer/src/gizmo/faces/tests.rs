@@ -12,7 +12,7 @@ fn pose(position: Vec3) -> Pose {
     }
 }
 
-/// A part of `size` studs standing at `centre`, square to the world — the
+/// A part of `size` studs standing at `centre`, square to the world, the
 /// matrix `pick::model_of` builds for one.
 fn part(centre: Vec3, size: Vec3) -> Mat4 {
     Mat4::from_scale_rotation_translation(size, Quat::IDENTITY, centre)
@@ -94,7 +94,7 @@ fn a_part_flattened_to_nothing_still_has_grabbable_handles() {
 #[test]
 fn a_ball_keeps_its_size_on_screen_rather_than_growing_with_the_part() {
     // Twice as far from the eye is twice as big in studs, which is the same
-    // size in pixels — the property that makes a handle on a baseplate's far
+    // size in pixels, the property that makes a handle on a baseplate's far
     // edge grabbable at all.
     let eye = pose(Vec3::ZERO);
     let near = Faces::new(part(Vec3::new(0.0, 0.0, -20.0), Vec3::ONE), eye, false);
@@ -171,7 +171,7 @@ fn a_baseplates_handle_is_grabbed_out_at_its_real_edge() {
     let edge = plate.handle(Axis::X, 1.0);
     assert!((edge.x - 512.0).abs() < 1e-2);
     // A ray fired straight at that ball from the eye grabs it, and one aimed
-    // at where the old fixed-arm block sat — a few studs off the pivot —
+    // at where the old fixed-arm block sat, a few studs off the pivot,
     // grabs nothing at all.
     let at_edge = Ray::new(eye.position, (edge - eye.position).normalize());
     assert_eq!(plate.grab(at_edge), Some((Axis::X, 1.0)));
@@ -195,7 +195,7 @@ fn every_face_is_listed_once() {
 
 /// Summoned onto a point on the box's own +Y face, the +Y ball comes to
 /// exactly that point and every other ball slides level with it on its own
-/// face — none leaves the box.
+/// face, none leaves the box.
 #[test]
 fn summoned_balls_slide_across_their_faces_to_the_point() {
     let faces = Faces::new(
@@ -218,8 +218,8 @@ fn summoned_balls_slide_across_their_faces_to_the_point() {
         .abs_diff_eq(Vec3::new(1.5, 0.0, -2.0), 1e-5));
 }
 
-/// A point outside the box — the cursor over some other part, or over the
-/// sky — is clamped into it first: Studio keeps summoned Scale handles
+/// A point outside the box, the cursor over some other part, or over the
+/// sky, is clamped into it first: Studio keeps summoned Scale handles
 /// "within the bounds of [the] selected object".
 #[test]
 fn a_summon_point_outside_the_box_is_held_to_its_bounds() {

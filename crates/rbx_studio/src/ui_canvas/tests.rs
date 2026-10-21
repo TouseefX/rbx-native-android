@@ -132,7 +132,7 @@ fn handles_sit_on_the_turned_box() {
 fn a_move_snaps_its_nearest_line_onto_a_siblings_within_reach() {
     let sibling = rect(100.0, 0.0, 50.0, 50.0);
     // Left edge 97 is 3 off the sibling's 100 and the centre 117 is 8 off
-    // its 125 — the nearer one wins.
+    // its 125, the nearer one wins.
     let shift = guides::snap_move(&rect(97.0, 200.0, 40.0, 40.0), &[sibling], 4.0);
     assert_eq!(shift, [3.0, 0.0], "down is out of reach");
     assert_eq!(
@@ -234,8 +234,8 @@ fn a_group_frame_fits_its_members_without_moving_them() {
     );
 }
 
-// Scale stays scale — of the new frame for a member, of the parent for the
-// frame — and pixels stay pixels; `UIScale` comes back out of a size, and a
+// Scale stays scale, of the new frame for a member, of the parent for the
+// frame, and pixels stay pixels; `UIScale` comes back out of a size, and a
 // `RelativeXX` height is taken against the frame's width.
 #[test]
 fn a_group_keeps_each_value_in_the_mode_it_was_written_in() {

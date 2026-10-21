@@ -25,7 +25,7 @@ pub use face::FlatFace;
 ///
 /// Cloning is cheap: the map and every mesh in it sit behind `Arc`s, so the
 /// render thread that parsed them and the thread that picks against them read
-/// the very same vertices — the geometry that is actually on screen, without
+/// the very same vertices, the geometry that is actually on screen, without
 /// a copy of it. Empty by default, which is also the right answer for a place
 /// whose meshes have not downloaded: a file-mesh part then picks as the
 /// fallback box it is drawn as.

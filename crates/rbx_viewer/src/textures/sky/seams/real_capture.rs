@@ -13,7 +13,7 @@ use rbx_assets::{decode_image, sniff, Asset, AssetCache};
 use super::super::SkyFace;
 use super::{Edge, ADJACENT_BORDERS, EDGES};
 
-/// Six distinct cloud panels, which make the seams measurable at all — a
+/// Six distinct cloud panels, which make the seams measurable at all, a
 /// uniform gradient would hide any mistake.
 const PANELS: [(SkyFace, u64); 6] = [
     (SkyFace::Rt, 14556579194),
@@ -157,7 +157,7 @@ fn the_real_capture_borders_agree_only_as_this_table_says() {
 
 // Which pole is the zenith is the one thing the pixels cannot settle: it comes
 // from the property names alone. Brightness is no help and must not be turned
-// into a check — this sky is painted from above a sea of clouds, so its `Dn`
+// into a check, this sky is painted from above a sea of clouds, so its `Dn`
 // panel (mean 184/255) is *brighter* than its `Up` panel (157/255), which holds
 // the moon. Both pole panels do show the radial singularity a pole has, and the
 // side panels are stored upright with their horizon across the middle.

@@ -25,7 +25,7 @@ use crate::luau_lsp::{self, Client};
 const MAX_COMPLETIONS: usize = 200;
 
 /// An open tab as the server knows it. Closed on the server when the last
-/// handle goes — the tab's and its editor's providers'.
+/// handle goes, the tab's and its editor's providers'.
 pub(crate) struct Document {
     client: Arc<Client>,
     uri: String,
@@ -208,8 +208,8 @@ fn identifier_start(source: &str, offset: usize) -> usize {
         .map_or(offset, |(index, _)| index)
 }
 
-/// The server's list narrowed to `prefix` — the editor's menu shows what it
-/// is given, unfiltered — in the server's own order, each item rewritten to
+/// The server's list narrowed to `prefix`: the editor's menu shows what it
+/// is given, unfiltered, in the server's own order, each item rewritten to
 /// replace `replace` (the typed prefix, in editor positions) with its text.
 fn shape(reply: Value, prefix: &str, replace: Range) -> Vec<CompletionItem> {
     let items = match serde_json::from_value(reply) {

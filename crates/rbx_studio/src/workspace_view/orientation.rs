@@ -2,12 +2,12 @@
 //! faces the camera's current pose puts on the near side, and where each
 //! one's four corners and label land inside the widget.
 //!
-//! An rbx-native addition, not a Roblox Studio one — see the `ROADMAP.md`
+//! An rbx-native addition, not a Roblox Studio one, see the `ROADMAP.md`
 //! bullet this implements. Still a flat 2D overlay, not a literal 3D cube
 //! mesh in the scene: each face is the plain orthographic projection of a
 //! world-axis-aligned unit cube's square face onto the camera's own basis,
 //! which is exactly what an isometric-style flat drawing of a cube already
-//! looks like — no perspective divide, no WGPU render pass. `workspace_view
+//! looks like, no perspective divide, no WGPU render pass. `workspace_view
 //! .rs`'s `Render` impl turns [`visible_faces`]'s answer into the actual
 //! GPUI elements (`PathBuilder`-filled polygons plus a label per face), the
 //! same split `label.rs` keeps between formatting and layout.
@@ -20,7 +20,7 @@ use crate::tokens;
 
 /// One world axis's pair of opposite faces, and the square they each span.
 ///
-/// `a`/`b` are the *other* two world axes — the ones a face spans across,
+/// `a`/`b` are the *other* two world axes, the ones a face spans across,
 /// found the same way `rbx_viewer::gizmo::Axis::next` cycles X→Y→Z→X, just
 /// inlined as data instead of a method, since this table only ever needs
 /// the two axes *other than* its own.
@@ -28,7 +28,7 @@ struct AxisFaces {
     axis: Vec3,
     a: Vec3,
     b: Vec3,
-    /// Which world axis each label names — an rbx-native convention, not a
+    /// Which world axis each label names, an rbx-native convention, not a
     /// Roblox one: positionally paired the way the `ROADMAP.md` bullet
     /// itself lists them (`+X`/Right, `-X`/Left, `+Y`/Top, `-Y`/Bottom,
     /// `+Z`/Front, `-Z`/Back), not Roblox's own `CFrame.LookVector` (`-Z`).
@@ -77,7 +77,7 @@ pub(super) struct Face {
     pub(super) label: &'static str,
     pub(super) color: Rgba,
     /// The face's four corners, in cyclic (non-self-intersecting) order, on
-    /// a unit-radius screen scale — the caller scales by the widget's
+    /// a unit-radius screen scale, the caller scales by the widget's
     /// actual on-screen radius. `x` is screen-right, `y` is screen-down
     /// (GPUI's own convention, not world space).
     ///
@@ -86,7 +86,7 @@ pub(super) struct Face {
     /// is not any more because nothing needed it.
     pub(super) corners: [(f32, f32); 4],
     /// How square-on this face is to the camera, from `0.0` (perfectly
-    /// edge-on — see `visible_faces`'s doc on the degenerate case) to `1.0`
+    /// edge-on, see `visible_faces`'s doc on the degenerate case) to `1.0`
     /// (dead centre, filling the indicator). A face's own fill already reads
     /// this from its `corners`' shrinking area for free; a caller's fixed-
     /// size *label* does not; without dimming it a near-edge-on face still
@@ -95,30 +95,30 @@ pub(super) struct Face {
     pub(super) prominence: f32,
 }
 
-/// The three cube faces — one per world axis — facing the camera at this
+/// The three cube faces, one per world axis, facing the camera at this
 /// pose, ready to lay out around the indicator's own centre.
 ///
 /// Always exactly three, one per axis, never fewer: at an axis-aligned view
 /// (looking exactly down one world axis) the other two axes' faces are
 /// edge-on and project to a degenerate zero-area sliver (their four corners
-/// collapse to two — see this module's tests) rather than vanishing outright,
+/// collapse to two, see this module's tests) rather than vanishing outright,
 /// which reads the same as "not there" once painted but needs no special
 /// case to produce.
 ///
 /// Depends only on `pose`'s rotation (`Pose::basis`), never its position or
-/// `ortho_scale` — so, deliberately unlike most of this camera's own state,
+/// `ortho_scale`: so, deliberately unlike most of this camera's own state,
 /// this projection needs no special-casing for orthographic mode: an
 /// orthographic camera's basis is exactly as meaningful as a perspective
 /// one's, since both share the same notion of "which way is it looking".
 ///
 /// "Facing the camera" means roughly aligned with the camera's own forward
-/// vector, not "closer to the viewer" in the literal ViewCube sense —
+/// vector, not "closer to the viewer" in the literal ViewCube sense,
 /// looking straight down `-Z` puts `-Z` ("Back") dead ahead and `+Z`
 /// ("Front") behind it, so the `Back` face fills the indicator square-on and
 /// `Front` doesn't appear. That reads oddly next to the label's English
 /// meaning, but it is what "which face am I currently looking toward" has
 /// to mean for a fixed label-to-axis pairing with no free camera-relative
-/// renaming — and this widget is an original rbx-native convention to begin
+/// renaming, and this widget is an original rbx-native convention to begin
 /// with, not a claim about how Roblox or any other tool labels its own cube.
 pub(super) fn visible_faces(pose: Pose) -> [Face; 3] {
     let (forward, right, up) = pose.basis();
@@ -153,7 +153,7 @@ pub(super) fn visible_faces(pose: Pose) -> [Face; 3] {
 ///
 /// The split is the whole illusion: two arcs of the same colour, the far
 /// one dimmed, read as a circle passing *through* a sphere rather than as a
-/// flat ellipse drawn on top of one. Nothing here is a 3D render — it is
+/// flat ellipse drawn on top of one. Nothing here is a 3D render, it is
 /// the same orthographic projection the cube faces already use.
 ///
 /// Each half is walked from the same start angle, so a ring that crosses
@@ -175,7 +175,7 @@ pub(super) struct AxisLabel {
     pub(super) color: Rgba,
     pub(super) at: (f32, f32),
     /// `1.0` when the axis points straight at the camera, `0.0` when it
-    /// lies in the screen plane, and negative when it points away — a
+    /// lies in the screen plane, and negative when it points away, a
     /// caller fades the far ones rather than letting three labels pile up
     /// in the middle.
     pub(super) depth: f32,
@@ -185,7 +185,7 @@ pub(super) struct AxisLabel {
 /// no visible corners, few enough that three of them cost nothing.
 const RING_SEGMENTS: usize = 64;
 
-/// The three orbital rings at this pose — one per world axis, each the unit
+/// The three orbital rings at this pose, one per world axis, each the unit
 /// circle in the plane *perpendicular* to that axis, so the red ring is the
 /// one the X axis passes through.
 pub(super) fn axis_rings(pose: Pose) -> [Ring; 3] {
@@ -260,7 +260,7 @@ mod tests {
     }
 
     // The worked example this pure function exists to make checkable: looking
-    // straight down `-Z` (Roblox's own spawn convention — see
+    // straight down `-Z` (Roblox's own spawn convention, see
     // `rbx_viewer::camera::Camera::spawn_pose`), the `Back` face (paired
     // with `-Z`) sits dead ahead of the camera and fills the indicator
     // square-on, corner-for-corner.
@@ -278,7 +278,7 @@ mod tests {
             );
         }
 
-        // Its edge-on neighbours have nothing to show — see
+        // Its edge-on neighbours have nothing to show, see
         // `a_face_exactly_edge_on_collapses_to_a_line_not_a_square` below for
         // their actual (degenerate) shape.
         assert!(face(&faces, "Left").prominence < 1e-4);
@@ -304,7 +304,7 @@ mod tests {
         );
     }
 
-    // A quarter turn brings the adjacent axis square-on instead — the same
+    // A quarter turn brings the adjacent axis square-on instead, the same
     // rotation `orientation`'s previous dot-based version checked.
     #[test]
     fn a_quarter_turn_brings_the_left_face_square_on() {
@@ -323,7 +323,7 @@ mod tests {
     }
 
     /// A square's projected centre is the mean of its projected corners,
-    /// because the projection is linear — which is what lets the renderer
+    /// because the projection is linear, which is what lets the renderer
     /// place anything relative to a face without carrying a separate point.
     #[test]
     fn a_faces_centre_is_the_mean_of_its_own_corners() {

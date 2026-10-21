@@ -1,5 +1,5 @@
-//! Bind group 0 — the view-projection matrix, the lighting uniform and the
-//! environment probe every pass shares — and the one function every surface
+//! Bind group 0, the view-projection matrix, the lighting uniform and the
+//! environment probe every pass shares, and the one function every surface
 //! pipeline in this renderer is built by.
 
 use glam::Mat4;
@@ -74,7 +74,7 @@ pub(super) const SKYBOX_SHADER: &str = concat!(
 
 // The frame uniform (bind group 0, binding 0): the view-projection matrix,
 // then the viewport's pixel size in a `vec4` (`xy`, `z` the `ForceField`
-// shimmer's phase, `w` how its intersection glow reads depth — see
+// shimmer's phase, `w` how its intersection glow reads depth, see
 // `intersection_depth`) so the outline shaders can expand their edges to a
 // constant pixel width. Every
 // other surface shader declares only the matrix and reads just the first 64
@@ -107,12 +107,12 @@ impl Target {
 
 /// The bind groups a surface pass shares whatever it draws: the frame at group
 /// 0 and the material arrays at group 1. A pass's own image, if it has one,
-/// sits above both at group 2 — see [`shape_pipelines`] for why the order matters.
+/// sits above both at group 2, see [`shape_pipelines`] for why the order matters.
 #[derive(Clone, Copy)]
 pub(super) struct Bindings<'a> {
     pub(super) frame: &'a wgpu::BindGroup,
     pub(super) materials: &'a wgpu::BindGroup,
-    /// Group 3, for the blended pipelines only — see [`super::scene_depth`].
+    /// Group 3, for the blended pipelines only, see [`super::scene_depth`].
     pub(super) scene_depth: Option<&'a wgpu::BindGroup>,
 }
 
@@ -127,22 +127,22 @@ pub(super) struct Shared<'a> {
     pub(super) env: &'a EnvMap,
     pub(super) shadow_map: &'a wgpu::TextureView,
     pub(super) shadow_sampler: &'a wgpu::Sampler,
-    /// The local lights' own shadow array and this frame's per-light records —
+    /// The local lights' own shadow array and this frame's per-light records,
     /// see `renderer::shadow::local`. Sampled through `shadow_sampler` above.
     pub(super) local_shadow_map: &'a wgpu::TextureView,
     pub(super) light_shadows: &'a wgpu::Buffer,
-    /// The `PointLight` cubes and their per-face matrices — see
+    /// The `PointLight` cubes and their per-face matrices, see
     /// `renderer::shadow::point`. Sampled through `shadow_sampler` too.
     pub(super) point_shadow_map: &'a wgpu::TextureView,
     pub(super) point_faces: &'a wgpu::Buffer,
-    /// The opaque scene a refracting surface reads — see `renderer::post`.
+    /// The opaque scene a refracting surface reads, see `renderer::post`.
     pub(super) refraction: &'a wgpu::TextureView,
 }
 
 /// One pass's copy of bind group 0.
 ///
-/// Passes do not all use the same matrix — the skybox and the celestial bodies
-/// need the camera's rotation without its translation — so each keeps its own
+/// Passes do not all use the same matrix, the skybox and the celestial bodies
+/// need the camera's rotation without its translation, so each keeps its own
 /// buffer, while the lighting uniform and the environment probe behind it are
 /// shared resources handed in from the renderer.
 pub(super) struct Frame {
@@ -215,7 +215,7 @@ pub(super) fn frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
                 count: None,
             },
             // The local lights' own shadow maps, one array layer per shadowed
-            // `SpotLight`/`SurfaceLight` this frame — see
+            // `SpotLight`/`SurfaceLight` this frame, see
             // `renderer::shadow::local`. Read through the very same comparison
             // sampler (binding 5) the sun's map is; a `sampler` is not tied to
             // any one texture, so no second one is needed.
@@ -231,7 +231,7 @@ pub(super) fn frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
             },
             // One record per entry of the local light buffer above: which array
             // layer (if any) it was assigned this frame, and the view-projection
-            // to read that layer with. Rewritten every frame — the nearest
+            // to read that layer with. Rewritten every frame, the nearest
             // lights to the camera are the ones that get a layer, and the camera
             // moves (see `renderer::shadow::local::select`).
             wgpu::BindGroupLayoutEntry {
@@ -245,7 +245,7 @@ pub(super) fn frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
                 count: None,
             },
             // The `PointLight` cubes and the six matrices each is read back
-            // through — see `renderer::shadow::point`. A second array
+            // through, see `renderer::shadow::point`. A second array
             // rather than more layers of binding 7's: the faces are half
             // the side, which is what keeps six of them affordable.
             wgpu::BindGroupLayoutEntry {
@@ -269,7 +269,7 @@ pub(super) fn frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
                 count: None,
             },
             // The scene as it stood after the opaque pass, which a `Glass`
-            // surface bends what is behind it out of — see
+            // surface bends what is behind it out of, see
             // `post::Targets::capture_refraction`. Read through the
             // environment probe's own filtering sampler at binding 3; one
             // unread texel stands here in a place with no glass.
@@ -345,8 +345,8 @@ impl Frame {
         Frame { matrix, bind_group }
     }
 
-    /// Rebuilds the group around a new set of shared resources — a re-viewed
-    /// environment probe, a reallocated shadow map, a recapped light buffer —
+    /// Rebuilds the group around a new set of shared resources, a re-viewed
+    /// environment probe, a reallocated shadow map, a recapped light buffer,
     /// keeping this pass's own matrix buffer, which no quality level touches.
     pub(super) fn rebind(
         &mut self,
@@ -567,7 +567,7 @@ pub(super) fn shape_pipelines(
     // The shared groups come first and a pass's own image (which these two have
     // none of) last, so every surface pipeline's layout is a prefix of every
     // other's. Switching pipelines within a pass then never leaves a set bound
-    // under an incompatible layout *below* one the new pipeline uses — which
+    // under an incompatible layout *below* one the new pipeline uses, which
     // Vulkan lets disturb the lower sets, and which showed up as a file mesh
     // drawn right after a textured one sampling garbage lighting and materials.
     let layouts = [Some(frame), Some(materials)];

@@ -3,9 +3,9 @@
 //! local-axis toggle beside them, then the chevron that opens the snap
 //! increments and the Align popover.
 //!
-//! `creator-docs`' own prose never names Transform as a distinct tool — it
+//! `creator-docs`' own prose never names Transform as a distinct tool, it
 //! only uses "transform" as the umbrella term for Move+Scale+Rotate
-//! together — but Roblox's enum reference does:
+//! together, but Roblox's enum reference does:
 //! `reference/engine/enums/RibbonTool.yaml` and the API dump this project
 //! syncs daily (`assets/API-Dump.json`) both give `Enum.RibbonTool.Transform`
 //! the summary "provides combined move, scale, and rotate handles in a
@@ -27,10 +27,9 @@ use super::Shell;
 pub(crate) mod snap;
 
 /// `RBX_STUDIO_TOOL=rotate` / `scale,local` / `move,nosnap` picks a tool and
-/// its snapping at startup — a
+/// its snapping at startup, a
 /// debugging aid for a screenshot of the draggers, since nothing else can
-/// click the toolbar or type its shortcut on the editor's behalf (see
-/// `AGENTS.md`'s safety rules), exactly as `RBX_STUDIO_SELECT` and
+/// click the toolbar or type its shortcut on the editor's behalf, exactly as `RBX_STUDIO_SELECT` and
 /// `RBX_STUDIO_EDIT` already stand in for a click and a keystroke elsewhere.
 pub(super) const TOOL_VARIABLE: &str = "RBX_STUDIO_TOOL";
 
@@ -139,7 +138,7 @@ impl Shell {
     /// row reads back what a drag will round to, and clicking either opens
     /// the fields that set them.
     ///
-    /// Read-out and control in one, which is the point — the increments are
+    /// Read-out and control in one, which is the point, the increments are
     /// checked far more often than they are changed, and a number you have
     /// to open a popover to *see* is a number nobody trusts.
     pub(super) fn snap_stack(&self, cx: &mut Context<Self>) -> impl IntoElement + 'static {
@@ -205,8 +204,8 @@ impl Shell {
     }
 }
 
-/// One row of the snap stack. A disabled increment is still *shown* — it is
-/// what snapping would round to the moment it is switched back on — but it
+/// One row of the snap stack. A disabled increment is still *shown*, it is
+/// what snapping would round to the moment it is switched back on, but it
 /// reads as inactive rather than as the value in force. While the popover
 /// is open both pills take the accent hairline and full-strength text, so
 /// the ribbon shows what the popover is editing.

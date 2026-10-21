@@ -4,7 +4,7 @@
 // Each edge arrives as a screen-space quad (two triangles) rather than a
 // one-pixel `LineList` line: the vertex shader pushes the two corners on each
 // end out to either side of the line by a constant number of pixels, so the
-// outline holds the same real thickness whatever the camera distance — the way
+// outline holds the same real thickness whatever the camera distance, the way
 // Studio's own selection box does, and unlike a hairline that vanishes against
 // busy geometry (see `renderer::outline` for the vertex layout).
 
@@ -31,7 +31,7 @@ struct Frame {
 @group(0) @binding(0)
 var<uniform> frame: Frame;
 
-// Half the outline's on-screen width, in pixels — a ~3px line, close to
+// Half the outline's on-screen width, in pixels, a ~3px line, close to
 // Studio's own selection box.
 const HALF_WIDTH: f32 = 1.5;
 

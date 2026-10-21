@@ -588,7 +588,7 @@ fn a_container_with_no_geometry_stands_for_nothing() {
     assert!(Selected::read(&dom, &database, folder).parts().is_empty());
 }
 
-/// A `BasePart` is a part however much is parented under it — a welded
+/// A `BasePart` is a part however much is parented under it, a welded
 /// assembly, or a `Tool`'s `Handle` with something screwed onto it. Reading
 /// that off the number of parts resolved for it made such a part a
 /// *container*, and outlined it with a loose world-axis-aligned box around
@@ -609,7 +609,7 @@ fn a_part_with_parts_under_it_is_still_a_part() {
 }
 
 /// Selecting a `Model` and something inside it names the same geometry twice
-/// — a second box drawn over the first, and a group drag moving the shared
+/// a second box drawn over the first, and a group drag moving the shared
 /// part twice as far as the gizmo travelled.
 #[test]
 fn a_model_selected_with_its_own_child_covers_it_once() {
@@ -630,7 +630,7 @@ fn a_model_selected_with_its_own_child_covers_it_once() {
     }
 }
 
-/// Two selections that do not contain one another are both kept — the dedup
+/// Two selections that do not contain one another are both kept, the dedup
 /// is about covered geometry, not about trimming the selection.
 #[test]
 fn two_unrelated_selections_are_both_kept() {

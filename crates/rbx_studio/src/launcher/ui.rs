@@ -1,6 +1,6 @@
 //! The pieces every launcher window is built from: the three button
 //! weights, pills,
-//! the modal frame, section headers. Colours are the shell's own tokens —
+//! the modal frame, section headers. Colours are the shell's own tokens,
 //! the design's panel/panel2/border… are exactly those values.
 
 use gpui_kit::component::{h_flex, v_flex, Icon};
@@ -111,7 +111,7 @@ pub(crate) fn icon_button(
         .child(label.into())
 }
 
-/// [`button`] with a trailing ↗ — a link that leaves the app.
+/// [`button`] with a trailing ↗, a link that leaves the app.
 pub(crate) fn external_button(
     id: impl Into<ElementId>,
     label: impl Into<SharedString>,

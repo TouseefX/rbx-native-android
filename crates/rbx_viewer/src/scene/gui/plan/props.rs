@@ -1,5 +1,5 @@
 //! Typed reads of the `Variant`s a `GuiObject`'s properties hold, each with
-//! the default Roblox itself falls back to when the property is absent — a
+//! the default Roblox itself falls back to when the property is absent, a
 //! tree built in code, unlike a saved place, serializes nothing.
 
 use std::collections::BTreeMap;
@@ -29,7 +29,7 @@ pub(in crate::scene::gui) fn vector2(
     }
 }
 
-/// A `Color3` linearized, since the display target re-encodes on write — same
+/// A `Color3` linearized, since the display target re-encodes on write, same
 /// reasoning as [`crate::scene::srgb_to_linear`]'s own callers.
 pub(in crate::scene::gui) fn color(
     properties: &BTreeMap<String, Variant>,
@@ -52,7 +52,7 @@ pub(in crate::scene::gui) fn degrees(properties: &BTreeMap<String, Variant>, nam
 }
 
 /// A plain number property (`float`, or an `int` where a place serialised
-/// one), `default` where it is missing or not finite — NaN and infinity both
+/// one), `default` where it is missing or not finite, NaN and infinity both
 /// come out of a corrupt file, never out of Studio.
 pub(in crate::scene::gui) fn float(
     properties: &BTreeMap<String, Variant>,

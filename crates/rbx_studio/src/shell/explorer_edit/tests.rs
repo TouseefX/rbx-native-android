@@ -18,7 +18,7 @@ fn database() -> ReflectionDatabase {
 }
 
 /// A `Workspace` with a `Model` holding one `Part`, plus a loose `Part`
-/// beside the model — enough for every row of the menu to have both answers
+/// beside the model, enough for every row of the menu to have both answers
 /// somewhere in it.
 fn place() -> (WeakDom, Ref, Ref, Ref, Ref) {
     let mut dom = WeakDom::new();

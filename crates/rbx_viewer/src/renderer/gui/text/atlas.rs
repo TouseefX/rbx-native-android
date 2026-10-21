@@ -44,8 +44,8 @@ pub(in crate::renderer::gui) struct GlyphAtlas {
     side: u32,
     pixels: Vec<u8>,
     shelves: Vec<Shelf>,
-    /// `None` for a glyph with no bitmap — a space, or one that no longer
-    /// fits — so it is not rasterised again on every build.
+    /// `None` for a glyph with no bitmap, a space, or one that no longer
+    /// fits, so it is not rasterised again on every build.
     glyphs: HashMap<CacheKey, Option<Glyph>>,
     dirty: bool,
     /// Bumped every time the atlas is grown and repacked: every `Glyph` handed

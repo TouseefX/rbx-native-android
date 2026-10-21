@@ -76,7 +76,7 @@ impl Skybox {
         }
     }
 
-    /// Whether the uploaded panels are exactly `panels` — see `envmap::sky_key`.
+    /// Whether the uploaded panels are exactly `panels`: see `envmap::sky_key`.
     pub(super) fn holds(&self, panels: &[Panel]) -> bool {
         sky_key(Some(panels)).is_some_and(|key| key == self.panels)
     }

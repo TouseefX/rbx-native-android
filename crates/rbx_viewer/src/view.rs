@@ -1,15 +1,15 @@
 //! The renderer state that does not come from the place, and so is not
 //! rebuilt from it.
 //!
-//! [`crate::Headless::reload`] — a Command Bar script's edit, a `Parent` move
+//! [`crate::Headless::reload`], a Command Bar script's edit, a `Parent` move
 //! that crossed the `Workspace` boundary, any fast path that reported it could
-//! not take the shortcut — re-derives the whole scene from the new DOM, which
+//! not take the shortcut, re-derives the whole scene from the new DOM, which
 //! is the only thing guaranteed to draw the right picture. Everything the
 //! *editor* asked for rather than the file is outside that derivation: the
 //! projection mode, the outlined selection, the transform gizmo. Each one
 //! silently missing afterwards is a visual regression with nothing on screen
-//! to explain it — an outline that vanished, draggers that stopped being
-//! drawn, a parallel projection that went back to perspective — and the
+//! to explain it, an outline that vanished, draggers that stopped being
+//! drawn, a parallel projection that went back to perspective, and the
 //! user's only recourse is to toggle the setting off and on again. (This
 //! happened, back when a reload built a whole new renderer and lost the
 //! three with the old one.)
@@ -17,7 +17,7 @@
 //! Collecting them into one value that `Offscreen::new` and
 //! `Offscreen::reload` both *require* is the point: there is no way to build
 //! or rebuild a renderer without saying what view it is for, so a rebuild
-//! cannot quietly drop one of these — whatever it does or does not happen to
+//! cannot quietly drop one of these, whatever it does or does not happen to
 //! keep of the renderer's own copy.
 
 use glam::Mat4;
@@ -29,13 +29,13 @@ use crate::renderer::{OverlayColors, Segment};
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct View {
     pub(crate) orthographic: bool,
-    /// Outlined in the viewport — every instance in the selection, not just
+    /// Outlined in the viewport, every instance in the selection, not just
     /// one: `rbxstudio`'s `Shift`/`Ctrl`/`Cmd`-click adds another top-level
     /// object rather than replacing it. Each entry already carries the parts
     /// it covers (see [`Selected`]), which is what survives a rebuild: the
     /// renderer has no DOM to resolve a bare referent against.
     pub(crate) selected: Vec<Selected>,
-    /// The "about to click" cue's outline — see `renderer::hover::Hover`.
+    /// The "about to click" cue's outline, see `renderer::hover::Hover`.
     /// One entry per hovered instance (a model as its aggregate box, a part
     /// as its own), what a click would select. Empty while `rbxview` runs,
     /// which never asks for a hover outline in the first place.
@@ -43,7 +43,7 @@ pub(crate) struct View {
     /// `None` whenever no transform tool is active, which is every `rbxview`
     /// frame: the standalone viewer edits nothing.
     pub(crate) gizmo: Option<Gizmo>,
-    /// The ghost boxes a tool is previewing — where the Align tool would
+    /// The ghost boxes a tool is previewing, where the Align tool would
     /// put the selection, say. Empty unless an editor asked for one, and
     /// carried here for the same reason the selection is: a reload must
     /// not quietly drop it while the tool is still open.
@@ -54,12 +54,12 @@ pub(crate) struct View {
     /// selected.
     pub(crate) lines: Vec<Vec<Segment>>,
     /// Whether a part standing in front of the selection hides its outline.
-    /// `false` — the box shows through everything, which is what Studio
-    /// draws — unless the embedder asks otherwise; `rbxview` never does.
+    /// `false`: the box shows through everything, which is what Studio
+    /// draws, unless the embedder asks otherwise; `rbxview` never does.
     pub(crate) selection_occluded: bool,
     /// The roots an isolated view draws (see `Headless::set_isolation`), or
     /// `None` for the whole place. Carried here because the renderer's half
-    /// of it — the backdrop, the neutral light — is a switch a rebuild must
+    /// of it, the backdrop, the neutral light, is a switch a rebuild must
     /// put back like every other one; the scene's half is re-applied from
     /// the same roots by whoever builds the scene.
     pub(crate) isolation: Option<Vec<rbx_dom::Ref>>,
@@ -68,32 +68,32 @@ pub(crate) struct View {
     pub(crate) layer_only: Option<Vec<rbx_dom::Ref>>,
     /// Instances the layer filter hides, with everything beneath them.
     pub(crate) layer_hidden: Vec<rbx_dom::Ref>,
-    /// The colours the selection, hover and preview cues are drawn in —
+    /// The colours the selection, hover and preview cues are drawn in,
     /// baked into their pipelines, so a rebuilt renderer must be told them
     /// again.
     pub(crate) overlay: OverlayColors,
 }
 
 impl View {
-    /// Replaces the outlined selection — never adds to it, the way selecting
+    /// Replaces the outlined selection, never adds to it, the way selecting
     /// another row in the Explorer replaces rather than extends.
     pub(crate) fn select(&mut self, selected: &[Selected]) {
         self.selected.clear();
         self.selected.extend_from_slice(selected);
     }
 
-    /// Replaces the hovered outline — the instances a hover covers, empty to
+    /// Replaces the hovered outline, the instances a hover covers, empty to
     /// clear it.
     pub(crate) fn set_hover(&mut self, selected: Vec<Selected>) {
         self.hovered = selected;
     }
 
-    /// Replaces the previewed boxes — empty to clear them.
+    /// Replaces the previewed boxes, empty to clear them.
     pub(crate) fn set_preview(&mut self, boxes: Vec<Mat4>) {
         self.preview = boxes;
     }
 
-    /// Replaces one layer's line segments — empty to clear it.
+    /// Replaces one layer's line segments, empty to clear it.
     pub(crate) fn set_lines(&mut self, layer: usize, segments: Vec<Segment>) {
         if self.lines.len() <= layer {
             self.lines.resize(layer + 1, Vec::new());
