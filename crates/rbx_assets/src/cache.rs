@@ -214,7 +214,8 @@ mod tests {
                 .write(true)
                 .open(cache.id_path(id))
                 .unwrap();
-            file.set_modified(old + std::time::Duration::from_secs(id)).unwrap();
+            file.set_modified(old + std::time::Duration::from_secs(id))
+                .unwrap();
         }
         // Reading 1 makes it the newest, so 2 and 3 go first.
         assert!(cache.get_id(1).is_some());

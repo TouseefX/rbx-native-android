@@ -831,26 +831,27 @@ fn render_row_editor(
         RowEditor::Slider(input, rail) => {
             stops.register(&input.read(cx).focus_handle(cx));
             h_flex()
-            .w_full()
-            .items_center()
-            .gap(tokens::label_gap())
-            .child(slider::slider(&rail, cx))
-            .child(
-                div()
-                    .flex_none()
-                    // Narrower than a labelled field (`field_min_width`):
-                    // there is no label in front of this one, and every
-                    // value a rail spans is a handful of digits.
-                    .w(tokens::scaled_width(52.))
-                    .child(text_field(&input, tab_index, cx)),
-            )
-            .into_any_element()
+                .w_full()
+                .items_center()
+                .gap(tokens::label_gap())
+                .child(slider::slider(&rail, cx))
+                .child(
+                    div()
+                        .flex_none()
+                        // Narrower than a labelled field (`field_min_width`):
+                        // there is no label in front of this one, and every
+                        // value a rail spans is a handful of digits.
+                        .w(tokens::scaled_width(52.))
+                        .child(text_field(&input, tab_index, cx)),
+                )
+                .into_any_element()
         }
         // Captioned lines, a `CFrame`'s Position over its Orientation.
         // Each group is its own run of field rows under its own caption,
         // which is what makes six numbers readable where one flat run of
         // six is a wall.
         RowEditor::Groups(groups, _, inputs) => {
+            register_fields(stops, &inputs, cx);
             let mut taken = 0;
             v_flex()
                 .w_full()
@@ -888,7 +889,6 @@ fn render_row_editor(
                             mine,
                             taken - group.fields.len(),
                             tab_index,
-                            stops,
                             on_scrub.clone(),
                             2,
                             cx,
@@ -897,7 +897,8 @@ fn render_row_editor(
                 .into_any_element()
         }
         RowEditor::Fields(fields, _, inputs) => {
-            number_fields(fields, &inputs, 0, tab_index, stops, on_scrub, 1, cx).into_any_element()
+            register_fields(stops, &inputs, cx);
+            number_fields(fields, &inputs, 0, tab_index, on_scrub, 1, cx).into_any_element()
         }
         // The checkbox is the only control an absent value has: there is
         // nothing to edit until it says there is a value. Present, it reads
@@ -1050,14 +1051,10 @@ fn number_fields(
     inputs: &[Entity<InputState>],
     offset: usize,
     tab_index: isize,
-    stops: &TabOrder,
     on_scrub: OnScrub,
     depth: usize,
     cx: &App,
 ) -> Div {
-    for input in inputs {
-        stops.register(&input.read(cx).focus_handle(cx));
-    }
     v_flex()
         .w_full()
         .children(
@@ -1120,6 +1117,13 @@ fn number_fields(
                         )
                 }),
         )
+}
+
+/// Puts each of a row's number fields in the window's Tab order, in order.
+fn register_fields(stops: &TabOrder, inputs: &[Entity<InputState>], cx: &App) {
+    for input in inputs {
+        stops.register(&input.read(cx).focus_handle(cx));
+    }
 }
 
 /// Where a name sits in the name column: past the row's own padding and the
