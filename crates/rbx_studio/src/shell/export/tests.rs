@@ -139,6 +139,41 @@ fn save_to_file_writes_the_whole_place_in_the_format_its_name_asks_for() {
     }
 }
 
+/// File › Export Clean Copy… writes the place with no trace of the
+/// editor's layers or notes, in either format, and leaves the open place
+/// holding them.
+#[test]
+fn a_clean_copy_carries_no_editor_data_and_the_open_place_keeps_it() {
+    let (mut dom, model, _) = place();
+    let layer = crate::layers::add_layer(&mut dom, "Props", (1, 2, 3)).unwrap();
+    crate::layers::assign(&mut dom, &[model], Some(&layer)).unwrap();
+    crate::notes::add_note(&mut dom, "Fix", "me", (4, 5, 6), [0.0; 3], Some(model)).unwrap();
+
+    for name in ["Clean.rbxl", "Clean.rbxlx"] {
+        let files = encode(
+            Export::CleanPlace,
+            &dom,
+            &database(),
+            &pick::Meshes::default(),
+            &[],
+            Path::new(name),
+        )
+        .unwrap();
+        let bytes = &files[0].1;
+        let marker = crate::layers::PREFIX.as_bytes();
+        assert!(!bytes.windows(marker.len()).any(|window| window == marker));
+        let read = match name.ends_with('x') {
+            true => rbx_xml::deserialize(std::str::from_utf8(bytes).unwrap()).unwrap(),
+            false => rbx_binary::deserialize(bytes).unwrap(),
+        };
+        assert!(crate::layers::layers(&read).is_empty());
+        assert!(crate::notes::notes(&read).is_empty());
+        assert!(find_by_name(&read, "Wheel").is_some());
+    }
+    assert_eq!(crate::layers::own_layer(&dom, model), Some(layer));
+    assert_eq!(crate::notes::notes(&dom).len(), 1);
+}
+
 /// File › Export as glTF… starts from `Workspace`, the root Studio's own
 /// whole-place export has, and nests the model under it.
 #[test]

@@ -286,6 +286,17 @@ impl Shell {
         }
     }
 
+    /// Whether uploads leave out layers and notes; see `crate::strip`.
+    pub(in crate::shell) fn strip_on_publish(&self) -> bool {
+        self.strip_on_publish
+    }
+
+    pub(in crate::shell) fn set_strip_on_publish(&mut self, on: bool, cx: &mut Context<Self>) {
+        self.strip_on_publish = on;
+        self.save_settings();
+        cx.notify();
+    }
+
     pub(super) fn start_upload(
         &mut self,
         target: Target,
@@ -307,7 +318,12 @@ impl Shell {
         self.roblox.dialog = None;
         // What is on screen, not what the DOM held when typing last paused.
         self.flush_script_edits(cx);
-        let bytes = match self.format.encode(&self.dom) {
+        let encoded = if self.strip_on_publish {
+            self.format.encode(&crate::strip::stripped(&self.dom))
+        } else {
+            self.format.encode(&self.dom)
+        };
+        let bytes = match encoded {
             Ok(bytes) => bytes,
             Err(message) => {
                 let failed = Err(Failure::before_sending(message));

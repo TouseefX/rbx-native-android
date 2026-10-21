@@ -130,6 +130,9 @@ pub(crate) enum Panel {
     /// The place's `InputContext`s, actions and bindings as one table
     /// (`shell::input_panel`). Shut until asked for.
     InputActions,
+    /// The place's editor layers and 3D notes (`shell::layers_panel`). Shut
+    /// until asked for.
+    Layers,
     /// The place's Loren Services and Controllers as a boot graph
     /// (`shell::loren_panel`). Shut until asked for.
     Loren,
@@ -139,7 +142,7 @@ impl Panel {
     /// In the order a fresh layout seats them, which is what makes the
     /// Viewport, Argon and Wally docks tabs beside Output rather than
     /// docks of their own.
-    pub(crate) const ALL: [Panel; 14] = [
+    pub(crate) const ALL: [Panel; 15] = [
         Panel::Explorer,
         Panel::Properties,
         Panel::Output,
@@ -153,6 +156,7 @@ impl Panel {
         Panel::Collaborators,
         Panel::PluginWidgets,
         Panel::InputActions,
+        Panel::Layers,
         Panel::Loren,
     ];
 
@@ -161,7 +165,9 @@ impl Panel {
     /// closing its torn-out window puts it back.
     pub(crate) fn home(self) -> Edge {
         match self {
-            Panel::Explorer | Panel::Collaborators | Panel::PluginWidgets => Edge::Right,
+            Panel::Explorer | Panel::Collaborators | Panel::PluginWidgets | Panel::Layers => {
+                Edge::Right
+            }
             Panel::Properties | Panel::TerrainEditor => Edge::Left,
             Panel::Output
             | Panel::Viewport
@@ -192,6 +198,7 @@ impl Panel {
             Panel::Collaborators => "Collaborators",
             Panel::PluginWidgets => "Plugin Widgets",
             Panel::InputActions => "Input Actions",
+            Panel::Layers => "Layers",
             Panel::Loren => "Loren",
         }
     }
@@ -206,6 +213,7 @@ impl Panel {
                 | Panel::Collaborators
                 | Panel::PluginWidgets
                 | Panel::InputActions
+                | Panel::Layers
                 | Panel::Loren
         )
     }

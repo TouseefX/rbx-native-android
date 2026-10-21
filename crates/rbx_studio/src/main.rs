@@ -80,6 +80,9 @@
 //! `joint=<name>`, `save`, `graph`, `graph-demo`, `play`, …) as the matching
 //! click would, the same aid, for the Animation Editor (see
 //! `shell::animation::debug` for every step).
+//!
+//! `RBX_STUDIO_PERF=<word of a measure's name>` turns the Performance view
+//! on with that measure (see `shell::perf_view`).
 
 mod accent;
 mod align;
@@ -105,8 +108,10 @@ mod home;
 mod input_actions;
 mod key_store;
 mod launcher;
+mod layers;
 mod luau_lsp;
 mod menu_bar;
+mod notes;
 mod pacing;
 mod packs;
 mod pointer_lock;
@@ -126,6 +131,7 @@ mod settings;
 mod settle;
 mod shell;
 mod shortcuts;
+mod strip;
 mod style_editor;
 mod sun;
 mod terrain;
