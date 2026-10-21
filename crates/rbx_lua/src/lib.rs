@@ -18,6 +18,7 @@ mod instance;
 mod lua_enum;
 mod not_creatable;
 mod output;
+pub mod pattern;
 pub mod pivot;
 pub mod plugin;
 mod printed;

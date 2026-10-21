@@ -180,6 +180,27 @@ pub(super) struct Named<'a> {
 }
 
 impl Properties {
+    /// Every property `reference` has a row for that can be set, under the
+    /// name a script reads it by, with its value, sorted by name: what
+    /// `crate::mcp`'s `inspect_instance` lists, so a tool and the panel never
+    /// disagree about what an instance holds. Read-only rows (`Mass`,
+    /// `CenterOfMass`) are left out, as real Studio's `inspect_instance`
+    /// leaves them out.
+    pub(crate) fn settable(&self, dom: &WeakDom, reference: Ref) -> Vec<(String, Variant)> {
+        let Some(instance) = dom.get(reference) else {
+            return Vec::new();
+        };
+        let sheet = self.sheet(instance.class());
+        let mut settable: Vec<(String, Variant)> = self
+            .named(dom, reference, instance, &sheet)
+            .into_iter()
+            .filter(|named| !named.read_only)
+            .map(|named| (named.name.to_owned(), named.value.into_owned()))
+            .collect();
+        settable.sort_by(|left, right| left.0.cmp(&right.0));
+        settable
+    }
+
     /// `class`'s sheet, built the first time it is asked for.
     pub(super) fn sheet(&self, class: &str) -> Rc<Sheet> {
         if let Some(sheet) = self.sheets.borrow().get(class) {
