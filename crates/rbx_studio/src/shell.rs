@@ -95,6 +95,7 @@ mod sun;
 mod templates_live;
 mod templates_window;
 mod terrain;
+mod tests_dock;
 mod theme_live;
 mod toolbar;
 pub(crate) mod tooltip;
@@ -335,6 +336,8 @@ pub(crate) struct Shell {
     /// `luau-lsp` behind the script editor and Script Analysis; see
     /// `shell::luau_lsp`.
     lsp: luau_lsp::Session,
+    /// The Tests dock's specs and last results; see `shell::tests_dock`.
+    tests: tests_dock::TestsDock,
     properties_scroll: ScrollHandle,
     /// The Style Editor panel's open fields and last error; see
     /// `shell::style_panel`.
@@ -834,6 +837,7 @@ impl Shell {
             graphs: std::collections::HashMap::new(),
             debug: debugging::Debugging::default(),
             lsp: luau_lsp::Session::default(),
+            tests: tests_dock::TestsDock::default(),
             properties_scroll: ScrollHandle::new(),
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
@@ -1119,6 +1123,7 @@ impl Shell {
         // `StyleRule` they selected.
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
+        shell.apply_debug_tests(cx);
         shell.apply_debug_layers(cx);
         shell.apply_debug_loren(cx);
 

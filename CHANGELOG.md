@@ -30,6 +30,22 @@
   `PhysicsGrid`) as `BinaryString`; as text it made Studio refuse the file.
   (@chteau)
 
+- **A built-in Luau test runner.** A place's TestEZ specs (ModuleScripts
+  named `*.spec`/`*.test`) run headlessly in the command bar's sandbox,
+  each file over its own fresh copy of the place, on a simulated clock so
+  `task.wait(30)` takes no time. `describe`/`it`/`expect` with TestEZ's
+  matchers, hooks, `SKIP`/`FOCUS`, and Jest-Lua's `toBe`-style names
+  beside them. A failure names the script and line it was raised on.
+  Loren's `return function(t)` specs run through Loren's own runner in the
+  same tree. `rbxlua test <place or project folder> [--filter] [--root]
+  [--format json] [--junit]` exits 1 on a failure; the Script Editor's new
+  **Tests** dock shows the specs as a tree, runs all or one, shows what each
+  test printed and how it failed, opens a failure at its line and can rerun
+  after each save; `.github/actions/rbxlua-test` runs it in CI. Script
+  Analysis knows `describe`/`it`/`expect` now. `docs/testing.md` lists what
+  the sandbox lacks (HTTP, data stores, RunService frames, physics) and how
+  each behaves. (@chteau)
+
 - **A Performance view for the place being edited.** The Viewport dock's
   new Performance section tints every part by what it costs: part
   density per 32-stud cell, triangles, decoded texture memory (shared

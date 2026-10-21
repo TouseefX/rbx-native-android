@@ -1,7 +1,9 @@
 //! Runs Loren-style specs (`return function(t) ... end`, Jest-style
 //! `t.describe`/`t.it`/`t.expect`) in the editor's Luau sandbox with Loren's
 //! own spec runner (`vendor/loren/test/runner/LorenTest.luau`). The editor's
-//! Tests dock calls [`run_specs`] for a place whose specs use `Loren.Testing`.
+//! Tests dock and `rbxlua test` call [`plan_mixed`] and [`run_mixed`], which
+//! send each spec module [`is_loren_module`] picks out here and the rest to
+//! `rbx_lua::test_runner`.
 
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
@@ -9,7 +11,11 @@ use std::rc::Rc;
 use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 
-use rbx_dom::{Ref, WeakDom};
+use rbx_dom::{Ref, Variant, WeakDom};
+use rbx_lua::test_runner::{
+    self, FilePlan, FileReport, Location, NodeKind, Options, PlanNode, Report, SpecFile, Status,
+    TestResult,
+};
 use rbx_lua::{Output, RunState, Runtime};
 use rbx_reflection::ReflectionDatabase;
 use regex::Regex;
@@ -22,6 +28,10 @@ const PRELUDE: &str = include_str!("specs/prelude.luau");
 
 const SUMMARY_MARK: &str = "@@LORENSPECS ";
 const FAILURE_MARK: &str = "@@LORENFAIL ";
+const NODE_MARK: &str = "@@LORENNODE ";
+const START_MARK: &str = "@@LORENSTART ";
+/// Between a path's names in [`NODE_MARK`] and [`START_MARK`] lines.
+const NAME_SEPARATOR: char = '\u{1f}';
 
 static SPEC_RETURN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^\s*return\s+function\s*\(\s*t\b").expect("valid regex"));
@@ -47,6 +57,16 @@ pub struct SpecReport {
 /// True when a ModuleScript looks like a Loren spec (a `*.spec` name whose source returns a function of `t`).
 pub fn is_loren_spec(name: &str, source: &str) -> bool {
     name.ends_with(".spec") && SPEC_RETURN.is_match(source)
+}
+
+/// [`is_loren_spec`] for a ModuleScript in `dom`.
+pub fn is_loren_module(dom: &WeakDom, module: Ref) -> bool {
+    dom.get(module).is_some_and(|instance| {
+        matches!(
+            instance.properties().get("Source"),
+            Some(Variant::String(source)) if is_loren_spec(instance.name(), source)
+        )
+    })
 }
 
 fn vendor_dir() -> PathBuf {
@@ -233,7 +253,7 @@ pub fn run_specs(
     let database = ReflectionDatabase::embedded();
     let enums = enum_names(&database);
     let source = driver(container, filter, &enums);
-    parse_report(drive(dom, database, &source, SUMMARY_MARK)?)
+    parse_report(drive(dom, database, &source, SUMMARY_MARK)?.text())
 }
 
 /// Runs `source` with the spec prelude on the same virtual clock as
@@ -245,7 +265,7 @@ pub fn run_script(dom: WeakDom, source: &str) -> Result<String, String> {
         "{enums}{PRELUDE}\nsetfenv(1, __lorenEnv)\ndo\n{source}\nend\nprint({})\n",
         lua_string(DONE_MARK)
     );
-    let output = drive(dom, database, &chunk, DONE_MARK)?;
+    let output = drive(dom, database, &chunk, DONE_MARK)?.text();
     Ok(output
         .lines()
         .filter(|line| !line.starts_with(DONE_MARK))
@@ -261,7 +281,7 @@ fn drive(
     database: ReflectionDatabase,
     chunk: &str,
     mark: &str,
-) -> Result<String, String> {
+) -> Result<Output, String> {
     let mut runtime = Runtime::new(dom, database).map_err(|err| err.to_string())?;
     // Specs wait on timeouts and `task.wait`; a virtual clock that jumps to
     // the next wake-up keeps a run quick without changing what it observes.
@@ -279,10 +299,10 @@ fn drive(
             // Loops the runtime and the specs leave running (heartbeats,
             // retry timers) never end on their own; the mark is all a run owes.
             runtime.cancel();
-            return Ok(output.text());
+            return Ok(output);
         }
         match step.state {
-            RunState::Finished => return Ok(output.text()),
+            RunState::Finished => return Ok(output),
             RunState::Failed(error) => return Err(format!("{}\n{error}", output.text())),
             RunState::Pending { wake_in } => {
                 // Roblox resumes waiting threads once per frame at most.
@@ -359,4 +379,392 @@ pub fn loren_unit_place() -> Result<WeakDom, String> {
         place_at(&mut dom, at, rel)?;
     }
     Ok(dom)
+}
+
+/// Runs one spec module through Loren's runner. Its `t` is Loren's own with
+/// `describe` and `it` wrapped, so each test reports itself when declared
+/// and when it starts: that gives the tree, which tests passed and what
+/// each one printed.
+const FILE_DRIVER: &str = r#"
+local LorenTest = require(game:GetService("ReplicatedStorage"):WaitForChild("LorenTest"):WaitForChild("LorenTest"))
+local at: Instance = game:GetService(path[1])
+for i = 2, #path do
+	local nextAt = at:FindFirstChild(path[i])
+	if not nextAt then
+		error("no " .. path[i] .. " under " .. at:GetFullName(), 0)
+	end
+	at = nextAt
+end
+local function esc(s: string): string
+	local out = string.gsub(s, "\\", "\\\\")
+	out = string.gsub(out, "\n", "\\n")
+	out = string.gsub(out, "\t", "\\t")
+	return out
+end
+local function joined(names: { string }): string
+	local parts = {}
+	for i, name in names do
+		parts[i] = esc(name)
+	end
+	return table.concat(parts, "\31")
+end
+local function selected(names: { string }): boolean
+	if only then
+		if #names < #only then
+			return false
+		end
+		for i, name in only do
+			if names[i] ~= name then
+				return false
+			end
+		end
+	end
+	return filter == nil or string.find(table.concat(names, " "), filter, 1, true) ~= nil
+end
+local function adapt(t: any): any
+	local stack = {}
+	local adapted = setmetatable({}, { __index = t })
+	local function here(name: any): { string }
+		local names = table.clone(stack)
+		table.insert(names, tostring(name))
+		return names
+	end
+	function adapted.describe(name: any, body: () -> ())
+		local names = here(name)
+		print(NODE_MARK .. "describe\t" .. tostring(debug.info(2, "l")) .. "\t0\t" .. joined(names))
+		t.describe(name, function()
+			table.insert(stack, tostring(name))
+			local ok, err = pcall(body)
+			table.remove(stack)
+			if not ok then
+				error(err, 0)
+			end
+		end)
+	end
+	function adapted.it(name: any, fn: any, opts: any)
+		local names = here(name)
+		if not selected(names) then
+			return
+		end
+		local skip = if typeof(opts) == "table" and opts.skip then "1" else "0"
+		print(NODE_MARK .. "test\t" .. tostring(debug.info(2, "l")) .. "\t" .. skip .. "\t" .. joined(names))
+		local run = fn
+		if typeof(fn) == "function" then
+			run = function(...)
+				print(START_MARK .. joined(names))
+				return fn(...)
+			end
+		end
+		t.it(name, run, opts)
+	end
+	return adapted
+end
+local function noop() end
+local loaded, spec = pcall(require, at)
+local passed, failed, skipped = 0, 0, 0
+if not loaded then
+	print(FAILURE_MARK .. "\t" .. esc("failed to load: " .. tostring(spec)))
+	failed = 1
+elseif typeof(spec) ~= "function" then
+	print(FAILURE_MARK .. "\t" .. esc("a spec must return function(t), got " .. typeof(spec)))
+	failed = 1
+elseif planOnly then
+	local declare = {
+		describe = function(_, body)
+			body()
+		end,
+		it = noop,
+		beforeAll = noop,
+		afterAll = noop,
+		beforeEach = noop,
+		afterEach = noop,
+		expect = LorenTest.expect,
+		spy = LorenTest.spy,
+	}
+	local ok, err = pcall(spec, adapt(declare))
+	if not ok then
+		print(FAILURE_MARK .. "\t" .. esc(tostring(err)))
+	end
+else
+	local results = LorenTest.run({ { name = "spec", fn = function(t)
+		return spec(adapt(t))
+	end } })
+	for _, f in results.failures do
+		print(FAILURE_MARK .. esc(f.path) .. "\t" .. esc(f.message))
+	end
+	passed, failed, skipped = results.passed, results.failed, results.skipped
+end
+stopFrames()
+print(string.format(SUMMARY_MARK .. "%d %d %d", passed, failed, skipped))
+"#;
+
+/// The names from the DataModel down to `module`.
+fn path_of(dom: &WeakDom, module: Ref) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut at = Some(module);
+    while let Some(r) = at {
+        let Some(instance) = dom.get(r) else { break };
+        names.push(instance.name().to_string());
+        at = dom.parent(r);
+    }
+    names.reverse();
+    names
+}
+
+fn lua_list(items: &[String]) -> String {
+    let items: Vec<String> = items.iter().map(|i| lua_string(i)).collect();
+    format!("{{ {} }}", items.join(", "))
+}
+
+/// The driver's output for `file`, with Loren's runner placed if missing.
+fn drive_file(
+    dom: &WeakDom,
+    file: &SpecFile,
+    options: &Options,
+    plan_only: bool,
+) -> Result<Output, String> {
+    let mut dom = dom.clone();
+    // The prelude reads `workspace` and the services up front.
+    for svc in ["Workspace", "Players", "ReplicatedStorage"] {
+        service(&mut dom, svc);
+    }
+    place_at(
+        &mut dom,
+        &["ReplicatedStorage", "LorenTest", "LorenTest"],
+        "test/runner/LorenTest.luau",
+    )?;
+    let database = ReflectionDatabase::embedded();
+    let enums = enum_names(&database);
+    let optional = |value: Option<String>| value.unwrap_or_else(|| "nil".into());
+    let source = format!(
+        "{enums}{PRELUDE}\nsetfenv(1, __lorenEnv)\nlocal path = {}\nlocal only = {}\nlocal filter = {}\nlocal planOnly = {plan_only}\nlocal FAILURE_MARK = {}\nlocal SUMMARY_MARK = {}\nlocal NODE_MARK = {}\nlocal START_MARK = {}\n{FILE_DRIVER}",
+        lua_list(&path_of(&dom, file.module)),
+        optional(options.only.as_deref().map(lua_list)),
+        optional(options.filter.as_deref().map(lua_string)),
+        lua_string(FAILURE_MARK),
+        lua_string(SUMMARY_MARK),
+        lua_string(NODE_MARK),
+        lua_string(START_MARK),
+    );
+    drive(dom, database, &source, SUMMARY_MARK)
+}
+
+/// One line of the driver's output.
+enum Line {
+    Node(PlanNode),
+    Start(Vec<String>),
+    Failure(SpecFailure),
+    Summary,
+    Printed,
+}
+
+fn names(joined: &str) -> Vec<String> {
+    match joined {
+        "" => Vec::new(),
+        _ => joined.split(NAME_SEPARATOR).map(unescape).collect(),
+    }
+}
+
+fn line(text: &str) -> Line {
+    if let Some(rest) = text.strip_prefix(NODE_MARK) {
+        let fields: Vec<&str> = rest.splitn(4, '\t').collect();
+        if let [kind, line, skip, path] = fields[..] {
+            return Line::Node(PlanNode {
+                kind: match kind {
+                    "describe" => NodeKind::Describe,
+                    _ => NodeKind::Test,
+                },
+                path: names(path),
+                line: line.parse().ok(),
+                skip: skip == "1",
+                focus: false,
+            });
+        }
+    } else if let Some(rest) = text.strip_prefix(START_MARK) {
+        return Line::Start(names(rest));
+    } else if let Some(rest) = text.strip_prefix(FAILURE_MARK) {
+        let (path, message) = rest.split_once('\t').unwrap_or((rest, ""));
+        return Line::Failure(SpecFailure {
+            path: unescape(path),
+            message: unescape(message),
+        });
+    } else if text.starts_with(SUMMARY_MARK) {
+        return Line::Summary;
+    }
+    Line::Printed
+}
+
+/// LorenTest's `spec > a > b` as the dock's `["a", "b"]`.
+fn failure_path(path: &str) -> Vec<String> {
+    path.split(" > ").skip(1).map(str::to_string).collect()
+}
+
+static RAISED_AT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\S+\.spec):(\d+)").expect("valid regex"));
+
+/// What a Loren spec module declares, without running its tests.
+pub fn plan_file(dom: &WeakDom, file: &SpecFile) -> FilePlan {
+    let mut plan = FilePlan {
+        file: file.clone(),
+        nodes: Vec::new(),
+        error: None,
+        focus: false,
+    };
+    match drive_file(dom, file, &Options::default(), true) {
+        Ok(output) => {
+            for text in output.lines() {
+                match line(text) {
+                    Line::Node(node) => plan.nodes.push(node),
+                    Line::Failure(failure) => plan.error = Some(failure.message),
+                    _ => {}
+                }
+            }
+        }
+        Err(error) => plan.error = Some(error),
+    }
+    plan
+}
+
+/// Runs one Loren spec module's selected tests.
+pub fn run_file(dom: &WeakDom, file: &SpecFile, options: &Options) -> FileReport {
+    let started = Instant::now();
+    let output = match drive_file(dom, file, options, false) {
+        Ok(output) => output,
+        Err(error) => {
+            return FileReport {
+                file: file.clone(),
+                results: vec![result(file, Vec::new(), Status::Failed, Some(error), None)],
+                output: Output::default(),
+                duration: started.elapsed(),
+            }
+        }
+    };
+    let mut nodes = Vec::new();
+    let mut failures = Vec::new();
+    let mut printed = Output::default();
+    let mut started_tests: Vec<(Vec<String>, Output)> = Vec::new();
+    for (i, text) in output.lines().iter().enumerate() {
+        match line(text) {
+            Line::Node(node) => nodes.push(node),
+            Line::Start(path) => started_tests.push((path, Output::default())),
+            Line::Failure(failure) => failures.push(failure),
+            Line::Summary => {}
+            Line::Printed => {
+                let one = output.slice(i..i + 1);
+                if let Some((_, own)) = started_tests.last_mut() {
+                    own.extend(one.clone());
+                }
+                printed.extend(one);
+            }
+        }
+    }
+    let line_of = |path: &[String]| nodes.iter().find(|n| n.path == path).and_then(|n| n.line);
+    let mut results = Vec::new();
+    for failure in &failures {
+        let path = failure_path(&failure.path);
+        let mut failed = result(
+            file,
+            path.clone(),
+            Status::Failed,
+            Some(failure.message.clone()),
+            line_of(&path),
+        );
+        if let Some(captures) = RAISED_AT.captures(&failure.message) {
+            if captures[1] == file.name {
+                failed.location = captures[2].parse().ok().map(|line| Location {
+                    script: file.module,
+                    name: file.name.clone(),
+                    line,
+                });
+            }
+        }
+        if let Some((_, own)) = started_tests.iter().find(|(p, _)| *p == path) {
+            failed.output = own.clone();
+        }
+        results.push(failed);
+    }
+    for node in nodes.iter().filter(|n| n.kind == NodeKind::Test) {
+        if results.iter().any(|r| r.path == node.path) {
+            continue;
+        }
+        // A declared test that never started was skipped (`{ skip = true }`
+        // or no function): LorenTest counts those as skipped too.
+        let own = started_tests.iter().find(|(p, _)| *p == node.path);
+        let status = match own {
+            Some(_) => Status::Passed,
+            None => Status::Skipped,
+        };
+        let mut one = result(file, node.path.clone(), status, None, node.line);
+        if let Some((_, own)) = own {
+            one.output = own.clone();
+        }
+        results.push(one);
+    }
+    // In declaration order, a whole-file failure first.
+    results.sort_by_key(|r| match r.path.is_empty() {
+        true => 0,
+        false => nodes
+            .iter()
+            .position(|n| n.path == r.path)
+            .map_or(usize::MAX, |i| i + 1),
+    });
+    FileReport {
+        file: file.clone(),
+        results,
+        output: printed,
+        duration: started.elapsed(),
+    }
+}
+
+fn result(
+    file: &SpecFile,
+    path: Vec<String>,
+    status: Status,
+    message: Option<String>,
+    line: Option<u32>,
+) -> TestResult {
+    TestResult {
+        path,
+        status,
+        message,
+        stack: None,
+        location: line.map(|line| Location {
+            script: file.module,
+            name: file.name.clone(),
+            line,
+        }),
+        duration: Duration::ZERO,
+        output: Output::default(),
+    }
+}
+
+/// What `file` declares: Loren's runner reads a Loren spec, `test_runner` the rest.
+pub fn plan_mixed(dom: &WeakDom, file: &SpecFile, database: &ReflectionDatabase) -> FilePlan {
+    match is_loren_module(dom, file.module) {
+        true => plan_file(dom, file),
+        false => test_runner::plan(dom, file, database),
+    }
+}
+
+/// Runs `files`: Loren specs one by one through Loren's runner, the rest
+/// through `test_runner` (honouring `FOCUS` across them). Reports come back
+/// in `files`' order.
+pub fn run_mixed(
+    dom: &WeakDom,
+    files: &[SpecFile],
+    database: &ReflectionDatabase,
+    options: &Options,
+) -> Report {
+    let (lorens, plain): (Vec<SpecFile>, Vec<SpecFile>) = files
+        .iter()
+        .cloned()
+        .partition(|f| is_loren_module(dom, f.module));
+    let mut reports = match (plain.as_slice(), options.only.is_some()) {
+        ([], _) => Vec::new(),
+        ([file], true) => vec![test_runner::run_file(dom, file, database, options, false)],
+        _ => test_runner::run(dom, &plain, database, options).files,
+    };
+    reports.extend(lorens.iter().map(|f| run_file(dom, f, options)));
+    reports.sort_by_key(|r| files.iter().position(|f| f.module == r.file.module));
+    Report { files: reports }
 }

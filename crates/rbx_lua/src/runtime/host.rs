@@ -170,6 +170,12 @@ pub(super) fn install_require(lua: &Lua) -> Result<()> {
 /// in an environment whose `script` is the module and whose `require`
 /// resolves from it; other names fall through to the globals.
 fn compile(lua: &Lua, module: &Value) -> Result<Function> {
+    compile_in(lua, module, lua.globals())
+}
+
+/// [`compile`] with `fallback` in place of the globals: the test runner
+/// puts `describe`, `it` and `expect` in front of them for a spec.
+pub(crate) fn compile_in(lua: &Lua, module: &Value, fallback: Table) -> Result<Function> {
     let referent = require::module_ref(lua, module)?;
     let ctx = engine(lua).ctx.clone();
     let (source, name) = {
@@ -188,7 +194,7 @@ fn compile(lua: &Lua, module: &Value) -> Result<Function> {
     scope.set("script", module.clone())?;
     scope.set("require", require::require_for(lua, module.clone())?)?;
     let meta = lua.create_table()?;
-    meta.set("__index", lua.globals())?;
+    meta.set("__index", fallback)?;
     scope.set_metatable(Some(meta))?;
     lua.load(source)
         .set_name(format!("={name}"))
