@@ -33,7 +33,12 @@ impl Shell {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let row_key = attrs::row_name(name);
-        let Some(kind) = attrs::edit_kind(value) else {
+        let enums = self
+            .selected()
+            .map(|reference| attrs::enum_types(&self.dom, reference))
+            .unwrap_or_default();
+        let enum_type = enums.get(name).map(String::as_str);
+        let Some(kind) = attrs::edit_kind(value, enum_type, &self.database) else {
             // Every type `Instance:SetAttribute` accepts has an editor (see
             // `properties::attributes::ATTRIBUTE_TYPES`), so this is only
             // reachable for an attribute some other tool wrote in a type it

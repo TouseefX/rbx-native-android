@@ -601,7 +601,16 @@ fn parse_enum(
     let property = db
         .resolve_property(class, prop_name)
         .ok_or_else(|| format!("no reflection data for {class}.{prop_name}"))?;
-    let enum_name = &property.value_type;
+    parse_enum_item(db, &property.value_type, text)
+}
+
+/// An item of `Enum.<enum_name>` by name, case-insensitive, or its raw
+/// ordinal.
+pub(crate) fn parse_enum_item(
+    db: &ReflectionDatabase,
+    enum_name: &str,
+    text: &str,
+) -> Result<Variant, String> {
     let items = db
         .enum_items(enum_name)
         .ok_or_else(|| format!("{enum_name} is not a known enum"))?;

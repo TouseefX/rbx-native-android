@@ -2173,7 +2173,12 @@ impl Shell {
             let value = properties::attributes::attributes(&self.dom, reference)
                 .get(attribute)?
                 .clone();
-            properties::attributes::edit_kind(&value)?
+            let enums = properties::attributes::enum_types(&self.dom, reference);
+            properties::attributes::edit_kind(
+                &value,
+                enums.get(attribute).map(String::as_str),
+                &self.database,
+            )?
         } else {
             let folder_color = self.folder_color(reference);
             self.properties
