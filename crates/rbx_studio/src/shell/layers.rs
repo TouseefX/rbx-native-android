@@ -205,12 +205,13 @@ impl Shell {
         }
     }
 
-    /// Pins a note with `text`: to the selected instance at its anchor when
-    /// one is selected and has one, else at the world origin. Selects it.
-    pub(super) fn pin_note(&mut self, text: &str, cx: &mut Context<Self>) {
+    /// Pins a note: to the selected instance at its pin point when one is
+    /// selected and has one, else at the world origin. Selects it and opens
+    /// its text for editing in the Layers dock.
+    pub(super) fn pin_note(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let anchored = self
             .selected()
-            .and_then(|target| crate::notes::anchor(&self.dom, target).map(|at| (target, at)));
+            .and_then(|target| crate::notes::pin_point(&self.dom, target).map(|at| (target, at)));
         let (target, at) = match anchored {
             Some((target, at)) => (Some(target), at),
             None => (None, [0.0; 3]),
@@ -218,13 +219,14 @@ impl Shell {
         let author = std::env::var("USER")
             .or_else(|_| std::env::var("USERNAME"))
             .unwrap_or_else(|_| "Me".to_owned());
-        let text = text.to_owned();
+        let text = crate::notes::DEFAULT_TEXT;
         let created = self.apply_layer_edit(
-            |dom| crate::notes::add_note(dom, &text, &author, PALETTE[0], at, target),
+            |dom| crate::notes::add_note(dom, text, &author, PALETTE[0], at, target),
             cx,
         );
         if let Some(note) = created {
             self.select(note, cx);
+            self.edit_new_note(note, window, cx);
         }
     }
 

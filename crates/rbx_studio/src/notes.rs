@@ -21,6 +21,8 @@ use crate::properties::attributes::{attributes, put_attribute};
 
 pub(crate) const FOLDER_NAME: &str = "RbxNativeNotes";
 pub(crate) const NOTE_CLASS: &str = "ObjectValue";
+/// The text a freshly pinned note starts with, selected in its editor.
+pub(crate) const DEFAULT_TEXT: &str = "Note";
 pub(crate) const TEXT: &str = "RbxNativeNoteText";
 pub(crate) const AUTHOR: &str = "RbxNativeNoteAuthor";
 pub(crate) const COLOR: &str = "RbxNativeNoteColor";
@@ -179,10 +181,15 @@ pub(crate) fn add_note(
     Ok(note)
 }
 
-/// Rewrites a note's text. Refused for a referent that is not a note.
+/// Rewrites a note's text, trimmed. Refused for a referent that is not a
+/// note, and for blank text.
 pub(crate) fn set_text(dom: &mut WeakDom, note: Ref, text: &str) -> Result<(), String> {
     if !is_note(dom, note) {
         return Err("Not a note".to_owned());
+    }
+    let text = text.trim();
+    if text.is_empty() {
+        return Err("A note needs text".to_owned());
     }
     put_attribute(dom, note, TEXT, Some(Variant::String(text.to_owned())))
 }
@@ -208,6 +215,23 @@ pub(crate) fn anchor(dom: &WeakDom, referent: Ref) -> Option<[f32; 3]> {
     position_of("CFrame")
         .or_else(|| position_of("WorldPivot"))
         .or_else(|| first_cframe_below(dom, referent))
+}
+
+/// Where Pin Note puts a note on `referent`: its anchor, lifted to the top
+/// of its world box when it is a part, so the billboard (and the camera
+/// framing it) is not buried inside the part.
+pub(crate) fn pin_point(dom: &WeakDom, referent: Ref) -> Option<[f32; 3]> {
+    let [x, y, z] = anchor(dom, referent)?;
+    let properties = dom.get(referent)?.properties();
+    let size = properties.get("size").or_else(|| properties.get("Size"));
+    let lift = match (properties.get("CFrame"), size) {
+        (Some(Variant::CFrame(cf)), Some(Variant::Vector3(size))) => {
+            let up = &cf.rotation[3..6];
+            (up[0].abs() * size.x + up[1].abs() * size.y + up[2].abs() * size.z) / 2.0
+        }
+        _ => 0.0,
+    };
+    Some([x, y + lift, z])
 }
 
 fn first_cframe_below(dom: &WeakDom, referent: Ref) -> Option<[f32; 3]> {

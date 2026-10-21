@@ -27,6 +27,7 @@
   Explorer, and nothing ever writes `Transparency`, `Locked` or `Parent`.
   Notes pinned to a point or an instance float over the viewport as
   labels and are listed in the dock; clicking one points the camera at it.
+  Pin Note sits a note on top of the part and opens its text right away.
   Layers and notes are plain attributes and an `ObjectValue` folder, so
   they travel with the place through both file formats, co-editing and
   merge, while who hides what stays in each user's own editor data.

@@ -182,7 +182,7 @@ impl Shell {
             .child(
                 chrome::button("layers-pin", "Pin note", false)
                     .track_focus(&self.tab_order.claim(cx))
-                    .on_click(cx.listener(|shell, _, _, cx| shell.pin_note("Note", cx))),
+                    .on_click(cx.listener(|shell, _, window, cx| shell.pin_note(window, cx))),
             )
             .into_any_element()
     }

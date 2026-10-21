@@ -84,6 +84,16 @@ fn set_text_rewrites_the_text() {
 }
 
 #[test]
+fn blank_text_is_refused_and_the_old_text_kept() {
+    let (mut dom, _) = place();
+    let id = add_note(&mut dom, DEFAULT_TEXT, "me", WHITE, [0.0; 3], None).unwrap();
+    assert!(set_text(&mut dom, id, "  ").is_err());
+    assert_eq!(notes(&dom)[0].text, DEFAULT_TEXT);
+    set_text(&mut dom, id, " Fix the door ").unwrap();
+    assert_eq!(notes(&dom)[0].text, "Fix the door");
+}
+
+#[test]
 fn remove_note_deletes_it() {
     let (mut dom, _) = place();
     let id = add_note(&mut dom, "a", "me", WHITE, [0.0; 3], None).unwrap();
@@ -129,4 +139,30 @@ fn a_model_anchors_at_its_pivot_else_its_first_descendant_with_a_cframe() {
     dom.set_property(model, "WorldPivot", cframe(1.0, 1.0, 1.0))
         .unwrap();
     assert_eq!(anchor(&dom, model), Some([1.0, 1.0, 1.0]));
+}
+
+#[test]
+fn a_part_is_pinned_at_the_top_of_its_box_a_model_at_its_anchor() {
+    let (mut dom, part) = place();
+    assert_eq!(pin_point(&dom, part), Some([10.0, 0.0, 0.0]));
+    // Parts store their size as `size`, the name in the place file.
+    dom.set_property(part, "size", Variant::Vector3(Vector3Data { x: 4.0, y: 16.0, z: 2.0 }))
+        .unwrap();
+    assert_eq!(pin_point(&dom, part), Some([10.0, 8.0, 0.0]));
+    // Lying on its side (90 degrees about Z), its X size is what stands up.
+    dom.set_property(
+        part,
+        "CFrame",
+        Variant::CFrame(rbx_dom::CFrameData {
+            position: Vector3Data { x: 10.0, y: 0.0, z: 0.0 },
+            rotation: [0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        }),
+    )
+    .unwrap();
+    assert_eq!(pin_point(&dom, part), Some([10.0, 2.0, 0.0]));
+    let root = dom.parent(part).unwrap();
+    let model = dom.new_instance("Model", "M", Some(root));
+    dom.set_property(model, "WorldPivot", cframe(1.0, 1.0, 1.0))
+        .unwrap();
+    assert_eq!(pin_point(&dom, model), Some([1.0, 1.0, 1.0]));
 }
