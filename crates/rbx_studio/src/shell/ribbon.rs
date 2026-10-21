@@ -272,7 +272,7 @@ impl Shell {
     /// the Model menu already uses, so a ribbon click and a menu-bar click
     /// are the same code path.
     fn insert_tiles(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let part = menu::dropdown(
+        let part = menu::dropdown_in_group(
             self,
             MenuId::InsertPart,
             super::chrome::Trigger::new(tile(
@@ -285,7 +285,7 @@ impl Shell {
             PART_INSERTS.iter().map(insert_item).collect(),
             cx,
         );
-        let script = menu::dropdown(
+        let script = menu::dropdown_in_group(
             self,
             MenuId::InsertScript,
             super::chrome::Trigger::new(tile(
@@ -527,7 +527,7 @@ impl Shell {
     }
 
     fn insert_gui(&self, cx: &mut Context<Self>) -> impl IntoElement + 'static {
-        menu::dropdown(
+        menu::dropdown_in_group(
             self,
             MenuId::InsertGui,
             super::chrome::Trigger::new(tile(
