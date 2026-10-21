@@ -1,9 +1,9 @@
 //! Runs Loren-style specs (`return function(t) ... end`, Jest-style
 //! `t.describe`/`t.it`/`t.expect`) in the editor's Luau sandbox with Loren's
 //! own spec runner (`vendor/loren/test/runner/LorenTest.luau`). The editor's
-//! Tests dock calls [`plan_file`] and [`run_file`] for each spec module
-//! [`is_loren_module`] picks out, and shows what they return beside the
-//! TestEZ specs `rbx_lua::test_runner` runs.
+//! Tests dock and `rbxlua test` call [`plan_mixed`] and [`run_mixed`], which
+//! send each spec module [`is_loren_module`] picks out here and the rest to
+//! `rbx_lua::test_runner`.
 
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
@@ -13,7 +13,8 @@ use std::time::{Duration, Instant};
 
 use rbx_dom::{Ref, Variant, WeakDom};
 use rbx_lua::test_runner::{
-    FilePlan, FileReport, Location, NodeKind, Options, PlanNode, SpecFile, Status, TestResult,
+    self, FilePlan, FileReport, Location, NodeKind, Options, PlanNode, Report, SpecFile, Status,
+    TestResult,
 };
 use rbx_lua::{Output, RunState, Runtime};
 use rbx_reflection::ReflectionDatabase;
@@ -721,4 +722,35 @@ fn result(
         duration: Duration::ZERO,
         output: Output::default(),
     }
+}
+
+/// What `file` declares: Loren's runner reads a Loren spec, `test_runner` the rest.
+pub fn plan_mixed(dom: &WeakDom, file: &SpecFile, database: &ReflectionDatabase) -> FilePlan {
+    match is_loren_module(dom, file.module) {
+        true => plan_file(dom, file),
+        false => test_runner::plan(dom, file, database),
+    }
+}
+
+/// Runs `files`: Loren specs one by one through Loren's runner, the rest
+/// through `test_runner` (honouring `FOCUS` across them). Reports come back
+/// in `files`' order.
+pub fn run_mixed(
+    dom: &WeakDom,
+    files: &[SpecFile],
+    database: &ReflectionDatabase,
+    options: &Options,
+) -> Report {
+    let (lorens, plain): (Vec<SpecFile>, Vec<SpecFile>) = files
+        .iter()
+        .cloned()
+        .partition(|f| is_loren_module(dom, f.module));
+    let mut reports = match (plain.as_slice(), options.only.is_some()) {
+        ([], _) => Vec::new(),
+        ([file], true) => vec![test_runner::run_file(dom, file, database, options, false)],
+        _ => test_runner::run(dom, &plain, database, options).files,
+    };
+    reports.extend(lorens.iter().map(|f| run_file(dom, f, options)));
+    reports.sort_by_key(|r| files.iter().position(|f| f.module == r.file.module));
+    Report { files: reports }
 }
