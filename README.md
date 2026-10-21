@@ -79,7 +79,7 @@ That builds everything. The binaries you get:
 | Binary | Crate | What it does |
 |---|---|---|
 | `rbxdump` | `rbx_parser_cli` | Prints the instance tree of a `.rbxm`/`.rbxl`/`.rbxlx`/`.rbxmx` file. `--roundtrip <file>` writes the file back out and diffs it against the original. |
-| `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`). |
+| `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`), or runs the place's TestEZ specs (`rbxlua test place.rbxl [--junit out.xml]`, see [`docs/testing.md`](docs/testing.md)). |
 | `rbxview` | `rbx_viewer` | A standalone 3D viewer (`rbxview place.rbxl [--screenshot out.png]`), and the server for the browser build (`rbxview --serve`, see below). |
 | `rbxstudio` | `rbx_studio` | The editor (`rbxstudio [--select <name-or-path>] [--run <script.luau>] [--verbose] <place>`, `--help` for the rest). |
 | `rbxcloud` | `rbx_cloud` | A small Open Cloud CLI (`whoami`, `list`, `download`, `asset`). |
@@ -123,6 +123,7 @@ otherwise. So yes, `cargo build` still takes a while for those two crates.
 | `rbx_materials` | The texture packs (colour, normal, metalness, roughness) behind each `Enum.Material`. |
 | `rbx_import` | Reads `.fbx`/`.obj`/`.gltf`/`.glb`, checks the triangle count against Roblox's limit and gets the file ready for upload. |
 | `rbx_cloud` | The Open Cloud client and the `rbxcloud` CLI. |
+| `rbx_loren` | Loren, the optional built-in game framework by fabi: the `rbxstudio loren` CLI, its vendored Luau runtime, and the project graph, place and spec runs the editor reads. |
 | `rbx_viewer` | The wgpu renderer and `rbxview` (desktop and WebGPU). |
 | `rbx_studio` | The editor (`rbxstudio`), built on GPUI Kit. |
 | `rbx_parser_cli` | The `rbxdump` and `rbxlua` tools. |
@@ -341,6 +342,16 @@ include, how to report a bug, and the rules about Roblox assets.
   Its Roblox API definitions, and Roblox's API reference text from
   [Roblox-Client-Tracker](https://github.com/MaximumADHD/Roblox-Client-Tracker),
   are downloaded at run time, not shipped.
+- **fabi** for [Loren](https://github.com/fabideveloper/Loren-Framework)
+  (MIT), the game framework rbx-native offers as its optional built-in one.
+  Services and Controllers start in dependency order, networking is packed
+  with typed specs and middleware, and there's `Loren.Testing`. Its Luau
+  runtime, project template and unit specs are vendored unchanged, apart
+  from the documented performance patches (`vendor/loren/`, with fabi's
+  licence and the bundled Promise's own). Its `loren` CLI is ported to Rust
+  as `rbxstudio loren` (`crates/rbx_loren`). If you build on Loren, use
+  fabi's framework and docs:
+  [fabideveloper.github.io/Loren-Framework](https://fabideveloper.github.io/Loren-Framework/).
 - **Twitter and jdecked** for the [Twemoji](https://github.com/jdecked/twemoji)
   graphics (CC-BY 4.0) on the Device Simulator's keyboard cover. They're
   shipped unmodified in `assets/twemoji/` with their licence.

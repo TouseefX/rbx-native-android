@@ -37,6 +37,10 @@
 //! Viewport › Advanced open under `RBX_STUDIO_SETTINGS_ADVANCED=1` and the
 //! page scrolled `RBX_STUDIO_SETTINGS_SCROLL=<px>` down, the same aid, for
 //! the Settings window (see `shell::settings_window`).
+//!
+//! `RBX_STUDIO_TESTS=1|run` opens the Tests dock, and with `run` runs every
+//! spec at once (see `shell::tests_dock`).
+//!
 //! `RBX_STUDIO_OPEN_SCRIPT=<name>[,<name>...]` opens each named
 //! `Script`/`LocalScript`/`ModuleScript` in the Script Editor panel exactly as
 //! double-clicking its Explorer row would, the same aid, for the script
@@ -80,6 +84,9 @@
 //! `joint=<name>`, `save`, `graph`, `graph-demo`, `play`, …) as the matching
 //! click would, the same aid, for the Animation Editor (see
 //! `shell::animation::debug` for every step).
+//!
+//! `RBX_STUDIO_PERF=<word of a measure's name>` turns the Performance view
+//! on with that measure (see `shell::perf_view`).
 
 mod accent;
 mod align;
@@ -105,14 +112,17 @@ mod home;
 mod input_actions;
 mod key_store;
 mod launcher;
+mod layers;
 mod luau_lsp;
 mod menu_bar;
+mod notes;
 mod pacing;
 mod packs;
 mod pointer_lock;
 #[cfg(test)]
 mod probe;
 mod properties;
+mod query;
 mod recovery;
 mod render_image;
 mod save;
@@ -125,6 +135,7 @@ mod settings;
 mod settle;
 mod shell;
 mod shortcuts;
+mod strip;
 mod style_editor;
 mod sun;
 mod terrain;
@@ -173,6 +184,14 @@ fn main() {
     if std::env::args().nth(1).as_deref() == Some(rbx_play::netsim::windivert::HELPER_FLAG) {
         let arguments: Vec<String> = std::env::args().skip(2).collect();
         std::process::exit(rbx_play::netsim::windivert::run_helper(&arguments));
+    }
+    // `rbxstudio loren <command>`: the Loren CLI, no window.
+    if std::env::args().nth(1).as_deref() == Some("loren") {
+        let arguments: Vec<String> = std::env::args().skip(2).collect();
+        std::process::exit(rbx_loren::cli::main(
+            &arguments,
+            rbx_loren::cli::Overrides::default(),
+        ));
     }
     // Before anything can ask whether a beta feature is on.
     beta::init();
@@ -309,14 +328,19 @@ pub(crate) fn open_home_again(cx: &mut App) {
 /// from disk as [`open_home_again`] reads it. The error is the message for
 /// the Output dock; the caller keeps its own window then.
 pub(crate) fn open_place(path: &Path, cx: &mut App) -> Result<(), String> {
+    open_editor(path, fresh_boot(), cx).map_err(|failed| failed.0)
+}
+
+/// The settings and user content as they are on disk now, for an editor
+/// opened after launch.
+fn fresh_boot() -> EditorBoot {
     let user = packs::UserContent::load();
     let settings = themed(Settings::load(), user.theme.palette.mode);
-    let boot = EditorBoot {
+    EditorBoot {
         settings,
         launch: Launch::default(),
         user,
-    };
-    open_editor(path, boot, cx).map_err(|failed| failed.0)
+    }
 }
 
 /// Starts a fresh editor process on `place`, for settings that only take
@@ -355,6 +379,9 @@ pub(crate) fn open_editor(
     boot: EditorBoot,
     cx: &mut App,
 ) -> Result<(), Box<(String, EditorBoot)>> {
+    if shell::game::manifest::is_manifest(path) {
+        return shell::game::open_game(path, boot, cx);
+    }
     let EditorBoot {
         settings,
         launch,

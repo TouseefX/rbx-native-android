@@ -213,7 +213,10 @@ fn synthetic_diff_doms() -> (rbx_dom::WeakDom, rbx_dom::WeakDom) {
 /// `UniqueId`, the engine's own per-instance id, which the dump does not tag
 /// hidden) whose value differs from the class default (a new Part lists its
 /// size and position, not fifty untouched surfaces).
-fn drop_defaults(nodes: &mut [rbx_dom::diff::DiffNode], db: &rbx_reflection::ReflectionDatabase) {
+pub(in crate::shell) fn drop_defaults(
+    nodes: &mut [rbx_dom::diff::DiffNode],
+    db: &rbx_reflection::ReflectionDatabase,
+) {
     for node in nodes {
         if node.kind == rbx_dom::diff::ChangeKind::Added {
             let class = node.class.clone();

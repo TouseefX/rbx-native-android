@@ -49,6 +49,13 @@ actions!(
     [
         MenuNewPlace,
         MenuOpenPlace,
+        MenuOpenGame,
+        MenuFindInGame,
+        MenuSyncShared,
+        MenuSaveAll,
+        MenuPublishAll,
+        MenuMarkShared,
+        MenuUnmarkShared,
         MenuInsertObject,
         MenuToggleCommandBar,
         MenuSave,
@@ -56,6 +63,7 @@ actions!(
         MenuClosePlace,
         MenuExportGltf,
         MenuExportProject,
+        MenuExportClean,
         MenuSaveToRoblox,
         MenuPublishToRoblox,
         MenuLinkRobloxPlace,
@@ -108,6 +116,8 @@ actions!(
         MenuToggleViewport,
         MenuToggleCollaborators,
         MenuToggleInputActions,
+        MenuToggleLayers,
+        MenuToggleLoren,
         /// Shared by every item below that has no real handler yet; always
         /// paired with `.disabled(true)` (see `menus`), so `PopupMenu` never
         /// lets a click reach it, `actions::install` still gives it a no-op
@@ -130,9 +140,11 @@ pub(crate) struct MenuInsertTemplate {
 /// Returns the entity `Shell` holds and mounts as the first child of its
 /// render tree (see [`MenuBar::bar`]).
 pub(crate) fn build(shell: Entity<Shell>, templates: &[Template], cx: &mut App) -> Entity<MenuBar> {
-    actions::install(shell, cx);
+    actions::install(&shell, cx);
     MenuBar::new(menus(templates), cx)
 }
+
+pub(crate) use actions::retarget;
 
 /// Rebuilds the menus after the user's templates changed on disk: Model's
 /// template items carry an index into the list, so the old ones would now
@@ -174,6 +186,10 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
         MenuItem::action("Import 3D Model…", MenuImportModel),
         MenuItem::action("Import Image…", MenuImportImage),
         MenuItem::separator(),
+        // The id Sync Shared matches across a game's places.
+        MenuItem::action("Mark as Shared", MenuMarkShared),
+        MenuItem::action("Unmark Shared", MenuUnmarkShared),
+        MenuItem::separator(),
         MenuItem::action("Group", MenuGroup),
         MenuItem::action("Ungroup", MenuUngroup),
     ];
@@ -195,6 +211,8 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 // Studio's place for it, under Open. Back to Home; asks
                 // first when there are unsaved changes (`shell::close_place`).
                 MenuItem::action("Close Place", MenuClosePlace),
+                // Every place of a game in one window (`shell::game`).
+                MenuItem::action("Open Game…", MenuOpenGame),
                 MenuItem::separator(),
                 // Studio's names: Save to File writes back to the file
                 // being edited (Ctrl+S), Save to File As… asks for a new one
@@ -205,6 +223,14 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 // A folder Argon or Rojo syncs from; File › Open reads one
                 // back (a `*.project.json`).
                 MenuItem::action("Export as Project…", MenuExportProject),
+                // A copy without layers and 3D notes (`crate::strip`).
+                MenuItem::action("Export Clean Copy…", MenuExportClean),
+                MenuItem::separator(),
+                // A game window's own: every place at once.
+                MenuItem::action("Find in Game…", MenuFindInGame),
+                MenuItem::action("Sync Shared…", MenuSyncShared),
+                MenuItem::action("Save All", MenuSaveAll),
+                MenuItem::action("Publish All…", MenuPublishAll),
                 MenuItem::separator(),
                 // Uploads, not local saves: see `shell::roblox_publish`. An
                 // unlinked file asks for its place on first use.
@@ -270,6 +296,8 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 // rbx-native. Shut by default, so it needs a way in.
                 MenuItem::action("Collaborators", MenuToggleCollaborators),
                 MenuItem::action("Input Actions", MenuToggleInputActions),
+                MenuItem::action("Layers", MenuToggleLayers),
+                MenuItem::action("Loren", MenuToggleLoren),
                 MenuItem::separator(),
                 // The accessibility settings the reference guidance calls
                 // for a native app to expose itself rather than inherit

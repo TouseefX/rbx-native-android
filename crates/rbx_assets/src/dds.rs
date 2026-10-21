@@ -52,6 +52,13 @@ fn parse_header(data: &[u8]) -> Result<Header, AssetError> {
     })
 }
 
+/// The top mip's width and height, read off the header alone.
+pub(crate) fn dimensions(data: &[u8]) -> Option<(u32, u32)> {
+    parse_header(data)
+        .ok()
+        .map(|header| (header.width, header.height))
+}
+
 /// Decodes a DDS asset's top mip to RGBA8, using only its own dimensions.
 ///
 /// Anything beyond the first mip is ignored: the sniffed [`crate::AssetKind`]

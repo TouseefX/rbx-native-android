@@ -74,7 +74,7 @@ impl Shell {
     }
 
     fn open_picked(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        if is_place_file(&path) {
+        if is_place_file(&path) || super::game::manifest::is_manifest(&path) {
             self.request_open(path, cx);
         } else {
             self.warn(

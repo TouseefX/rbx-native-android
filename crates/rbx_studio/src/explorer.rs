@@ -2,7 +2,7 @@
 //! Explorer shows it.
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -544,21 +544,32 @@ pub(crate) fn search(items: &[TreeItem], query: &str) -> Vec<TreeItem> {
     if query.is_empty() {
         return items.to_vec();
     }
+    keep_matching(items, &|item| item.label.to_lowercase().contains(&query))
+}
+
+/// [`search`] for the rows of `matches` rather than for a name: what a query
+/// in the search field's query mode selected (see `crate::query`), laid out
+/// the same way.
+pub(crate) fn search_refs(items: &[TreeItem], matches: &[Ref]) -> Vec<TreeItem> {
+    let ids: HashSet<SharedString> = matches
+        .iter()
+        .map(|&reference| item_id(reference))
+        .collect();
+    keep_matching(items, &|item| ids.contains(&item.id))
+}
+
+fn keep_matching(items: &[TreeItem], is_match: &dyn Fn(&TreeItem) -> bool) -> Vec<TreeItem> {
     items
         .iter()
-        .filter_map(|item| matching(item, &query))
+        .filter_map(|item| matching(item, is_match))
         .collect()
 }
 
-fn matching(item: &TreeItem, query: &str) -> Option<TreeItem> {
-    if item.label.to_lowercase().contains(query) {
+fn matching(item: &TreeItem, is_match: &dyn Fn(&TreeItem) -> bool) -> Option<TreeItem> {
+    if is_match(item) {
         return Some(item.clone());
     }
-    let children: Vec<TreeItem> = item
-        .children
-        .iter()
-        .filter_map(|child| matching(child, query))
-        .collect();
+    let children = keep_matching(&item.children, is_match);
     if children.is_empty() {
         return None;
     }

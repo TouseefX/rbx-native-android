@@ -6566,6 +6566,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rbx_loren"
+version = "0.1.0"
+dependencies = [
+ "rbx_dom",
+ "rbx_lua",
+ "rbx_reflection",
+ "regex",
+ "tempfile",
+ "ureq",
+ "zip",
+]
+
+[[package]]
 name = "rbx_lua"
 version = "0.1.0"
 dependencies = [
@@ -6603,6 +6616,7 @@ dependencies = [
  "base64 0.22.1",
  "rbx_binary",
  "rbx_dom",
+ "rbx_loren",
  "rbx_lua",
  "rbx_reflection",
  "rbx_xml",
@@ -6679,6 +6693,7 @@ dependencies = [
  "gpui-base",
  "gpui-kit",
  "image",
+ "libc",
  "lsp-types",
  "raw-window-handle",
  "rbx_animation",
@@ -6690,6 +6705,7 @@ dependencies = [
  "rbx_eyedropper",
  "rbx_figma",
  "rbx_import",
+ "rbx_loren",
  "rbx_lua",
  "rbx_mesh",
  "rbx_play",

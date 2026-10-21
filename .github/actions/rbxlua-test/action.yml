@@ -1,0 +1,50 @@
+# Runs a place's TestEZ / Jest-Lua specs headlessly with `rbxlua test`
+# (see docs/testing.md). Builds rbxlua from this repository at `branch`; the
+# Swatinem cache keeps that to the first run.
+name: rbxlua test
+description: Run a Roblox place's Luau specs without Studio
+inputs:
+  place:
+    description: The .rbxl/.rbxlx to test, or a Rojo/Argon project folder
+    required: true
+  filter:
+    description: Only run tests whose describe/it names contain this text
+    required: false
+    default: ""
+  roots:
+    description: Space-separated dotted paths to search for specs (default the whole place)
+    required: false
+    default: ""
+  junit:
+    description: Where to write JUnit XML (empty for none)
+    required: false
+    default: rbxlua-test.xml
+  branch:
+    description: The rbx-native branch to build rbxlua from
+    required: false
+    default: dev
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+      with:
+        key: rbxlua-${{ inputs.branch }}
+    - name: Install rbxlua
+      shell: bash
+      run: |
+        cargo install --locked --git https://github.com/chteau/rbx-native \
+          --branch "${{ inputs.branch }}" rbx_parser_cli --bin rbxlua
+    - name: Run specs
+      shell: bash
+      env:
+        PLACE: ${{ inputs.place }}
+        FILTER: ${{ inputs.filter }}
+        ROOTS: ${{ inputs.roots }}
+        JUNIT: ${{ inputs.junit }}
+      run: |
+        args=(test "$PLACE")
+        [ -n "$FILTER" ] && args+=(--filter "$FILTER")
+        for root in $ROOTS; do args+=(--root "$root"); done
+        [ -n "$JUNIT" ] && args+=(--junit "$JUNIT")
+        rbxlua "${args[@]}"

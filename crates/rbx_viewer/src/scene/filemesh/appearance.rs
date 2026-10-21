@@ -100,7 +100,7 @@ impl Appearance {
 ///
 /// Studio only ever creates one; a file carrying several (the fixture's `Head`
 /// does) is resolved the way the engine resolves it, by keeping the first.
-pub(super) fn of(dom: &WeakDom, part: &Instance) -> Option<Appearance> {
+pub(crate) fn of(dom: &WeakDom, part: &Instance) -> Option<Appearance> {
     let child = part.children().iter().find_map(|&referent| {
         let child = dom.get(referent)?;
         (child.class() == CLASS).then_some(child)

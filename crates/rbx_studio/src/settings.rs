@@ -115,6 +115,10 @@ pub(crate) struct Settings {
     /// reveal reads as an insert that did nothing.
     pub(crate) increment_names: bool,
     pub(crate) expand_on_select: bool,
+    /// Whether Save/Publish to Roblox uploads a copy without the editor's
+    /// own layers and notes (see `crate::strip`). Defaults on: they mean
+    /// nothing to the engine, and a note is not meant for players.
+    pub(crate) strip_on_publish: bool,
     /// The dragger guides' switches, see [`DraggerSettings`].
     pub(crate) dragger: DraggerSettings,
     /// The camera's feel and the snap increments, see [`Controls`].
@@ -237,6 +241,7 @@ impl Default for Settings {
             optimize_graph_on_open: false,
             increment_names: true,
             expand_on_select: true,
+            strip_on_publish: true,
             dragger: DraggerSettings::default(),
             controls: Controls::default(),
             discord_presence: false,
@@ -439,6 +444,10 @@ fn load_from(path: &Path) -> Settings {
             .unwrap_or(false),
         increment_names: value
             .get("increment_names")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true),
+        strip_on_publish: value
+            .get("strip_on_publish")
             .and_then(|v| v.as_bool())
             .unwrap_or(true),
         expand_on_select: value
@@ -752,6 +761,7 @@ fn save_to(settings: &Settings, path: &Path) -> Result<(), SettingsError> {
     value["device_custom"] = settings.device_custom.json();
     value["device_scaling"] = settings.device_scaling.key().into();
     value["device_keyboard_layout"] = settings.device_keyboard_layout.key().into();
+    value["strip_on_publish"] = settings.strip_on_publish.into();
     // A fixed-shape object always serializes; nothing here can fail.
     let bytes = serde_json::to_vec_pretty(&value).expect("settings JSON always serializes");
     write_atomic(path, &bytes)
@@ -858,18 +868,18 @@ impl PlaySandbox {
     }
 }
 
+/// Guards every test in the crate that mutates `XDG_CONFIG_HOME`/`APPDATA`:
+/// env vars are process-global and `cargo test` runs tests on threads of one
+/// process, so two such tests holding separate locks see each other's value.
+#[cfg(test)]
+pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
-    use std::sync::Mutex;
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    /// Guards every test below that mutates `XDG_CONFIG_HOME`/`APPDATA`: env
-    /// vars are process-global, and `cargo test` runs tests on separate
-    /// threads of the same process, so two such tests running concurrently
-    /// would each observe the other's value.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     /// A settings.json path under a fresh, never-created temp directory: each
     /// test gets its own, so tests never share (or need to clean up) state,
