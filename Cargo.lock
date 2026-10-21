@@ -6484,6 +6484,7 @@ version = "0.1.0"
 dependencies = [
  "full_moon",
  "rbx_dom",
+ "rbx_loren",
  "rbx_xml",
 ]
 

@@ -13,7 +13,8 @@ use full_moon::visitors::Visitor;
 use rbx_dom::{Ref, WeakDom};
 
 use crate::resolve::{args, dotted, first_string, ident, string, Resolver, Val};
-use crate::{full_name, Check, Finding, Severity, Side, Usage};
+use crate::{full_name, Check, Finding, LorenService, Severity, Side, Usage};
+use rbx_loren::graph::RouteKind;
 
 /// Names a script assigns to `.Name` from a string literal: instances it
 /// creates at run time, which a static path can't see.
@@ -40,7 +41,7 @@ pub(crate) fn runtime_names(ast: &Ast) -> HashSet<String> {
 }
 
 /// Every named function in the script, by the name a handler would be
-/// passed as (`onBuy`, `Shop.onBuy`).
+/// passed as or called by (`onBuy`, `Shop.onBuy`, `Shop:give`).
 fn functions(ast: &Ast) -> HashMap<String, FunctionBody> {
     struct Functions(HashMap<String, FunctionBody>);
     impl Visitor for Functions {
@@ -50,10 +51,12 @@ fn functions(ast: &Ast) -> HashMap<String, FunctionBody> {
         }
         fn visit_function_declaration(&mut self, node: &full_moon::ast::FunctionDeclaration) {
             let name = node.name();
-            if name.method_name().is_none() {
-                let path: Vec<&str> = name.names().iter().map(ident).collect();
-                self.0.insert(path.join("."), node.body().clone());
-            }
+            let path: Vec<&str> = name.names().iter().map(ident).collect();
+            let key = match name.method_name() {
+                Some(method) => format!("{}:{}", path.join("."), ident(method)),
+                None => path.join("."),
+            };
+            self.0.insert(key, node.body().clone());
         }
     }
     let mut functions = Functions(HashMap::new());
@@ -67,6 +70,7 @@ pub(crate) fn script(
     side: Side,
     ast: &Ast,
     runtime_names: &HashSet<String>,
+    loren: Option<&LorenService>,
     usage: &mut Usage,
 ) -> Vec<Finding> {
     let mut walker = Walker {
@@ -79,8 +83,10 @@ pub(crate) fn script(
         path: full_name(dom, script),
         functions: functions(ast),
         runtime_names,
+        loren,
         usage,
         taint: None,
+        calls: Vec::new(),
         findings: Vec::new(),
     };
     walker.block(ast.nodes());
@@ -99,7 +105,33 @@ struct Taint {
     tainted: HashSet<String>,
     /// Names an enclosing condition has checked.
     guarded: HashSet<String>,
+    /// Numbers (`tonumber(x)`, or `typeof(x) == "number"` checked): only a
+    /// lower and an upper bound validate them, not a nil check.
+    numeric: HashSet<String>,
+    /// Names compared against a lower and against an upper bound.
+    lower: HashSet<String>,
+    upper: HashSet<String>,
+    /// A Loren `Spec` or `Middleware` entry that runs before the handler.
+    gate: Option<String>,
 }
+
+impl Taint {
+    fn new(remote: String, player: Option<String>, tainted: HashSet<String>) -> Self {
+        Taint {
+            remote,
+            player,
+            tainted,
+            guarded: HashSet::new(),
+            numeric: HashSet::new(),
+            lower: HashSet::new(),
+            upper: HashSet::new(),
+            gate: None,
+        }
+    }
+}
+
+/// How deep taint follows calls into the script's own functions.
+const MAX_CALL_DEPTH: usize = 4;
 
 struct Walker<'a> {
     resolver: Resolver<'a>,
@@ -107,15 +139,19 @@ struct Walker<'a> {
     path: String,
     functions: HashMap<String, FunctionBody>,
     runtime_names: &'a HashSet<String>,
+    loren: Option<&'a LorenService>,
     usage: &'a mut Usage,
     taint: Option<Taint>,
+    /// The functions taint is being followed into, innermost last.
+    calls: Vec<String>,
     findings: Vec<Finding>,
 }
 
 /// Results that are a checked value however the input was shaped.
 /// `Instance.new` is here because the instance is the server's own, even
 /// when its class isn't: the call itself is the sink.
-const SANITIZERS: [&str; 5] = ["tonumber", "math.clamp", "typeof", "type", "Instance.new"];
+/// `tonumber` isn't one: it makes a number, but not a bounded one.
+const SANITIZERS: [&str; 4] = ["math.clamp", "typeof", "type", "Instance.new"];
 
 /// Writing a client-supplied value to these is the classic exploit.
 const SENSITIVE: [&str; 13] = [
@@ -199,6 +235,9 @@ impl Walker<'_> {
                 }
                 for (i, name) in local.names().iter().enumerate() {
                     self.bind(ident(name), exprs.get(i).copied());
+                    if let Some(Expression::TableConstructor(table)) = exprs.get(i) {
+                        self.loren_table(ident(name), table);
+                    }
                 }
             }
             Stmt::Assignment(assign) => {
@@ -222,6 +261,12 @@ impl Walker<'_> {
                                     .chain(var.prefix(), &suffixes[..suffixes.len() - 1]);
                                 self.listener(&remote, line(var));
                                 self.handler_arg(&remote, expr);
+                            } else if let (Some(route), Expression::Function(f)) = (
+                                dotted(var.prefix(), &suffixes)
+                                    .and_then(|path| self.loren_route(&path, false)),
+                                expr,
+                            ) {
+                                self.handler(route.0, f.body(), route.1, route.2);
                             } else {
                                 self.expr(expr);
                                 self.assigned(var, expr);
@@ -286,7 +331,16 @@ impl Walker<'_> {
                 self.taint = saved;
             }
             Stmt::LocalFunction(f) => self.function(f.body()),
-            Stmt::FunctionDeclaration(f) => self.function(f.body()),
+            Stmt::FunctionDeclaration(f) => {
+                let name = f.name();
+                let mut path: Vec<&str> = name.names().iter().map(ident).collect();
+                let colon = name.method_name().map(ident);
+                path.extend(colon);
+                match self.loren_route(&path.join("."), colon.is_some()) {
+                    Some((remote, player, gate)) => self.handler(remote, f.body(), player, gate),
+                    None => self.function(f.body()),
+                }
+            }
             _ => {}
         }
     }
@@ -295,45 +349,57 @@ impl Walker<'_> {
         let val = expr.map_or(Val::Unknown, |e| self.resolver.expr(e));
         let tainted = expr.is_some_and(|e| self.tainted(e));
         self.resolver.bindings.insert(name.to_string(), val);
+        let numeric = expr.is_some_and(is_tonumber);
         if let Some(taint) = &mut self.taint {
             taint.guarded.remove(name);
+            taint.lower.remove(name);
+            taint.upper.remove(name);
             match tainted {
                 true => taint.tainted.insert(name.to_string()),
                 false => taint.tainted.remove(name),
+            };
+            match tainted && numeric {
+                true => taint.numeric.insert(name.to_string()),
+                false => taint.numeric.remove(name),
             };
         }
     }
 
     fn if_stmt(&mut self, branch: &If) {
         self.expr(branch.condition());
-        let mut conditions = vec![branch.condition()];
-        self.guarded_block(&conditions, branch.block());
+        let mut failed = Vec::new();
+        self.guarded_block(&failed, Some(branch.condition()), branch.block());
+        failed.push(branch.condition());
         for elseif in branch.else_if().into_iter().flatten() {
             self.expr(elseif.condition());
-            conditions.push(elseif.condition());
-            self.guarded_block(&conditions, elseif.block());
+            self.guarded_block(&failed, Some(elseif.condition()), elseif.block());
+            failed.push(elseif.condition());
         }
         if let Some(block) = branch.else_block() {
-            self.guarded_block(&conditions, block);
+            self.guarded_block(&failed, None, block);
         }
         // `if not valid(x) then return end` guards the rest of the block.
         if branch.else_if().is_none() && branch.else_block().is_none() && exits(branch.block()) {
-            self.guard(branch.condition());
+            self.guard(branch.condition(), true);
         }
     }
 
-    fn guarded_block(&mut self, conditions: &[&Expression], block: &Block) {
+    /// A branch runs with the earlier conditions false and its own true.
+    fn guarded_block(&mut self, failed: &[&Expression], holds: Option<&Expression>, block: &Block) {
         let saved = self.taint.clone();
-        for condition in conditions {
-            self.guard(condition);
+        for condition in failed {
+            self.guard(condition, true);
+        }
+        if let Some(condition) = holds {
+            self.guard(condition, false);
         }
         self.block(block);
         self.taint = saved;
     }
 
-    fn guard(&mut self, condition: &Expression) {
+    fn guard(&mut self, condition: &Expression, negated: bool) {
         if let Some(taint) = &mut self.taint {
-            taint.guarded.extend(names(condition));
+            guard(taint, condition, negated);
         }
     }
 
@@ -453,7 +519,18 @@ impl Walker<'_> {
                     }
                     return;
                 }
+                if let (Some((remote, gate)), Some(body), "Connect" | "Once") = (
+                    self.loren_event(prefix, before),
+                    arguments.first().and_then(|h| self.handler_body(h)),
+                    name,
+                ) {
+                    self.handler(remote, &body, 0, gate);
+                    return;
+                }
                 self.method(prefix, before, name, method.args(), line);
+                if let Some(key) = self.method_key(prefix, before, name) {
+                    self.follow(&key, &arguments);
+                }
                 for arg in arguments {
                     self.expr(arg);
                 }
@@ -462,6 +539,9 @@ impl Walker<'_> {
                 let callee = dotted(prefix, before);
                 let line = line(prefix);
                 self.function_call(callee.as_deref(), call_args, line);
+                if let Some(callee) = &callee {
+                    self.follow(callee, &args(call_args));
+                }
                 for arg in args(call_args) {
                     self.expr(arg);
                 }
@@ -594,7 +674,7 @@ impl Walker<'_> {
             }
             Some("assert") => {
                 if let Some(condition) = arguments.first() {
-                    self.guard(condition);
+                    self.guard(condition, false);
                 }
             }
             Some("tonumber") => {
@@ -669,7 +749,20 @@ impl Walker<'_> {
 
     /// A handler passed by value: an anonymous function, or a named one.
     fn handler_arg(&mut self, remote: &Val, handler: &Expression) {
-        let body = match handler {
+        let Some(body) = self.handler_body(handler) else {
+            self.expr(handler);
+            return;
+        };
+        let remote = match remote {
+            Val::Inst(r) => full_name(self.resolver.dom, *r),
+            Val::Missing { path, .. } => path.clone(),
+            _ => "remote".into(),
+        };
+        self.handler(remote, &body, 0, None);
+    }
+
+    fn handler_body(&self, handler: &Expression) -> Option<FunctionBody> {
+        match handler {
             Expression::Function(f) => Some(f.body().clone()),
             Expression::Var(Var::Name(name)) => self.functions.get(ident(name)).cloned(),
             Expression::Var(Var::Expression(var)) => {
@@ -677,18 +770,21 @@ impl Walker<'_> {
                     .and_then(|name| self.functions.get(&name).cloned())
             }
             _ => None,
-        };
-        let Some(body) = body else {
-            self.expr(handler);
-            return;
-        };
-        let params = params(&body);
-        let remote = match remote {
-            Val::Inst(r) => full_name(self.resolver.dom, *r),
-            Val::Missing { path, .. } => path.clone(),
-            _ => "remote".into(),
-        };
-        let player = params.first().filter(|p| *p != "...").cloned();
+        }
+    }
+
+    /// Walks a handler with the parameters after the Player (`params[player]`)
+    /// tainted.
+    fn handler(
+        &mut self,
+        remote: String,
+        body: &FunctionBody,
+        player: usize,
+        gate: Option<String>,
+    ) {
+        let params = params(body);
+        let first = player;
+        let player = params.get(first).filter(|p| *p != "...").cloned();
         if let Some(p) = &player {
             let lower = p.to_lowercase();
             let playerish = p.len() == 1
@@ -699,31 +795,161 @@ impl Walker<'_> {
                     Check::PlayerArgument,
                     Severity::Medium,
                     line(body.parameters_parentheses()),
-                    format!("The `{remote}` handler's first parameter is named `{p}`, but it always receives the sending Player; the client's arguments start at the second."),
+                    format!("The `{remote}` handler names its Player parameter `{p}`, but it always receives the sending Player; the client's arguments come after it."),
                 );
             }
         }
-        let mut tainted: HashSet<String> = params.iter().skip(1).cloned().collect();
-        if params.first().is_some_and(|p| p == "...") {
+        let mut tainted: HashSet<String> = params.iter().skip(first + 1).cloned().collect();
+        if params.get(first).is_some_and(|p| p == "...") {
             tainted.insert("...".into());
         }
-        self.function_with(
-            &body,
-            Some(Taint {
-                remote,
-                player,
-                tainted,
-                guarded: HashSet::new(),
-            }),
-        );
+        let mut taint = Taint::new(remote, player, tainted);
+        taint.gate = gate;
+        self.function_with(body, Some(taint));
+    }
+
+    /// A call to one of the script's own functions with client data: the
+    /// callee is walked with the parameters those arguments land in tainted.
+    fn follow(&mut self, key: &str, arguments: &[&Expression]) {
+        let Some(taint) = &self.taint else { return };
+        if self.calls.len() >= MAX_CALL_DEPTH || self.calls.iter().any(|c| c == key) {
+            return;
+        }
+        let Some(body) = self.functions.get(key).cloned() else {
+            return;
+        };
+        let dirty: Vec<bool> = arguments.iter().map(|a| self.tainted(a)).collect();
+        if !dirty.contains(&true) {
+            return;
+        }
+        let mut tainted = HashSet::new();
+        let mut player = None;
+        for (i, p) in params(&body).into_iter().enumerate() {
+            if p == "..." {
+                if dirty.get(i..).is_some_and(|rest| rest.contains(&true)) {
+                    tainted.insert(p);
+                }
+                break;
+            }
+            let Some(arg) = arguments.get(i) else { break };
+            if dirty[i] {
+                tainted.insert(p);
+            } else if taint.player.as_ref().is_some_and(|name| is_name(arg, name)) {
+                player = Some(p);
+            }
+        }
+        let mut callee = Taint::new(taint.remote.clone(), player, tainted);
+        callee.gate = taint.gate.clone();
+        self.calls.push(key.to_string());
+        self.function_with(&body, Some(callee));
+        self.calls.pop();
+    }
+
+    /// The `functions` key a method call lands on: `Shop:give`, or for
+    /// `self:give` the one method of that name the script declares.
+    fn method_key(&self, prefix: &Prefix, before: &[&Suffix], name: &str) -> Option<String> {
+        self.taint.as_ref()?;
+        let key = format!("{}:{name}", dotted(prefix, before)?);
+        if self.functions.contains_key(&key) {
+            return Some(key);
+        }
+        let suffix = format!(":{name}");
+        let mut matches = self.functions.keys().filter(|k| k.ends_with(&suffix));
+        match (matches.next(), matches.next()) {
+            (Some(only), None) if key.starts_with("self:") => Some(only.clone()),
+            _ => None,
+        }
+    }
+
+    /// The Loren route a function at `path` (`Shop.Client.Buy`,
+    /// `Shop.Client:Buy`, `Shop.Middleware.Buy`) handles: its name, which
+    /// parameter is the Player, and the gate that runs before it.
+    fn loren_route(&self, path: &str, colon: bool) -> Option<(String, usize, Option<String>)> {
+        let service = self.loren?;
+        let rest = path.strip_prefix(service.name.as_str())?;
+        let (table, name) = rest
+            .strip_prefix(".Client")
+            .map(|n| ("Client", n))
+            .or_else(|| rest.strip_prefix(".Middleware").map(|n| ("Middleware", n)))?;
+        let name = name.strip_prefix(['.', ':'])?;
+        let route = service.routes.iter().find(|r| r.name == name)?;
+        match table {
+            "Client" if route.kind == RouteKind::Method => Some((
+                format!("{}.Client.{name}", service.name),
+                usize::from(!colon),
+                gate(service, route),
+            )),
+            "Middleware" if route.middleware => {
+                Some((format!("{}.Middleware.{name}", service.name), 0, None))
+            }
+            _ => None,
+        }
+    }
+
+    /// `self.ClientEvents.X` / `Shop.ClientEvents.X` in a Loren Service: the
+    /// route's name and its gate.
+    fn loren_event(&self, prefix: &Prefix, before: &[&Suffix]) -> Option<(String, Option<String>)> {
+        let service = self.loren?;
+        let path = dotted(prefix, before)?;
+        let (owner, name) = path.split_once(".ClientEvents.")?;
+        if owner != "self" && owner != service.name {
+            return None;
+        }
+        let route = service
+            .routes
+            .iter()
+            .find(|r| r.name == name && r.kind == RouteKind::ClientEvent)?;
+        Some((
+            format!("{}.ClientEvents.{name}", service.name),
+            gate(service, route),
+        ))
+    }
+
+    /// `Middleware = { Buy = function(player, ...) ... end }` in a Loren
+    /// Service's own table.
+    fn loren_table(&mut self, local: &str, table: &full_moon::ast::TableConstructor) {
+        if self.loren.is_none_or(|s| s.name != local) {
+            return;
+        }
+        for field in table.fields().iter() {
+            let Field::NameKey { key, value, .. } = field else {
+                continue;
+            };
+            let Expression::TableConstructor(middleware) = &**value else {
+                continue;
+            };
+            if ident(key) != "Middleware" {
+                continue;
+            }
+            for entry in middleware.fields().iter() {
+                let Field::NameKey { key, value, .. } = entry else {
+                    continue;
+                };
+                if let Expression::Function(f) = &**value {
+                    let path = format!("{local}.Middleware.{}", ident(key));
+                    if let Some((remote, player, gate)) = self.loren_route(&path, false) {
+                        self.handler(remote, f.body(), player, gate);
+                    }
+                }
+            }
+        }
     }
 
     fn sink(&mut self, severity: Severity, line: usize, what: &str) {
         let Some(taint) = &self.taint else { return };
-        let message = format!(
+        let mut message = format!(
             "The `{}` handler {what} without validating it first.",
             taint.remote
         );
+        let severity = match &taint.gate {
+            Some(gate) => {
+                message.push_str(&format!(
+                    " `{gate}` runs first: make sure it bounds this value."
+                ));
+                severity.lower()
+            }
+            None => severity,
+        };
         self.finding(Check::UnvalidatedArgument, severity, line, message);
     }
 
@@ -744,7 +970,10 @@ impl Walker<'_> {
         }
         let text = var.to_string().trim().to_string();
         let receiver = self.chain_tainted(var.prefix(), &suffixes[..suffixes.len() - 1]);
-        if receiver {
+        // A lowercase field is a Lua table's (`args.n` on a `table.pack`), not
+        // an Instance property.
+        let property = prop.starts_with(|c: char| c.is_ascii_uppercase());
+        if receiver && property {
             let severity = match SENSITIVE.contains(&prop) {
                 true => Severity::High,
                 false => Severity::Medium,
@@ -809,9 +1038,11 @@ impl Walker<'_> {
     }
 
     fn name_tainted(&self, name: &str) -> bool {
-        self.taint
-            .as_ref()
-            .is_some_and(|t| t.tainted.contains(name) && !t.guarded.contains(name))
+        self.taint.as_ref().is_some_and(|t| {
+            t.tainted.contains(name)
+                && !t.guarded.contains(name)
+                && !(t.lower.contains(name) && t.upper.contains(name))
+        })
     }
 
     fn tainted(&self, expr: &Expression) -> bool {
@@ -894,6 +1125,108 @@ impl Walker<'_> {
                 server_only_message(&service),
             );
         }
+    }
+}
+
+fn gate(service: &LorenService, route: &rbx_loren::graph::Route) -> Option<String> {
+    let table = match (route.spec, route.middleware) {
+        (true, _) => "Spec",
+        (false, true) => "Middleware",
+        _ => return None,
+    };
+    Some(format!("{}.{table}.{}", service.name, route.name))
+}
+
+/// What a condition (or, `negated`, its failing) says about the names in
+/// it. A name compared with `<`/`>` gets one bound; anything else that
+/// reads a name (a type check, a lookup, a call, a nil check) validates
+/// it, except a number, which needs both bounds.
+fn guard(taint: &mut Taint, condition: &Expression, negated: bool) {
+    match condition {
+        Expression::Parentheses { expression, .. } => guard(taint, expression, negated),
+        Expression::UnaryOperator {
+            unop: UnOp::Not(_),
+            expression,
+        } => guard(taint, expression, !negated),
+        Expression::BinaryOperator { lhs, binop, rhs } => {
+            let op = binop.token().to_string();
+            match op.trim() {
+                "and" | "or" => {
+                    guard(taint, lhs, negated);
+                    guard(taint, rhs, negated);
+                }
+                op @ ("<" | "<=" | ">" | ">=") => {
+                    // `x < y`: an upper bound on x, a lower one on y.
+                    let upper = matches!(op, "<" | "<=") != negated;
+                    bound(taint, lhs, upper);
+                    bound(taint, rhs, !upper);
+                }
+                "==" | "~=" => match number_check(lhs, rhs).or_else(|| number_check(rhs, lhs)) {
+                    Some(name) => {
+                        taint.numeric.insert(name);
+                    }
+                    None => validate(taint, condition),
+                },
+                _ => validate(taint, condition),
+            }
+        }
+        _ => validate(taint, condition),
+    }
+}
+
+fn bound(taint: &mut Taint, side: &Expression, upper: bool) {
+    match side {
+        Expression::Var(Var::Name(name)) => {
+            let set = if upper {
+                &mut taint.upper
+            } else {
+                &mut taint.lower
+            };
+            set.insert(ident(name).to_string());
+        }
+        _ => validate(taint, side),
+    }
+}
+
+fn validate(taint: &mut Taint, expr: &Expression) {
+    for name in names(expr) {
+        if !taint.numeric.contains(&name) {
+            taint.guarded.insert(name);
+        }
+    }
+}
+
+/// `typeof(x) == "number"`'s `x`.
+fn number_check(call: &Expression, literal: &Expression) -> Option<String> {
+    if string(literal) != Some("number") {
+        return None;
+    }
+    let Expression::FunctionCall(call) = call else {
+        return None;
+    };
+    if !matches!(call.prefix(), Prefix::Name(n) if matches!(ident(n), "typeof" | "type")) {
+        return None;
+    }
+    call.suffixes().find_map(|s| match s {
+        Suffix::Call(Call::AnonymousCall(a)) => match args(a).first() {
+            Some(Expression::Var(Var::Name(n))) => Some(ident(n).to_string()),
+            _ => None,
+        },
+        _ => None,
+    })
+}
+
+/// `tonumber(x)`, or `tonumber(x) or default`.
+fn is_tonumber(expr: &Expression) -> bool {
+    match expr {
+        Expression::FunctionCall(call) => {
+            matches!(call.prefix(), Prefix::Name(n) if ident(n) == "tonumber")
+        }
+        Expression::BinaryOperator { lhs, binop, .. } => {
+            binop.token().to_string().trim() == "or" && is_tonumber(lhs)
+        }
+        Expression::Parentheses { expression, .. } => is_tonumber(expression),
+        _ => false,
     }
 }
 
