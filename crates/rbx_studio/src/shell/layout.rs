@@ -133,6 +133,9 @@ pub(crate) enum Panel {
     /// The whole-place security audit (`shell::security_audit`). Shut until
     /// asked for.
     SecurityAudit,
+    /// The place's specs and their last results (`shell::tests_dock`).
+    /// Script Editor only; shut until asked for.
+    Tests,
     /// The place's editor layers and 3D notes (`shell::layers_panel`). Shut
     /// until asked for.
     Layers,
@@ -145,7 +148,7 @@ impl Panel {
     /// In the order a fresh layout seats them, which is what makes the
     /// Viewport, Argon and Wally docks tabs beside Output rather than
     /// docks of their own.
-    pub(crate) const ALL: [Panel; 16] = [
+    pub(crate) const ALL: [Panel; 17] = [
         Panel::Explorer,
         Panel::Properties,
         Panel::Output,
@@ -160,6 +163,7 @@ impl Panel {
         Panel::PluginWidgets,
         Panel::InputActions,
         Panel::SecurityAudit,
+        Panel::Tests,
         Panel::Layers,
         Panel::Loren,
     ];
@@ -182,6 +186,7 @@ impl Panel {
             | Panel::CallStack
             | Panel::InputActions
             | Panel::SecurityAudit
+            | Panel::Tests
             | Panel::Loren => Edge::Bottom,
         }
     }
@@ -204,6 +209,7 @@ impl Panel {
             Panel::PluginWidgets => "Plugin Widgets",
             Panel::InputActions => "Input Actions",
             Panel::SecurityAudit => "Security Audit",
+            Panel::Tests => "Tests",
             Panel::Layers => "Layers",
             Panel::Loren => "Loren",
         }
@@ -220,6 +226,7 @@ impl Panel {
                 | Panel::PluginWidgets
                 | Panel::InputActions
                 | Panel::SecurityAudit
+                | Panel::Tests
                 | Panel::Layers
                 | Panel::Loren
         )

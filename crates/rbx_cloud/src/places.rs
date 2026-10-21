@@ -15,6 +15,29 @@ struct UniverseOfPlaceRaw {
     universe_id: Option<u64>,
 }
 
+/// One place of an experience.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlaceSummary {
+    pub id: u64,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+struct PlacesPageRaw {
+    #[serde(rename = "nextPageCursor")]
+    next_page_cursor: Option<String>,
+    data: Vec<PlaceSummary>,
+}
+
+/// One page of `develop.roblox.com`'s place list: its places and the cursor
+/// of the next page, `None` on the last.
+fn parse_places_page(
+    body: &[u8],
+) -> Result<(Vec<PlaceSummary>, Option<String>), serde_json::Error> {
+    let raw: PlacesPageRaw = serde_json::from_slice(body)?;
+    Ok((raw.data, raw.next_page_cursor))
+}
+
 #[derive(Deserialize)]
 struct UserRaw {
     #[serde(rename = "displayName")]
@@ -81,6 +104,37 @@ impl Client {
         }))
     }
 
+    /// Every place of an experience, start place included, oldest first:
+    /// `GET develop.roblox.com/v1/universes/{id}/places`, page by page.
+    /// Anonymous; it answered for a private test universe too (checked
+    /// live, 2026-10-20). Open Cloud itself has no place listing.
+    pub fn universe_places(&self, universe_id: u64) -> Result<Vec<PlaceSummary>, CloudError> {
+        let mut places = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let mut url = format!(
+                "https://develop.roblox.com/v1/universes/{universe_id}/places?sortOrder=Asc&limit=100"
+            );
+            if let Some(cursor) = &cursor {
+                url.push_str(&format!("&cursor={cursor}"));
+            }
+            let response = self.get_raw(&url, false, true)?;
+            if !(200..300).contains(&response.status) {
+                return Err(error::error_for_status(
+                    &url,
+                    response.status,
+                    &response.headers,
+                ));
+            }
+            let (page, next) = parse_places_page(&response.body)?;
+            places.extend(page);
+            match next {
+                Some(next) if !next.is_empty() => cursor = Some(next),
+                _ => return Ok(places),
+            }
+        }
+    }
+
     /// A user's display name (`users.roblox.com/v1/users/{id}`, anonymous),
     /// what the wizard shows for a key's `authorized_user_id`.
     pub fn user_display_name(&self, user_id: u64) -> Result<String, CloudError> {
@@ -142,6 +196,30 @@ pub fn place_id_from_link(text: &str) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_a_page_of_places_and_its_cursor() {
+        let body = br#"{"previousPageCursor":null,"nextPageCursor":"abc_2","data":[
+            {"id":1,"universeId":9,"name":"Lobby","description":""},
+            {"id":2,"universeId":9,"name":"Arena","description":"x"}]}"#;
+        let (places, next) = parse_places_page(body).unwrap();
+        assert_eq!(
+            places,
+            vec![
+                PlaceSummary {
+                    id: 1,
+                    name: "Lobby".into()
+                },
+                PlaceSummary {
+                    id: 2,
+                    name: "Arena".into()
+                },
+            ]
+        );
+        assert_eq!(next.as_deref(), Some("abc_2"));
+        let last = br#"{"previousPageCursor":"abc_1","nextPageCursor":null,"data":[]}"#;
+        assert_eq!(parse_places_page(last).unwrap(), (Vec::new(), None));
+    }
 
     #[test]
     fn reads_a_place_id_out_of_every_link_shape() {

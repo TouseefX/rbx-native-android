@@ -26,6 +26,9 @@ impl ArgonDiffWindow {
         let total = counts[0];
         let subtitle = if let super::Provider::Merge(session) = &self.provider {
             format!("Conflicts merging {}", session.borrow().theirs_label)
+        } else if matches!(self.provider, super::Provider::Shared(..)) {
+            let plural = if total == 1 { "change" } else { "changes" };
+            format!("{total} {plural} a sync would make")
         } else if matches!(self.provider, super::Provider::Presence(_)) {
             let plural = if total == 1 { "change" } else { "changes" };
             format!("{total} {plural} since you were last here")
@@ -179,7 +182,10 @@ impl ArgonDiffWindow {
     /// Cancel and Accept, 96×34, the dock's own handlers.
     pub(super) fn footer(&mut self, narrow: bool, cx: &mut Context<Self>) -> Div {
         // A presence "View changes" diff applies nothing: just a way out.
-        if matches!(self.provider, super::Provider::Presence(_)) {
+        if matches!(
+            self.provider,
+            super::Provider::Presence(_) | super::Provider::Shared(..)
+        ) {
             return h_flex()
                 .h(px(57.))
                 .flex_none()
@@ -194,7 +200,11 @@ impl ArgonDiffWindow {
                             .text_size(tokens::text_sm())
                             .line_height(tokens::line_sm())
                             .text_color(tokens::text3())
-                            .child("A read-only view \u{2014} these changes are already in your place."),
+                            .child(if matches!(self.provider, super::Provider::Shared(..)) {
+                                "A read-only view \u{2014} Sync Shared applies it."
+                            } else {
+                                "A read-only view \u{2014} these changes are already in your place."
+                            }),
                     )
                 })
                 .child(div().flex_1())

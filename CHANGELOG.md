@@ -29,6 +29,43 @@
   the editor. `rbxaudit place.rbxl` prints the same findings and exits 1 on
   any high one. (@chteau)
 
+- **Every place of a game in one window.** Roblox Studio edits one place
+  per window; File › Open Game… (or a card's new "Open every place as one
+  game" on Home, which downloads the experience's places) opens them all
+  together, listed in a `.rbxgame` manifest beside the place files,
+  nothing about the game is written into a place file. A Places bar swaps
+  the place on screen at once, each keeping its own undo history,
+  selection, camera and script tabs, and a place is only read when first
+  shown. Find in Game searches every script of every place (place ›
+  script › line, click to open) and replaces with a preview, one undo step
+  per place. Model › Mark as Shared tags a Model, Folder or ModuleScript
+  with an `RbxNativeSharedId` attribute, and Sync Shared copies the active
+  place's version to every place holding the same id, with each asset's
+  diff and a per-place switch. Sync keeps references into the asset by
+  path, points the copy's references out of it at the same path in the
+  target, and never copies the source's `UniqueId`s. A place left off
+  screen for 30 s drops its render scene and GPU device, and rebuilds it
+  when shown again. Save All and Publish All report per place. A
+  `.rbxlx` save now writes a string XML can't hold (Terrain's
+  `PhysicsGrid`) as `BinaryString`; as text it made Studio refuse the file.
+  (@chteau)
+
+- **A built-in Luau test runner.** A place's TestEZ specs (ModuleScripts
+  named `*.spec`/`*.test`) run headlessly in the command bar's sandbox,
+  each file over its own fresh copy of the place, on a simulated clock so
+  `task.wait(30)` takes no time. `describe`/`it`/`expect` with TestEZ's
+  matchers, hooks, `SKIP`/`FOCUS`, and Jest-Lua's `toBe`-style names
+  beside them. A failure names the script and line it was raised on.
+  Loren's `return function(t)` specs run through Loren's own runner in the
+  same tree. `rbxlua test <place or project folder> [--filter] [--root]
+  [--format json] [--junit]` exits 1 on a failure; the Script Editor's new
+  **Tests** dock shows the specs as a tree, runs all or one, shows what each
+  test printed and how it failed, opens a failure at its line and can rerun
+  after each save; `.github/actions/rbxlua-test` runs it in CI. Script
+  Analysis knows `describe`/`it`/`expect` now. `docs/testing.md` lists what
+  the sandbox lacks (HTTP, data stores, RunService frames, physics) and how
+  each behaves. (@chteau)
+
 - **A Performance view for the place being edited.** The Viewport dock's
   new Performance section tints every part by what it costs: part
   density per 32-stud cell, triangles, decoded texture memory (shared
