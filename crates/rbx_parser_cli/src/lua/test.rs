@@ -1,14 +1,17 @@
-//! `rbxlua test`: runs a place's specs (see `rbx_lua::test_runner`) and
-//! exits non-zero when any fails.
+//! `rbxlua test`: runs a place's specs (see `rbx_lua::test_runner`, and
+//! `rbx_loren::specs` for Loren's) and exits non-zero when any fails. The
+//! place can be a Rojo/Argon project folder, read the way Rojo builds it.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use rbx_dom::WeakDom;
+use rbx_loren::{place, specs};
 use rbx_lua::test_runner::{self, Options};
 
 use crate::dom_io;
 
-pub const USAGE: &str = "usage: rbxlua test <place.rbxl|.rbxlx> [--filter <text>] [--root <Path.To.Folder>]... [--format human|json] [--junit <out.xml>]";
+pub const USAGE: &str = "usage: rbxlua test <place.rbxl|.rbxlx|project folder> [--filter <text>] [--root <Path.To.Folder>]... [--format human|json] [--junit <out.xml>]";
 
 #[derive(Debug, Default, PartialEq)]
 pub struct TestArgs {
@@ -47,14 +50,21 @@ pub fn parse<I: Iterator<Item = String>>(argv: I) -> Result<TestArgs, String> {
 /// failed or the run could not start.
 pub fn run(args: &TestArgs) -> ExitCode {
     let report = (|| {
-        let dom = dom_io::read_dom(&args.place)?;
+        let dom = match args.place.is_dir() {
+            true => {
+                let mut dom = WeakDom::new();
+                place::apply_project(&mut dom, &args.place)?;
+                dom
+            }
+            false => dom_io::read_dom(&args.place)?,
+        };
         let files = test_runner::discover(&dom, &args.roots)?;
         let database = rbx_parser_cli::default_reflection_database();
         let options = Options {
             filter: args.filter.clone(),
             only: None,
         };
-        let report = test_runner::run(&dom, &files, &database, &options);
+        let report = specs::run_mixed(&dom, &files, &database, &options);
         if let Some(path) = &args.junit {
             std::fs::write(path, test_runner::junit(&report))
                 .map_err(|err| format!("failed to write '{}': {err}", path.display()))?;

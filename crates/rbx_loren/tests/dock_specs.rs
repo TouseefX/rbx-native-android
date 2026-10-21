@@ -1,6 +1,7 @@
 use rbx_dom::{Variant, WeakDom};
-use rbx_loren::specs::{is_loren_module, plan_file, run_file};
+use rbx_loren::specs::{is_loren_module, plan_file, run_file, run_mixed};
 use rbx_lua::test_runner::{discover, NodeKind, Options, Status};
+use rbx_reflection::ReflectionDatabase;
 
 fn place() -> WeakDom {
     let mut dom = WeakDom::new();
@@ -86,4 +87,38 @@ fn a_loren_spec_plans_and_runs_test_by_test() {
     let narrowed = run_file(&dom, file, &only);
     assert_eq!(narrowed.results.len(), 1, "{:#?}", narrowed.results);
     assert_eq!(narrowed.results[0].status, Status::Passed);
+}
+
+#[test]
+fn a_mixed_run_sends_each_spec_to_its_own_runner() {
+    let mut dom = place();
+    let storage = dom.root_refs()[1];
+    let testez = dom.new_instance("ModuleScript", "A.spec", Some(storage));
+    let source = "return function()\n\tit('prints', function() print('from testez') end)\nend\n";
+    dom.set_property(testez, "Source", Variant::String(source.into()))
+        .unwrap();
+    let files = discover(&dom, &[]).unwrap();
+    let report = run_mixed(
+        &dom,
+        &files,
+        &ReflectionDatabase::embedded(),
+        &Options::default(),
+    );
+    let names: Vec<_> = report.files.iter().map(|r| r.file.name.as_str()).collect();
+    assert_eq!(
+        names,
+        [
+            "ReplicatedStorage.Counter.spec",
+            "ReplicatedStorage.Plain.spec",
+            "ReplicatedStorage.A.spec"
+        ]
+    );
+    let a = &report.files[2].results[0];
+    assert_eq!(a.status, Status::Passed);
+    assert_eq!(a.output.lines(), ["from testez"]);
+    assert_eq!(
+        report.count(Status::Failed),
+        1,
+        "only Counter's `waits a beat`"
+    );
 }

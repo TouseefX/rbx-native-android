@@ -5,7 +5,7 @@ name: rbxlua test
 description: Run a Roblox place's Luau specs without Studio
 inputs:
   place:
-    description: The .rbxl/.rbxlx to test (build a Rojo/Argon project into one first)
+    description: The .rbxl/.rbxlx to test, or a Rojo/Argon project folder
     required: true
   filter:
     description: Only run tests whose describe/it names contain this text

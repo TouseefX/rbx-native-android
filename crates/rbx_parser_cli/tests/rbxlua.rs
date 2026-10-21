@@ -247,3 +247,33 @@ fn test_filter_runs_only_matching_tests_and_json_parses() {
         (Some(1), Some(0))
     );
 }
+
+#[test]
+fn test_reads_a_project_folder_and_runs_loren_specs_too() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("src/specs")).unwrap();
+    std::fs::write(
+        root.join("default.project.json"),
+        r#"{ "name": "game", "tree": { "$className": "DataModel",
+            "ReplicatedStorage": { "Specs": { "$path": "src/specs" } } } }"#,
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("src/specs/Testez.spec.luau"),
+        "return function()\n\tit('adds', function() expect(1 + 1).to.equal(2) end)\nend\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("src/specs/Loren.spec.luau"),
+        "return function(t)\n\tt.it('fails', function()\n\t\tt.expect(1).toBe(2)\n\tend)\n\tt.it('later', function() end, { skip = true })\nend\n",
+    )
+    .unwrap();
+    let output = rbxlua(&["test", root.to_str().unwrap()]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(output.status.code(), Some(1), "{stdout}");
+    assert!(
+        stdout.contains("1 passed, 1 failed, 1 skipped (2 files)"),
+        "{stdout}"
+    );
+}

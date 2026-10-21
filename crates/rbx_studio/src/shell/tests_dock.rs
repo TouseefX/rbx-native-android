@@ -18,14 +18,12 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::{h_flex, v_flex, ActiveTheme, Icon, Sizable};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
-use rbx_dom::{Ref, WeakDom};
+use rbx_dom::Ref;
 use rbx_loren::specs as loren;
 use rbx_lua::test_runner::{
-    self, FilePlan, FileReport, NodeKind, Options, PlanNode, SpecFile, Status as TestStatus,
-    TestResult,
+    self, FilePlan, NodeKind, Options, PlanNode, SpecFile, Status as TestStatus, TestResult,
 };
 use rbx_lua::{LineKind, Output};
-use rbx_reflection::ReflectionDatabase;
 
 use crate::tokens;
 
@@ -254,10 +252,7 @@ impl Shell {
                     Ok::<_, String>(
                         files
                             .iter()
-                            .map(|file| match loren::is_loren_module(&dom, file.module) {
-                                true => loren::plan_file(&dom, file),
-                                false => test_runner::plan(&dom, file, &database),
-                            })
+                            .map(|file| loren::plan_mixed(&dom, file, &database))
                             .collect::<Vec<_>>(),
                     )
                 })
@@ -298,7 +293,9 @@ impl Shell {
         let modules: Vec<Ref> = files.iter().map(|f| f.module).collect();
         cx.spawn(async move |this, cx| {
             let reports = cx
-                .background_spawn(async move { run_files(&dom, &files, &database, &options) })
+                .background_spawn(async move {
+                    loren::run_mixed(&dom, &files, &database, &options).files
+                })
                 .await;
             let _ = this.update(cx, |shell, cx| {
                 let dock = &mut shell.tests;
@@ -511,28 +508,6 @@ fn row(
         })
 }
 
-/// Runs `files`: Loren specs one by one through Loren's runner, the rest
-/// through `test_runner`, honouring `FOCUS` across them; reports in `files`' order.
-fn run_files(
-    dom: &WeakDom,
-    files: &[SpecFile],
-    database: &ReflectionDatabase,
-    options: &Options,
-) -> Vec<FileReport> {
-    let (lorens, plain): (Vec<SpecFile>, Vec<SpecFile>) = files
-        .iter()
-        .cloned()
-        .partition(|f| loren::is_loren_module(dom, f.module));
-    let mut reports: Vec<FileReport> = match (plain.as_slice(), options.only.is_some()) {
-        ([], _) => Vec::new(),
-        ([file], true) => vec![test_runner::run_file(dom, file, database, options, false)],
-        _ => test_runner::run(dom, &plain, database, options).files,
-    };
-    reports.extend(lorens.iter().map(|f| loren::run_file(dom, f, options)));
-    reports.sort_by_key(|r| files.iter().position(|f| f.module == r.file.module));
-    reports
-}
-
 /// The selected row's title and what the pane shows for it: a test's
 /// failure and output, or a file's whole output.
 fn pane_contents(
@@ -672,52 +647,7 @@ fn summary(
 
 #[cfg(test)]
 mod tests {
-    use rbx_dom::{Variant, WeakDom};
-    use rbx_lua::test_runner::{self, Options, Status};
-    use rbx_reflection::ReflectionDatabase;
-
-    use super::{run_files, summary};
-
-    #[test]
-    fn loren_specs_go_through_lorens_runner_beside_testez_ones() {
-        let mut dom = WeakDom::new();
-        let storage = dom.new_instance("ReplicatedStorage", "ReplicatedStorage", None);
-        for (name, source) in [
-            (
-                "A.spec",
-                "return function()\n\tdescribe(\"a\", function()\n\t\tit(\"passes\", function()\n\t\t\tprint(\"from testez\")\n\t\tend)\n\tend)\nend\n",
-            ),
-            (
-                "B.spec",
-                "return function(t)\n\tt.describe(\"b\", function()\n\t\tt.it(\"fails\", function()\n\t\t\tprint(\"from loren\")\n\t\t\tt.expect(1).toBe(2)\n\t\tend)\n\tend)\nend\n",
-            ),
-        ] {
-            let module = dom.new_instance("ModuleScript", name, Some(storage));
-            dom.set_property(module, "Source", Variant::String(source.into()))
-                .unwrap();
-        }
-        let files = test_runner::discover(&dom, &[]).unwrap();
-        let reports = run_files(
-            &dom,
-            &files,
-            ReflectionDatabase::shared(),
-            &Options::default(),
-        );
-        let names: Vec<_> = reports.iter().map(|r| r.file.name.as_str()).collect();
-        assert_eq!(
-            names,
-            ["ReplicatedStorage.A.spec", "ReplicatedStorage.B.spec"]
-        );
-        let a = &reports[0].results[0];
-        assert_eq!(
-            (a.status, a.output.lines()),
-            (Status::Passed, &["from testez".to_string()][..])
-        );
-        let b = &reports[1].results[0];
-        assert_eq!(b.path, ["b", "fails"], "{:?}", b.message);
-        assert_eq!(b.status, Status::Failed);
-        assert_eq!(b.output.lines(), ["from loren"]);
-    }
+    use super::summary;
 
     #[test]
     fn the_summary_says_what_the_dock_is_doing_or_found() {

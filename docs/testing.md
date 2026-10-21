@@ -55,6 +55,17 @@ ship Jest-Lua itself. Matchers outside these lists fail the test with
 `FOCUS` works across the whole run, as in TestEZ: once any test anywhere is
 focused, only focused tests run, and the rest are reported skipped.
 
+**Loren specs** (`return function(t)` with `t.describe`, `t.it(name, fn,
+{ skip = true })`, `t.expect`, `t.spy` and the hooks) run through Loren's
+own runner (`rbx_loren::specs`), with the stand-ins Loren's runtime needs
+in the sandbox, so `WaitForChild` and a running server look the way Loren's
+unit specs expect. They show up in the same tree and the same report. The
+plain runner also takes them: it hands `t` the names above.
+
+Script Analysis knows the TestEZ and Jest-Lua globals (`testez.d.luau`,
+loaded into luau-lsp beside Roblox's API), so a spec file doesn't light up
+with "Unknown global 'describe'".
+
 ## How a run behaves
 
 - **Isolation.** Each spec file runs in a VM of its own over a fresh copy of
@@ -112,10 +123,12 @@ rbxlua test place.rbxl --junit results.xml     # plus JUnit XML for CI
 0 when nothing failed (including when there was nothing to run), 1 when a
 test failed or the place could not be read, 2 for a usage error.
 
-`rbxlua test` reads place files (`.rbxl`, `.rbxlx`) only. rbx-native has no
-Rojo/Argon project-folder loader (its Argon support talks to a running
-Argon server), so build a project into a place first: `rojo build -o
-place.rbxl` or `argon build`.
+`rbxlua test` reads a place file (`.rbxl`, `.rbxlx`) or a Rojo/Argon
+project folder. A folder is read the way Rojo builds it from its
+`default.project.json`: `$path`s, `$className`s, `init.luau` folder
+modules, `.server`/`.client` scripts and nested projects. It skips
+`.json`/`.txt`/`.rbxm` files, so a project that needs those should build a
+place first (`rojo build -o place.rbxl` or `argon build`).
 
 ## In GitHub Actions
 
@@ -130,11 +143,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Install Rojo however the project pins it (Rokit, Aftman, Foreman).
-      - run: rojo build -o place.rbxl
       - uses: chteau/rbx-native/.github/actions/rbxlua-test@dev
         with:
-          place: place.rbxl
+          place: .   # the project folder, or a place you built first
           junit: results.xml
       - uses: actions/upload-artifact@v4
         if: always()
@@ -155,6 +166,9 @@ spec file with its describes and tests, as declared, before anything runs.
 Run all from its header, or one file, describe or test from its row's play
 button; a failure shows its message under the test, and clicking it opens
 the script at the line it was raised on. **Rerun on save** runs the whole
-suite again after each Ctrl+S.
+suite again after each Ctrl+S. Selecting a row fills the output pane under
+the tree: a test's failure, its traceback and what it (and its hooks)
+printed, warnings and errors in their colours; a file row shows everything
+the file printed.
 
 ![The Tests dock after a run, one test failed](screenshots/luau-tests/tests-dock.png)

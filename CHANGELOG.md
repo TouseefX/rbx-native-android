@@ -15,12 +15,15 @@
   `task.wait(30)` takes no time. `describe`/`it`/`expect` with TestEZ's
   matchers, hooks, `SKIP`/`FOCUS`, and Jest-Lua's `toBe`-style names
   beside them. A failure names the script and line it was raised on.
-  `rbxlua test place.rbxl [--filter] [--root] [--format json] [--junit]`
-  exits 1 on a failure; the Script Editor's new **Tests** dock shows the
-  specs as a tree, runs all or one, opens a failure at its line and can
-  rerun after each save; `.github/actions/rbxlua-test` runs it in CI.
-  `docs/testing.md` lists what the sandbox lacks (HTTP, data stores,
-  RunService frames, physics) and how each behaves. (@chteau)
+  Loren's `return function(t)` specs run through Loren's own runner in the
+  same tree. `rbxlua test <place or project folder> [--filter] [--root]
+  [--format json] [--junit]` exits 1 on a failure; the Script Editor's new
+  **Tests** dock shows the specs as a tree, runs all or one, shows what each
+  test printed and how it failed, opens a failure at its line and can rerun
+  after each save; `.github/actions/rbxlua-test` runs it in CI. Script
+  Analysis knows `describe`/`it`/`expect` now. `docs/testing.md` lists what
+  the sandbox lacks (HTTP, data stores, RunService frames, physics) and how
+  each behaves. (@chteau)
 
 - **Select by query.** The Explorer's search field has a query mode (the
   `</>` toggle beside it): `Part where Material = Plastic and Anchored =
