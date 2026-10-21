@@ -52,6 +52,7 @@ mod quality;
 mod recovery;
 mod ref_pick;
 mod reparent;
+mod reveal;
 mod ribbon;
 mod rig;
 mod roblox_login;
