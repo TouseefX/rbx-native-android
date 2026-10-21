@@ -31,6 +31,10 @@ pub(crate) use mirror::Mirror;
 /// release to bundle looks for `luau-lsp` on `PATH`.
 pub(crate) const BINARY_VARIABLE: &str = "RBX_STUDIO_LUAU_LSP";
 
+/// `describe`, `it`, `expect` and the rest of what a spec sees, so Script
+/// Analysis doesn't call them unknown globals.
+const TESTEZ_DEFINITIONS: &str = include_str!("luau_lsp/testez.d.luau");
+
 /// Loading the definitions file is most of `initialize`'s cost.
 const START_TIMEOUT: Duration = Duration::from_secs(60);
 /// Long enough for a whole-place `workspace/diagnostic` on a large place.
@@ -60,6 +64,9 @@ pub(crate) fn start(root: &Path) -> Result<Client, String> {
     let api = api::files(&cache)?;
     let settings = root.join(".luau-lsp-settings.json");
     fs::write(&settings, SETTINGS).map_err(|error| error.to_string())?;
+    let testez = cache.join("testez.d.luau");
+    fs::create_dir_all(&cache).map_err(|error| error.to_string())?;
+    fs::write(&testez, TESTEZ_DEFINITIONS).map_err(|error| error.to_string())?;
 
     let mut command = Command::new(&binary);
     command
@@ -70,6 +77,7 @@ pub(crate) fn start(root: &Path) -> Result<Client, String> {
             "--definitions=@roblox={}",
             api.definitions.display()
         ))
+        .arg(format!("--definitions=@testez={}", testez.display()))
         .current_dir(root);
     if let Some(documentation) = api.documentation {
         command.arg(format!("--docs={}", documentation.display()));
