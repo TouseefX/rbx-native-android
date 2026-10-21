@@ -5,7 +5,7 @@
 //!
 //! All of it happens here on the UI thread, against `rbx_viewer`'s own
 //! geometry ([`rbx_viewer::pick`], [`rbx_viewer::gizmo`]) and the camera the
-//! render thread reports with each frame — the renderer builds the handles the
+//! render thread reports with each frame, the renderer builds the handles the
 //! user sees from exactly the same functions, so what is grabbable is what is
 //! drawn. Nothing here touches the DOM: `Shell` owns that, and hears about a
 //! click or a drag through [`super::ViewportAction`].
@@ -46,7 +46,7 @@ const MIN_SIZE: f32 = 0.001;
 const MAX_SIZE: f32 = 2048.0;
 
 /// Whether a click's modifiers mean "add to (or drop from) the selection"
-/// rather than "replace it" — `Shift`, `Ctrl`, or `Cmd` (`platform`), per
+/// rather than "replace it", `Shift`, `Ctrl`, or `Cmd` (`platform`), per
 /// `creator-docs` (`studio/ui-overview.md#object-selection`), which lists all
 /// three as equivalent.
 fn extends_selection(modifiers: Modifiers) -> bool {
@@ -63,12 +63,12 @@ pub(super) enum Drag {
         axis: Vec3,
         grabbed: f32,
     },
-    /// Any selected part's own body is held — Studio's "cursor dragging". The
+    /// Any selected part's own body is held, Studio's "cursor dragging". The
     /// gizmo's anchor comes to rest on whatever the cursor is over (see
     /// [`crate::settle`]); with nothing under the cursor it travels instead
     /// in the plane that faced the camera through the grab point, keeping the
     /// anchor where it was relative to the cursor regardless of which
-    /// selected part was actually grabbed — the offset is always measured
+    /// selected part was actually grabbed, the offset is always measured
     /// from the anchor, so the whole group tracks the cursor together.
     ///
     /// The plane is fixed in the world at the moment of the grab rather than
@@ -92,20 +92,20 @@ pub(super) enum Drag {
         axis: Vec3,
         grabbed: f32,
         size: Vec3,
-        /// Which component of `size` this axis is — `Size` is expressed in the
+        /// Which component of `size` this axis is, `Size` is expressed in the
         /// part's own frame, so the axis alone does not say.
         component: usize,
         /// Whether the part is a `Ball` *and* `Alt` was held at the grab: the
         /// other two components grow by the same amount as `component` does,
         /// keeping it round, instead of only the one axis actually pulled.
-        /// Decided once here rather than re-read live each step — the shape
+        /// Decided once here rather than re-read live each step, the shape
         /// cannot change mid-gesture, and freezing the choice at the grab
         /// matches how `component` itself is already fixed for the gesture's
         /// whole duration.
         sphere: bool,
         /// The same freeze as `sphere`, for a `Cylinder`: `Alt` locks its
         /// round Y/Z pair together when either is the one grabbed. Grabbing
-        /// its length axis (X, `component == 0`) is unaffected either way —
+        /// its length axis (X, `component == 0`) is unaffected either way,
         /// nothing else is meant to grow together with the length.
         cylinder: bool,
         /// Whether `Ctrl` holds the part's middle still, both faces moving
@@ -116,7 +116,7 @@ pub(super) enum Drag {
     /// (see `gizmo::scale_box`): the box's centre, the box's axis pointing
     /// out through the grabbed face, where the cursor stood along it, how
     /// long the box was along that axis, and the two points the whole
-    /// selection may scale about — the centre of the opposite face, so that
+    /// selection may scale about, the centre of the opposite face, so that
     /// face holds still the way a lone part's does, or with `centred`
     /// (`Ctrl`, re-read on every move) the selection's pivot.
     Box {
@@ -177,8 +177,8 @@ pub(super) enum Change {
 }
 
 /// What a drag is allowed to land on for this one mouse move: the grid its
-/// travel rounds to (`0.0` for no grid) — studs for Move and Scale, which
-/// share the toolbar's one increment, radians for Rotate's own — and the
+/// travel rounds to (`0.0` for no grid), studs for Move and Scale, which
+/// share the toolbar's one increment, radians for Rotate's own, and the
 /// soft snaps a handle drag found at its press (empty with Snap to Parts off
 /// or `Shift` held).
 #[derive(Debug, Clone, Copy)]
@@ -211,7 +211,7 @@ impl WorkspaceView {
     }
 
     /// Cursor motion with nothing held: resolves what is under it and asks
-    /// `Shell` to outline it, distinctly from the selection outline —
+    /// `Shell` to outline it, distinctly from the selection outline,
     /// Studio's "about to click" cue. `None` when the panel has no size yet
     /// or the render thread has not reported a camera (see `cursor_ray`),
     /// which clears the hover outline exactly as a ray that hits nothing
@@ -244,7 +244,7 @@ impl WorkspaceView {
     }
 
     /// The axis whose arrow or ring `ray` rests on, tried in the order
-    /// [`WorkspaceView::grab_handle`] tries them — what a press here grabs.
+    /// [`WorkspaceView::grab_handle`] tries them, what a press here grabs.
     pub(super) fn hovered_axis(&self, ray: Ray) -> Option<Axis> {
         let handles = self.handles()?;
         match self.transform.tool {
@@ -269,22 +269,22 @@ impl WorkspaceView {
 
     /// Where the Move and Rotate arms stand this frame, anchored on the same
     /// part `rbx_viewer::renderer::selection::Selection::anchor` draws them
-    /// on — the first selected part with a placement, whether or not it is
-    /// alone — and built the same way `rbx_viewer::renderer` builds the ones
+    /// on, the first selected part with a placement, whether or not it is
+    /// alone, and built the same way `rbx_viewer::renderer` builds the ones
     /// on screen. Scale's own handles are [`WorkspaceView::faces`].
     pub(super) fn handles(&self) -> Option<Handles> {
         let anchor = self.targets.anchor()?;
         let pose = self.view?;
         // Move drags the whole selection by one offset and Rotate turns it
-        // about one point, so both sit at the middle of it — which for one
+        // about one point, so both sit at the middle of it, which for one
         // part is that part's own centre. The renderer picks the same origin
         // the same way (see `renderer::Renderer::handles`), both from
         // `gizmo::centre_of`, so what can be grabbed is what is drawn. The
-        // *basis* always comes from the anchor — a selection has no
+        // *basis* always comes from the anchor, a selection has no
         // aggregate rotation to take. Summoned with `Tab`, they stand
         // wherever the cursor put them instead (see `super::summon`).
         // A lone part's or model's pivot stands in for the centre, so a
-        // turn goes round it (see `Targets::pivot`) — and Edit Pivot's
+        // turn goes round it (see `Targets::pivot`), and Edit Pivot's
         // handles take the pivot's own axes, which is what turning them
         // turns.
         let pivot = self.targets.pivot();
@@ -328,7 +328,7 @@ impl WorkspaceView {
     }
 
     /// The left button going down: grab a handle, grab the selected part, or
-    /// — failing both — ask `Shell` to resolve a pick against the DOM.
+    /// failing both, ask `Shell` to resolve a pick against the DOM.
     pub(super) fn press(
         &mut self,
         position: Point<Pixels>,
@@ -404,8 +404,8 @@ impl WorkspaceView {
                 let drag = self.measure_from_handle(drag, ray);
                 self.begin(drag, cx);
                 self.hold_handle(ray);
-                // Studio's handle drag shows its guides from the press on —
-                // the label reading 0 — not from the first step that moves.
+                // Studio's handle drag shows its guides from the press on,
+                // the label reading 0, not from the first step that moves.
                 self.grab_guides(drag, ray);
                 self.step_guides(drag, self.measured(ray), modifiers.shift, scale);
                 return;
@@ -413,7 +413,7 @@ impl WorkspaceView {
             // A selected part's body is only a *candidate*: the view knows
             // the selection's boxes but not what else stands in front of
             // them, so the click goes to `Shell` as a pick that may turn
-            // into this drag (see [`WorkspaceView::confirm_grab`]) — and
+            // into this drag (see [`WorkspaceView::confirm_grab`]), and
             // never with `Alt` or an extend modifier, which ask to change
             // the selection, not to move it.
             // Posing a rig, a press that misses a handle by a hair was
@@ -429,7 +429,7 @@ impl WorkspaceView {
             }
             if !cycling && !extend {
                 // The free-drag ball is a body grab too, so it yields to
-                // the same modifiers — and to any handle: an arrow pointing
+                // the same modifiers, and to any handle: an arrow pointing
                 // nearly at the camera is drawn right over it.
                 if let Some(drag) = self.grab_origin(ray) {
                     self.begin(drag, cx);
@@ -451,7 +451,7 @@ impl WorkspaceView {
 
     /// Starts `drag` this gesture: the part under a body grab, or the gizmo
     /// itself under an axis/face/ring grab, would otherwise still be wearing
-    /// a hover box for the whole gesture — nothing moves the cursor off it,
+    /// a hover box for the whole gesture, nothing moves the cursor off it,
     /// since `render`'s `on_mouse_move` routes every move into `drag_to`
     /// instead of `hover_pending` once `dragging()` is true.
     pub(super) fn begin(&mut self, drag: Drag, cx: &mut gpui_kit::Context<Self>) {
@@ -478,7 +478,7 @@ impl WorkspaceView {
     /// held nothing.
     ///
     /// `surface` is the frame under the press and where the press met it,
-    /// resolved against the real geometry there and then — never an older
+    /// resolved against the real geometry there and then, never an older
     /// hover's, which a camera flown with the keys has left behind.
     pub(crate) fn confirm_grab(
         &mut self,
@@ -509,7 +509,7 @@ impl WorkspaceView {
             Tool::Move => self.handles().and_then(|handles| handles.grab_arm(ray)),
             Tool::Scale => self.faces().and_then(|faces| faces.grab(ray)),
             // Transform's three kinds share one `End`, which cannot say
-            // *which* of them was grabbed — an arm and a ball can carry the
+            // *which* of them was grabbed, an arm and a ball can carry the
             // same axis and sign. Isolating one would risk hiding a ball
             // that was never touched just because it happens to share an
             // arm's tag, so Transform never isolates at all: every handle of
@@ -532,7 +532,7 @@ impl WorkspaceView {
     }
 
     /// What this ray grabs on the gizmo itself, if anything: a Move arrow, a
-    /// Scale face, a Rotate ring — never a part's body, which is
+    /// Scale face, a Rotate ring, never a part's body, which is
     /// [`WorkspaceView::grab_body`]'s own question.
     fn grab_handle(&self, ray: Ray, lock_shape: bool, centred: bool) -> Option<Drag> {
         let handles = self.handles()?;
@@ -573,7 +573,7 @@ impl WorkspaceView {
         })
     }
 
-    /// The body grab this ray would open on the current selection — Move's
+    /// The body grab this ray would open on the current selection, Move's
     /// cursor dragging, which starts a group drag of the whole selection by
     /// any selected part's own body (see [`WorkspaceView::drag_to`]). Only
     /// Move: `creator-docs` documents cursor dragging under Move alone.
@@ -587,7 +587,7 @@ impl WorkspaceView {
     /// once `Shell` has found it; before then the box's own face stands in.
     fn grab_body(&self, ray: Ray, surface: Option<(SurfaceFrame, Vec3)>) -> Option<Drag> {
         // Transform includes Move's own handles, so its cursor dragging
-        // comes along too — `creator-docs` only documents the gesture under
+        // comes along too, `creator-docs` only documents the gesture under
         // Move, but Transform draws Move's very arrows over the same part.
         if !matches!(self.transform.tool, Tool::Move | Tool::Transform) {
             return None;
@@ -599,7 +599,7 @@ impl WorkspaceView {
             .filter_map(|target| Some((pick::ray_hits_box(ray, target.model)?, target)))
             .min_by(|(a, _), (b, _)| a.total_cmp(b))?;
         // Studio snaps the point it holds on the grid of the frame under the
-        // click whenever the toolbar's snapping is on — `Shift` or not — and
+        // click whenever the toolbar's snapping is on, `Shift` or not, and
         // holds the part by where the click met its real surface.
         let snap = self.transform.translate;
         let (point, hovered) = match surface {
@@ -639,8 +639,8 @@ impl WorkspaceView {
         })
     }
 
-    /// What this move is allowed to land on: the grid in force — with `Shift`
-    /// suspending the toolbar's checkbox for as long as it is held — and a
+    /// What this move is allowed to land on: the grid in force, with `Shift`
+    /// suspending the toolbar's checkbox for as long as it is held, and a
     /// handle drag's soft snaps.
     fn landing(&self, shift: bool) -> Landing<'_> {
         Landing {
@@ -692,7 +692,7 @@ impl WorkspaceView {
         let turning = self.turn_progress();
         // `position` is reused below as a match binding name for the part's
         // own new world-space placement (`Change::Position`), which shadows
-        // this screen-space one for the length of that arm — kept under its
+        // this screen-space one for the length of that arm, kept under its
         // own name so the readout can still place itself against it there.
         let cursor = position;
         // Read per move rather than latched at the grab: Studio's Shift is
@@ -728,7 +728,7 @@ impl WorkspaceView {
                     Drag::Plane { offset, .. } => {
                         // A free drag has no Studio label; this editor's own
                         // readout stands in for one, measured from where
-                        // the anchor stood at the grab — and measured again
+                        // the anchor stood at the grab, and measured again
                         // once `Shell` has landed the step (see `settle_at`).
                         self.drag_readout = self
                             .held
@@ -768,8 +768,8 @@ impl WorkspaceView {
                     settle,
                 });
             }
-            // Scale and Rotate have no group meaning yet — see
-            // `transform::Targets::set_anchor` — so only the anchor itself
+            // Scale and Rotate have no group meaning yet, see
+            // `transform::Targets::set_anchor`: so only the anchor itself
             // moves, exactly as it did before there was more than one part to
             // select.
             // A lone part's Size is its own, so a Scale of one resizes that
@@ -867,7 +867,7 @@ impl WorkspaceView {
     }
 
     /// Applies the latest recorded cursor position to the drag in progress
-    /// — see `render`'s `on_mouse_move` handler for why the two are apart.
+    /// see `render`'s `on_mouse_move` handler for why the two are apart.
     pub(super) fn step_drag(
         &mut self,
         window: &gpui_kit::Window,
@@ -930,7 +930,7 @@ impl WorkspaceView {
     }
 
     /// `t`/`r` typed with a part held by its body, reporting whether it was
-    /// one of the two — the caller stops there only then, so a `t` typed
+    /// one of the two, the caller stops there only then, so a `t` typed
     /// with nothing in hand stays an ordinary key.
     pub(super) fn turn_key(
         &mut self,
@@ -960,7 +960,7 @@ impl WorkspaceView {
 
     /// `T` or `R` with the selection held by its body (`FreeformDragger:
     /// rotate`): a quarter turn added to the drag's tilt, and the drag
-    /// stepped again where the cursor stands — so it turns about the point
+    /// stepped again where the cursor stands, so it turns about the point
     /// it is held by and comes to rest on the face again.
     ///
     /// `creator-docs` (`parts/index.md#transform-parts`): "`T` tilts the
@@ -1008,7 +1008,7 @@ impl WorkspaceView {
     }
 
     /// Whether a free drag turns the selection onto the face it lands on:
-    /// Align Dragged Objects on, and `Alt` — Hold Orientation — up.
+    /// Align Dragged Objects on, and `Alt`, Hold Orientation, up.
     fn aligns(&self, alt: bool) -> bool {
         self.guides.settings.align_dragged_objects && !alt
     }
@@ -1028,19 +1028,19 @@ impl WorkspaceView {
 }
 
 /// What this cursor ray does to the part, and the drag state the next step is
-/// measured from. `None` when the gesture has no answer at this angle — an
+/// measured from. `None` when the gesture has no answer at this angle, an
 /// axis sighted end-on, or a drag plane the ray has turned parallel to (or
 /// ended up behind).
 ///
 /// Pure, and the whole of what a drag computes: [`Drag`] is a grab's worth of
 /// geometry, and this turns it plus a ray into the part's new placement.
 ///
-/// `landing`'s grids bear on every handle — the stud increment on a Move or
+/// `landing`'s grids bear on every handle, the stud increment on a Move or
 /// Scale travel (`creator-docs`, `parts/index.md#transform-parts`: increments
 /// "are based on studs for moving/scaling"), the degree increment on a
-/// Rotate — and its soft snaps on Move's and Scale's. What is rounded is the
-/// *travel* since the handle was grabbed — the studs slid or grown, the angle
-/// swept — not the part's world position, size or heading, which is how
+/// Rotate, and its soft snaps on Move's and Scale's. What is rounded is the
+/// *travel* since the handle was grabbed, the studs slid or grown, the angle
+/// swept, not the part's world position, size or heading, which is how
 /// Studio's handles snap (`snapToGridSize` of the drag's distance) and what
 /// keeps a part that already stood off-grid from jumping the moment it is
 /// picked up.
@@ -1099,8 +1099,8 @@ pub(super) fn advance(drag: Drag, ray: Ray, landing: Landing) -> Option<(Drag, C
 }
 
 /// One step of a gesture: the target as `change` leaves it and whether this is
-/// the gesture's first step to change anything — the one that opens its undo
-/// entry — or `None` for a sample that leaves the part exactly where it is.
+/// the gesture's first step to change anything, the one that opens its undo
+/// entry, or `None` for a sample that leaves the part exactly where it is.
 ///
 /// `dragged` is marked only on a real change, never on a sample. The first
 /// samples of a snapped Move round their travel to nothing until the cursor
@@ -1117,7 +1117,7 @@ pub(super) fn stepped(
 }
 
 /// The target as this change leaves it, or `None` when it leaves it exactly as
-/// it was — which is what keeps a cursor that has not actually moved the part
+/// it was, which is what keeps a cursor that has not actually moved the part
 /// from opening an undo step.
 pub(super) fn applied(target: Target, change: Change) -> Option<Target> {
     match change {

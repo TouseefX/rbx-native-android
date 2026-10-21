@@ -1,4 +1,4 @@
-# Animation — research notes
+# Animation: research notes
 
 The primary-source research behind `crates/rbx_animation` and the Animation
 Editor document: Roblox's classes, enums and blend rules for
@@ -251,7 +251,7 @@ The PoseEasingDirection enum doc says Constant has no effect, but the PoseEasing
 The Cautioned addon, in `roblox_animations/animation/easing.py`, says "Constant Out holds the previous pose; In jumps to the next pose immediately". That is the more useful behaviour, but it is community evidence only (**UNVERIFIED**).
 
 ### Conflicting evidence about direction (treat as UNVERIFIED and test empirically)
-- `CD:animation/editor.md` describes the editor menu with standard meanings: "In — slower at the beginning and faster toward the end; Out — faster at the beginning and slower toward the end". `CD:animation/curve-editor.md` says the same for generated Bounce and Elastic curves.
+- `CD:animation/editor.md` describes the editor menu with standard meanings: "In, slower at the beginning and faster toward the end; Out, faster at the beginning and slower toward the end". `CD:animation/curve-editor.md` says the same for generated Bounce and Elastic curves.
 - The Cautioned addon maps Blender `EASE_IN → "In"` and `EASE_OUT → "Out"` for CubicV2 and Bounce. Its comment says this was "Verified against Animator:StepAnimations, not just enum names". It also notes "Studio's Bounce InOut differs from Blender's combined bounce curve".
 - One possible reading is that the CubicV2 runtime matches the standard meaning while the legacy Cubic is reversed. The docs do not state this. **Verify in Studio** with `StepAnimations` and a single joint before you fix the direction semantics.
 
@@ -318,7 +318,7 @@ Source: `CD:reference/engine/classes/AnimationConstraint.yaml`, `CD:physics/cons
 - Derived formula (**UNVERIFIED as a doc quote**; it follows from the aliases above plus Motor6D equivalence):
   `Attachment1.WorldCFrame = Attachment0.WorldCFrame * Transform`, which means
   `Part1.CFrame = Part0.CFrame * Att0.CFrame * Transform * Att1.CFrame:Inverse()`
-- `Transform` "works identically to Motor6D.Transform — the Animator writes to it each frame".
+- `Transform` "works identically to Motor6D.Transform, the Animator writes to it each frame".
 - Procedural layering pattern: during `PreSimulation`, `if not animator.EvaluationThrottled then neck.Transform = rot * neck.Transform end`.
 - `animConstraint:IsA("Motor6D")` returns false. Code should check `FindFirstChildWhichIsA("AnimationConstraint")` first and fall back to Motor6D.
 - **StarterPlayer.AvatarJointUpgrade: RolloutState**.

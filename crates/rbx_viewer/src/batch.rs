@@ -1,7 +1,7 @@
 //! `--batch`: screenshots every place file under a directory in one process,
 //! sharing the GPU device, the reflection database and the decoded-asset
-//! cache across the whole run instead of paying for each — see
-//! `capture::write_png_on` and `load::Resident` — for a caller photographing
+//! cache across the whole run instead of paying for each, see
+//! `capture::write_png_on` and `load::Resident`: for a caller photographing
 //! a large corpus of files where spawning `rbxview` once per file would pay
 //! that setup cost (and re-decode every asset two places share) again and
 //! again.
@@ -35,8 +35,8 @@ pub(crate) fn run(options: &Options, out_dir: &Path) -> Result<(), String> {
     let (device, queue) = gpu::device(&adapter)?;
     let database = ReflectionDatabase::embedded();
     let file_toggles = toggles(options);
-    // Blocking, like the single-shot path (`Loaded::read`) — nothing here
-    // streams into a next frame — but kept for the whole run rather than one
+    // Blocking, like the single-shot path (`Loaded::read`), nothing here
+    // streams into a next frame, but kept for the whole run rather than one
     // file: two places drawing on the same catalog decal, material pack or
     // file mesh decode it once between them.
     //
@@ -102,8 +102,8 @@ pub(crate) fn run(options: &Options, out_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// What every file in a `--batch` run shares — the GPU device, the
-/// reflection database and the camera/quality options — bundled together for
+/// What every file in a `--batch` run shares, the GPU device, the
+/// reflection database and the camera/quality options, bundled together for
 /// the same reason [`Framing`] is: one argument beats several to a function
 /// called once per input file.
 struct Context<'a> {
@@ -140,7 +140,7 @@ fn render_one(
 }
 
 /// Every `.rbxl`/`.rbxm`/`.rbxlx`/`.rbxmx` file under `root`, recursively, in
-/// a stable order — `root` itself if it names one directly rather than a
+/// a stable order, `root` itself if it names one directly rather than a
 /// directory.
 fn collect(root: &Path) -> Result<Vec<PathBuf>, String> {
     if root.is_file() {

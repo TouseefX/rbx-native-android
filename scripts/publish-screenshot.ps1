@@ -1,13 +1,13 @@
 # Publishes one or more images to a secret GitHub gist and prints ready-to-paste
 # Markdown links (each file's raw-content URL) for a PR description or review
-# comment. Native Windows equivalent of publish-screenshot.sh — see that
+# comment. Native Windows equivalent of publish-screenshot.sh, see that
 # script's own header for the full rationale (gh gist create itself refuses
 # binary files; the trick is cloning the gist as a real git repo and pushing
 # the image as an ordinary blob instead). Run end to end on Windows 11 with
 # Windows PowerShell 5.1 (see README's Platform support table); check.ps1 and
 # shots.ps1 have not been.
 #
-# Needs only `gh` and `git` — uses PowerShell's own ConvertFrom-Json rather
+# Needs only `gh` and `git`: uses PowerShell's own ConvertFrom-Json rather
 # than a separate jq dependency.
 #
 # "Secret" (gh gist create's own default, kept here) means unlisted, not

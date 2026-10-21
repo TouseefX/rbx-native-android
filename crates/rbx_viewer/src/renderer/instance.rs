@@ -19,7 +19,7 @@ const INSTANCE_ATTRIBUTES: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array!
 
 // Same fields as `INSTANCE_ATTRIBUTES`, shifted up two locations so this buffer
 // can follow a vertex format that already occupies 0-2 (position, normal, uv)
-// instead of the box's 0-1 — see `renderer::filemesh`'s textured pipeline.
+// instead of the box's 0-1, see `renderer::filemesh`'s textured pipeline.
 const INSTANCE_ATTRIBUTES_AFTER_UV: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array![
     3 => Float32x4,
     4 => Float32x4,
@@ -33,7 +33,7 @@ const INSTANCE_ATTRIBUTES_AFTER_UV: [wgpu::VertexAttribute; 9] = wgpu::vertex_at
 ];
 
 // Same fields again, shifted up one more location for the vertex format that
-// also carries a tangent (0-3) — see `renderer::filemesh`'s appearance pipeline.
+// also carries a tangent (0-3), see `renderer::filemesh`'s appearance pipeline.
 const INSTANCE_ATTRIBUTES_AFTER_TANGENT: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array![
     4 => Float32x4,
     5 => Float32x4,
@@ -76,7 +76,7 @@ impl InstanceRaw {
         )
     }
 
-    /// Used directly by `renderer::filemesh`, which has no `Part` — its model
+    /// Used directly by `renderer::filemesh`, which has no `Part`: its model
     /// matrices come from resolved mesh placement instead.
     pub(super) fn new(
         model: [[f32; 4]; 4],
@@ -209,7 +209,7 @@ mod tests {
     fn every_attribute_addresses_a_field_inside_the_stride() {
         let stride = std::mem::size_of::<InstanceRaw>() as wgpu::BufferAddress;
         // 4x4 matrix, then color+alpha, then reflectance, then the material
-        // triple — a multiple of 16, which is what `InstanceInput` in
+        // triple, a multiple of 16, which is what `InstanceInput` in
         // shader.wgsl declares.
         assert_eq!(stride, 96);
 

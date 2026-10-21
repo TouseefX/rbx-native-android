@@ -22,8 +22,8 @@ const RUNNER_KEY: &str = "__rbxn_runner";
 
 /// The running thread parks itself under its await id before yielding
 /// (`park` hands back the result at once when it is already there), so a
-/// wait works in any coroutine — one a script made with `coroutine.wrap`
-/// included — as in Roblox, where the engine resumes whichever thread
+/// wait works in any coroutine, one a script made with `coroutine.wrap`
+/// included, as in Roblox, where the engine resumes whichever thread
 /// waited, not whoever last resumed it.
 const YIELDING_SRC: &str = r#"
 local park = ...
@@ -286,7 +286,7 @@ pub(crate) fn resume(lua: &Lua, thread: Thread, args: MultiValue) -> Result<()> 
                 }
             },
             // A plain `coroutine.yield()` suspends the thread until
-            // whoever holds it resumes it, as in Roblox — signal libraries
+            // whoever holds it resumes it, as in Roblox, signal libraries
             // park their runner threads exactly this way.
             None => return Ok(()),
         }

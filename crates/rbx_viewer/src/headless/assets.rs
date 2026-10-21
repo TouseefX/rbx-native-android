@@ -10,7 +10,7 @@
 //! pack changes every layer that shares it and resizes the texture arrays; a
 //! landed sky panel changes the environment probe every pass binds. Doing each
 //! of those by hand would be five partial answers where
-//! [`crate::renderer::Renderer::rebuild`] is one whole one — and the rebuild is
+//! [`crate::renderer::Renderer::rebuild`] is one whole one, and the rebuild is
 //! not the expensive thing here anyway: it keeps the device, its pipelines and
 //! every upload whose invalidation key says the new scene would upload it
 //! identically, so what it actually uploads for one landed asset is that one
@@ -55,8 +55,8 @@ impl Headless {
         let landed = std::mem::take(&mut self.landed);
         // A fetch cannot be cancelled, so a `MeshId` typed, corrected and
         // typed again leaves a result arriving for a reference nothing names
-        // any more. It stays filed in the `Resident` — the next place to name
-        // it gets it free — and costs nothing else. The throttle is not
+        // any more. It stays filed in the `Resident`: the next place to name
+        // it gets it free, and costs nothing else. The throttle is not
         // touched on the way out: nothing was swapped in, so the next batch
         // that matters must not be held back on this one's account.
         if !self.loaded.wants_any(&landed) {
@@ -88,7 +88,7 @@ impl Headless {
         self.resident.forget(&reference);
     }
 
-    /// How many asset fetches are still running — the harness's cue that a
+    /// How many asset fetches are still running, the harness's cue that a
     /// streamed load has finished arriving, and nothing else's.
     #[doc(hidden)]
     pub fn assets_in_flight(&self) -> usize {

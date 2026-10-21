@@ -4,7 +4,7 @@
 use super::row_kind::RowKind;
 use super::{game, OutputEntry};
 
-/// Which entries [`super::OutputLog::filtered`] shows by type — Studio's own
+/// Which entries [`super::OutputLog::filtered`] shows by type, Studio's own
 /// Output window "filters output by type, such as **Error** or **Warning**".
 /// One bucket per kind this editor produces: a `print`/successful run, an
 /// info line (`TestService.Message` in a running game), a warning and an
@@ -53,7 +53,7 @@ impl OutputFilter {
     }
 }
 
-/// Which entries show by where they came from — Studio "filters output by
+/// Which entries show by where they came from, Studio "filters output by
 /// context, such as **Client**, **Server**, or **User Plugin**". Everything
 /// that is not a message from the running game (a Command Bar run, an app
 /// warning) is `Edit`, Studio's name for edit-mode output; what a plugin

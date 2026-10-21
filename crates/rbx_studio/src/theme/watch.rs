@@ -1,5 +1,5 @@
-//! Noticing that the theme changed on disk — another theme picked in
-//! `appearance.json`, or the active theme's own files edited — so the switch
+//! Noticing that the theme changed on disk, another theme picked in
+//! `appearance.json`, or the active theme's own files edited, so the switch
 //! happens live rather than on the next launch, and a theme author sees an
 //! edit a second after saving it.
 //!
@@ -60,7 +60,7 @@ fn stamp(appearance: Option<&Path>, theme: Option<&Path>) -> u64 {
     fingerprint([appearance, theme].into_iter().flatten())
 }
 
-/// A hash of every path, size and modification time under `roots` — what
+/// A hash of every path, size and modification time under `roots`, what
 /// changes when anything there is added, removed or saved. Also how
 /// `Shell::watch_script_templates` notices a template edited by hand.
 pub(crate) fn fingerprint<'a>(roots: impl IntoIterator<Item = &'a Path>) -> u64 {

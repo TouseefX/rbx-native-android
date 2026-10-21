@@ -17,8 +17,8 @@ use crate::assets::Image;
 use crate::scene::{AlphaMode, Appearance, Resolved};
 
 /// What a map kind contributes where the set does not carry it. White at zero
-/// alpha is the colour map's neutral, which under `Overlay` — the mode a set
-/// without a colour map is forced into — leaves the part's own colour untouched.
+/// alpha is the colour map's neutral, which under `Overlay`, the mode a set
+/// without a colour map is forced into, leaves the part's own colour untouched.
 fn neutral(kind: MapKind) -> [u8; 4] {
     match kind {
         MapKind::Color => [255, 255, 255, 0],
@@ -45,7 +45,12 @@ struct Uniform {
     /// and 0 for `Overlay`, which is the only thing that tells the fragment
     /// shader whether the colour map's alpha blends or reveals the part colour.
     tint: [f32; 4],
+    /// xyz: emissive tint times strength, linear. w: unused.
+    emissive: [f32; 4],
 }
+
+/// Black: no emissive mask means no glow.
+const NEUTRAL_EMISSIVE: [u8; 4] = [0, 0, 0, 255];
 
 pub(super) fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     let map = |binding| wgpu::BindGroupLayoutEntry {
@@ -82,6 +87,7 @@ pub(super) fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
                 },
                 count: None,
             },
+            map(6),
         ],
     })
 }
@@ -91,7 +97,7 @@ pub(super) fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 pub(super) struct Sets {
     sets: Vec<Set>,
     /// What each entry of `sets` was uploaded from. A resolved appearance is
-    /// its four map assets (only the ones that downloaded — see
+    /// its four map assets (only the ones that downloaded, see
     /// `scene::filemesh::Appearance::resolved`), its tint and its alpha mode,
     /// which is everything [`upload`] reads: an equal one uploads equal maps
     /// and an equal uniform, so a scene rebuild keeps the set (see
@@ -104,6 +110,7 @@ pub(super) struct Sets {
 /// quality level rebuilds the bind group and nothing else.
 struct Set {
     maps: Vec<texture::Uploaded>,
+    emissive_mask: texture::Uploaded,
     uniform: wgpu::Buffer,
 }
 
@@ -126,7 +133,7 @@ impl Sets {
     /// Re-indexes the sets to `resolved.appearances`' order, uploading only
     /// the appearances the previous scene did not have: a character's limbs
     /// re-resolved after an edit elsewhere in the place still wear the very
-    /// same maps. The bind groups are rebuilt regardless — they are indexed
+    /// same maps. The bind groups are rebuilt regardless, they are indexed
     /// by the new order, and a bind group is cheap next to a map upload.
     pub(super) fn rebuild(
         &mut self,
@@ -184,8 +191,22 @@ fn upload(
         })
         .collect();
 
+    let mask = appearance
+        .emissive_mask
+        .as_ref()
+        .and_then(|reference| resolved.images.get(reference))
+        .map(|image| image.as_ref());
+    let blank = solid(NEUTRAL_EMISSIVE);
+    let emissive_mask = texture::Uploaded::new(
+        device,
+        queue,
+        mask.unwrap_or(&blank),
+        wgpu::TextureFormat::Rgba8Unorm,
+    );
+
     Set {
         maps,
+        emissive_mask,
         uniform: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("rbxview surface appearance"),
             contents: bytemuck::bytes_of(&Uniform {
@@ -194,6 +215,12 @@ fn upload(
                     appearance.tint[1],
                     appearance.tint[2],
                     f32::from(u8::from(appearance.alpha_mode == AlphaMode::Transparency)),
+                ],
+                emissive: [
+                    appearance.emissive[0],
+                    appearance.emissive[1],
+                    appearance.emissive[2],
+                    0.0,
                 ],
             }),
             usage: wgpu::BufferUsages::UNIFORM,
@@ -207,6 +234,7 @@ fn bind(device: &wgpu::Device, binding: Binding<'_>, set: &Set) -> wgpu::BindGro
         .iter()
         .map(|map| map.view(binding.max_size))
         .collect();
+    let mask_view = set.emissive_mask.view(binding.max_size);
     let entries: Vec<wgpu::BindGroupEntry<'_>> = views
         .iter()
         .enumerate()
@@ -222,6 +250,10 @@ fn bind(device: &wgpu::Device, binding: Binding<'_>, set: &Set) -> wgpu::BindGro
             wgpu::BindGroupEntry {
                 binding: 5,
                 resource: set.uniform.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: wgpu::BindingResource::TextureView(&mask_view),
             },
         ])
         .collect();
@@ -264,7 +296,12 @@ mod tests {
     }
 
     #[test]
-    fn the_uniform_is_one_vec4_the_shader_can_bind() {
-        assert_eq!(std::mem::size_of::<Uniform>(), 16);
+    fn the_uniform_is_two_vec4s_the_shader_can_bind() {
+        assert_eq!(std::mem::size_of::<Uniform>(), 32);
+    }
+
+    #[test]
+    fn a_missing_emissive_mask_is_black() {
+        assert_eq!(NEUTRAL_EMISSIVE[..3], [0, 0, 0]);
     }
 }

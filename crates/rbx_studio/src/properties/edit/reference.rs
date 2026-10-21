@@ -1,5 +1,5 @@
 //! A `Ref` row (`ObjectValue.Value`, `Weld.Part0`): an instance in the place,
-//! picked from the Explorer the way Studio's own panel does it — "select the
+//! picked from the Explorer the way Studio's own panel does it, "select the
 //! Adornee property. Your cursor changes. In the Explorer window, select the
 //! part." (creator-docs, `ui/text-input.md`). The pick commits through the
 //! panel's ordinary textual path as the target's referent, so a pick is one
@@ -7,8 +7,8 @@
 //!
 //! `Variant` has no null reference: a `nil` one is an absent key, which is
 //! how both file formats read their null referent back. The panel still has
-//! to list such a property — a new `Weld` has no `Part0` yet, and that is
-//! exactly the value someone opens the panel to set — so it stands in
+//! to list such a property, a new `Weld` has no `Part0` yet, and that is
+//! exactly the value someone opens the panel to set, so it stands in
 //! [`NIL_REF`] for the missing value. The stand-in is never written: a commit
 //! of it removes the key instead (see [`super::commit`]).
 

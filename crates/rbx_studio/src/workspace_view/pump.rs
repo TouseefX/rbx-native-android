@@ -1,14 +1,14 @@
 //! Rendering off the UI thread.
 //!
-//! One thread owns the viewer and does the whole GPU round trip — advance the
-//! camera, draw, read back — and hands finished frames over a channel. The UI
+//! One thread owns the viewer and does the whole GPU round trip, advance the
+//! camera, draw, read back, and hands finished frames over a channel. The UI
 //! thread does nothing but upload them, so neither the 5 MB readback nor the wait
 //! for the GPU behind it ever sits between a mouse move and the answer to it.
 //!
 //! The thread paces itself to one display refresh and draws only while the
 //! picture can change: a command arrived, the camera moved, an asset landed,
 //! or something on screen moves with the clock (particles, `Trail`, `Beam`, a
-//! `ForceField` — see `Headless::animating`). A still view over a still place
+//! `ForceField`: see `Headless::animating`). A still view over a still place
 //! draws nothing, reads nothing back and uploads nothing, which is most of
 //! what an editor sits doing; and it sleeps outright once the panel is not
 //! visible, which is what keeps a backgrounded view free.
@@ -42,7 +42,7 @@ const IDLE_WAIT: Duration = Duration::from_millis(100);
 /// in the single frame that follows the key which woke it.
 const MAX_STEPS: u32 = 3;
 /// How often a moved pose is worth reporting up to the UI thread for DOM sync
-/// (see `WorkspaceView`'s `PoseSynced` event) — frames themselves come at
+/// (see `WorkspaceView`'s `PoseSynced` event), frames themselves come at
 /// ~75/sec (see this module's doc comment), far more often than
 /// `Workspace.CurrentCamera.CFrame` needs to track a flying camera.
 const POSE_SYNC_INTERVAL: Duration = Duration::from_millis(200);
@@ -55,60 +55,60 @@ enum Command {
     /// A wheel event at `at`, in the frame's pixels: scrolls the
     /// `ScrollingFrame` under it if one can take `scroll` (reported back
     /// through [`Ready::scrolls`]), else steps the camera by `camera`
-    /// notches — see `super::scroll`.
+    /// notches, see `super::scroll`.
     Wheel {
         at: [f32; 2],
         scroll: Wheel,
         camera: f32,
     },
     Size((u32, u32)),
-    /// A new frame budget to pace the loop to — see `crate::pacing::FocusPacing`.
+    /// A new frame budget to pace the loop to, see `crate::pacing::FocusPacing`.
     /// Sent whenever the window's focus state (or the unfocused rate setting)
     /// changes, never on a plain tick.
     Interval(Duration),
     Quality(QualityLevel),
     Orthographic(bool),
-    /// How the free camera responds — see `Headless::set_camera_feel`.
+    /// How the free camera responds, see `Headless::set_camera_feel`.
     CameraFeel(CameraFeel),
-    /// Puts the camera at `eye` looking at `target` — see `Headless::open_at`.
+    /// Puts the camera at `eye` looking at `target`: see `Headless::open_at`.
     LookAt {
         eye: [f32; 3],
         target: [f32; 3],
     },
-    /// The renderer's tuned constants — see `Headless::set_calibration`.
+    /// The renderer's tuned constants, see `Headless::set_calibration`.
     Calibration(Calibration),
     /// Draws only these instances on a plain backdrop, or everything again
-    /// — see `Headless::set_isolation`.
+    /// see `Headless::set_isolation`.
     Isolation(Option<Vec<rbx_dom::Ref>>),
-    /// Whether a part in front of the selection hides its outline box — see
+    /// Whether a part in front of the selection hides its outline box, see
     /// `Headless::set_selection_occluded`.
     SelectionOccluded(bool),
     Selection(Vec<Selected>),
-    /// The "about to click" cue — see `Headless::set_hover`. `None` clears
+    /// The "about to click" cue, see `Headless::set_hover`. `None` clears
     /// it, the way an empty `Selection` clears the selection outline.
     Hover(Vec<Selected>),
-    /// Which transform tool's draggers to draw over the selection, if any —
+    /// Which transform tool's draggers to draw over the selection, if any,
     /// see `Headless::set_gizmo`.
     Gizmo(Option<Gizmo>),
-    /// The device screen the `ScreenGui` overlay is laid out as — see
+    /// The device screen the `ScreenGui` overlay is laid out as, see
     /// `Headless::set_gui_screen`.
     GuiScreen(Option<(u32, u32)>),
-    /// Whether the `ScreenGui` overlay is drawn — see
+    /// Whether the `ScreenGui` overlay is drawn, see
     /// `Headless::set_screen_gui_shown`.
     ScreenGuiShown(bool),
-    /// That device's safe-area insets — see `Headless::set_gui_safe_insets`.
+    /// That device's safe-area insets, see `Headless::set_gui_safe_insets`.
     GuiSafeInsets(rbx_viewer::SafeInsets),
-    /// Where a tool being configured would put the selection — the Align
+    /// Where a tool being configured would put the selection, the Align
     /// popover's live preview. An empty list clears it.
     Preview(Vec<glam::Mat4>),
-    /// One layer of the world-space line segments drawn over the scene —
+    /// One layer of the world-space line segments drawn over the scene,
     /// see `Headless::set_lines`. An empty list clears that layer.
     Lines(usize, Vec<Segment>),
-    /// A terrain edit in progress, as the chunks it changed — see
+    /// A terrain edit in progress, as the chunks it changed, see
     /// `Headless::preview_terrain`.
     TerrainPreview(TerrainChunks),
     /// An edit to the DOM, as the `Change` log it produced, patched into the
-    /// scene instance by instance — see `Headless::apply_changes`. What
+    /// scene instance by instance, see `Headless::apply_changes`. What
     /// travels with the log is a snapshot of the instances it names (see
     /// `WeakDom::snapshot`), never the tree: the thread keeps a mirror of
     /// the editor's DOM and brings it in step first, so one command costs
@@ -121,7 +121,7 @@ enum Command {
     /// `Workspace` (where the viewer draws adornments) only for drawing.
     PluginAdornments(Vec<rbx_dom::Instance>),
     Visible(bool),
-    /// The UI editor's canvas to draw, or `None` once it is off screen —
+    /// The UI editor's canvas to draw, or `None` once it is off screen,
     /// see [`canvas`].
     Canvas(Option<canvas::Request>),
     /// Lets go of the viewer (`true`) or rebuilds it from the mirror
@@ -133,7 +133,7 @@ enum Command {
 /// A frame to upload, carrying the flight speed and the graphics quality level as
 /// of the moment it was drawn. `pixels` is empty on a message sent only to report
 /// one of those two changing. `pose` is `Some` only on the (throttled) tick that
-/// is due to report it — see [`POSE_SYNC_INTERVAL`] and [`due_pose`] — so most
+/// is due to report it, see [`POSE_SYNC_INTERVAL`] and [`due_pose`], so most
 /// messages carry `None` even while the camera is moving every frame.
 pub(super) struct Ready {
     pub(super) pixels: Option<Vec<u8>>,
@@ -149,12 +149,12 @@ pub(super) struct Ready {
     /// most likely to click.
     pub(super) view: Option<Pose>,
     /// The file meshes the viewer's scene holds, on the first message and on
-    /// the one after every rebuild — see `Headless::pick_meshes`. `None` the
+    /// the one after every rebuild, see `Headless::pick_meshes`. `None` the
     /// rest of the time: the geometry a click is tested against only changes
     /// when the scene does, and a handle onto it is all the UI thread keeps.
     pub(super) meshes: Option<Meshes>,
     /// Asset-fetch/decode warnings drained off the viewer since the previous
-    /// tick — see `Headless::drain_warnings`. Empty on most ticks, same as
+    /// tick, see `Headless::drain_warnings`. Empty on most ticks, same as
     /// `pose`, but unlike `pose` this is never throttled: a warning is worth
     /// showing the moment it exists, not on a sampled interval.
     pub(super) warnings: Vec<String>,
@@ -162,7 +162,7 @@ pub(super) struct Ready {
     /// frame (see [`Command::Wheel`]), oldest first. Never throttled, like
     /// `warnings`: the UI thread owns the DOM the scroll is written to.
     pub(super) scrolls: Vec<Scroll>,
-    /// The UI editor's canvas, on the tick it was redrawn — see [`canvas`].
+    /// The UI editor's canvas, on the tick it was redrawn, see [`canvas`].
     pub(super) canvas: Option<canvas::Drawn>,
 }
 
@@ -170,7 +170,7 @@ pub(super) struct Pump {
     commands: Sender<Command>,
     ready: Receiver<Ready>,
     stats: Arc<Stats>,
-    /// Whether the thread has nothing to draw — see [`Pump::resting`].
+    /// Whether the thread has nothing to draw, see [`Pump::resting`].
     resting: Arc<AtomicBool>,
     /// Joined on drop: the thread holds a GPU device of its own, and letting it
     /// draw into a window that is being torn down is how a driver crash starts.
@@ -179,7 +179,7 @@ pub(super) struct Pump {
 
 impl Pump {
     /// `dom` is the tree `viewer` was built from, handed over once: the
-    /// thread keeps it as its mirror of the editor's DOM from here on — see
+    /// thread keeps it as its mirror of the editor's DOM from here on, see
     /// [`Command::Changes`].
     pub(super) fn spawn(
         viewer: Headless,
@@ -225,7 +225,7 @@ impl Pump {
         let _ = self.commands.send(Command::Input(event));
     }
 
-    /// A wheel event at `at` — see [`Command::Wheel`].
+    /// A wheel event at `at`: see [`Command::Wheel`].
     pub(super) fn wheel(&self, at: [f32; 2], scroll: Wheel, camera: f32) {
         let _ = self.commands.send(Command::Wheel { at, scroll, camera });
     }
@@ -234,7 +234,7 @@ impl Pump {
         let _ = self.commands.send(Command::Size(size));
     }
 
-    /// Retargets the render thread's own pacing — the actual throttle: unlike
+    /// Retargets the render thread's own pacing, the actual throttle: unlike
     /// the UI thread's polling delay (`WorkspaceView::advance`'s return
     /// value), this is what stops the GPU render and readback themselves from
     /// running at the display's full rate while the window is unfocused.
@@ -280,18 +280,18 @@ impl Pump {
     }
 
     /// Outlines the hovered part in the viewport, distinctly from the
-    /// selection — `None` clears it.
+    /// selection, `None` clears it.
     pub(super) fn hover(&self, selected: Vec<Selected>) {
         let _ = self.commands.send(Command::Hover(selected));
     }
 
     /// Draws ghost boxes where the tool being configured would put the
-    /// selection — see `Headless::set_preview`.
+    /// selection, see `Headless::set_preview`.
     pub(super) fn preview(&self, boxes: Vec<glam::Mat4>) {
         let _ = self.commands.send(Command::Preview(boxes));
     }
 
-    /// Draws one layer of line segments over the scene — see
+    /// Draws one layer of line segments over the scene, see
     /// `Headless::set_lines`.
     pub(super) fn terrain_preview(&self, chunks: TerrainChunks) {
         let _ = self.commands.send(Command::TerrainPreview(chunks));
@@ -320,7 +320,7 @@ impl Pump {
         let _ = self.commands.send(Command::GuiSafeInsets(insets));
     }
 
-    /// Patches the viewer's scene for one edit's `Change` log — see
+    /// Patches the viewer's scene for one edit's `Change` log, see
     /// [`Command::Changes`].
     pub(super) fn apply_changes(&self, snapshots: Vec<Snapshot>, changes: Vec<Change>) {
         let _ = self.commands.send(Command::Changes(snapshots, changes));
@@ -331,7 +331,7 @@ impl Pump {
         let _ = self.commands.send(Command::PluginAdornments(adornments));
     }
 
-    /// Tells the render thread whether the panel is actually on screen — the
+    /// Tells the render thread whether the panel is actually on screen, the
     /// dock only mounts the active tab of a group, so a hidden viewport never
     /// calls back into `render` to report a size. Draws stop entirely while
     /// it is not, rather than going on into a picture nobody can see.
@@ -339,7 +339,7 @@ impl Pump {
         let _ = self.commands.send(Command::Visible(visible));
     }
 
-    /// Asks for the UI editor's canvas, or stops drawing it — see
+    /// Asks for the UI editor's canvas, or stops drawing it, see
     /// [`canvas`]. Sending the same request again costs nothing.
     pub(super) fn canvas(&self, request: Option<canvas::Request>) {
         let _ = self.commands.send(Command::Canvas(request));
@@ -358,8 +358,8 @@ impl Pump {
         self.ready.try_recv().ok()
     }
 
-    /// Whether the thread is idle by choice — visible, but with nothing that
-    /// would change the picture — rather than stalled: no frame is coming
+    /// Whether the thread is idle by choice, visible, but with nothing that
+    /// would change the picture, rather than stalled: no frame is coming
     /// until something does, so no frame arriving says nothing about whether
     /// the panel is still on screen (see `super::presence`).
     pub(super) fn resting(&self) -> bool {
@@ -401,7 +401,7 @@ fn run(
     // ponytail: `Quality`'s automatic-level target (`target_hz`) is fixed at
     // this full-focus budget for the thread's whole life, even once
     // `Command::Interval` later slows `interval` itself down while
-    // unfocused — Automatic then keeps sizing the level for the display's
+    // unfocused, Automatic then keeps sizing the level for the display's
     // full rate rather than the looser unfocused one, which only leaves
     // headroom on the table, never breaks anything. Upgrade path: fold the
     // new budget into `quality` too wherever `Command::Interval` is applied,
@@ -419,7 +419,7 @@ fn run(
     let mut shown = viewer.quality().resolved();
     // `Instant::now()`, not `ticked`: due right away, so a place that opens
     // already aimed at its own saved `Camera` reports that pose once even with
-    // zero input — see `due_pose`'s doc comment.
+    // zero input, see `due_pose`'s doc comment.
     let mut pose_due = Instant::now();
     let mut pose_sent = None;
     // True to begin with: the scene the thread opened with is as new to the
@@ -493,7 +493,7 @@ fn run(
         let draw = visible && (std::mem::take(&mut owed) | changed || viewer.animating());
         let frame = next_frame(&mut viewer, size, draw, &mut in_flight, stats);
         // Nothing to draw, and the last frame queued already collected: wait
-        // for an event rather than for the clock — for no longer than a frame
+        // for an event rather than for the clock, for no longer than a frame
         // while visible, since the camera and the asset pool are only ever
         // looked at from here.
         idle = !draw && frame.is_none() && !in_flight;
@@ -519,7 +519,7 @@ fn run(
 
         let warnings = viewer.drain_warnings();
         // Either a command rebuilt the scene, or an asset landed on this tick
-        // and was swapped into it — both mean new geometry to pick against.
+        // and was swapped into it, both mean new geometry to pick against.
         let meshes = (std::mem::take(&mut rebuilt) | viewer.pick_meshes_changed())
             .then(|| viewer.pick_meshes());
         // A swap-in is news to the canvas as much as to the scene.
@@ -579,7 +579,7 @@ fn run(
 ///
 /// Sleeping "what is left of the budget" instead would lose a frame every few:
 /// each sleep overshoots by a millisecond or two, and counted from `now` that
-/// overshoot is never made up — 75 Hz asked for, 60 delivered.
+/// overshoot is never made up, 75 Hz asked for, 60 delivered.
 fn deadline(previous: Instant, interval: Duration, now: Instant) -> Instant {
     (previous + interval).max(now)
 }
@@ -600,9 +600,9 @@ struct Frame {
 /// change the picture; either way the frame queued last is collected once,
 /// so the one on screen is the latest.
 ///
-/// Panels the dock is not currently showing never report a size — the active
+/// Panels the dock is not currently showing never report a size, the active
 /// tab of a group is the only one mounted, so a hidden viewport's `render`
-/// simply never runs to say otherwise — but `visible` is driven by that same
+/// simply never runs to say otherwise, but `visible` is driven by that same
 /// absence (see `WorkspaceView::advance`), which is what actually stops the
 /// draw: a size left over from before the tab was switched away is not enough
 /// on its own. Going invisible still has to collect the frame queued just
@@ -675,31 +675,31 @@ fn drain_pending_frame(viewer: &mut Headless, stats: &Stats) -> Option<Frame> {
 /// draws at and whether the panel is currently visible.
 struct Rendering<'a> {
     viewer: &'a mut Headless,
-    /// The editor's DOM as this thread last saw it — see [`Command::Changes`].
+    /// The editor's DOM as this thread last saw it, see [`Command::Changes`].
     mirror: &'a mut WeakDom,
     /// Poses the mirror's parts from their joints' `Transform`, which is all
-    /// the animation editor writes — see [`JointSolver`].
+    /// the animation editor writes, see [`JointSolver`].
     joints: &'a mut JointSolver,
     quality: &'a mut Quality,
     size: &'a mut (u32, u32),
     visible: &'a mut bool,
     /// Set by any command that rebuilt the scene, so the tick that follows
-    /// reports the geometry the UI thread now has to pick against — see
+    /// reports the geometry the UI thread now has to pick against, see
     /// [`Ready::meshes`].
     rebuilt: &'a mut bool,
     /// The wheel notches that landed on a scrolling frame this tick, for
     /// [`Ready::scrolls`].
     scrolls: &'a mut Vec<Scroll>,
-    /// The budget the loop is currently pacing itself to — see
+    /// The budget the loop is currently pacing itself to, see
     /// [`Command::Interval`]. Note: this is only the *pacing* budget;
     /// `quality`'s automatic-level target stays fixed to the rate `Quality::new`
-    /// opened with, not to this — see this module's `run` for why that's fine.
+    /// opened with, not to this, see this module's `run` for why that's fine.
     interval: &'a mut Duration,
     canvas: &'a mut canvas::Canvas,
     /// Set by every command, so the tick that follows draws: nearly all of
     /// them change the picture, and one frame for one that did not is cheap.
     owed: &'a mut bool,
-    /// The plugin adornments the mirror holds — see
+    /// The plugin adornments the mirror holds, see
     /// [`Command::PluginAdornments`].
     plugin_adornments: &'a mut Vec<Ref>,
     /// Set by [`Command::Park`]; `run` parks once the batch is through.
@@ -787,10 +787,10 @@ fn parked(
 /// everything else where it was.
 ///
 /// A drag sends one change batch per mouse-move event, and a mouse reports
-/// far more of those than the display draws frames — up to a thousand a
+/// far more of those than the display draws frames, up to a thousand a
 /// second. Each batch is a hint about *which* instances to re-read from the
 /// mirror (see `Headless::apply_changes`), never a value, so applying the
-/// union once is the same picture as applying each in turn — while the
+/// union once is the same picture as applying each in turn, while the
 /// per-batch cost that does not scale with the edit (the effect, GUI and
 /// light plans a moved part's children invalidate) is paid once a frame
 /// instead of once a move. Without this a place big enough for those plans
@@ -800,7 +800,7 @@ fn parked(
 ///
 /// Line segments are folded past as well: a drag's guides move with it and
 /// send a fresh list almost every step, between one change batch and the
-/// next, and a list replaces whatever that layer held before — so only the
+/// next, and a list replaces whatever that layer held before, so only the
 /// last one per layer is kept, and the batches either side of it still
 /// fold into one.
 fn coalesce(commands: Vec<Command>) -> Vec<Command> {
@@ -956,10 +956,10 @@ fn step(since: Duration, interval: Duration) -> Duration {
 }
 
 /// Whether this tick's pose (`candidate`, `None` while the view is still
-/// auto-orbiting — see [`Headless::pose`]) is worth reporting up to the UI
+/// auto-orbiting, see [`Headless::pose`]) is worth reporting up to the UI
 /// thread: gated on [`POSE_SYNC_INTERVAL`] (`ready`) and on actually differing
-/// from the last one sent, so a camera at rest — the common case, since a
-/// frame is drawn every tick regardless of movement — never re-reports the
+/// from the last one sent, so a camera at rest, the common case, since a
+/// frame is drawn every tick regardless of movement, never re-reports the
 /// same value once `ready` comes back around.
 ///
 /// A plain function of three values rather than a method on any of the loop's

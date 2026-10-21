@@ -10,7 +10,7 @@ path = "src/main.rs"
 
 # The performance harness (see scripts/bench.sh). An example rather than a bin
 # so it never ships in a release build of the viewer, with `test = true` because
-# cargo does not run an example's own unit tests otherwise — and the statistics
+# cargo does not run an example's own unit tests otherwise, and the statistics
 # and argument parsing behind a committed number have to be held to the same
 # gate as everything else.
 [[example]]
@@ -54,7 +54,7 @@ base64 = "0.22"
 web-time = "1.1"
 
 # The network: Open Cloud and Roblox's CDNs through a blocking client, which a
-# browser has neither of — a wasm build asks `rbxview --serve` instead.
+# browser has neither of, a wasm build asks `rbxview --serve` instead.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rbx_cloud = { path = "../rbx_cloud" }
 

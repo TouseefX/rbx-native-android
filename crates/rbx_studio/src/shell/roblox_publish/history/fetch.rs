@@ -42,7 +42,7 @@ fn client() -> Result<Client, String> {
         .ok_or_else(|| describe(&CloudError::NoApiKey))
 }
 
-/// A refusal of a read, naming the scope it needed — the wizard lists
+/// A refusal of a read, naming the scope it needed, the wizard lists
 /// `universe.place:read` as optional, so a key without it is common.
 pub(super) fn describe_read(err: &CloudError, scope: &str) -> String {
     match err {

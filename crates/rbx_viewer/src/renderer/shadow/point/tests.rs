@@ -49,7 +49,7 @@ fn no_cubes_at_all_selects_nothing() {
 }
 
 /// Every direction out of the light has to land inside exactly the face the
-/// shader will pick for it — the major axis of the direction — or a
+/// shader will pick for it, the major axis of the direction, or a
 /// fragment would be tested against a map that never saw it.
 #[test]
 fn every_direction_projects_inside_the_face_the_major_axis_names() {

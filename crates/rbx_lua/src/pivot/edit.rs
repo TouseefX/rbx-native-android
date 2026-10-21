@@ -1,5 +1,5 @@
-//! Moving a pivot without moving what it belongs to — Studio's Edit Pivot
-//! tool and its Reset button (`studio/pivot-tools.md`) — and keeping a
+//! Moving a pivot without moving what it belongs to, Studio's Edit Pivot
+//! tool and its Reset button (`studio/pivot-tools.md`), and keeping a
 //! model's pivot where it is when the parts it was read off are moved or
 //! deleted out from under it.
 
@@ -16,7 +16,7 @@ use crate::datatypes::cframe::LuaCFrame;
 
 /// Puts `reference`'s pivot on `to` and leaves the instance where it is: a
 /// part's `PivotOffset`, a model's `PrimaryPart`'s `PivotOffset` while it has
-/// one (its pivot *is* that part's), else the model's `WorldPivot` — the
+/// one (its pivot *is* that part's), else the model's `WorldPivot`, the
 /// three properties `studio/pivot-tools.md` says "will not move or rotate
 /// the object". `None` when `reference` has no pivot.
 pub fn set_pivot(
@@ -59,7 +59,7 @@ pub fn reset(
     set_pivot(dom, db, reference, &centre)
 }
 
-/// Clears `model`'s `PrimaryPart`, and — when it had one — puts its pivot
+/// Clears `model`'s `PrimaryPart`, and, when it had one, puts its pivot
 /// back on the centre of its bounding box, as [`reset`] does:
 /// `studio/pivot-tools.md` has unassigning a `PrimaryPart` reset the pivot,
 /// where deleting the part ([`keep_pivots`]) leaves it be. The box is squared
@@ -89,7 +89,7 @@ pub fn clear_primary_part(
 /// model, the pivot point remains in the same location and does **not**
 /// revert to its previous position. This prevents a sudden "jump"". While
 /// the part was primary its pivot stood in for the model's, and the
-/// `WorldPivot` underneath is whatever it was before that — the very jump.
+/// `WorldPivot` underneath is whatever it was before that, the very jump.
 pub fn keep_pivots(
     dom: &mut WeakDom,
     db: &ReflectionDatabase,
@@ -116,7 +116,7 @@ pub fn keep_pivots(
 }
 
 /// A model whose stored `WorldPivot` has to follow its parts when they are
-/// written one by one — a drag in the viewport writes each part's `CFrame`
+/// written one by one, a drag in the viewport writes each part's `CFrame`
 /// and nothing else, where Studio carries a dragged model's pivot with it.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Follower {
@@ -129,7 +129,7 @@ pub struct Follower {
 
 /// What [`follow`] has to carry when the parts under `roots` move: each
 /// model among them and under them with a `WorldPivot` of its own and no
-/// `PrimaryPart` — a `PrimaryPart`'s pivot travels with that part already —
+/// `PrimaryPart`, a `PrimaryPart`'s pivot travels with that part already,
 /// read off its first part.
 pub fn followers(dom: &WeakDom, db: &ReflectionDatabase, roots: &[Ref]) -> Vec<Follower> {
     let mut pending = roots.to_vec();

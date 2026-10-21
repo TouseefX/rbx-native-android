@@ -309,7 +309,7 @@ fn automatic_size_grows_only_the_axes_it_names_and_never_below_the_size() {
 #[test]
 fn automatic_size_grows_until_a_scale_sized_child_holds_its_content() {
     // Measured in Studio: the button comes to 320, the `(1, -20)` body and
-    // its `(1, 1)` child to 300 — the 300px item reaches up through both.
+    // its `(1, 1)` child to 300, the 300px item reaches up through both.
     let (mut dom, gui) = screen_gui();
     let button = frame(
         &mut dom,

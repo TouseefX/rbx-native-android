@@ -20,7 +20,7 @@ use super::{give_focus_back, Shell};
 /// creates exactly one of each and scripts reach it by class through
 /// `GetService`, which is the same reason `explorer::reparent` refuses to
 /// let one be dragged somewhere else. A referent that no longer resolves
-/// cannot either — there is nothing left to rename.
+/// cannot either, there is nothing left to rename.
 pub(super) fn renameable(dom: &WeakDom, database: &ReflectionDatabase, reference: Ref) -> bool {
     dom.get(reference)
         .is_some_and(|instance| !database.is_service(instance.class()))
@@ -30,10 +30,10 @@ pub(super) fn renameable(dom: &WeakDom, database: &ReflectionDatabase, reference
 pub(super) struct Renaming {
     target: Ref,
     input: Entity<InputState>,
-    /// What had focus before the box took it — the tree, from `F2` or the
-    /// row menu — given back however the box closes.
+    /// What had focus before the box took it, the tree, from `F2` or the
+    /// row menu, given back however the box closes.
     previous: Option<FocusHandle>,
-    /// Kept alive only to stay subscribed — see `shell::edit::RowEdit`'s
+    /// Kept alive only to stay subscribed, see `shell::edit::RowEdit`'s
     /// identical convention.
     _subscription: Subscription,
 }
@@ -64,7 +64,7 @@ pub(super) fn name_box(input: &Entity<InputState>) -> AnyElement {
         .min_w(px(40.))
         .h(tokens::tree_row_height())
         // The tree's own row press selects, and the Explorer's wrapper hands
-        // focus back to the tree on any click inside it — which would blur
+        // focus back to the tree on any click inside it, which would blur
         // this box and commit the half-typed name. A click aimed at the
         // caret has to stop here.
         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
@@ -80,7 +80,7 @@ pub(super) fn name_box(input: &Entity<InputState>) -> AnyElement {
 
 impl Shell {
     /// Opens the name box on `reference`, with the current name selected so
-    /// the first keystroke replaces it — a rename is almost always a new
+    /// the first keystroke replaces it, a rename is almost always a new
     /// name rather than an edit to the old one.
     pub(super) fn begin_rename(
         &mut self,
@@ -162,7 +162,7 @@ impl Shell {
             cx.notify();
             return;
         }
-        // One `Change::Property` on `Name` — the same log a Properties-panel
+        // One `Change::Property` on `Name`: the same log a Properties-panel
         // rename produces, which is what lets an open script tab's label
         // follow along without knowing where the rename came from.
         let changes = self.dom.take_changes();

@@ -347,7 +347,7 @@ impl Shell {
     }
 
     /// What a card shows for `setting` at the level being edited: its own
-    /// override, else the default — the plugin's binding
+    /// override, else the default, the plugin's binding
     /// (`Settings.luau:379`, `:391`).
     pub(super) fn argon_shown(&self, setting: Setting) -> Value {
         let keys = self.argon_level_keys();

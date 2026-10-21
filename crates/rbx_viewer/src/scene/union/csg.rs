@@ -42,7 +42,7 @@ pub(super) enum Failure {
     /// here so a badly leaky result never reaches the renderer.
     Leaky,
     /// The signed volume is non-positive, or exceeds the sum of every
-    /// additive leaf's own volume — a global (or large partial) winding
+    /// additive leaf's own volume, a global (or large partial) winding
     /// flip, or a boolean that grew instead of shrank. See [`evaluate`].
     Inverted,
 }
@@ -55,13 +55,13 @@ pub(super) struct Solid {
 
 /// Re-fuses the two triangles of each flat quad face (every shape generator
 /// in `crate::shapes` emits a face as two triangles sharing a diagonal, back
-/// to back — see `MeshData::push_flat_quad`) back into one 4-vertex polygon.
+/// to back, see `MeshData::push_flat_quad`) back into one 4-vertex polygon.
 ///
 /// The diagonal is purely a rasterizer convenience; feeding the BSP tree a
 /// triangulated face instead of the whole flat face gives every cutting plane
 /// two independent fragmentation histories for the same physical surface, and
 /// a many-cut boolean (a real carved rock) compounds their tiny floating-point
-/// disagreement into an actual gap — this is what a leaky real-world union
+/// disagreement into an actual gap, this is what a leaky real-world union
 /// traced back to. Any pair that isn't a matching diagonal (a standalone
 /// triangle, or two unrelated ones landing next to each other) is left alone.
 fn merge_quad_pairs(polygons: Vec<Polygon>) -> Vec<Polygon> {
@@ -178,7 +178,7 @@ impl Solid {
         Solid::bounded(a.all_polygons())
     }
 
-    /// Only caps the polygon count here — welding and the watertightness
+    /// Only caps the polygon count here, welding and the watertightness
     /// check are `O(vertices)` to `O(edges * vertices)` costs that a tree of
     /// hundreds of leaves would otherwise pay on every intermediate step;
     /// [`evaluate`] runs them exactly once, on the finished result.
@@ -236,7 +236,7 @@ impl Solid {
     }
 
     /// Signed volume by the divergence theorem: positive for an outward-wound,
-    /// closed solid, negative if the whole result came out inside-out — the
+    /// closed solid, negative if the whole result came out inside-out, the
     /// production check in [`evaluate`] as well as a test assertion.
     pub(super) fn volume(&self) -> f64 {
         self.polygons
@@ -393,8 +393,8 @@ fn evaluate_node(node: &Node, cache: &mut Vec<(ShapeKind, MeshData)>) -> Result<
 /// The leaf colour a union shows when `UsePartColor` is off: Roblox keeps
 /// each original piece's own colour then, but this module's one mesh can
 /// only carry a single tint (no per-facet provenance survives the boolean),
-/// so it picks the additive leaf with the *largest volume* — the one most
-/// likely to dominate what a viewer actually sees — rather than whichever
+/// so it picks the additive leaf with the *largest volume*, the one most
+/// likely to dominate what a viewer actually sees, rather than whichever
 /// leaf happens to come first in the tree's own (arbitrary, DOM-order)
 /// traversal, which would let a small differently-coloured accent piece
 /// override the colour of the lump it sits on just by decoding first.

@@ -3,8 +3,8 @@
 //!
 //! Two pairs, not three. `creator-docs` (`parts/index.md#transform-parts`)
 //! gives Move and Scale a single studs increment between them and Rotate its
-//! own in degrees — "increments are based on **studs** for moving/scaling or
-//! **degrees** for rotating, each adjustable in the toolbar" — and its
+//! own in degrees, "increments are based on **studs** for moving/scaling or
+//! **degrees** for rotating, each adjustable in the toolbar", and its
 //! shortcuts say the same thing twice over: `Shift`+`2` jumps to "the
 //! **move/scale** increment input", `Alt`+`R` to "the **rotate** increment
 //! input".
@@ -81,7 +81,7 @@ impl SnapFields {
 
     /// Puts the caret in one field and selects what is already there, so the
     /// shortcut's next keystroke replaces the increment rather than appending
-    /// to it — which is the only reason to jump to a two-character field.
+    /// to it, which is the only reason to jump to a two-character field.
     pub(crate) fn focus(&self, kind: SnapKind, window: &mut Window, cx: &mut App) {
         self.of(kind).update(cx, |state, cx| {
             state.focus(window, cx);
@@ -225,7 +225,7 @@ impl NumberField {
 
 /// The spinner buttons §5.1 puts on a numeric field. One press is one
 /// increment step: the fields hold a snap size, and doubling or halving it
-/// is what a user reaching for the arrows actually wants — 1, 2, 4 studs,
+/// is what a user reaching for the arrows actually wants, 1, 2, 4 studs,
 /// not 1, 1.01, 1.02.
 fn watch_steps(
     input: &Entity<InputState>,
@@ -327,7 +327,7 @@ impl Shell {
         // (`shell::roving::TabOrder`) here, the same one-line fix
         // `Shell::quality_control` gets and for the same reason: `InputState`
         // is `Focusable`, and the handle it hands out is the one its own
-        // `.focus` already uses, so recording that handle *is* the fix —
+        // `.focus` already uses, so recording that handle *is* the fix,
         // there is nothing to forward focus to once Tab lands on it.
         //
         // Registered while building the popover's body rather than once at

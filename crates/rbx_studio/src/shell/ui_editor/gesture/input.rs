@@ -38,7 +38,7 @@ impl Shell {
     }
 
     /// Keys typed with the canvas focused: the arrows nudge the selection a
-    /// pixel (ten with Shift), Delete removes it — through the Explorer's
+    /// pixel (ten with Shift), Delete removes it, through the Explorer's
     /// own delete. Undo, redo, save and group are the window's, and reach
     /// here like anywhere else.
     pub(in crate::shell::ui_editor) fn canvas_key(

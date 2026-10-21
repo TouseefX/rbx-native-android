@@ -4,8 +4,8 @@
 //!
 //! The DOM stays the only copy of a script that counts. An editor's text is
 //! written back to its instance's `Source` on a debounce (see
-//! `shell::scripts`), and a tab whose `Source` moved underneath it — an undo,
-//! a Command Bar script — is re-seeded from the DOM on the next render.
+//! `shell::scripts`), and a tab whose `Source` moved underneath it, an undo,
+//! a Command Bar script, is re-seeded from the DOM on the next render.
 //! Nothing here holds a script for longer than that, which is what makes
 //! closing and reopening a tab show what the DOM actually has.
 
@@ -36,7 +36,7 @@ pub(crate) struct OpenScript {
     /// [`crate::shell::Shell::resync_scripts`] re-seeds on.
     pub(crate) synced: String,
     /// Whether this editor holds typing that has yet to reach the DOM. While
-    /// set, nothing re-seeds the editor — the pending text would be the thing
+    /// set, nothing re-seeds the editor, the pending text would be the thing
     /// overwritten.
     pub(crate) pending: bool,
     /// Bumped on every keystroke. A debounced write only lands if the

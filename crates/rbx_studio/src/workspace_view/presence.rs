@@ -1,7 +1,7 @@
 //! Whether the 3D view is still on screen.
 //!
 //! The dock renders only the active tab of a group, so a viewport switched
-//! away from simply stops having [`super::WorkspaceView::render`] called —
+//! away from simply stops having [`super::WorkspaceView::render`] called,
 //! there is no event for it, and the panel's last known size just sits there
 //! unchanged. The only signal available is therefore indirect: did GPUI
 //! repaint this panel since the last tick?
@@ -9,8 +9,8 @@
 //! That inference is only sound while *something* keeps causing repaints, and
 //! ordinarily the only thing that does is a finished frame landing (see
 //! `WorkspaceView::show_frame`, which is what calls `cx.notify()`). A long
-//! stall on the render thread — a Command Bar script rebuilds the whole scene,
-//! textures and all, which takes seconds — looks identical to a tab switched
+//! stall on the render thread, a Command Bar script rebuilds the whole scene,
+//! textures and all, which takes seconds, looks identical to a tab switched
 //! away: no frames, so no repaints, so no paint to observe. Concluding
 //! "hidden" from that stops the render thread, which stops the frames, which
 //! stops the repaints, and the state sustains itself: the viewport stays blank
@@ -34,7 +34,7 @@ pub(super) struct Presence {
     pub(super) missed: u32,
     pub(super) visible: bool,
     /// Force one repaint, so a panel that really is mounted gets the chance to
-    /// prove it before being declared hidden — see this module's doc comment
+    /// prove it before being declared hidden, see this module's doc comment
     /// for why it would otherwise never get another.
     pub(super) probe: bool,
 }

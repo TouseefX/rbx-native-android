@@ -202,7 +202,7 @@ pub(crate) struct Context {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct Model {
     /// Every `InputContext` in the place, depth-first from the roots, in
-    /// child order — nested ones included, as their own entries.
+    /// child order, nested ones included, as their own entries.
     pub(crate) contexts: Vec<Context>,
     /// `InputAction`s with no `InputContext` ancestor, depth-first.
     pub(crate) loose: Vec<Action>,
