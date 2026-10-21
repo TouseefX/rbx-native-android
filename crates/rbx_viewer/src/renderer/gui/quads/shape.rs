@@ -166,7 +166,7 @@ pub(super) fn quad(
     let top = rect.y;
     let right = rect.x + rect.width;
     let bottom = rect.y + rect.height;
-    let (gradient, gradient_row, kind, tile) = match paint.gradient {
+    let (gradient, gradient_row, kind, tile, gradient_turn) = match paint.gradient {
         Some((row, gradient)) => (
             [
                 gradient.origin[0],
@@ -177,8 +177,9 @@ pub(super) fn quad(
             row as f32,
             gradient.kind as u32,
             gradient.tile as u32,
+            gradient.turn,
         ),
-        None => ([0.0; 4], -1.0, 0, 0),
+        None => ([0.0; 4], -1.0, 0, 0, [1.0, 0.0]),
     };
     let mode = mode(shape.join as u32, kind, tile);
     let corner = |position: [f32; 2], uv: [f32; 2]| VertexRaw {
@@ -194,6 +195,7 @@ pub(super) fn quad(
         gradient,
         gradient_row,
         mode,
+        gradient_turn,
     };
 
     let (uv0, uv1) = uv;
@@ -260,4 +262,5 @@ pub(super) fn grown(rect: &GuiRect, band: [f32; 2]) -> GuiRect {
 // ordinals the shader unpacks; these pin that down.
 const _: () = assert!(GuiJoin::Miter as u32 == 2);
 const _: () = assert!(GuiGradientKind::Conical as u32 == 2);
+const _: () = assert!(GuiGradientKind::Elliptical as u32 == 3);
 const _: () = assert!(GuiTile::Mirror as u32 == 2);

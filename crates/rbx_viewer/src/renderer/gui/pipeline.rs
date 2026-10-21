@@ -41,9 +41,11 @@ pub(super) struct VertexRaw {
     pub(super) gradient_row: f32,
     /// [`mode`]: the line join, gradient kind and tile mode packed together.
     pub(super) mode: u32,
+    /// `GuiGradient::turn`.
+    pub(super) gradient_turn: [f32; 2],
 }
 
-const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 12] = wgpu::vertex_attr_array![
+const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 13] = wgpu::vertex_attr_array![
     0 => Float32x2,
     1 => Float32x2,
     2 => Float32x3,
@@ -56,6 +58,7 @@ const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 12] = wgpu::vertex_attr_array![
     9 => Float32x4,
     10 => Float32,
     11 => Uint32,
+    12 => Float32x2,
 ];
 
 /// Three two-bit enum ordinals in one attribute: bits 0–1 the

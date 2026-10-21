@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21
+
+- **`SurfaceAppearance.Color` tints the colour map only.** Where an
+  `Overlay` map is clear, the part's own colour now shows as it is, like in
+  Studio, instead of tinted too. An emissive face cut into a tinted pumpkin
+  glows white again, not orange. Exports bake it the same way. (@chteau)
+
 ## 2026-10-20
 
 - **Recorded playtests, replayed in Edit mode.** Play now records each
@@ -37,6 +44,17 @@
   editor's source. (@chteau)
 
 ## 2026-10-19
+
+- **Creator Roadmap catch-up against the live API dump.** Checked the
+  Renderer and GUI items against API dump version-4f087c32742644ab (the
+  live one, already embedded) and real Studio. `UIGradient` now draws the
+  `Elliptical` type the dump added, and the UI Editor's Fill section gets
+  type and tile toggles and a `Scale` field for a gradient, which Studio's
+  own Properties window hides. `SurfaceAppearance` draws its emissive mask,
+  strength and tint. A part `shape` this build does not know says so once
+  in Output instead of silently drawing as a block. The orthographic
+  `Camera` properties, `UIBlur` and `ParticleEmitter2D` are in the dump
+  but Studio does nothing with them yet, so they stay planned. (@chteau)
 
 - **Two tests no longer collide when suites run side by side.** The
   viewer's XML sniffing test and the graph probe's save test wrote a fixed
