@@ -102,6 +102,17 @@ local function validVec(t)
 	return type(t) == "table" and number(t[1]) and number(t[2]) and number(t[3])
 end
 
+-- Health lost from `last` to `health`, or nil when it is not a damage
+-- event. A drop to 0 is the death itself: a reset sets Health to 0 and
+-- HealthChanged fires before Died, which logged a 100-point hit at the
+-- moment of every reset.
+function Record.damageTaken(last, health, dead)
+	if dead or health <= 0 or health >= last then
+		return nil
+	end
+	return last - health
+end
+
 local function hookCharacter(player, character, first)
 	if not first then
 		local root = rootOf(player)
@@ -121,9 +132,10 @@ local function hookCharacter(player, character, first)
 				event("death", player.UserId, root and posOf(root), nil, "", "")
 			end)
 			humanoid.HealthChanged:Connect(function(health)
-				if not dead and health < last then
+				local amount = Record.damageTaken(last, health, dead)
+				if amount then
 					local root = rootOf(player)
-					event("damage", player.UserId, root and posOf(root), last - health, "", "")
+					event("damage", player.UserId, root and posOf(root), amount, "", "")
 				end
 				last = health
 			end)
