@@ -465,6 +465,9 @@ fn install_fonts(cx: &mut App) {
 }
 
 fn load(path: &Path, launch: &Launch, icon_pack: IconPack) -> Result<Place, String> {
+    // An Argon/Rojo project opens as the place it builds.
+    let imported = shell::project::place_for(path)?;
+    let path = imported.as_deref().unwrap_or(path);
     let bytes = std::fs::read(path).map_err(|err| format!("failed to read {path:?}: {err}"))?;
     let format = Format::sniff(&bytes);
     launch.say(format!(

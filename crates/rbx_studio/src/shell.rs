@@ -45,6 +45,7 @@ mod panel_window;
 mod panels;
 mod pivot;
 mod place_merge;
+pub(crate) mod project;
 mod play;
 mod plugins;
 mod property_element;

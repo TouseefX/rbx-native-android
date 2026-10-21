@@ -40,6 +40,9 @@ pub(crate) enum Export {
     Place,
     Obj,
     Gltf,
+    /// The whole place as an Argon/Rojo project folder (see
+    /// `shell::project`), from the File menu.
+    Project,
 }
 
 impl Export {
@@ -49,6 +52,7 @@ impl Export {
             Export::Place => "rbxl",
             Export::Obj => "obj",
             Export::Gltf => "gltf",
+            Export::Project => "",
         }
     }
 }
@@ -111,6 +115,8 @@ fn encode(
                 .map(|(name, bytes)| (path.with_file_name(name), bytes))
                 .collect())
         }
+        // Written by `export_to` itself: a folder of files, not bytes.
+        Export::Project => Ok(Vec::new()),
     }
 }
 
@@ -163,7 +169,10 @@ impl Shell {
             (Export::Place, Format::Xml) => "rbxlx",
             _ => kind.extension(),
         };
-        let suggested = format!("{name}.{extension}");
+        let suggested = match kind {
+            Export::Project => name.to_owned(),
+            _ => format!("{name}.{extension}"),
+        };
         if let Ok(directory) = std::env::var(EXPORT_DIR_VARIABLE) {
             self.export_to(kind, &roots, &Path::new(&directory).join(suggested), cx);
             return;
@@ -192,6 +201,14 @@ impl Shell {
     fn export_to(&mut self, kind: Export, roots: &[Ref], path: &Path, cx: &mut Context<Self>) {
         if kind == Export::Place {
             self.save_as(path, cx);
+            return;
+        }
+        if kind == Export::Project {
+            self.flush_script_edits(cx);
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            let result = super::project::export(&self.dom, path, &name)
+                .map(|project| format!("Exported {}", project.display()));
+            self.report_export(result, cx);
             return;
         }
         // An open script's text reaches the DOM on a debounce; a model file
