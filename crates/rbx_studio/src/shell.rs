@@ -28,6 +28,7 @@ mod explorer_edit;
 mod export;
 mod folder_color;
 mod freeze;
+pub(crate) mod game;
 mod group;
 mod guides;
 mod history;
@@ -444,6 +445,9 @@ pub(crate) struct Shell {
     rig_user_focus: bool,
     /// This editor's window, which Close Place removes from outside it.
     window_handle: AnyWindowHandle,
+    /// The game this place belongs to, when its window holds several (see
+    /// `shell::game`): leaving and the Places bar go through it.
+    game: Option<WeakEntity<game::GameWorkspace>>,
     /// This place's `Folder` colour tags; see `shell::folder_color`.
     folder_colors: FolderColors,
     /// Which transform tool the toolbar has active, and whether its draggers
@@ -868,6 +872,7 @@ impl Shell {
             rig_user,
             rig_user_focus: false,
             window_handle: window.window_handle(),
+            game: None,
             argon_ui: argon_dock::ArgonDock::new(&argon_address_setting, window, cx),
             wally_ui: wally_dock::WallyDock::new(cx),
             viewport_ui: viewport_dock::ViewportDock::new(),
@@ -2025,6 +2030,7 @@ impl Render for Shell {
             .children(self.theme_background(false))
             .child(self.topbar(cx))
             .child(crate::menu_bar::bar(&self.menu_bar))
+            .children(self.places_bar(cx))
             .child(self.document_tabs(cx))
             .child(self.ribbon_tabs(cx))
             .child(self.ribbon(cx))
