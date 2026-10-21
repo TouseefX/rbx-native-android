@@ -8,6 +8,7 @@ use std::time::Duration;
 use gpui_kit::Context;
 
 use crate::command_bar::Feedback;
+use crate::mcp::protocol::Reply;
 use crate::mcp::{self, endpoint::Server, PlayState, ScriptEdit, Session, Studio};
 
 use super::play::Phase;
@@ -79,7 +80,20 @@ impl Shell {
             if let Some(edit) = planned {
                 self.mcp_apply(&edit, cx);
             }
-            request.answer(reply);
+            match reply {
+                Some(Reply::Later(work)) => {
+                    // The connection waits for this answer before reading
+                    // its next line, so its calls still answer in order.
+                    let spawned = std::thread::Builder::new()
+                        .name("mcp-tool".to_owned())
+                        .spawn(move || request.answer(Some(work())));
+                    if let Err(err) = spawned {
+                        self.output
+                            .push_warning(&format!("MCP server could not run a tool: {err}"));
+                    }
+                }
+                reply => request.answer(reply.map(Reply::wait)),
+            }
         }
     }
 

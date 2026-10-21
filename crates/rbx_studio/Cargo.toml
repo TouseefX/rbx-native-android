@@ -127,6 +127,9 @@ toml = "0.9"
 # Account fingerprints (`key_store::accounts`); already in the tree at this
 # version, as the build script's hash.
 sha2 = "0.10"
+# The MCP endpoint's token and studio id (`mcp::endpoint`). Already in the
+# tree at this version through rbx_presence and rbx_cloud.
+getrandom = "0.3"
 # The colour popover's eyedropper.
 rbx_eyedropper = { path = "../rbx_eyedropper" }
 

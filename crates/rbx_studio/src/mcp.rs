@@ -9,9 +9,9 @@
 //! [`broker`] that knows every running editor. Each editor's side
 //! ([`endpoint`]) listens on a port the system picks and writes it, with a
 //! random token and the editor's `studio_id`, to its own file under
-//! `<config>/mcp/`; a connection that does not open with that token is closed
-//! unread, so another user on the same machine cannot reach the session
-//! through the port alone.
+//! `<config>/mcp/`, which only its owner can read; a connection that does not
+//! open with that token is closed unread, so another user on the same machine
+//! cannot reach the session through the port alone.
 //!
 //! As in Studio, every tool call names the editor it is for by `studio_id`
 //! (`list_roblox_studios` lists them); with one editor running the id may be
@@ -20,7 +20,9 @@
 //! Every message is answered on the UI thread ([`protocol::handle`]), with
 //! the DOM exactly as the Explorer shows it at that moment. An edit is only
 //! planned there ([`Session::planned`]); the shell applies it through the
-//! same DOM write and undo history a script tab's own edits take.
+//! same DOM write and undo history a script tab's own edits take. Only a
+//! grep, whose Luau pattern has no bound on how long it takes, runs off that
+//! thread, over a copy of the scripts ([`Session::deferred`]).
 
 pub(crate) mod bridge;
 pub(crate) mod broker;
@@ -49,7 +51,14 @@ pub(crate) struct Session<'a> {
     /// The edit a `multi_edit` call asked for, for the shell to apply once
     /// the call has been answered. Tools never write to `dom` themselves.
     pub(crate) planned: Option<ScriptEdit>,
+    /// The work a tool with no bound on how long it takes (`script_grep`)
+    /// left to run off the UI thread; what it returns is the tool's answer.
+    pub(crate) deferred: Option<Deferred>,
 }
+
+/// Runs over a copy of what it reads, so the editor stays responsive however
+/// long it takes, and the place can change meanwhile.
+pub(crate) type Deferred = Box<dyn FnOnce() -> Result<serde_json::Value, String> + Send>;
 
 impl<'a> Session<'a> {
     pub(crate) fn new(dom: &'a WeakDom, properties: &'a Properties, studio: &'a Studio) -> Self {
@@ -58,6 +67,7 @@ impl<'a> Session<'a> {
             properties,
             studio,
             planned: None,
+            deferred: None,
         }
     }
 }

@@ -4,22 +4,29 @@
 //! Each connection gets a thread that reads one line at a time and waits for
 //! the UI thread's answer before reading the next, so requests from one
 //! client are answered in order and never two at once.
+//!
+//! The token is what keeps another account on the machine out, so on unix
+//! the directory is `0700` and each file `0600`; Windows' `%APPDATA%` is
+//! already private to its user.
 
 #[cfg(test)]
 mod tests;
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, Shutdown, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
+use std::time::Duration;
 
 use serde_json::json;
 
 /// What an editor's `<studio_id>.json` holds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Endpoint {
+    /// Hex digits only: it names the file, so it can never step out of
+    /// the directory.
     pub(crate) studio_id: String,
     pub(crate) port: u16,
     pub(crate) token: String,
@@ -32,8 +39,12 @@ impl Endpoint {
 
     pub(crate) fn from_json(text: &str) -> Option<Endpoint> {
         let value: serde_json::Value = serde_json::from_str(text).ok()?;
+        let studio_id = value.get("studio_id")?.as_str()?;
+        if studio_id.is_empty() || !studio_id.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return None;
+        }
         Some(Endpoint {
-            studio_id: value.get("studio_id")?.as_str()?.to_owned(),
+            studio_id: studio_id.to_owned(),
             port: u16::try_from(value.get("port")?.as_u64()?).ok()?,
             token: value.get("token")?.as_str()?.to_owned(),
         })
@@ -82,16 +93,16 @@ impl Server {
     pub(crate) fn start(dir: &Path) -> std::io::Result<Server> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
         let endpoint = Endpoint {
-            studio_id: random_hex(1),
+            studio_id: random_hex(8)?,
             port: listener.local_addr()?.port(),
-            token: random_hex(2),
+            token: random_hex(16)?,
         };
-        std::fs::create_dir_all(dir)?;
+        private_dir(dir)?;
         let file = file_of(dir, &endpoint.studio_id);
         // Written whole and renamed, so a broker scanning the directory never
         // reads half a file.
         let tmp = file.with_extension("json.tmp");
-        std::fs::write(&tmp, endpoint.to_json())?;
+        write_private(&tmp, endpoint.to_json().as_bytes())?;
         std::fs::rename(&tmp, &file)?;
 
         let (sender, requests) = mpsc::channel();
@@ -149,12 +160,17 @@ fn serve(stream: TcpStream, token: &str, sender: &Sender<Request>) {
     let Ok(mut writer) = stream.try_clone() else {
         return;
     };
-    let mut lines = BufReader::new(stream).lines();
-    if !matches!(lines.next(), Some(Ok(first)) if first.trim_end() == token) {
+    let mut reader = BufReader::new(stream);
+    if !introduced(&mut reader, token) {
         let _ = writer.shutdown(Shutdown::Both);
         return;
     }
-    for line in lines {
+    // A client may sit idle between calls for as long as it likes once it
+    // has shown the token.
+    if reader.get_ref().set_read_timeout(None).is_err() {
+        return;
+    }
+    for line in reader.lines() {
         let Ok(line) = line else {
             return;
         };
@@ -180,12 +196,66 @@ fn serve(stream: TcpStream, token: &str, sender: &Sender<Request>) {
     }
 }
 
-/// `words` times 64 bits as hex, from the standard library's random hash
-/// keys, so no RNG crate is needed for the token and the id this makes.
-fn random_hex(words: usize) -> String {
-    use std::collections::hash_map::RandomState;
-    use std::hash::BuildHasher;
-    (0..words)
-        .map(|_| format!("{:016x}", RandomState::new().hash_one(std::process::id())))
-        .collect()
+/// How long a connection has to show the token, and how much it may send
+/// before it does: a token is 32 hex digits and a newline, so anything more
+/// is not a client, and nobody else gets to hold a thread or fill memory.
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
+const HANDSHAKE_LIMIT: u64 = 64;
+
+/// Whether the connection's first line is `token`.
+fn introduced(reader: &mut BufReader<TcpStream>, token: &str) -> bool {
+    if reader
+        .get_ref()
+        .set_read_timeout(Some(HANDSHAKE_TIMEOUT))
+        .is_err()
+    {
+        return false;
+    }
+    let mut first = Vec::new();
+    let read = reader
+        .by_ref()
+        .take(HANDSHAKE_LIMIT)
+        .read_until(b'\n', &mut first);
+    read.is_ok() && first.ends_with(b"\n") && same(first.trim_ascii_end(), token.as_bytes())
+}
+
+/// `a == b` in a time that does not depend on where they first differ.
+fn same(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0, |differ, (x, y)| differ | (x ^ y)) == 0
+}
+
+/// `bytes` from the OS random source, as hex.
+fn random_hex(bytes: usize) -> std::io::Result<String> {
+    let mut raw = vec![0u8; bytes];
+    getrandom::fill(&mut raw).map_err(std::io::Error::other)?;
+    Ok(raw.iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
+/// Creates `dir`, and keeps it readable by its owner alone.
+fn private_dir(dir: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
+}
+
+/// Writes `path` readable by its owner alone from the moment it exists. A
+/// file left there before is removed first, since opening one only keeps the
+/// mode it already has.
+fn write_private(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    match std::fs::remove_file(path) {
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err),
+        _ => {}
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)?.write_all(contents)
 }

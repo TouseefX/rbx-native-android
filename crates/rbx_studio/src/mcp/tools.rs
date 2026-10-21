@@ -156,10 +156,16 @@ pub(super) fn call(params: &Value, session: &mut Session) -> Result<Value, Failu
         )),
         _ => run(name, &arguments, session)?,
     };
-    Ok(match outcome {
+    Ok(finished(outcome))
+}
+
+/// A tool's outcome as `tools/call` answers it. `pub(super)`: a deferred
+/// tool's outcome is only known once its work has run.
+pub(super) fn finished(outcome: Outcome) -> Value {
+    match outcome {
         Ok(value) => result(&value, false),
         Err(message) => result(&Value::String(message), true),
-    })
+    }
 }
 
 fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, Failure> {

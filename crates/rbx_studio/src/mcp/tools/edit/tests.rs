@@ -293,3 +293,27 @@ fn applying_to_a_script_deleted_meanwhile_writes_nothing() {
     dom.remove(script);
     assert_eq!(apply(&mut dom, &planned.unwrap()), None);
 }
+
+#[test]
+fn a_new_script_is_refused_beside_one_that_differs_only_in_case() {
+    let dom = place();
+    // `inspect_instance` answers this spelling for GameLoop, so a client
+    // may well edit by it.
+    let (failed, result, planned) = edit(
+        &dom,
+        json!({
+            "file_path": "game.ServerScriptService.gameloop",
+            "className": "Script",
+            "edits": [replacement("", "print(1)")],
+        }),
+    );
+    assert!(failed);
+    assert!(
+        result
+            .as_str()
+            .unwrap()
+            .contains("ServerScriptService.GameLoop differs only in case"),
+        "{result}"
+    );
+    assert_eq!(planned, None);
+}

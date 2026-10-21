@@ -180,14 +180,27 @@ impl Broker {
             // connection is not kept past a failure.
             failed => {
                 self.connections.remove(&studio.studio_id);
-                let why = failed
-                    .err()
-                    .map_or("it closed".to_owned(), |err| err.to_string());
-                Err(format!(
-                    "studio {} stopped answering: {why}",
-                    studio.studio_id
-                ))
+                Err(unanswered(&studio.studio_id, failed.err()))
             }
+        }
+    }
+}
+
+/// What the client is told when an editor gave no answer: `None` is a
+/// connection the editor closed.
+fn unanswered(studio_id: &str, failure: Option<std::io::Error>) -> String {
+    match failure {
+        // The request is already queued in the editor and still runs once its
+        // UI thread gets to it, so a client that simply retried an edit would
+        // make it twice.
+        Some(err) if matches!(err.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => format!(
+            "studio {studio_id} did not answer within {} s; the call may still apply once it \
+             does, so check its effect before trying it again",
+            ANSWER_TIMEOUT.as_secs()
+        ),
+        failure => {
+            let why = failure.map_or("it closed".to_owned(), |err| err.to_string());
+            format!("studio {studio_id} stopped answering: {why}")
         }
     }
 }
