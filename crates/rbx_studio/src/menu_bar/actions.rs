@@ -10,7 +10,7 @@ use gpui_kit::{App, Entity, WeakEntity};
 use rbx_cloud::PublishMode;
 
 use crate::shell::import3d::ImportKind;
-use crate::shell::{Export, Panel, Shell};
+use crate::shell::{Export, Panel, PresetView, Shell};
 
 use super::*;
 
@@ -155,6 +155,24 @@ pub(super) fn install(shell: Entity<Shell>, cx: &mut App) {
         let shell = shell.clone();
         move |_: &MenuLargeTargets, cx| {
             let _ = shell.update(cx, |shell, cx| shell.toggle_large_targets(cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuTopView, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.preset_view(PresetView::Top, cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuFrontView, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.preset_view(PresetView::Front, cx));
+        }
+    });
+    cx.on_action({
+        let shell = shell.clone();
+        move |_: &MenuRightView, cx| {
+            let _ = shell.update(cx, |shell, cx| shell.preset_view(PresetView::Right, cx));
         }
     });
     cx.on_action({
