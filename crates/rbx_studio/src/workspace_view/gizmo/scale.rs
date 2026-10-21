@@ -15,7 +15,7 @@ use gpui_kit::Modifiers;
 use rbx_viewer::gizmo::{self, Axis, Faces};
 use rbx_viewer::pick::Ray;
 
-use crate::transform::{Target, Targets};
+use crate::transform::{Slope, Target, Targets};
 
 use super::{snapped, Change, Drag, Landing, WorkspaceView, MAX_SIZE, MIN_SIZE};
 
@@ -86,6 +86,7 @@ fn regrab(
             component,
             sphere,
             cylinder,
+            slope,
             ..
         } => {
             let anchor = targets.anchor()?;
@@ -98,6 +99,7 @@ fn regrab(
                 component,
                 sphere,
                 cylinder,
+                slope,
                 centred,
             }
         }
@@ -150,6 +152,7 @@ pub(super) fn grab_face(
         axis,
         sphere: target.sphere && lock_shape,
         cylinder: target.cylinder && lock_shape,
+        slope: if lock_shape { target.slope } else { Slope::None },
         grabbed: gizmo::along_axis(origin, axis, ray)?,
         size: target.size(),
         component: grabbed as usize,
@@ -209,6 +212,7 @@ pub(super) fn advance(drag: Drag, ray: Ray, landing: Landing) -> Option<(Drag, C
             component,
             sphere,
             cylinder,
+            slope,
             centred,
         } => {
             let pull = snapped(gizmo::along_axis(origin, axis, ray)? - grabbed, landing);
@@ -246,6 +250,21 @@ pub(super) fn advance(drag: Drag, ray: Ray, landing: Landing) -> Option<(Drag, C
                 // exactly right: the length has no partner to grow with.
                 let other = if component == 1 { 2 } else { 1 };
                 resized[other] = (size[other] + grown).clamp(MIN_SIZE, MAX_SIZE);
+            }
+            // The slope's other axes scale by the same factor, about their
+            // middles like the ball's do. A wedge's slope spans Y and Z, so
+            // its X (and a pull on X) is left alone.
+            let spanned: &[usize] = match slope {
+                Slope::None => &[],
+                Slope::Wedge if component == 0 => &[],
+                Slope::Wedge => &[1, 2],
+                Slope::CornerWedge => &[0, 1, 2],
+            };
+            let factor = resized[component] / size[component];
+            for &other in spanned {
+                if other != component {
+                    resized[other] = (size[other] * factor).clamp(MIN_SIZE, MAX_SIZE);
+                }
             }
             // A lone part's box is its own, so its pivot for `Ctrl` is its
             // middle (Studio leaves `PivotOffset` out of it), which holds.

@@ -255,6 +255,7 @@ fn block() -> Target {
         model: Mat4::from_scale(Vec3::new(2.0, 1.0, 4.0)),
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
     }
 }
 
@@ -273,6 +274,7 @@ fn ball() -> Target {
 fn cylinder() -> Target {
     Target {
         cylinder: true,
+        slope: crate::transform::Slope::None,
         ..block()
     }
 }
@@ -305,6 +307,7 @@ fn grabbed_x_face() -> Drag {
         component: 0,
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
         centred: false,
     }
 }
@@ -373,6 +376,7 @@ fn a_locked_ball_grows_all_three_axes_by_the_same_amount() {
         component: 0,
         sphere: true,
         cylinder: false,
+        slope: crate::transform::Slope::None,
         centred: false,
     };
     let (_, change) = advance(drag, looking_at(4.0, 0.0), free()).expect("the axis is across");
@@ -407,6 +411,7 @@ fn a_locked_ball_still_stops_at_the_size_ceiling() {
         component: 0,
         sphere: true,
         cylinder: false,
+        slope: crate::transform::Slope::None,
         centred: false,
     };
     // Ask for far more growth than Y has room for.
@@ -474,6 +479,7 @@ fn a_locked_cylinders_round_handle_grows_its_partner_axis_too() {
         component: 1,
         sphere: false,
         cylinder: true,
+        slope: crate::transform::Slope::None,
         centred: false,
     };
     let (_, change) = advance(drag, looking_at(0.0, 2.5), free()).expect("the axis is across");
@@ -505,6 +511,7 @@ fn a_locked_cylinders_length_handle_grows_only_the_length() {
         component: 0,
         sphere: false,
         cylinder: true,
+        slope: crate::transform::Slope::None,
         centred: false,
     };
     let (_, change) = advance(drag, looking_at(4.0, 0.0), free()).expect("the axis is across");
@@ -552,6 +559,7 @@ fn a_turned_parts_ball_resizes_the_face_it_actually_sits_on() {
         ),
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
     };
     let drag =
         grab_face(&faces(target), target, looking_at(0.0, 1.0), false, false).expect("the +X ball");
@@ -581,6 +589,7 @@ fn pointing_at_no_ball_grabs_no_resize() {
         model: Mat4::from_scale(Vec3::splat(40.0)),
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
     };
     assert_eq!(
         grab_face(&faces(target), target, looking_at(8.0, 8.0), false, false),
@@ -688,6 +697,7 @@ fn a_scale_handle_on_the_far_face_grows_the_part_the_other_way() {
         component: 0,
         sphere: false,
         cylinder: false,
+        slope: crate::transform::Slope::None,
         centred: false,
     };
 
@@ -1019,4 +1029,54 @@ fn a_group_scale_applied_to_a_part_moves_it_away_from_the_pivot() {
         ),
         None
     );
+}
+
+fn sloped(slope: crate::transform::Slope, axis: Vec3, component: usize, grabbed: f32) -> Drag {
+    Drag::Size {
+        origin: Vec3::ZERO,
+        axis,
+        grabbed,
+        size: Vec3::new(2.0, 1.0, 4.0),
+        component,
+        sphere: false,
+        cylinder: false,
+        slope,
+        centred: false,
+    }
+}
+
+#[test]
+fn a_locked_wedges_height_pull_scales_its_depth_by_the_same_factor() {
+    use crate::transform::Slope;
+    // +Y from 0.5 to 2.5: height 1 -> 3, so depth 4 -> 12 and the slope
+    // keeps its angle; the width is not part of the slope.
+    let drag = sloped(Slope::Wedge, Vec3::Y, 1, 0.5);
+    let (_, change) = advance(drag, looking_at(0.0, 2.5), free()).expect("the axis is across");
+    let Change::Size { size, .. } = change else {
+        panic!("expected a resize, got {change:?}");
+    };
+    assert_eq!((size.x, size.y, size.z), (2.0, 3.0, 12.0));
+}
+
+#[test]
+fn a_locked_wedges_width_pull_grows_only_the_width() {
+    use crate::transform::Slope;
+    let drag = sloped(Slope::Wedge, Vec3::X, 0, 1.0);
+    let (_, change) = advance(drag, looking_at(4.0, 0.0), free()).expect("the axis is across");
+    let Change::Size { size, .. } = change else {
+        panic!("expected a resize, got {change:?}");
+    };
+    assert_eq!((size.x, size.y, size.z), (5.0, 1.0, 4.0));
+}
+
+#[test]
+fn a_locked_corner_wedge_scales_every_axis_by_the_same_factor() {
+    use crate::transform::Slope;
+    // +X from 1 to 4: width 2 -> 5, a factor of 2.5 on all three.
+    let drag = sloped(Slope::CornerWedge, Vec3::X, 0, 1.0);
+    let (_, change) = advance(drag, looking_at(4.0, 0.0), free()).expect("the axis is across");
+    let Change::Size { size, .. } = change else {
+        panic!("expected a resize, got {change:?}");
+    };
+    assert_eq!((size.x, size.y, size.z), (5.0, 2.5, 10.0));
 }

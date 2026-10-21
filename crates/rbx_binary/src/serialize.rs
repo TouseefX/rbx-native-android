@@ -217,14 +217,21 @@ fn prop_header(class_id: i32, name: &str, type_id: u8, payload: &[u8]) -> Vec<u8
     writer.into_bytes()
 }
 
+// Properties old Studio builds wrote that current Studio refuses to load: a place
+// still holding one doesn't open at all. `SolidMeshHolder` is a pre-2019 CSG
+// string on unions (always empty in the files we've seen), so it's dropped.
+const RETIRED_PROPERTIES: &[&str] = &["SolidMeshHolder"];
+
 // Alphabetical union of every property key set on any instance of `class`, plus the
-// synthetic "Name" property every class carries.
+// synthetic "Name" property every class carries, minus the retired ones.
 fn property_names(dom: &WeakDom, class: &plan::ClassPlan) -> BTreeSet<String> {
     let mut names: BTreeSet<String> = class
         .referents
         .iter()
         .filter_map(|&referent| dom.get(referent))
-        .flat_map(|instance| instance.properties().keys().cloned())
+        .flat_map(|instance| instance.properties().keys())
+        .filter(|name| !RETIRED_PROPERTIES.contains(&name.as_str()))
+        .cloned()
         .collect();
     names.retain(|name| !is_legacy_brick_color(dom, class, name));
     names.insert(NAME_PROPERTY.to_owned());
@@ -501,6 +508,24 @@ mod tests {
         let instance = round_tripped.get(Ref::new(referent.value())).unwrap();
         assert_eq!(instance.class(), "Part");
         assert_eq!(instance.name(), "MyPart");
+    }
+
+    #[test]
+    fn a_retired_union_property_is_not_written() {
+        // marked.rbxl's unions carry an empty `SolidMeshHolder` string, and current
+        // Studio won't open a file that still has that chunk.
+        let mut dom = WeakDom::new();
+        let union = dom.new_instance("UnionOperation", "Rock", None);
+        dom.set_property(union, "SolidMeshHolder", Variant::String(String::new()))
+            .unwrap();
+        dom.set_property(union, "Anchored", Variant::Bool(true))
+            .unwrap();
+
+        let round_tripped = deserialize(&serialize(&dom).unwrap()).unwrap();
+
+        let props = round_tripped.get(Ref::new(union.value())).unwrap().properties();
+        assert!(!props.contains_key("SolidMeshHolder"));
+        assert_eq!(props.get("Anchored"), Some(&Variant::Bool(true)));
     }
 
     #[test]

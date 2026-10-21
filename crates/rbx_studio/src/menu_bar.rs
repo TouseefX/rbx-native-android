@@ -91,6 +91,9 @@ actions!(
         MenuReduceMotion,
         MenuLargeTargets,
         MenuResetLayout,
+        MenuTopView,
+        MenuFrontView,
+        MenuRightView,
         MenuCommandPalette,
         MenuQuickOpen,
         /// One per dock, so the View menu can put back one that has been
@@ -245,6 +248,12 @@ pub(crate) fn menus(templates: &[Template]) -> Vec<OwnedMenu> {
                 MenuItem::action("Output", MenuToggleOutput),
                 MenuItem::action("Viewport", MenuToggleViewport),
                 MenuItem::action("Command Bar", MenuToggleCommandBar),
+                MenuItem::separator(),
+                // Fixed camera views, the same snap a click on the
+                // orientation indicator's cube does.
+                MenuItem::action("Top View", MenuTopView),
+                MenuItem::action("Front View", MenuFrontView),
+                MenuItem::action("Right View", MenuRightView),
                 MenuItem::separator(),
                 MenuItem::action("Style Editor", MenuStyleEditor),
                 // Team presence: who else is in the place, from Studio or
