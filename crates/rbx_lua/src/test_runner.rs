@@ -87,6 +87,8 @@ pub struct TestResult {
     /// scripts), or else where the test was declared.
     pub location: Option<Location>,
     pub duration: Duration,
+    /// What the test and its hooks printed.
+    pub output: Output,
 }
 
 #[derive(Debug, Clone)]
@@ -218,7 +220,7 @@ pub fn plan(dom: &WeakDom, file: &SpecFile, database: &ReflectionDatabase) -> Fi
         error: ran.harness_error,
         focus: false,
     };
-    for event in ran.events {
+    for (event, _) in ran.events {
         match event {
             Event::Node(node) => plan.nodes.push(node),
             Event::Error { message, .. } => plan.error = Some(message),
@@ -275,16 +277,20 @@ pub fn run_file(
             })
     };
     let mut results = Vec::new();
-    let mut running: Option<Vec<String>> = None;
+    let mut running: Option<(Vec<String>, usize)> = None;
     let mut done = false;
-    for event in ran.events {
+    for (event, at) in ran.events {
         match event {
-            Event::Start(path) => running = Some(path),
+            Event::Start(path) => running = Some((path, at)),
             Event::Result(raw) => {
-                if running.as_ref() == Some(&raw.path) {
-                    running = None;
+                let mut output = Output::default();
+                if running.as_ref().is_some_and(|(path, _)| *path == raw.path) {
+                    if let Some((_, from)) = running.take() {
+                        output = ran.output.slice(from..at);
+                    }
                 }
                 results.push(TestResult {
+                    output,
                     location: locate(raw.stack.as_deref(), raw.line),
                     stack: raw.stack.as_deref().map(|s| user_frames(s, &scripts)),
                     path: raw.path,
@@ -308,13 +314,15 @@ pub fn run_file(
                  (a signal no code fires, a client's remote); later tests in the file did not run"
                 .to_string(),
         };
+        let (path, from) = running.unwrap_or_default();
         results.push(TestResult {
-            path: running.unwrap_or_default(),
+            path,
             status: Status::Failed,
             message: Some(message),
             stack: None,
             location: None,
             duration: Duration::ZERO,
+            output: ran.output.slice(from..usize::MAX),
         });
     }
     FileReport {
@@ -343,7 +351,8 @@ enum Event {
 }
 
 struct Ran {
-    events: Vec<Event>,
+    /// Each with how many lines had been printed when it was reported.
+    events: Vec<(Event, usize)>,
     output: Output,
     /// The harness itself could not run (a VM error, not a test's).
     harness_error: Option<String>,
@@ -376,7 +385,12 @@ fn drive(
     runtime.set_clock(move || read.get());
 
     let events = Rc::new(RefCell::new(Vec::new()));
-    match harness_args(runtime.lua(), file, events.clone(), options) {
+    let printed = Rc::new(Cell::new(0));
+    let counter = Counter {
+        pending: runtime.pending_output(),
+        printed: printed.clone(),
+    };
+    match harness_args(runtime.lua(), file, events.clone(), counter, options) {
         Ok(args) => {
             let chunk = runtime
                 .lua()
@@ -393,6 +407,7 @@ fn drive(
     loop {
         let step = runtime.resume();
         ran.output.extend(step.output);
+        printed.set(ran.output.lines().len());
         match step.state {
             RunState::Finished => break,
             RunState::Failed(error) => {
@@ -416,10 +431,24 @@ fn drive(
     ran
 }
 
+/// How many lines the file has printed so far: those already collected
+/// plus those waiting for the resume to return.
+struct Counter {
+    pending: Rc<RefCell<Output>>,
+    printed: Rc<Cell<usize>>,
+}
+
+impl Counter {
+    fn now(&self) -> usize {
+        self.printed.get() + self.pending.borrow().lines().len()
+    }
+}
+
 fn harness_args(
     lua: &Lua,
     file: &SpecFile,
-    events: Rc<RefCell<Vec<Event>>>,
+    events: Rc<RefCell<Vec<(Event, usize)>>>,
+    counter: Counter,
     options: impl FnOnce(&Lua) -> mlua::Result<Table>,
 ) -> mlua::Result<MultiValue> {
     let spec = LuaInstance::new(file.module, engine(lua).ctx.clone()).into_lua(lua)?;
@@ -434,7 +463,9 @@ fn harness_args(
         Ok(())
     })?;
     let report = lua.create_function(move |_, (kind, data): (String, Table)| {
-        events.borrow_mut().push(event(&kind, &data)?);
+        events
+            .borrow_mut()
+            .push((event(&kind, &data)?, counter.now()));
         Ok(())
     })?;
     Ok(MultiValue::from_vec(vec![

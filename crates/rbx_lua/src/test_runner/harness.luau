@@ -74,8 +74,9 @@ local function declarer(kind)
 			declare(kind, name, fn, "focus")
 		end,
 	}, {
-		__call = function(_, name, fn)
-			declare(kind, name, fn, nil)
+		-- Loren's `t.it(name, fn, { skip = true })` takes options too.
+		__call = function(_, name, fn, opts)
+			declare(kind, name, fn, if type(opts) == "table" and opts.skip then "skip" else nil)
 		end,
 	})
 end
@@ -253,9 +254,10 @@ local loaded, loadError = xpcall(function()
 	local body = loadSpec(spec, env)
 	local value = body()
 	-- TestEZ specs return a function that declares the tests; Jest-Lua
-	-- ones declare them at the top level.
+	-- ones declare them at the top level. Loren's `return function(t)`
+	-- gets the same names as fields of `t`.
 	if type(value) == "function" then
-		value()
+		value(env)
 	end
 end, trap)
 if not loaded then
