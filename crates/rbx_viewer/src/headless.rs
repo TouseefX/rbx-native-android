@@ -474,6 +474,18 @@ impl Headless {
         self.offscreen.set_hover(selected, self.loaded.scene());
     }
 
+    /// Tints every part in `bins` its bin's colour, the Performance view's
+    /// heatmap (see [`crate::perf`]), or clears the tint with an empty list.
+    /// Nothing about the place changes; same idle-skipping caveat as
+    /// [`Headless::set_hover`].
+    pub fn set_heat(&mut self, bins: Vec<crate::perf::HeatBin>) {
+        if self.view.heat == bins {
+            return;
+        }
+        self.offscreen.set_heat(&bins, self.loaded.scene());
+        self.view.heat = bins;
+    }
+
     /// Recolours the editor cues, the selection and hover silhouettes and
     /// boxes, and the preview's ghost boxes, from linear RGB plus alpha. A
     /// no-op when `colors` equals what is already set; otherwise only the

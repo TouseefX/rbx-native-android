@@ -46,6 +46,7 @@ mod output;
 mod palette;
 mod panel_window;
 mod panels;
+mod perf_view;
 mod pivot;
 mod place_merge;
 mod play;
@@ -180,6 +181,8 @@ pub(crate) struct Shell {
     /// Whether a part in front of the selection hides its outline box.
     /// Persisted the same way `orthographic` is (see `settings`).
     selection_occluded: bool,
+    /// The Performance view, while it is on, see [`perf_view`].
+    perf: Option<perf_view::PerfView>,
     /// Whether the viewport draws its `ScreenGui`s: the ribbon's Show UI.
     /// Per session, not persisted, as Studio's View > UI is.
     show_screen_gui: bool,
@@ -775,6 +778,7 @@ impl Shell {
             orthographic,
             axis_indicator,
             selection_occluded,
+            perf: None,
             show_screen_gui: true,
             light_guides,
             light_guides_sent: Vec::new(),
@@ -1010,6 +1014,16 @@ impl Shell {
         // `RBX_STUDIO_RESIZE` (same module): the same, for a Scale drag of
         // the selected part.
         shell.apply_debug_resize(cx);
+
+        // `RBX_STUDIO_PERF=<density|triangles|textures|collision|draw>` (see
+        // `shell::perf_view`): turns the Performance view on, a screenshot
+        // aid, since its dropdown can't be clicked from outside.
+        if let Ok(name) = std::env::var("RBX_STUDIO_PERF") {
+            let metric = rbx_viewer::perf::Metric::ALL
+                .into_iter()
+                .find(|metric| metric.label().to_lowercase().contains(&name.to_lowercase()));
+            shell.set_perf_metric(metric, cx);
+        }
 
         // `RBX_STUDIO_IMPORT=<file>` (see `shell::import3d`): the Import 3D
         // Model path for a screenshot, since a drop or file picker can't be

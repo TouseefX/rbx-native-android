@@ -294,6 +294,7 @@ impl Shell {
             .targets
             .then(|| selection::outlined(&self.dom, &self.database, self.selected_all()));
         self.pose_out(posed);
+        self.perf_changes(&snapshots, changes);
         self.viewport.update(cx, |viewport, _| {
             viewport.apply_changes(snapshots, changes.to_vec());
             if let Some(targets) = targets {
