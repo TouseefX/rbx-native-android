@@ -21,6 +21,7 @@ pub(crate) mod joints;
 mod label;
 mod measure;
 mod orientation;
+pub(crate) use orientation::snapped_forward;
 mod pivot;
 mod plugin_handles;
 mod plugin_mouse;
@@ -168,6 +169,9 @@ pub(crate) enum ViewportAction {
     /// [`WorkspaceView::show_sun`]. `first` is what starts a new gesture,
     /// so a release needs no message of its own.
     Sun { ray: Ray, first: bool },
+    /// A click on the orientation indicator's cube: turn the camera to look
+    /// this way, around whatever it is looking at (see `Shell::snap_view`).
+    SnapView(Vec3),
     /// A transform-toolbar shortcut typed over the view.
     Tool(transform::Action),
     /// Cursor motion with nothing held: `Shell` resolves what is under the
@@ -288,6 +292,9 @@ pub(crate) struct WorkspaceView {
     /// The whole panel, in physical pixels: `viewport` less the letterbox
     /// while a screen is emulated, and what the frame is placed against.
     panel: Rc<Cell<Viewport>>,
+    /// Where the orientation indicator's sphere was last painted, in window
+    /// pixels, for a click on it to find the face under the pointer.
+    indicator: Rc<Cell<Bounds<Pixels>>>,
     /// Set by `render` each time GPUI actually paints this view, and cleared by
     /// `advance`, which runs on a plain timer of its own and keeps firing
     /// whether or not the dock currently mounts this panel. The dock renders
@@ -503,6 +510,7 @@ impl WorkspaceView {
             sized: (0, 0),
             screen: None,
             panel: Rc::default(),
+            indicator: Rc::default(),
             device: None,
             playing: false,
             keyboard_page: device::KeyboardPage::default(),
@@ -562,6 +570,32 @@ impl WorkspaceView {
 
     pub(crate) fn meshes(&self) -> &Meshes {
         &self.meshes
+    }
+
+    /// The camera as of the last frame, `None` before the first one.
+    pub(crate) fn pose(&self) -> Option<Pose> {
+        self.view
+    }
+
+    /// A press on the orientation indicator: snaps the view square-on to
+    /// the cube face under it. A press between the faces does nothing.
+    fn snap_to_face(&mut self, at: Point<Pixels>, cx: &mut Context<Self>) {
+        let Some(pose) = self.view else {
+            return;
+        };
+        let bounds = self.indicator.get();
+        let radius = CUBE_RADIUS * crate::tokens::viewport_scale();
+        let centre = bounds.center();
+        let unit = (
+            f32::from(at.x - centre.x) / radius,
+            f32::from(at.y - centre.y) / radius,
+        );
+        if let Some(face) = orientation::face_at(pose, unit) {
+            cx.emit(ViewportAction::SnapView(orientation::snapped_forward(
+                pose,
+                face.normal,
+            )));
+        }
     }
 
     /// Puts whatever the render thread has finished on screen, resolves a
@@ -888,10 +922,12 @@ impl WorkspaceView {
         self.pump.camera_feel(feel);
     }
 
-    /// Moves the free camera to `eye`, looking at `target`: the Animation
-    /// Editor framing the rig it binds.
+    /// Moves the free camera to `eye`, looking at `target`, keeping its
+    /// field of view: the Animation Editor framing the rig it binds, and a
+    /// snapped view.
     pub(crate) fn look_at(&self, eye: [f32; 3], target: [f32; 3]) {
-        self.pump.look_at(eye, target);
+        let fov = self.view.map_or(70.0, |pose| pose.fov_degrees);
+        self.pump.look_at(eye, target, fov);
     }
 
     /// The renderer's tuned constants, taken between two frames like the
@@ -1345,7 +1381,15 @@ impl Render for WorkspaceView {
             // thread's first `Ready` lands, see `self.view`'s own doc) draws
             // nothing rather than a widget with no orientation to show.
             .when_some(self.view.filter(|_| self.axis_indicator), |this, pose| {
-                this.child(orientation_indicator(pose))
+                this.child(
+                    orientation_indicator(pose, self.indicator.clone()).on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|view, event: &MouseDownEvent, _, cx| {
+                            cx.stop_propagation();
+                            view.snap_to_face(event.position, cx);
+                        }),
+                    ),
+                )
             })
     }
 }
@@ -1380,7 +1424,7 @@ const LABEL_RADIUS: f32 = 39.0;
 /// Drawn at the viewport text size (`tokens::viewport_scale`) as a whole:
 /// its letters are the part that has to be read, and letters grown on a
 /// sphere that did not would land on top of it.
-fn orientation_indicator(pose: Pose) -> impl IntoElement {
+fn orientation_indicator(pose: Pose, painted: Rc<Cell<Bounds<Pixels>>>) -> Stateful<Div> {
     let k = crate::tokens::viewport_scale();
     let faces = orientation::visible_faces(pose);
     let rings = orientation::axis_rings(pose);
@@ -1406,7 +1450,7 @@ fn orientation_indicator(pose: Pose) -> impl IntoElement {
         .tooltip(move |window, cx| {
             gpui_kit::component::tooltip::Tooltip::new(facing.clone()).build(window, cx)
         })
-        .child(orientation_sphere(rings, faces, k))
+        .child(orientation_sphere(rings, faces, k, painted))
         .children(labels.map(|label| axis_label(label, k)))
 }
 
@@ -1416,10 +1460,12 @@ fn orientation_sphere(
     rings: [orientation::Ring; 3],
     faces: [orientation::Face; 3],
     k: f32,
+    painted: Rc<Cell<Bounds<Pixels>>>,
 ) -> impl IntoElement {
     canvas(
         |_, _, _| (),
         move |bounds, _, window, _| {
+            painted.set(bounds);
             let center = bounds.center();
             let at = |(x, y): (f32, f32), radius: f32| {
                 point(center.x + px(x * radius), center.y + px(y * radius))
