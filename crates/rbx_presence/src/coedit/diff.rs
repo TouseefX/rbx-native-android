@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use rbx_dom::{Ref, Variant, WeakDom};
 use serde_json::{json, Map, Value};
 
+use super::attrs;
 use super::engine::Engine;
 use super::ids::IdMap;
 use super::names;
@@ -121,19 +122,39 @@ pub fn local_ops(
     let mut order = Vec::new();
     tree_order(current, current.root_refs(), &mut order);
     for r in order {
+        let old = shadow.get(r).filter(|_| !deleted.contains(&r));
+        let Some(inst) = current.get(r) else { continue };
+        // Most of a large place is unchanged: skip it before naming it.
+        let unchanged = old.is_some_and(|old| {
+            old.name() == inst.name()
+                && shadow.parent(r) == current.parent(r)
+                && old.properties() == inst.properties()
+        });
+        if unchanged {
+            continue;
+        }
         let Some(at) = target_of(current, ids, r) else {
             continue;
         };
-        let old = shadow.get(r).filter(|_| !deleted.contains(&r));
         let Some(inst) = current.get(r) else { continue };
         let class = inst.class().to_string();
         let name = inst.name().to_string();
         let props: Vec<(String, Variant)> = inst
             .properties()
             .iter()
-            .filter(|(k, _)| k.as_str() != "UniqueId")
+            .filter(|(k, _)| k.as_str() != "UniqueId" && !attrs::is_blob(k))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
+        let blobs_changed = old.is_none_or(|old| {
+            [attrs::ATTRIBUTES, attrs::TAGS]
+                .iter()
+                .any(|k| old.properties().get(*k) != inst.properties().get(*k))
+        });
+        let entries = if blobs_changed {
+            attrs::wire_entries(inst)
+        } else {
+            Default::default()
+        };
         let Some(old) = old else {
             let parent = match current.parent(r) {
                 Some(p) => target_of(current, ids, p),
@@ -146,6 +167,7 @@ pub fn local_ops(
                     map.insert(names::wire_name(&class, k), e);
                 }
             }
+            map.extend(entries);
             ops.push(Op::Add {
                 at,
                 cls: class,
@@ -204,8 +226,29 @@ pub fn local_ops(
                 });
             }
         }
+        if blobs_changed {
+            let (before, after) = (attrs::wire_entries(old), entries);
+            for (n, v) in &after {
+                if before.get(n) != Some(v) {
+                    ops.push(Op::Set {
+                        at: at.clone(),
+                        n: n.clone(),
+                        v: v.clone(),
+                        c: engine.tick(),
+                    });
+                }
+            }
+            for n in before.keys().filter(|n| !after.contains_key(*n)) {
+                ops.push(Op::Set {
+                    at: at.clone(),
+                    n: n.clone(),
+                    v: Value::Null,
+                    c: engine.tick(),
+                });
+            }
+        }
         for (k, v) in old.properties() {
-            if k == "UniqueId" || props.iter().any(|(n, _)| n == k) {
+            if k == "UniqueId" || attrs::is_blob(k) || props.iter().any(|(n, _)| n == k) {
                 continue;
             }
             let sendable = value::encode(v, &|_| {

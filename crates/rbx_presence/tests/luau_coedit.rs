@@ -233,3 +233,56 @@ fn every_plugin_module_compiles() {
     }
     assert!(count > 0);
 }
+
+/// Attributes (`@name`) and tags (`#tag`) read, encode and apply through
+/// CoeditApply on a stand-in instance, removals as `null`.
+#[test]
+fn attributes_and_tags_apply_one_by_one() {
+    let lua = new_lua();
+    lua.load(
+        r##"
+        __modules.CoeditClasses = {}
+        game = { GetService = function() return {} end }
+        local attrs, tags = { Speed = 16 }, { Lava = true }
+        part = {
+            ClassName = "Part",
+            GetFullName = function() return "Workspace.P" end,
+            GetAttribute = function(_, n) return attrs[n] end,
+            SetAttribute = function(_, n, v) attrs[n] = v end,
+            HasTag = function(_, t) return tags[t] == true end,
+            AddTag = function(_, t) tags[t] = true end,
+            RemoveTag = function(_, t) tags[t] = nil end,
+        }
+        attrsOf, tagsOf = function() return attrs end, function() return tags end
+        "##,
+    )
+    .exec()
+    .unwrap();
+    let apply = load_module(&lua, "CoeditApply").unwrap();
+    let json = load_module(&lua, "Json").unwrap();
+    let result: (String, String, String, String) = lua
+        .load(
+            r##"
+            local Apply, Json = ...
+            local state = { idOf = {}, byId = { p1 = part }, marks = {}, registers = __modules.CoeditCore.Registers.new(), log = __modules.CoeditCore.Log.new(), counter = 0 }
+            local before = Apply.encodeProp(state, part, "@Speed") .. Apply.encodeProp(state, part, "#Lava") .. Apply.encodeProp(state, part, "@Gone")
+            local batch = Json.decode('{"a":"1:native:x","ops":[' ..
+                '{"k":"set","id":"p1","p":"","n":"@Speed","v":null,"c":[1,"1:native:x"]},' ..
+                '{"k":"set","id":"p1","p":"","n":"@Team","v":{"t":"String","v":"red"},"c":[2,"1:native:x"]},' ..
+                '{"k":"set","id":"p1","p":"","n":"#Lava","v":null,"c":[3,"1:native:x"]},' ..
+                '{"k":"set","id":"p1","p":"","n":"#Kill","v":{"t":"Bool","v":true},"c":[4,"1:native:x"]}]}')
+            local r = Apply.new(state):batch(batch, false, "Chee")
+            local a, t = attrsOf(), tagsOf()
+            return before, tostring(r.applied), tostring(a.Speed) .. "," .. tostring(a.Team), tostring(t.Lava) .. "," .. tostring(t.Kill)
+            "##,
+        )
+        .call((apply, json))
+        .unwrap();
+    assert_eq!(
+        result.0,
+        r##"{"t":"Float64","v":16}{"t":"Bool","v":true}null"##
+    );
+    assert_eq!(result.1, "4");
+    assert_eq!(result.2, "nil,red");
+    assert_eq!(result.3, "nil,true");
+}
