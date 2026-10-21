@@ -94,9 +94,8 @@ fn painted(
     };
     // Likewise a fresh `Texture` has no tiling properties yet; it still
     // tiles at the class's own 2 studs rather than stretching like a decal.
-    let tile = |name| {
-        number(properties.get(name)).or((instance.class() == "Texture").then_some(2.0))
-    };
+    let tile =
+        |name| number(properties.get(name)).or((instance.class() == "Texture").then_some(2.0));
 
     let mapping = match (tile("StudsPerTileU"), tile("StudsPerTileV")) {
         (Some(u), Some(v)) => Mapping::Tiled {

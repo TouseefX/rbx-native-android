@@ -523,7 +523,10 @@ mod tests {
 
         let round_tripped = deserialize(&serialize(&dom).unwrap()).unwrap();
 
-        let props = round_tripped.get(Ref::new(union.value())).unwrap().properties();
+        let props = round_tripped
+            .get(Ref::new(union.value()))
+            .unwrap()
+            .properties();
         assert!(!props.contains_key("SolidMeshHolder"));
         assert_eq!(props.get("Anchored"), Some(&Variant::Bool(true)));
     }

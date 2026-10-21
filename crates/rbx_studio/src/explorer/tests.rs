@@ -166,9 +166,27 @@ fn children_sort_like_studios_explorer() {
     assert_eq!(
         names(&roots[0].children),
         [
-            "Camera", "Terrain", "Mid", "Snd", "apple", "Att", "SpawnLocation", "aScript",
-            "Client", "Alpha", "beta", "Mesh", "10", "9", "Alpha", "Zed", "_under",
-            "alpha2", "W", "Cfg", "k1",
+            "Camera",
+            "Terrain",
+            "Mid",
+            "Snd",
+            "apple",
+            "Att",
+            "SpawnLocation",
+            "aScript",
+            "Client",
+            "Alpha",
+            "beta",
+            "Mesh",
+            "10",
+            "9",
+            "Alpha",
+            "Zed",
+            "_under",
+            "alpha2",
+            "W",
+            "Cfg",
+            "k1",
         ]
     );
 }
