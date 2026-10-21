@@ -2,7 +2,7 @@
 // finished frame.
 //
 // Every vertex arrives in viewport pixels with the origin at the top-left
-// corner — the frame `UDim2` is written in — so the only transform here is the
+// corner, the frame `UDim2` is written in, so the only transform here is the
 // orthographic flip into clip space. There is no camera and no depth: the pass
 // is a painter's-algorithm overlay, ordered entirely on the CPU.
 //
@@ -38,6 +38,7 @@ struct VertexInput {
     @location(9) gradient: vec4<f32>,
     @location(10) gradient_row: f32,
     @location(11) mode: u32,
+    @location(12) gradient_turn: vec2<f32>,
 }
 
 struct VertexOutput {
@@ -53,6 +54,7 @@ struct VertexOutput {
     @location(8) @interpolate(flat) gradient_row: f32,
     @location(9) @interpolate(flat) mode: u32,
     @location(10) @interpolate(flat) soft: f32,
+    @location(11) @interpolate(flat) gradient_turn: vec2<f32>,
 }
 
 @vertex
@@ -76,6 +78,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.gradient_row = in.gradient_row;
     out.mode = in.mode;
     out.soft = in.soft;
+    out.gradient_turn = in.gradient_turn;
     return out;
 }
 
@@ -111,9 +114,18 @@ fn box_distance(p: vec2<f32>, half: vec2<f32>, r: f32, join: u32) -> f32 {
 }
 
 // Where `p` falls along the ramp, per `GradientType` (0 linear, 1 radial,
-// 2 conical); see `scene::gui::layout::GradientPx::axis` for what `g` holds.
-fn ramp_position(p: vec2<f32>, g: vec4<f32>, kind: u32) -> f32 {
+// 2 conical, 3 elliptical); see `scene::gui::layout::GradientPx` for what `g`
+// and `turn` hold.
+fn ramp_position(p: vec2<f32>, g: vec4<f32>, turn: vec2<f32>, kind: u32) -> f32 {
     let d = p - g.xy;
+    if kind == 3u {
+        // Rotate by -Rotation into the ellipse's own axes.
+        let local = vec2<f32>(
+            d.x * turn.x + d.y * turn.y,
+            d.y * turn.x - d.x * turn.y,
+        );
+        return length(local * g.zw);
+    }
     if kind == 1u {
         return length(d) * g.z;
     }
@@ -132,7 +144,7 @@ fn ramp_position(p: vec2<f32>, g: vec4<f32>, kind: u32) -> f32 {
 // re-encodes what is written: the fixed-function blend runs on whatever this
 // returns. Encoding here is therefore what makes a `BackgroundTransparency`
 // of 0.5 halve the *encoded* pixel behind it, which is how Roblox composites
-// its 2D layer — blending in linear light leaves every translucent frame
+// its 2D layer, blending in linear light leaves every translucent frame
 // visibly lighter than Studio's.
 fn linear_to_srgb(c: vec3<f32>) -> vec3<f32> {
     let low = c * 12.92;
@@ -175,7 +187,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = in.color;
     var alpha = in.alpha * coverage;
     if in.gradient_row >= 0.0 {
-        let t = tiled(ramp_position(in.local, in.gradient, kind), tile);
+        let t = tiled(ramp_position(in.local, in.gradient, in.gradient_turn, kind), tile);
         // Texel centres: the first and last texel are the ramp's exact ends.
         let u = (t * (RAMP_WIDTH - 1.0) + 0.5) / RAMP_WIDTH;
         let rows = f32(textureDimensions(gradients).y);
@@ -195,7 +207,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // The tint, the ramp and the image sample all meet in linear light
     // (vertex colours are linearized by `scene::gui::plan`, and both textures
     // are `*Srgb` formats the sampler decodes); only the result is encoded,
-    // once, for the blend. Alpha is untouched — coverage and transparency are
+    // once, for the blend. Alpha is untouched, coverage and transparency are
     // already the linear quantities the blend wants.
     return vec4<f32>(linear_to_srgb(sampled.rgb * color), sampled.a * alpha);
 }

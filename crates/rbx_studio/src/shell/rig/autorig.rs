@@ -325,7 +325,7 @@ impl Shell {
     /// A drag on a joint marker in the 3D view (see
     /// `workspace_view::joints`): the press selects the joint, each step
     /// moves it (and its mirror) with the markers following, and the release
-    /// cuts again, as a panel edit does — one rebuild, one undo step.
+    /// cuts again, as a panel edit does, one rebuild, one undo step.
     pub(crate) fn autorig_drag_joint(
         &mut self,
         index: usize,

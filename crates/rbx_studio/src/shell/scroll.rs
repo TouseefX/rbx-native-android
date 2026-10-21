@@ -14,7 +14,7 @@ impl Shell {
     /// One wheel notch the render thread resolved onto a frame (see
     /// `workspace_view::scroll`): written straight to the DOM and reflected
     /// into the viewport so the next frame shows the canvas moved, never
-    /// through `Shell::push_history` — like `sync_camera_pose`, a scroll is
+    /// through `Shell::push_history`: like `sync_camera_pose`, a scroll is
     /// viewing, not editing, and a notch per undo step would bury the
     /// history under a single flick. The Properties panel reads the DOM on
     /// its next render, so a selected frame's `CanvasPosition` row follows.

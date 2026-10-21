@@ -70,7 +70,7 @@ fn does_not_match_an_activated_version_that_fails_the_requirement() {
 #[test]
 fn a_diamond_dependency_resolves_to_the_one_shared_activation() {
     // Two different packages (A and B) both depend on the same `shared`
-    // package — this is exactly the case the removed-too-early bug this
+    // package, this is exactly the case the removed-too-early bug this
     // session caught would have silently dropped for whichever of A/B
     // came later in resolution order.
     let mut activated = HashMap::new();

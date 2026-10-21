@@ -1,8 +1,8 @@
 //! The browser build: [`Viewer`], which a page drives from JavaScript (see
 //! `web/index.html`). It is the windowed viewer's loop (`app`) with the
-//! browser standing in for winit — the page forwards its keyboard, pointer
+//! browser standing in for winit, the page forwards its keyboard, pointer
 //! and wheel events as [`CameraInput`], and calls [`Viewer::frame`] from
-//! `requestAnimationFrame` — and the editor's streaming loader (`Headless`)
+//! `requestAnimationFrame`: and the editor's streaming loader (`Headless`)
 //! with the browser's `fetch()` standing in for the worker pool: the place
 //! draws at once, on fallbacks, and every mesh, texture, union and font is
 //! swapped in as it arrives from `rbxview --serve` (see `crate::serve`).
@@ -31,7 +31,7 @@ use crate::quality::{Automatic, QualityLevel, QualityProfile};
 use crate::renderer::Renderer;
 use crate::services;
 
-/// How long a swap-in waits to collect more landings — `headless::assets`'
+/// How long a swap-in waits to collect more landings, `headless::assets`'
 /// `SWAP_INTERVAL`, for the same reason.
 const SWAP_INTERVAL: Duration = Duration::from_millis(100);
 
@@ -63,7 +63,7 @@ pub struct Viewer {
 
     /// The place as parsed, never edited: a scene toggle rebuilds from it
     /// (from a copy, for `ShowDevelopmentGui`), so every referent the page
-    /// holds — the selection, the Explorer's rows — stays good.
+    /// holds, the selection, the Explorer's rows, stays good.
     dom: WeakDom,
     name: String,
     /// What is selected, in the order it was, as Studio keeps it.
@@ -92,7 +92,7 @@ pub struct Viewer {
 #[wasm_bindgen]
 impl Viewer {
     /// Opens `bytes` (a `.rbxl`/`.rbxm`/`.rbxlx`/`.rbxmx`, named `name` in
-    /// errors) on `canvas`, fetching assets from `assets` — the URL of a
+    /// errors) on `canvas`, fetching assets from `assets`: the URL of a
     /// `rbxview --serve`'s `/asset` route.
     pub async fn open(
         canvas: web_sys::HtmlCanvasElement,
@@ -240,8 +240,8 @@ impl Viewer {
         match option {
             "textures" | "materials" | "lights" | "developmentGui" => self.rebuild(),
             // Profile switches, but these four passes only read theirs when
-            // they are built — one switched off builds nothing to switch back
-            // on — so the scene is rebuilt around the new profile (keeping
+            // they are built, one switched off builds nothing to switch back
+            // on, so the scene is rebuilt around the new profile (keeping
             // every upload, as an asset swap-in does).
             "gui" | "particles" | "beams" | "trails" => {
                 self.retune();
@@ -278,7 +278,7 @@ impl Viewer {
         self.surface.configure(&self.device, &self.config);
     }
 
-    /// Stands at `eye` looking toward `at` (studs) and flies on from there —
+    /// Stands at `eye` looking toward `at` (studs) and flies on from there,
     /// what the page's `?eye=x,y,z&at=x,y,z` asks for, the same view
     /// `rbxview --eye --look-at` frames a screenshot at.
     pub fn look_at(&mut self, eye: Vec<f32>, at: Vec<f32>) -> Result<(), JsError> {
@@ -325,7 +325,7 @@ impl Viewer {
         self.input.apply(CameraInput::Wheel { notches });
     }
 
-    /// Lets go of every held key and button — the page lost focus.
+    /// Lets go of every held key and button, the page lost focus.
     pub fn release(&mut self) {
         self.input.apply(CameraInput::Release);
     }
@@ -410,7 +410,7 @@ impl Viewer {
         self.selection()
     }
 
-    /// Replaces the selection — an Explorer click.
+    /// Replaces the selection, an Explorer click.
     pub fn select(&mut self, ids: Vec<u32>) {
         self.selected = ids
             .into_iter()
@@ -425,7 +425,7 @@ impl Viewer {
     }
 
     /// The Explorer rows under `parent` as JSON (`[{id, name, class,
-    /// children}]`), or the place's roots for `None` — ordered and filtered
+    /// children}]`), or the place's roots for `None`: ordered and filtered
     /// the way Studio's default Explorer view shows them.
     pub fn children(&self, parent: Option<u32>) -> String {
         let nodes: Vec<Node> = match parent {
@@ -468,7 +468,7 @@ impl Viewer {
         serde_json::Value::from(rows).to_string()
     }
 
-    /// `id` and every instance above it, root first — the rows the Explorer
+    /// `id` and every instance above it, root first, the rows the Explorer
     /// opens to show a selection made in the viewport.
     pub fn ancestors(&self, id: u32) -> Vec<u32> {
         let mut chain = vec![id];
@@ -522,7 +522,7 @@ impl Viewer {
 
 impl Viewer {
     /// Re-reads the place under the current toggles, keeping the renderer's
-    /// uploads and every decoded asset — `Headless::reload`, from bytes.
+    /// uploads and every decoded asset, `Headless::reload`, from bytes.
     fn rebuild(&mut self) -> Result<(), JsError> {
         let mut loaded = build(
             &self.dom,
@@ -579,7 +579,7 @@ impl Viewer {
         self.outline();
     }
 
-    /// Draws the selection's outline — what `Headless::set_selection` does
+    /// Draws the selection's outline, what `Headless::set_selection` does
     /// for the editor.
     fn outline(&mut self) {
         let selected = pick::selection(&self.dom, &self.database, &self.selected);
@@ -641,7 +641,7 @@ fn apply(profile: &mut QualityProfile, shown: Shown) {
     profile.color_correction &= shown.color_correction;
 }
 
-/// `app::input::camera_key`, by `KeyboardEvent.code` — the same physical
+/// `app::input::camera_key`, by `KeyboardEvent.code`: the same physical
 /// positions, so AZERTY flies with ZQSD here too.
 fn camera_key(code: &str) -> Option<CameraKey> {
     match code {

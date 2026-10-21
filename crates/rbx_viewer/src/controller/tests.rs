@@ -47,7 +47,7 @@ fn step(controller: &mut Controller, input: &mut Input, dt: Duration) -> Viewpoi
     controller.update(input, dt, Duration::ZERO, &bounds(), false)
 }
 
-/// Like [`step`], but with orthographic mode on — for the wheel's other role
+/// Like [`step`], but with orthographic mode on, for the wheel's other role
 /// (zooming `Pose::ortho_scale` instead of dollying), see
 /// `orthographic_wheel_zooms_ortho_scale_instead_of_translating` and friends.
 fn step_orthographic(controller: &mut Controller, input: &mut Input, dt: Duration) -> Viewpoint {
@@ -190,7 +190,7 @@ fn shift_slows_movement_down() {
 #[test]
 fn a_rightward_mouse_move_turns_the_view_right_not_left() {
     // Starting from yaw 0 (looking down -Z), Studio's convention is that dragging
-    // the mouse right turns the view towards +X — the inverse-look regression.
+    // the mouse right turns the view towards +X, the inverse-look regression.
     let moved = pose(step(
         &mut spawned(),
         &mut looking(10.0, 0.0),
@@ -325,7 +325,7 @@ fn wheel_translation_scales_with_the_number_of_notches() {
 }
 
 // Orthographic mode's whole point: the wheel without the look button held
-// must zoom (change `Pose::ortho_scale`) instead of dollying the eye — a
+// must zoom (change `Pose::ortho_scale`) instead of dollying the eye, a
 // parallel projection has no divide to make dollying visible anyway, and
 // doing it regardless risks flying the eye through geometry with no size cue
 // (the bug `Pose::ortho_scale` itself exists to fix).
@@ -345,8 +345,8 @@ fn orthographic_wheel_zooms_ortho_scale_instead_of_translating() {
 }
 
 // Scrolling "in" (positive notches, matching the perspective dolly's own
-// forward-is-positive convention) must shrink the view volume — zoom in,
-// things look bigger — and scrolling "out" must grow it back.
+// forward-is-positive convention) must shrink the view volume, zoom in,
+// things look bigger, and scrolling "out" must grow it back.
 #[test]
 fn orthographic_wheel_direction_matches_zoom_in_and_out() {
     let mut controller = spawned();
@@ -375,7 +375,7 @@ fn orthographic_wheel_direction_matches_zoom_in_and_out() {
 }
 
 // The clamp exists so the wheel can't drive the view volume to a singular or
-// unusably huge extreme — "zoom indefinitely" still means "within a sane
+// unusably huge extreme, "zoom indefinitely" still means "within a sane
 // range", not "without bound".
 #[test]
 fn orthographic_wheel_zoom_is_clamped_both_ways() {
@@ -405,7 +405,7 @@ fn orthographic_wheel_zoom_is_clamped_both_ways() {
 }
 
 // The look button held still means "adjust flight speed", exactly as it does
-// in perspective — orthographic only changes the wheel's *other* role.
+// in perspective, orthographic only changes the wheel's *other* role.
 #[test]
 fn orthographic_wheel_with_the_look_button_still_changes_speed() {
     let mut controller = spawned();
@@ -421,7 +421,7 @@ fn orthographic_wheel_with_the_look_button_still_changes_speed() {
 
 // `Controller::sync_ortho_scale`: a one-time resync the moment orthographic
 // switches on, not a per-frame recompute (see `Pose::ortho_scale`'s doc
-// comment for why the latter was the actual bug) — flying the free pose away
+// comment for why the latter was the actual bug), flying the free pose away
 // from the scene's centre first, then syncing, must produce a value derived
 // from *that* distance, not whatever it started at.
 #[test]
@@ -583,7 +583,7 @@ fn easing_the_position_is_also_frame_rate_independent() {
 
 // A frame time that varies around a steady average (e.g. 8ms/24ms alternating
 // instead of a flat 16ms) must still cover the same ground as the steady rate
-// once both have run for the same wall-clock time — the concrete case a
+// once both have run for the same wall-clock time, the concrete case a
 // stable average FPS with jittery per-frame timing represents.
 #[test]
 fn uneven_frame_times_cover_the_same_ground_as_even_ones() {

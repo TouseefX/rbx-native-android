@@ -9,7 +9,7 @@
 //!
 //! Two-phase like `filemesh`: [`plan`] walks the DOM for every operation, and
 //! [`resolve`] joins that plan against downloaded asset bytes once they exist
-//! (an inline tree is its own bytes). No network access happens here — see
+//! (an inline tree is its own bytes). No network access happens here, see
 //! `crate::assets` for downloading.
 
 mod baked;
@@ -38,7 +38,7 @@ pub(super) use patch::replan;
 const PART_OPERATION: &str = "PartOperation";
 
 /// A place with many legacy unions shouldn't spawn one thread per boolean
-/// regardless of core count — same bounded-worker-pool shape as
+/// regardless of core count, same bounded-worker-pool shape as
 /// `crate::assets`'s download pool, just sized to available CPU parallelism
 /// rather than a remote request-rate limit: this work is CPU-bound, not
 /// network-bound, so the cap that matters is core count, not Roblox's API.
@@ -47,7 +47,7 @@ const MAX_CSG_WORKERS: usize = 8;
 /// One legacy union/negate found in the DOM, before its asset exists.
 pub(super) struct Entry {
     /// The real DOM instance this entry stands for, so its fallback box can be
-    /// hidden once real geometry resolves — see `Scene::resolve_unions`.
+    /// hidden once real geometry resolves, see `Scene::resolve_unions`.
     referent: Ref,
     /// The union's `AssetId`, or the [`inline_key`] of the tree it carries.
     asset: AssetRef,
@@ -56,7 +56,7 @@ pub(super) struct Entry {
     /// describes is expressed relative to this.
     cframe: Mat4,
     /// A builder can resize a union after Studio baked its CSG tree, the same
-    /// way a `MeshPart` can be resized after import — see `filemesh::Fit::Part`.
+    /// way a `MeshPart` can be resized after import, see `filemesh::Fit::Part`.
     /// The tree's own coordinates are authored against `initial_size`, so the
     /// ratio to current `size` is the extra scale that resize left behind.
     size: Vec3,
@@ -73,7 +73,7 @@ pub(super) struct Entry {
 }
 
 impl Entry {
-    /// Unit mesh (asset frame) to world — see `initial_size`.
+    /// Unit mesh (asset frame) to world, see `initial_size`.
     fn placement(&self) -> Mat4 {
         self.cframe * Mat4::from_scale(self.size / self.initial_size)
     }
@@ -174,8 +174,8 @@ fn inline_key(raw: &[u8]) -> AssetRef {
     AssetRef::Thumb(format!("csg-inline/{:016x}-{}", hasher.finish(), raw.len()))
 }
 
-/// The bytes a union carries for itself: its operation tree, or — only
-/// when it has neither a tree nor an `AssetId` to find one behind — the
+/// The bytes a union carries for itself: its operation tree, or, only
+/// when it has neither a tree nor an `AssetId` to find one behind, the
 /// mesh Studio baked for it.
 fn inline_document(properties: &std::collections::BTreeMap<String, Variant>) -> Option<&[u8]> {
     tree::child_data(properties).or_else(|| {
@@ -221,7 +221,7 @@ pub(crate) fn is_empty(dom: &WeakDom, database: &ReflectionDatabase, referent: R
 /// How many triangles a union draws as: Studio's own `TriangleCount` where
 /// the file carries one, else the baked mesh it holds inline or behind its
 /// `AssetId` (read through `fetch`, which never downloads). `None` when none
-/// of the three is at hand — a tree-only union whose boolean has not been
+/// of the three is at hand, a tree-only union whose boolean has not been
 /// carved anywhere this can read. `known` keeps each bake's count by its
 /// bytes or asset, so the copies of one union decode it once.
 pub(crate) fn triangles(
@@ -279,7 +279,7 @@ fn from_operation(
     })
 }
 
-/// A union's key (its asset, or its inline tree's [`inline_key`] — the
+/// A union's key (its asset, or its inline tree's [`inline_key`], the
 /// inline tree winning, since it needs no download), whether it is inline,
 /// and its world `CFrame`, `size` and `InitialSize`: all its computed mesh
 /// needs to be placed where it is drawn.
@@ -357,8 +357,8 @@ pub(crate) struct Resolution {
 /// contributed has to survive the next `Scene::resolve_file_meshes`, which
 /// rebuilds the resolved set from the file mesh plan alone. So the meshes and
 /// instances are kept here to be laid back on top of it, while the recovered
-/// parts — which are appended to the scene's own parts once and never
-/// rebuilt — are handed straight over through `fresh_parts`.
+/// parts, which are appended to the scene's own parts once and never
+/// rebuilt, are handed straight over through `fresh_parts`.
 #[derive(Default)]
 pub(crate) struct Merged {
     pub(crate) hidden: HashSet<Ref>,
@@ -368,7 +368,7 @@ pub(crate) struct Merged {
     /// take. Empty at every other moment.
     pub(crate) fresh_parts: Vec<Part>,
     /// Every union referent merged in so far, whichever way it resolved. What
-    /// makes [`Merged::absorb`] idempotent — see its doc comment.
+    /// makes [`Merged::absorb`] idempotent, see its doc comment.
     absorbed: HashSet<Ref>,
 }
 
@@ -407,7 +407,7 @@ impl Merged {
     }
 }
 
-/// One asset's decoded tree and, when the boolean succeeded, its mesh —
+/// One asset's decoded tree and, when the boolean succeeded, its mesh,
 /// computed once however many instances share the asset.
 pub(super) struct Evaluated {
     tree: tree::Node,
@@ -417,8 +417,8 @@ pub(super) struct Evaluated {
     baked_color: Option<[u8; 3]>,
 }
 
-/// Every asset's [`Evaluated`] so far — `None` where its bytes did not
-/// parse — kept across scene rebuilds by whoever owns the place (see
+/// Every asset's [`Evaluated`] so far, `None` where its bytes did not
+/// parse, kept across scene rebuilds by whoever owns the place (see
 /// `load::Resident`). A boolean is a function of the asset's bytes alone,
 /// never of the union placed in the scene, so once carved it is carved for
 /// good: a reload re-plans every union from the DOM and finds every one of
@@ -429,7 +429,7 @@ pub(crate) struct Evaluations {
 }
 
 impl Evaluations {
-    /// Whether this place has already tried to carve `asset` at all —
+    /// Whether this place has already tried to carve `asset` at all,
     /// carved it, or found its bytes unparseable. [`resolve`] then needs
     /// none of those bytes, so a reload can skip fetching them (see
     /// `load::resolve_unions`), and an edit pointing a union at the asset
@@ -546,7 +546,7 @@ fn evaluate(
 }
 
 /// The nested union assets that the trees in `assets`, and the inline trees
-/// of `plan` not yet carved, point at and `assets` does not hold yet — what
+/// of `plan` not yet carved, point at and `assets` does not hold yet, what
 /// a loader fetches next, before [`resolve`] can carve those trees.
 pub(crate) fn missing(
     plan: &Plan,
@@ -576,7 +576,7 @@ pub(crate) fn missing(
 /// Every distinct asset `plan` needs that is either already known or
 /// downloaded, evaluated: out of `evaluations` where an earlier scene already
 /// carved it, and through [`evaluate`] across a bounded worker pool where
-/// not — same `thread::scope` plus atomic work-list index shape as
+/// not, same `thread::scope` plus atomic work-list index shape as
 /// `crate::assets::load_with`'s download pool, just with the BSP boolean
 /// itself as the unit of work instead of a network fetch. Whatever is carved
 /// here is remembered in `evaluations`.
@@ -586,7 +586,7 @@ pub(crate) fn missing(
 /// asset's, so a place with dozens of legacy unions can spread that cost
 /// across cores instead of paying for it back to back on the caller's own
 /// thread. Several entries can share an asset (a builder copy-pasting the
-/// same rock), so this dedupes by [`AssetRef`] first — the whole point is
+/// same rock), so this dedupes by [`AssetRef`] first, the whole point is
 /// never redoing the same boolean twice, in parallel or not, and a reload
 /// is the same boolean again.
 fn evaluate_all(

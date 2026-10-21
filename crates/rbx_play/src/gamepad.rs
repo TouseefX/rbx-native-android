@@ -2,7 +2,7 @@
 //! Controller Emulator.
 //!
 //! No script API can fabricate gamepad input inside the client, so the pad
-//! is made at the OS level instead — a Linux `uinput` device, which the
+//! is made at the OS level instead, a Linux `uinput` device, which the
 //! client cannot tell from a plugged-in controller, in the same spirit as
 //! the free camera's OS-level mouse capture. Each [`Device`] copies the
 //! name, USB ids and evdev layout the matching kernel driver gives the real

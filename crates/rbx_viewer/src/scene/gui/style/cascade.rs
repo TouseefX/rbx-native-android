@@ -1,4 +1,4 @@
-//! Flattening a `StyleSheet` — its derives, its nested rules and its tokens —
+//! Flattening a `StyleSheet`, its derives, its nested rules and its tokens,
 //! into the flat, ordered list of rules the cascade applies.
 
 use std::collections::{BTreeMap, HashSet};
@@ -24,12 +24,12 @@ pub(super) struct Rule {
     order: usize,
 }
 
-/// Every rule `sheet` brings to bear, weakest first — apply them in this order
+/// Every rule `sheet` brings to bear, weakest first, apply them in this order
 /// and the strongest is the one left standing.
 ///
 /// Precedence is `StyleRule.Priority` (higher wins, per the docs), and for a
 /// tie the later rule in this flattening. The docs describe no CSS-style
-/// specificity — a `#Name` selector carries no more weight than a class one —
+/// specificity, a `#Name` selector carries no more weight than a class one,
 /// and say nothing about ties, so "later wins" is borrowed from CSS. Derived
 /// sheets are flattened first because `StyleSheet:SetDerives` calls the base
 /// sheet "the spot of least priority".

@@ -68,7 +68,7 @@ pub(super) enum Step {
 }
 
 /// Where `step` lands from cell `from`: along the row, or to the nearest
-/// cell in the row above or below — the left one of the two a honeycomb
+/// cell in the row above or below, the left one of the two a honeycomb
 /// offers when they are equally near. An edge stays put.
 pub(super) fn step(cells: &[Cell], from: usize, step: Step) -> usize {
     let Some(here) = cells.get(from) else {

@@ -33,7 +33,7 @@ pub(in crate::scene::gui) enum StrokePosition {
 pub(in crate::scene::gui) struct Stroke {
     pub(in crate::scene::gui) color: [f32; 3],
     pub(in crate::scene::gui) alpha: f32,
-    /// Pixels, or — `StrokeSizingMode.ScaledSize` — a fraction of the
+    /// Pixels, or, `StrokeSizingMode.ScaledSize`, a fraction of the
     /// parent's shorter side.
     pub(in crate::scene::gui) thickness: f32,
     pub(in crate::scene::gui) scaled: bool,
@@ -56,8 +56,8 @@ const SIZING_SCALED: u32 = 1;
 /// Every *enabled* `UIStroke` among `children`, `text` saying whether the
 /// parent is a text class. The docs make `Enabled = false` a stroke that is
 /// not rendered at all, so it is skipped over rather than read as invisible.
-/// All the others apply — a text object can carry "two `UIStroke` instances,
-/// one set to `Contextual` and the other to `Border`" — in the order the
+/// All the others apply, a text object can carry "two `UIStroke` instances,
+/// one set to `Contextual` and the other to `Border`", in the order the
 /// stroke's own `ZIndex` sets, "those with a lower `ZIndex` render under
 /// (behind) those with a higher `ZIndex`"; ties, which the docs leave
 /// undefined, keep tree order.

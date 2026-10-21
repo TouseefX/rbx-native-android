@@ -40,6 +40,7 @@ fn gradient() -> GuiGradient {
         transparency: NumberSequence { keypoints: vec![] },
         origin: [10.0, -5.0],
         axis: [0.005, 0.0],
+        turn: [1.0, 0.0],
         kind: GuiGradientKind::Conical,
         tile: GuiTile::Repeat,
     }
@@ -47,7 +48,7 @@ fn gradient() -> GuiGradient {
 
 // The fragment's distance field is evaluated in the element's own frame, so
 // every vertex carries where it sits relative to the box centre *before*
-// rotation — which is what keeps a rotated rounded box round.
+// rotation, which is what keeps a rotated rounded box round.
 #[test]
 fn a_vertex_carries_its_unrotated_position_relative_to_the_centre() {
     let mut spun = rounded(8.0);

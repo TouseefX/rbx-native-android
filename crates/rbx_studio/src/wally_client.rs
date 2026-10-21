@@ -1,20 +1,20 @@
-//! A client for Wally (`UpliftGames/wally`, MPL-2.0)'s registry — search,
+//! A client for Wally (`UpliftGames/wally`, MPL-2.0)'s registry, search,
 //! resolve a dependency graph, and fetch every package in it. Read-only:
-//! nothing here writes anywhere, on disk or in a `WeakDom` — that's
+//! nothing here writes anywhere, on disk or in a `WeakDom`, that's
 //! `shell::wally_sync`'s job, kept separate so this module has no `Shell`/
 //! `WeakDom` dependency of its own and is usable and testable in isolation
 //! (the same split `argon_client` already uses).
 //!
 //! Confirmed by hand against the real `api.wally.run` this session:
 //! `GET /v1/package-search?query=<text>` is plain JSON, no auth, and its
-//! `versions` field is a package's *full* published list — enough to
+//! `versions` field is a package's *full* published list, enough to
 //! enumerate one exact package's versions by filtering results to its
 //! `scope`/`name` ([`search::versions_of`]), without cloning Wally's own
 //! git-backed registry index the real CLI reads from. `GET /v1/
 //! package-contents/{scope}/{name}/{version}` needs a `Wally-Version`
-//! header and returns a zip of the package's *raw source tree* —
+//! header and returns a zip of the package's *raw source tree*,
 //! `wally.toml` included, and often a lot more than that (a package's
-//! whole repo, tests and docs included, confirmed by hand) — Wally itself
+//! whole repo, tests and docs included, confirmed by hand), Wally itself
 //! never produces or touches a Roblox instance; a Rojo-style syncer does
 //! that from these same files, and [`tree::PackageNode`] is this client's
 //! own version of that conversion.
@@ -64,7 +64,7 @@ fn agent() -> ureq::Agent {
         .into()
 }
 
-/// The highest published version of one exact `scope/name` — what the
+/// The highest published version of one exact `scope/name`: what the
 /// dock resolves a clicked search result to before calling [`resolve`]
 /// (this client installs latest-compatible only; see the plan's own
 /// simplifications for why there's no version picker yet).
@@ -79,7 +79,7 @@ pub(crate) fn latest_version(scope: &str, name: &str) -> Result<semver::Version,
 mod tests {
     use super::*;
 
-    /// Not run by default — needs the real network. Same shape as
+    /// Not run by default, needs the real network. Same shape as
     /// `argon_client`'s own live-server test:
     /// `cargo test -p rbx_studio --bin rbxstudio wally_client -- --ignored`.
     #[test]
@@ -105,7 +105,7 @@ mod tests {
     /// A real, live case found by hand this session: `sleitnick/knit
     /// @1.5.1` (an older version, still resolvable directly by exact
     /// version even though it's no longer `latest`) depends on `sleitnick/
-    /// comm@^0.3`, and only `1.0.1` of comm has ever been published — an
+    /// comm@^0.3`, and only `1.0.1` of comm has ever been published, an
     /// actually-broken dependency preserved in the registry's history, and
     /// a genuine exercise of the "fail the whole graph cleanly" path
     /// rather than a synthetic fixture. (The *current* `knit`, tested
@@ -127,7 +127,7 @@ mod tests {
         assert!(error.contains("0.3"));
     }
 
-    /// The success path for real transitive resolution — the whole reason
+    /// The success path for real transitive resolution, the whole reason
     /// this pass exists over the previous "one package, no dependencies"
     /// scope. Confirmed by hand this session: `sleitnick/knit`'s current
     /// version depends on `sleitnick/comm@^1` and `evaera/promise@^4`,

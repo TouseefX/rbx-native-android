@@ -25,7 +25,7 @@ mod shape;
 
 use shape::{center, grown, outline, quad, Paint, Shape, Spin, FILL, UV_WHOLE};
 
-/// The slot every untextured rectangle — a background, a border — samples: a
+/// The slot every untextured rectangle, a background, a border, samples: a
 /// single white texel, so one pipeline covers both.
 pub(super) const WHITE: usize = 0;
 
@@ -99,7 +99,7 @@ fn build_once(
 
         // Under everything the element draws: the docs put every shadow
         // "below the parent", lowest `ZIndex` first, and turn it with the
-        // parent's `Rotation` — about the parent's own centre, so an
+        // parent's `Rotation`: about the parent's own centre, so an
         // `Offset` turns with it.
         let start = vertices.len();
         for shadow in &element.shadows {
@@ -130,7 +130,7 @@ fn build_once(
         {
             // A flattened `CanvasGroup`: its background and whole subtree
             // are already the texture (see `super::group`), drawn once with
-            // the group's own tint — and shaped and shaded like any image,
+            // the group's own tint, and shaped and shaded like any image,
             // which is how a `UICorner`/`UIGradient` under a group "apply
             // to the whole group" (docs).
             let paint = Paint {
@@ -154,7 +154,7 @@ fn build_once(
             if let Some((width, color)) = element.border {
                 let paint = Paint { color, ..paint };
                 // The bands are rotated about the element's own centre, same
-                // as the background — not each band's own, or a rotated
+                // as the background, not each band's own, or a rotated
                 // border would fly apart from the box it outlines.
                 for side in outline(&inset(&element.rect, element.border_inset), width) {
                     quad(&side, UV_WHOLE, &paint, &fill, &spin, &mut vertices);
@@ -165,7 +165,7 @@ fn build_once(
 
         if let Some(image) = &element.image {
             // Never downloaded, failed, or still on its way: the placeholder
-            // Studio gives an image-less label stands in — and where even
+            // Studio gives an image-less label stands in, and where even
             // that has not landed, nothing draws.
             let slot = textures
                 .get(&image.asset)
@@ -197,7 +197,7 @@ fn build_once(
             }
         }
 
-        // Over the image, and — unlike the border — independent of the
+        // Over the image, and, unlike the border, independent of the
         // background: the docs give `UIStroke.Transparency` its own life so
         // a box can be "hollow", an outline and nothing else.
         for stroke in &element.strokes {

@@ -114,7 +114,7 @@ fn ancestry<'a>(database: &'a ReflectionDatabase, class: &str) -> impl Iterator<
 
 /// The classes nearest `sources` in the class tree that they could become:
 /// walk up from their nearest common superclass, one ancestor at a time,
-/// taking whatever else descends from it — so a `Part` is offered `Seat`
+/// taking whatever else descends from it, so a `Part` is offered `Seat`
 /// and `SpawnLocation` (its own subclasses), then `WedgePart` (under
 /// `FormFactorPart`), then `MeshPart` and `TrussPart` (under `BasePart`).
 ///
@@ -190,7 +190,7 @@ pub(crate) fn letters(query: &str) -> Vec<char> {
 }
 
 /// [`rank`] with everything that depends on one side only computed by the
-/// caller — `lower` and `words` once per name, `letters` once per query —
+/// caller, `lower` and `words` once per name, `letters` once per query,
 /// for the command palette, which ranks every instance in a place on each
 /// keystroke. With `scattered` false only the prefix and word-start tiers
 /// count: on long dotted paths nearly every query's letters appear
@@ -218,10 +218,10 @@ pub(crate) fn rank_split(
         .then_some(Tier::Scattered)
 }
 
-/// `class` split where a new word begins — at a capital after a lower-case
+/// `class` split where a new word begins, at a capital after a lower-case
 /// letter or digit, and at the last capital of a run followed by lower case
 /// (`UIListLayout` is `ui`, `list`, `layout`), and after anything that is
-/// not a letter or digit (`Save to File` is `save`, `to`, `file`) — each
+/// not a letter or digit (`Save to File` is `save`, `to`, `file`), each
 /// lower-cased, separators dropped.
 pub(crate) fn words(class: &str) -> Vec<Vec<char>> {
     let chars: Vec<char> = class.chars().collect();

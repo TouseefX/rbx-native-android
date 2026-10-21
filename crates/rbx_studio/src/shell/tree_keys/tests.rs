@@ -105,7 +105,7 @@ fn type_ahead_jumps_to_the_next_row_starting_with_what_was_typed() {
 }
 
 /// One letter pressed repeatedly walks the matches rather than sticking on
-/// the first — which is how every file manager behaves, and the only way a
+/// the first, which is how every file manager behaves, and the only way a
 /// single letter is useful in a tree with several `Part`s.
 #[test]
 fn repeating_one_letter_cycles_through_its_matches() {

@@ -4,8 +4,8 @@
 //! the script's `Source` is the one truth, the graph is imported from it,
 //! and an old `ScriptGraph` attribute is ignored.
 //!
-//! Only the data and its rules live here — what may connect to what, and
-//! what removing a node takes with it — so they can be tested without a
+//! Only the data and its rules live here, what may connect to what, and
+//! what removing a node takes with it, so they can be tested without a
 //! window. `shell::script_graph` draws and edits it.
 
 pub(crate) mod catalog;
@@ -244,7 +244,7 @@ impl Graph {
         false
     }
 
-    /// The nodes drawn wholly inside a group's frame — what moves with it.
+    /// The nodes drawn wholly inside a group's frame, what moves with it.
     pub(crate) fn nodes_within(&self, group: usize) -> Vec<NodeId> {
         let Some(group) = self.groups.get(group) else {
             return Vec::new();

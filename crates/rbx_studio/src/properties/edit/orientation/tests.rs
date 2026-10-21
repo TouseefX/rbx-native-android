@@ -30,7 +30,7 @@ fn an_unrotated_part_reads_as_three_zeroes() {
 }
 
 /// The single-axis cases, because getting the order wrong still produces
-/// plausible-looking angles — it just puts the part somewhere else. Each of
+/// plausible-looking angles, it just puts the part somewhere else. Each of
 /// these has an independently obvious matrix.
 #[test]
 fn a_quarter_turn_about_each_axis_is_the_matrix_it_should_be() {
@@ -72,7 +72,7 @@ fn every_angle_triple_survives_the_round_trip() {
 
 /// Gimbal lock: at `x = ±90°` the Y and Z rotations become the same degree
 /// of freedom, so the angles that come back need not be the ones that went
-/// in — but the *rotation* must still be the one that was asked for, and
+/// in, but the *rotation* must still be the one that was asked for, and
 /// the extraction must not produce NaN.
 #[test]
 fn a_gimbal_locked_rotation_still_round_trips_to_the_same_orientation() {

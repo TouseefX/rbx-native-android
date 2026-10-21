@@ -11,7 +11,7 @@ use super::MeshData;
 /// `Enum.Style`: AlternatingSupports=0 (default), BridgeStyleSupports=1,
 /// NoSupports=2.
 // Every variant ends in "Supports" because that is Enum.Style's own naming
-// (AlternatingSupports, BridgeStyleSupports, NoSupports) — matching it verbatim
+// (AlternatingSupports, BridgeStyleSupports, NoSupports), matching it verbatim
 // is more useful here than a shorter name clippy would prefer.
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -133,7 +133,7 @@ fn rotate(mut mesh: MeshData, by: impl Fn(Vec3) -> Vec3) -> MeshData {
 /// The Y/Z offsets stay fixed to those axes rather than to whatever is
 /// perpendicular to `p1 - p0`: a brace's own direction always has some X
 /// component (it is diagonal), and offsetting perpendicular to that would
-/// smear part of the thickness onto X — a small amount in this unit mesh, but
+/// smear part of the thickness onto X, a small amount in this unit mesh, but
 /// one that [`oriented`]'s scale-by-`size` later multiplies by the part's
 /// whole long-axis length, overshooting well past the bar's own endpoints.
 /// Keeping every offset in the cross-section plane rules that out entirely.
@@ -237,9 +237,9 @@ mod tests {
         }
     }
 
-    // No fixture has a TrussPart to screenshot (see AGENTS.md's fixture list),
+    // No fixture has a TrussPart to screenshot (see `assets/tests/`),
     // so this dumps the unit mesh alone as an OBJ for manual inspection in any
-    // 3D viewer — run with `cargo test -p rbx_viewer -- --ignored truss_obj`.
+    // 3D viewer, run with `cargo test -p rbx_viewer -- --ignored truss_obj`.
     #[test]
     #[ignore]
     fn truss_obj_dump() {

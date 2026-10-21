@@ -15,7 +15,7 @@ pub(super) const PROPERTY: &str = "MaterialColors";
 const TERRAIN: &str = "Terrain";
 
 /// The wire id XML's `BinaryString` round-trips, so a written blob saves as
-/// one in either format — the same reasoning as
+/// one in either format, the same reasoning as
 /// `attributes::STRING_TYPE_ID`. A `Variant::String` cannot hold it: the
 /// bytes are rarely valid UTF-8.
 const STRING_TYPE_ID: u8 = 0x01;

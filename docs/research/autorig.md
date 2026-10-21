@@ -1,6 +1,6 @@
 # Auto-rigger spec: fitting an R15 skeleton to an unrigged humanoid mesh
 
-> **Note.** This is the research spec written *before* `crates/rbx_autorig` and the viewer's skinning were built. For what exists now, see [`animation-handoff.md`](animation-handoff.md). The `/tmp/claude-0/...` and `scratchpad/` paths below are where the sources were read during that research session. They don't exist in the repository; the upstream URLs next to them do.
+> **Note.** This is the research spec written *before* `crates/rbx_autorig` and the viewer's skinning were built. For what exists now, read the code and [ROADMAP.md](../../ROADMAP.md).
 
 Researched 2026-10-11 for rbx-native. No repository files were changed.
 
@@ -8,19 +8,19 @@ Researched 2026-10-11 for rbx-native. No repository files were changed.
 
 | Tag | What it is |
 |---|---|
-| `CD:` | Roblox/creator-docs `main`, local clone at `/tmp/claude-0/research/creator-docs/content/en-us/`. Upstream: `https://github.com/Roblox/creator-docs/tree/main/content/en-us/`. |
-| `CDH:` | creator-docs history clone at `/tmp/claude-0/research/creator-docs-hist` (HEAD `af5f853c`, 2026-10-10). Older files are read with `git show <rev>:<path>`. |
-| `API:` | Engine class reference YAMLs fetched 2026-10-11 from `raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/<Class>.yaml`. Saved in `/tmp/claude-0/research/raw3/` and `/tmp/claude-0/research/raw/`. |
-| `DUMP:` | `/tmp/claude-0/research/raw/Full-API-Dump-latest.json` (Studio 0.742, from the MaximumADHD client-tracker mirror; see `animation-research.md`). |
-| `REPO:` | This repository, `/home/user/rbx-native/crates/...`. |
-| `RE:` | Public reverse-engineering code, cloned or fetched into `/tmp/claude-0/research/raw3/mesh/`: |
+| `CD:` | Roblox/creator-docs `main`. Upstream: `https://github.com/Roblox/creator-docs/tree/main/content/en-us/`. |
+| `CDH:` | creator-docs history (HEAD `af5f853c`, 2026-10-10). Older files are read with `git show <rev>:<path>`. |
+| `API:` | Engine class reference YAMLs fetched 2026-10-11 from `raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/<Class>.yaml`. |
+| `DUMP:` | The full API dump (Studio 0.742, from the MaximumADHD client-tracker mirror; see [`animation.md`](animation.md)). |
+| `REPO:` | This repository, `crates/...`. |
+| `RE:` | Public reverse-engineering code: |
 | | `MaximumADHD/Roblox-Utils` `Modules/RobloxMesh/init.luau` @ `5926d8b5`, the most complete public reader (v1–v7, skinning, FACS) |
 | | `AntiBoomz/BTRoblox` `js/rbx/Parser/MeshParser.js` @ `7f0cc7a7` |
 | | `krakow10/rbx_mesh` (Rust, binrw) `src/mesh/v4.rs`, `v5.rs` @ `0398e5da` |
 | | `MaximumADHD/Rbx2Source` `Geometry/Mesh.cs` @ `0f8fe7c4` |
 | | `steinann/RoAvatar-Renderer` @ `c11bfe0f` (three.js avatar renderer) |
-| `EMP:` | My own measurement, by parsing a real mesh file (scripts in the session scratchpad). |
-| `PIN:` | Pinocchio reference source, `pmolodo/Pinocchio` @ `14fe424b`, cloned to `/tmp/claude-0/research/raw3/papers/Pinocchio`. |
+| `EMP:` | My own measurement, by parsing a real mesh file. |
+| `PIN:` | Pinocchio reference source, `pmolodo/Pinocchio` @ `14fe424b`. |
 
 **Not reachable from this sandbox:** devforum.roblox.com, web.archive.org, about.roblox.com, people.csail.mit.edu, homes.cs.washington.edu and alecjacobson.com. Those pages are cited only through search-result summaries, and each such citation is marked **(secondary)**.
 
@@ -204,7 +204,7 @@ Useful ratios (Mannequin):
 - **[REPO]** The joint instance is parented to **Part1** on R15 (to Part0 on R6) (`layout.rs` `JointSpec.host`).
 - **[REPO/DOC] C0 and C1:**
   - `C0 = Part0.<Joint>RigAttachment.CFrame` and `C1 = Part1.<Joint>RigAttachment.CFrame`.
-  - The rest relation is `Part1.CFrame = Part0.CFrame · C0 · Transform · C1⁻¹` (`REPO: rig/cframe.rs::joined`; `animation-research.md` §7).
+  - The rest relation is `Part1.CFrame = Part0.CFrame · C0 · Transform · C1⁻¹` (`REPO: rig/cframe.rs::joined`; [`animation.md`](animation.md) §7).
   - For AnimationConstraint, `C0, C1, Part0, Part1` "map to `Attachment0.CFrame`, `Attachment1.CFrame`, `Attachment0.Parent`, `Attachment1.Parent`" (`API: AnimationConstraint.yaml`).
 - **[DOC] Motor6D vs AnimationConstraint.**
   - AnimationConstraint is "the default joint type for R15 avatar rigs". With `StarterPlayer.AvatarJointUpgrade` (default for new experiences), player characters spawn with AnimationConstraints instead of Motor6Ds (`API: Motor6D.yaml`, `AnimationConstraint.yaml`).
@@ -290,12 +290,12 @@ Points that are still open:
 ### 2.3 Animating Bones
 
 - **[DOC]** `Bone.Transform` (CFrame, NotReplicated): "Roblox uses the offset of the bones from the default pose to drive an animation … you can use `Bone.Transform` in the same way as `Motor6D.Transform`" (`API: Bone.yaml`). `Bone` inherits `Attachment`, so `Bone.CFrame` is its rest offset.
-- **[DOC/REPO]** Keyframe `Pose`s and CurveAnimation folders are matched by name and can drive Bones as well as Motor6Ds (`animation-research.md` §4, from DUMP; Animation Editor "Select a Bone or MeshPart").
+- **[DOC/REPO]** Keyframe `Pose`s and CurveAnimation folders are matched by name and can drive Bones as well as Motor6Ds ([`animation.md`](animation.md) §4, from DUMP; Animation Editor "Select a Bone or MeshPart").
   - **[INFERRED]** A KeyframeSequence Pose named after a Bone, nested under the Pose of the part (or Bone) it hangs from, drives that Bone's `Transform`.
 
 ### 2.4 How skinned R15 and Motor6D coexist
 
-**[EMP]** I parsed a real Roblox dynamic-head mesh: `version 5.00`, asset `13674780763`, from the krakow10 sample set (`scratchpad/skin45.py`). Findings:
+**[EMP]** I parsed a real Roblox dynamic-head mesh: `version 5.00`, asset `13674780763`, from the krakow10 sample set. Findings:
 
 - **Bone table.** It holds **38 bones**:
   - The full ancestor chain: `Root`, `HumanoidRootNode`, `LowerTorso`, `UpperTorso`, `Head`.
@@ -323,7 +323,7 @@ Points that are still open:
 - 15 separate, capped MeshParts joined by Motor6D/AnimationConstraint (A),
 - each skinned with ≤ 4 influences to part-named bones (B), so joints bend smoothly instead of hinging.
 
-Roblox's own Avatar Setup does this: it "Adds a R15 rigging armature", "Skinning — Adds weights and influences", and "Partitioning — Separates the body mesh into the appropriate 15 body parts" (`CD:avatar-setup/index.md`).
+Roblox's own Avatar Setup does this: it "Adds a R15 rigging armature", "Skinning, Adds weights and influences", and "Partitioning, Separates the body mesh into the appropriate 15 body parts" (`CD:avatar-setup/index.md`).
 
 A single unsplit skinned mesh (an "R1" mesh in `CD:art/modeling/rigging.md` terms) is also legal, but:
 - It is not an avatar body. Validation, `HumanoidDescription` and body-part swapping all need 15 parts.
@@ -721,7 +721,7 @@ Parameters from Maya `geomBind` docs (`FXTD-ODYSSEY/MayaDoc` `CommandsPython/geo
 | … `build.rs` | Instances in reference order: Motor6D (C0/C1) or AnimationConstraint + BallSocket + NoCollision; Humanoid (RigType, HipHeight, scale values, HumanoidDescription); MeshPart dressing (`MeshId`, `InitialSize`, `OriginalSize`, `AvatarPartScaleType`, `WrapTarget`, `SurfaceAppearance`, `FaceControls`). |
 | … `bundle.rs` | `Piece` = one body part's mesh + `init` size + rig attachments + extra attachments. `RigOptions.pieces` is explicitly "a player's own packages replace stock entries". **This is the integration point**: the auto-rigger can produce 15 `Piece`s and call `build_rig` unchanged. |
 | … `bones.rs` | Adds the 37 optional hidden `Bone`s (Mannequin offsets). A template for "advanced R15" bone placement in our output. |
-| `rbx_import` | Reads `.fbx` (fbxcel tree; **triangle counts only**, no geometry), `.gltf/.glb` (`gltf` crate; mesh triangle counts), `.obj` → glTF (`tobj`; positions, normals, UVs, no materials). `prepare()` returns the upload bytes. **Missing:** full geometry and skin readout from FBX. Options: extend the fbxcel walker (Vertices / PolygonVertexIndex / LayerElementUV / Deformer-Cluster) or adopt `ufbx` (C library, already evaluated in `animation-research.md` §7c; local copy `/tmp/claude-0/research/ext/ufbx-rust`). |
+| `rbx_import` | Reads `.fbx` (fbxcel tree; **triangle counts only**, no geometry), `.gltf/.glb` (`gltf` crate; mesh triangle counts), `.obj` → glTF (`tobj`; positions, normals, UVs, no materials). `prepare()` returns the upload bytes. **Missing:** full geometry and skin readout from FBX. Options: extend the fbxcel walker (Vertices / PolygonVertexIndex / LayerElementUV / Deformer-Cluster) or adopt `ufbx` (C library, already evaluated in [`animation.md`](animation.md) §7c). |
 | `rbx_studio/src/shell/import3d.rs` | Open Cloud model upload (`rbx_cloud::create_model_asset`), download of the created model, and placement in Workspace. `RBX_STUDIO_IMPORT_MOCK=<rbxm>` substitutes a local model for upload and download. The auto-rigger's "Publish" step should reuse this with its own glTF. |
 | `rbx_studio/src/freeze/` | Prior art for "bake geometry → glTF → upload as Model → read back MeshId/InitialSize → verify proportions" (`mesh.rs`; `PROPORTION_TOLERANCE`; `RBX_STUDIO_FREEZE_MOCK`). It refuses skinned meshes (`has_bones`). |
 | `rbx_viewer/src/export` | glTF writer (`Export`, `ExportMesh`, `ExportNode`, `gltf_files`): positions, normals, tangents, UVs, maps. **No skin** (no `JOINTS_0`/`WEIGHTS_0`/`skins`/`inverseBindMatrices`). Option B needs these added: node per bone named `Root`, `HumanoidRootNode`, `LowerTorso`, …; meshes named `<Part>_Geo`; one skin. |

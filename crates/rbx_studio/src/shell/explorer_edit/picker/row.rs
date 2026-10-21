@@ -26,7 +26,7 @@ pub(in crate::shell) fn insert_button(shell: &Entity<Shell>, reference: Ref) -> 
     )
     // The press must not reach the row underneath. Letting it through
     // selects the row, and the toolkit scrolls a freshly selected row into
-    // view — which slides this button out from under the pointer between
+    // view, which slides this button out from under the pointer between
     // the press and the release, so the click never completes. The picker
     // is told which row it is inserting under anyway, so there is nothing
     // the selection is needed for here.
@@ -40,8 +40,8 @@ pub(in crate::shell) fn insert_button(shell: &Entity<Shell>, reference: Ref) -> 
 }
 
 /// How far a refused row's icon is faded. A kit tile carries its own
-/// colours — the colour *is* the identity, so it is never re-tinted (see
-/// `UX_GUIDELINES.md` §5) — and a greyed label beside a full-strength icon
+/// colours, the colour *is* the identity, so it is never re-tinted (see
+/// `UX_GUIDELINES.md` §5), and a greyed label beside a full-strength icon
 /// reads as a half-disabled row. Fading is the one treatment that works on
 /// a multi-colour sprite and on a Lucide glyph alike, and this much still
 /// leaves the shape readable.
@@ -74,7 +74,7 @@ pub(super) fn caption(text: &'static str) -> AnyElement {
 }
 
 /// One class in the list, with the same identity icon the Explorer draws
-/// for an instance of it. A refused class is greyed — label *and* icon —
+/// for an instance of it. A refused class is greyed, label *and* icon,
 /// and inert rather than missing, with the reason on hover: the point of
 /// the whole affordance (see this module's own comment). The highlighted
 /// row wears the hover wash, since it is the row a keypress acts on.

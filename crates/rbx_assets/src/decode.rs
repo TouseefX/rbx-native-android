@@ -21,7 +21,7 @@ pub fn decode_image(asset: &Asset) -> Result<RgbaImage, AssetError> {
 }
 
 /// The width and height `bytes` decode to, read off the image's header
-/// without decoding it — what the viewer's decoded copy of it will measure,
+/// without decoding it, what the viewer's decoded copy of it will measure,
 /// for a caller that only needs the size. `None` for anything
 /// [`decode_image`] would refuse.
 pub fn image_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {

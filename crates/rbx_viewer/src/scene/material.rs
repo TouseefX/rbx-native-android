@@ -6,8 +6,8 @@
 //! distinct material in a scene becomes one [`Slot`], whose `layer` is the
 //! texture-array layer the renderer gives it.
 //!
-//! A `MeshPart` wearing a `SurfaceAppearance` still gets a slot here — its
-//! `Kind` is what keeps Neon and ForceField procedural — but none of its maps
+//! A `MeshPart` wearing a `SurfaceAppearance` still gets a slot here, its
+//! `Kind` is what keeps Neon and ForceField procedural, but none of its maps
 //! are projected: see `scene::filemesh::appearance`.
 
 use std::collections::BTreeMap;
@@ -137,8 +137,8 @@ impl Catalog {
     /// Read off the layer's own maps rather than remembered, so that asking
     /// again after more of them have landed answers the newer truth. A
     /// demotion written into the definition would be permanent, and a
-    /// streaming load — which asks once with nothing resolved and again with
-    /// everything — would leave every material plastic forever.
+    /// streaming load, which asks once with nothing resolved and again with
+    /// everything, would leave every material plastic forever.
     pub(crate) fn slot(&self, layer: u32) -> Slot {
         let Some(def) = self.defs.get(layer as usize) else {
             return Slot::plastic();
@@ -154,7 +154,7 @@ impl Catalog {
         }
     }
 
-    /// Whether any of a layer's maps actually decoded — with `--no-materials`,
+    /// Whether any of a layer's maps actually decoded, with `--no-materials`,
     /// or with no network, that is none of them for every layer.
     fn has_maps(&self, def: &Def) -> bool {
         def.maps
@@ -175,7 +175,7 @@ impl Catalog {
     }
 
     /// Joins the layers to whatever downloaded. A textured layer left without a
-    /// map falls back to plastic — with `--no-materials`, or with no network,
+    /// map falls back to plastic, with `--no-materials`, or with no network,
     /// that is every one of them; see [`Catalog::slot`], which is where that
     /// fallback is decided rather than written down.
     pub(crate) fn resolve(&mut self, images: HashMap<AssetRef, Arc<Image>>) {
@@ -186,7 +186,7 @@ impl Catalog {
         self.defs.len()
     }
 
-    /// One layer's maps, for a caller that has to fetch them — a single-part
+    /// One layer's maps, for a caller that has to fetch them, a single-part
     /// edit naming a material the place had not used before, whose pack is
     /// not resident and has to be asked for.
     pub(crate) fn maps_of(&self, layer: u32) -> Vec<AssetRef> {
@@ -197,7 +197,7 @@ impl Catalog {
     }
 
     /// Every layer's maps in layer order, `None` where a layer has no such map
-    /// or its download failed — which is exactly, and only, what
+    /// or its download failed, which is exactly, and only, what
     /// `renderer::material` reads through [`Catalog::image`] when it uploads
     /// the texture arrays. Two catalogs answering the same thing would upload
     /// identical texels, so a scene rebuild compares this before deciding
@@ -223,7 +223,7 @@ impl Catalog {
     }
 
     /// [`Catalog::image`] as the shared handle itself, for a holder that
-    /// outlives the catalog — an export's (see `crate::pick::Meshes`).
+    /// outlives the catalog, an export's (see `crate::pick::Meshes`).
     pub(crate) fn shared_image(&self, layer: usize, kind: MapKind) -> Option<&Arc<Image>> {
         let reference = self.defs.get(layer)?.maps[kind.index()].as_ref()?;
         self.images.get(reference)
@@ -313,7 +313,7 @@ fn builtin(name: &str, set: Set) -> Def {
     }
 }
 
-/// Reads `MaterialService`, which a place file may leave out entirely — in
+/// Reads `MaterialService`, which a place file may leave out entirely, in
 /// which case every part is a built-in 2022 material.
 pub(super) fn service(dom: &WeakDom, database: &ReflectionDatabase) -> Service {
     let mut service = Service {
@@ -371,7 +371,7 @@ pub(super) fn service(dom: &WeakDom, database: &ReflectionDatabase) -> Service {
 /// One `MaterialVariant`: its own maps over its `BaseMaterial`'s flavour.
 ///
 /// Maps it leaves empty stay empty rather than falling back to the base
-/// material's own pack — Studio requires a colour and a normal map to create
+/// material's own pack, Studio requires a colour and a normal map to create
 /// one, so a missing map is the author saying "none", not "inherit".
 fn variant(properties: &BTreeMap<String, Variant>, database: &ReflectionDatabase) -> Def {
     let base = match properties.get("BaseMaterial") {

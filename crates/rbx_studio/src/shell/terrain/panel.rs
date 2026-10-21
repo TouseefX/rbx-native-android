@@ -1,5 +1,5 @@
 //! The Terrain Editor dock: Create and Edit tabs, the tools of the tab
-//! showing, and the settings of the tool in use — laid out after
+//! showing, and the settings of the tool in use, laid out after
 //! `terrain-editor.md`'s own per-tool tables.
 
 mod brush;

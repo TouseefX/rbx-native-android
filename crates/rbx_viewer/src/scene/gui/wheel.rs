@@ -18,13 +18,13 @@ use super::layout::Rect;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ScrollWindow {
     pub(crate) referent: Ref,
-    /// The window the canvas shows through — not the frame, which a bar
+    /// The window the canvas shows through, not the frame, which a bar
     /// inset makes wider than the window.
     pub(crate) rect: Rect,
     /// The scissor the frame itself is drawn under: a frame scrolled out of
     /// its parent's window is not under the cursor, whatever its rect says.
     pub(crate) clip: Option<Rect>,
-    /// How far `CanvasPosition` can go along each axis — `[0, range]`; zero
+    /// How far `CanvasPosition` can go along each axis, `[0, range]`; zero
     /// where the canvas fits the window, `ScrollingDirection` excludes the
     /// axis or `ScrollingEnabled` is off.
     pub(crate) range: [f32; 2],
@@ -38,7 +38,7 @@ pub struct ScrollTarget {
     pub range: f32,
 }
 
-/// The innermost of `windows` — the last in paint order — under `point` that
+/// The innermost of `windows`, the last in paint order, under `point` that
 /// can scroll along `axis` (0 across, 1 down). A frame that cannot is looked
 /// through, so the wheel over a fitted list still scrolls the list around it.
 ///

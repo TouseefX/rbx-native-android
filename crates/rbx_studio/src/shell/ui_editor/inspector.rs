@@ -1,11 +1,11 @@
 //! The canvas sidebar's design fields, Figma's: a `GuiObject`'s position,
 //! size, rotation, opacity, corner radius, fill, stroke, effects, auto
 //! layout and constraints as compact fields that write straight through
-//! `Shell::write_drag` — one undo step per typed value, per colour picked,
+//! `Shell::write_drag`: one undo step per typed value, per colour picked,
 //! per drag of a field's label.
 //!
-//! Where Roblox keeps the look on a modifier rather than on the element —
-//! a `UICorner`'s radius, a `UIStroke`, a `UIListLayout`'s gap — the field
+//! Where Roblox keeps the look on a modifier rather than on the element,
+//! a `UICorner`'s radius, a `UIStroke`, a `UIListLayout`'s gap, the field
 //! reads that child, and an edit makes it when it is missing: a rounded
 //! corner is one drag, not an insert, a select and a property row.
 //!
@@ -41,7 +41,7 @@ pub(super) use view::{caption, line, section};
 /// A label drag in flight.
 struct Drag {
     key: Key,
-    /// Where the label was grabbed, in window pixels — `None` for a drag
+    /// Where the label was grabbed, in window pixels, `None` for a drag
     /// the canvas drives (a radius handle, a band), which the window's own
     /// mouse move must leave alone.
     origin: Option<f32>,
@@ -49,12 +49,12 @@ struct Drag {
     last: f32,
     first: bool,
     /// The log of the step that made the modifier the drag writes to, when
-    /// it did — see `Shell::write_drag_after`.
+    /// it did, see `Shell::write_drag_after`.
     opened: Vec<Change>,
 }
 
 /// The fields' own editing state, kept between frames and dropped on every
-/// selection change — a half-typed value must not land on what is
+/// selection change, a half-typed value must not land on what is
 /// selected next.
 #[derive(Default)]
 pub(super) struct Inspector {
@@ -120,7 +120,7 @@ impl Shell {
             .filter(move |&child| self.dom.get(child).is_some_and(|i| i.class() == class))
     }
 
-    /// `property`'s numbers on `referent` — its own value, or its class's
+    /// `property`'s numbers on `referent`: its own value, or its class's
     /// default where it stores none.
     fn numbers(&self, referent: Ref, property: &str) -> Option<Vec<f32>> {
         let instance = self.dom.get(referent)?;
@@ -168,7 +168,7 @@ impl Shell {
         Some(readings.all(|other| other == first).then_some(first))
     }
 
-    /// The writes that put `value` — in the field's own terms — on every
+    /// The writes that put `value`, in the field's own terms, on every
     /// inspected element's `key`, and the elements that need the modifier
     /// it lives on made first.
     fn key_writes(&self, key: Key, value: &[f32]) -> (super::tree::Writes, Vec<Ref>) {
@@ -199,8 +199,8 @@ impl Shell {
         (writes, missing)
     }
 
-    /// Writes `value` to `key` — the step of a drag, or with `first` an edit
-    /// of its own — making the modifier it lives on wherever it is missing.
+    /// Writes `value` to `key`: the step of a drag, or with `first` an edit
+    /// of its own, making the modifier it lives on wherever it is missing.
     fn commit_key(&mut self, key: Key, value: Vec<f32>, first: bool, cx: &mut Context<Self>) {
         let (writes, missing) = self.key_writes(key, &value);
         let spec = self.spec(key);
@@ -274,7 +274,7 @@ impl Shell {
         });
     }
 
-    /// One step of a label drag, from the window's own mouse move — the
+    /// One step of a label drag, from the window's own mouse move, the
     /// pointer leaves the sidebar long before a long drag is over.
     pub(in crate::shell) fn drag_inspector(
         &mut self,
@@ -303,8 +303,8 @@ impl Shell {
         self.drag_value_to(value, cx);
     }
 
-    /// Opens a drag of `key` from the canvas — a corner's radius, a gap, a
-    /// side of the padding — from what it reads, or nothing where the
+    /// Opens a drag of `key` from the canvas, a corner's radius, a gap, a
+    /// side of the padding, from what it reads, or nothing where the
     /// modifier it lives on is not there yet. Where it starts is returned.
     pub(super) fn begin_value_drag(&mut self, key: Key) -> f32 {
         let start = match self.reading(key) {

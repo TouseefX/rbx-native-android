@@ -9,7 +9,7 @@ fn arguments(values: &[&str]) -> Vec<String> {
 }
 
 /// The parsed arguments, or a panic naming which of the two other outcomes
-/// came back instead — every test below but the `--help` and error ones wants
+/// came back instead, every test below but the `--help` and error ones wants
 /// a place to open.
 fn open(values: &[&str]) -> Arguments {
     open_with_default(values, QualityLevel::Automatic)

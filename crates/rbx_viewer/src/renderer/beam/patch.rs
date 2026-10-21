@@ -10,13 +10,13 @@ use super::Beams;
 use crate::scene::Beam;
 
 impl Beams {
-    /// Replaces the beam set with `beams` — the scene's freshly re-planned
+    /// Replaces the beam set with `beams`: the scene's freshly re-planned
     /// list (see `Scene::replan_effect`). Nothing carries over per beam: a
     /// ribbon is rebuilt from its definition every frame (see [`Beams::draw`]),
     /// so the next frame simply draws the new set.
     ///
     /// A beam whose texture this pass has no upload for draws on the flat
-    /// white slot — the solid line Roblox itself falls back to — whether that
+    /// white slot, the solid line Roblox itself falls back to, whether that
     /// image failed to decode or has simply not arrived yet. The loader is the
     /// only thing that fetches one (see `load::fetcher`), a `Texture` edit
     /// naming a new one has already asked it to, and the rebuild that follows

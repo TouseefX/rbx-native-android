@@ -17,7 +17,7 @@ use super::stats;
 /// A switch costs well under a frame (see [`Headless::set_quality`]), but the
 /// frame it lands in still carries it, and the one after it re-primes the driver's
 /// caches. Feeding those two to the manager would read as a slow patch and walk
-/// the level straight back down, so they are skipped — a sixteenth of a second at
+/// the level straight back down, so they are skipped, a sixteenth of a second at
 /// worst, against a level that would otherwise oscillate.
 const SETTLE_FRAMES: u8 = 3;
 
@@ -33,7 +33,7 @@ pub(super) struct Quality {
 }
 
 impl Quality {
-    /// `budget` is what one frame is paced to — the display's refresh interval,
+    /// `budget` is what one frame is paced to, the display's refresh interval,
     /// which is therefore the frame rate the manager aims to hold.
     pub(super) fn new(mode: QualityLevel, budget: Duration, viewer: &mut Headless) -> Self {
         let mut quality = Quality {

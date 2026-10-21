@@ -5,7 +5,7 @@
 //! docked path uses, so a floating Explorer is the Explorer rather than a
 //! second one that has to be kept in step. That is the rule the sequence
 //! graph window already follows (`crate::sequence_window`), for the same
-//! reason — two copies of a panel is two panels disagreeing.
+//! reason, two copies of a panel is two panels disagreeing.
 //!
 //! Which panels are torn out is [`super::layout::Layout`]'s to say. This
 //! module only keeps the open windows matching it: [`Shell::sync_panel_windows`]
@@ -124,12 +124,12 @@ impl Shell {
     ///
     /// Driven from the shell's own render rather than from the transforms
     /// that move a panel, so that a layout restored from the settings file
-    /// opens its windows too — a floating panel that only appeared once
+    /// opens its windows too, a floating panel that only appeared once
     /// you floated it *again* would be a panel the editor lost on restart.
     ///
     /// **Deferred**, and that is not a detail. Opening a window renders it
     /// immediately, and this window's content is the shell itself
-    /// ([`PanelWindow::render`] asks it for the panel's parts) — so
+    /// ([`PanelWindow::render`] asks it for the panel's parts), so
     /// opening one straight from `Shell::render` re-enters `Shell::update`
     /// and GPUI panics with "cannot update while it is already being
     /// updated". Running it after the frame costs nothing and is the whole
@@ -137,7 +137,7 @@ impl Shell {
     /// Brings every torn-out dock up with the window it belongs to.
     ///
     /// `WindowKind::Floating` asks the platform to keep these above the
-    /// editor, and on X11 a window manager is free to ignore it — which
+    /// editor, and on X11 a window manager is free to ignore it, which
     /// leaves a dock you tore out sitting behind the window you tore it
     /// out of. Raising them on the main window's own rising edge is the
     /// part this app can do for itself. Only on the *edge*: raising them

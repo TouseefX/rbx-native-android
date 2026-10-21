@@ -1,7 +1,7 @@
 //! The review prompt's data: the pending batch read back out as a tree
 //! the Diff window can draw. Every "before" comes from the DOM as it is
-//! now — nothing in a pending review has been applied yet, so the DOM
-//! *is* the before state — and the window rebuilds this per batch, never
+//! now, nothing in a pending review has been applied yet, so the DOM
+//! *is* the before state, and the window rebuilds this per batch, never
 //! keeping a copy the batch could drift from.
 
 use std::collections::BTreeMap;
@@ -38,7 +38,7 @@ impl Ids {
 
 impl Shell {
     /// The pending batch as a tree, or nothing once no review is pending
-    /// — including right after Accept or Cancel, which is what tells the
+    /// including right after Accept or Cancel, which is what tells the
     /// Diff window to close itself.
     pub(in crate::shell) fn argon_diff_nodes(&self) -> Vec<DiffNode> {
         let Some(pending) = &self.argon.pending else {
@@ -155,7 +155,7 @@ impl Shell {
     }
 
     /// `RBX_STUDIO_ARGON_DIFF=1` opens the Diff window on the batch
-    /// [`Shell::seed_debug_diff_pending`] builds — a real one only exists
+    /// [`Shell::seed_debug_diff_pending`] builds, a real one only exists
     /// after a live `argon serve` session pushes enough changes at once,
     /// which nothing else can arrange on the editor's behalf, the same
     /// reason every other `RBX_STUDIO_*` var exists.
@@ -168,7 +168,7 @@ impl Shell {
     }
 
     /// The review prompt's Diff button: opens the detail window
-    /// (`shell::argon_diff_window`), or raises it if one is already open —
+    /// (`shell::argon_diff_window`), or raises it if one is already open,
     /// there is only ever one review pending at a time, so a second window
     /// would just be the same rows twice.
     pub(in crate::shell) fn open_argon_diff(&mut self, cx: &mut Context<Self>) {
@@ -179,7 +179,7 @@ impl Shell {
         let shell = cx.entity();
         // Deferred for the same reason `open_sequence_editor` defers: this
         // runs inside the click handler's own `Shell` update, and opening a
-        // window renders it immediately — reading the entity that update is
+        // window renders it immediately, reading the entity that update is
         // still holding is a panic, not something the compiler catches.
         cx.defer(move |cx| {
             let opened = crate::shell::argon_diff_window::ArgonDiffWindow::open(shell.clone(), cx);
@@ -189,7 +189,7 @@ impl Shell {
 }
 
 /// An addition and its subtree, numbered depth-first in the server's
-/// order — the order the list shows.
+/// order, the order the list shows.
 fn added_node(snapshot: &Snapshot, path: String, ids: &mut Ids) -> DiffNode {
     let id = ids.next();
     let is_script = is_script_class(&snapshot.class);
@@ -244,7 +244,7 @@ fn string_of(value: Option<&Variant>) -> Option<String> {
     }
 }
 
-/// One addition's own subtree, minus its own root — a row's "+N nested".
+/// One addition's own subtree, minus its own root, a row's "+N nested".
 pub(super) fn count_descendants(children: &[Snapshot]) -> usize {
     children
         .iter()

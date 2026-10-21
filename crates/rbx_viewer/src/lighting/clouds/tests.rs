@@ -2,7 +2,7 @@ use super::*;
 use rbx_dom::{Instance, Ref, Variant};
 
 /// A `Terrain` carrying one `Clouds` child at most, in order, parented under
-/// a `Workspace` — `read` only ever looks there now (see [`super::read`]).
+/// a `Workspace`: `read` only ever looks there now (see [`super::read`]).
 fn terrain_with(children: &[(&str, &[(&str, Variant)])]) -> WeakDom {
     let mut dom = WeakDom::new();
     let workspace_ref = Ref::new(1);

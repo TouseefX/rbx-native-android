@@ -30,11 +30,11 @@ mod tests;
 
 /// The property a viewport move or rotation writes. A move gives it three
 /// numbers and a rotation nine, and `properties::edit::commit` carries the
-/// half that was left out through untouched — which is what keeps a dragged
+/// half that was left out through untouched, which is what keeps a dragged
 /// part facing the way it was, and a turned one standing where it was.
 pub(super) const CFRAME_PROPERTY: &str = "CFrame";
 /// Roblox's binary format spells `BasePart.Size` lowercase, which is the name
-/// the DOM keeps — see `rbx_viewer::pick::model_of`, which reads the same pair.
+/// the DOM keeps, see `rbx_viewer::pick::model_of`, which reads the same pair.
 pub(super) const SIZE_PROPERTY: &str = "size";
 
 impl Shell {
@@ -84,7 +84,7 @@ impl Shell {
     }
 
     /// Cursor motion with nothing held: outlines the nearest `BasePart`
-    /// under `ray`, distinctly from the selection outline — Studio's "about
+    /// under `ray`, distinctly from the selection outline, Studio's "about
     /// to click" cue (see `ViewportAction::Hover`'s own doc comment for what
     /// `None` means).
     ///
@@ -116,7 +116,7 @@ impl Shell {
                 // all: a plain hover previews the enclosing `Model` a plain
                 // click would take, and an `Alt` hover previews the *next*
                 // part `Alt`-click cycling would land on from the current
-                // selection — so the cue tracks the cycle rather than always
+                // selection, so the cue tracks the cycle rather than always
                 // showing the nearest hit. That last part is what makes the
                 // preview work with the camera inside a part: the surrounding
                 // part is the nearest hit (distance zero), and only cycling
@@ -136,7 +136,7 @@ impl Shell {
                     },
                 };
                 // Studio's hover ruler measures the face of whatever the
-                // cursor is over — selected or not — once there is something
+                // cursor is over, selected or not, once there is something
                 // selectable there at all.
                 target = hits.first().and_then(|&part| {
                     let surface = PartSurface::read(&self.dom, &self.database, &meshes, part)?;
@@ -180,8 +180,8 @@ impl Shell {
 
     /// A click in the 3D view: select whatever it resolves to, clear the
     /// selection when it resolves to nothing (clicking the sky deselects, the
-    /// same as clicking empty space in the Explorer would), or — with
-    /// `extend` (`Shift`/`Ctrl`/`Cmd` held) — add it to or remove it from the
+    /// same as clicking empty space in the Explorer would), or, with
+    /// `extend` (`Shift`/`Ctrl`/`Cmd` held), add it to or remove it from the
     /// selection instead, leaving an empty-space click with the modifier held
     /// alone rather than clearing everything a Studio user did not ask to
     /// drop.
@@ -189,7 +189,7 @@ impl Shell {
     /// With `held`, the view has a Move body-drag waiting on this same click
     /// (see `ViewportAction::Pick`): it goes ahead, and the selection stays
     /// as it is, only when the part actually under the cursor is already
-    /// selected — itself, or through a selected `Model` — the way Studio
+    /// selected, itself, or through a selected `Model`, the way Studio
     /// drags a selected object from any point on it. Anything nearer takes
     /// the click as an ordinary pick instead.
     fn pick_in_viewport(
@@ -279,7 +279,7 @@ impl Shell {
     ) {
         let posed = self.pose_in();
         let settled = settle.and_then(|settle| {
-            // Same render-thread mesh handle `pick_in_viewport` reads — a
+            // Same render-thread mesh handle `pick_in_viewport` reads, a
             // settle's own surface search needs to agree with what a click
             // would have hit.
             let viewport = self.viewport.read(cx);
@@ -319,8 +319,8 @@ impl Shell {
     /// One step of a Scale drag, for every part it carries. Two properties
     /// per part, because Studio's Scale tool holds the face opposite the
     /// grabbed one still: the part's `Size` grows and its `CFrame` shifts by
-    /// half of that growth — or, for a group scaled as a whole, by its
-    /// offset from the box's far face — and either one written without the
+    /// half of that growth, or, for a group scaled as a whole, by its
+    /// offset from the box's far face, and either one written without the
     /// other would show the part jumping.
     ///
     /// `pivot` is where the view scaled the selection's pivot to, when it
@@ -347,7 +347,7 @@ impl Shell {
     /// One step of a Rotate drag, for every part it carries: the rotation
     /// and the centre together, as the twelve numbers Roblox's own
     /// `CFrame.new(x, y, z, R00 … R22)` takes them in, row by row
-    /// (`creator-docs`, `reference/engine/datatypes/CFrame.yaml`) — a lone
+    /// (`creator-docs`, `reference/engine/datatypes/CFrame.yaml`), a lone
     /// part turning about itself keeps its centre, a part of a group swings
     /// round the group's.
     fn rotate_parts(&mut self, parts: &[(Ref, Mat3, Vec3)], first: bool, cx: &mut Context<Self>) {
@@ -379,7 +379,7 @@ impl Shell {
     }
 
     /// [`Shell::write_drag`] for a gesture whose opening step changed the
-    /// tree as well — the UI editor's scrub adding the `UICorner` it then
+    /// tree as well, the UI editor's scrub adding the `UICorner` it then
     /// rounds: `opened` is that step's log, kept at the head of every later
     /// step's so the one entry still undoes it.
     pub(super) fn write_drag_after(
@@ -432,8 +432,8 @@ impl Shell {
         );
         self.pose_out(posed);
         // Same reasoning as `move_parts`: overwrites the entry's log with
-        // just this step's writes — one `CFrame` per part for a Rotate,
-        // Size and CFrame per part for a Scale — one patch of each part
+        // just this step's writes, one `CFrame` per part for a Rotate,
+        // Size and CFrame per part for a Scale, one patch of each part
         // either way, here and on undo.
         let mut changes = self.dom.take_changes();
         // A posed limb dragged is a key, and the part goes back to rest.
@@ -448,13 +448,13 @@ impl Shell {
     }
 
     /// Hands the viewport the boxes a handle drag can soft-snap onto: every
-    /// drawn part in the workspace except whichever the selection carries — a
+    /// drawn part in the workspace except whichever the selection carries, a
     /// group drag carries all of them together, so none should pull the
     /// others.
     ///
     /// Only on a selection change, after an edit moved something other
     /// than the selection (see `Shell::reflect_changes`), and when the
-    /// Animation Editor stages or unstages a rig — never per mouse move:
+    /// Animation Editor stages or unstages a rig, never per mouse move:
     /// this walks the whole workspace, and during a drag nothing but the
     /// dragged parts is moving anyway.
     ///
@@ -470,7 +470,7 @@ impl Shell {
                     .any(|at| at == model)
             })
         };
-        // Everything the selection carries is left out — a selected
+        // Everything the selection carries is left out, a selected
         // `Model`'s own parts included, which `covered` holds and the
         // selection itself does not.
         let neighbours: Vec<Mat4> = pick::drawable_parts(&self.dom, &self.database)
@@ -518,8 +518,8 @@ fn cframe(orientation: Mat3, position: Vec3) -> String {
         .join(", ")
 }
 
-/// The three-number text `properties::edit::parse` reads a `Vector3` — or a
-/// `CFrame`'s position — back out of. `pub(super)`: also `shell::align`'s own
+/// The three-number text `properties::edit::parse` reads a `Vector3`: or a
+/// `CFrame`'s position, back out of. `pub(super)`: also `shell::align`'s own
 /// position writes, which commit through this exact same text-shaped path.
 pub(super) fn vector(value: Vec3) -> String {
     format!("{}, {}, {}", value.x, value.y, value.z)

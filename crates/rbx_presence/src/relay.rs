@@ -4,7 +4,7 @@
 //! owner sets it once (see [`crate::secret`], which keeps it beside the
 //! secret on `ServerStorage/RbxNativePresence`), and every collaborator
 //! reads it from the place and just clicks Connect. A place that names no
-//! relay falls back to the [`community`](RelayConfig::community) instance —
+//! relay falls back to the [`community`](RelayConfig::community) instance,
 //! best effort, no uptime promise.
 //!
 //! Three transports are supported, all official:

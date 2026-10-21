@@ -1,20 +1,20 @@
-//! This project's own class icons — flat, multi-colour SVGs shipped in
+//! This project's own class icons, flat, multi-colour SVGs shipped in
 //! `assets/icons/default/dark` and `assets/icons/default/light` (spec'd in
 //! `assets/icons/README.md`, gitignored working notes, not a shipped asset)
-//! — replacing the sprite sheet Roblox's own Studio ships, which this
+//! replacing the sprite sheet Roblox's own Studio ships, which this
 //! project no longer downloads or draws.
 //!
 //! Rasterized ourselves with `resvg` rather than painted through GPUI's own
 //! `svg()` element: that element is a monochrome icon renderer (it always
 //! recolors its SVG to one flat `text_color`, discarding whatever fill the
-//! file itself carries — fine for Lucide's single-color glyphs, wrong for
+//! file itself carries, fine for Lucide's single-color glyphs, wrong for
 //! this kit's palette), so the sliced-sprite path the old Roblox sheet used
 //! (`render_image::to_render_image`, painted with `img()`) is kept and fed
 //! from a rasterized SVG instead of a downloaded PNG tile.
 //!
 //! Both variants are embedded at compile time; [`IconPack`] (an editor
 //! setting, see `settings::Settings::icon_pack`) only picks which one
-//! [`icon_tile`] reads from — no rebuild needed to switch. A user's own pack
+//! [`icon_tile`] reads from, no rebuild needed to switch. A user's own pack
 //! (`crate::packs`) is layered over either: [`set_user_pack`] installs it, and
 //! whatever it leaves out is still drawn from the built-in kit.
 
@@ -40,13 +40,13 @@ pub(crate) use tint::tint;
 struct DefaultIcons;
 
 /// Every SVG in `assets/icons/default/light`, embedded at compile time
-/// alongside [`DefaultIcons`] — [`IconPack`] picks between the two at
+/// alongside [`DefaultIcons`], [`IconPack`] picks between the two at
 /// lookup time, so both ship in the binary regardless of which is active.
 #[derive(rust_embed::RustEmbed)]
 #[folder = "$CARGO_MANIFEST_DIR/../../assets/icons/default/light"]
 struct LightIcons;
 
-/// Which of the kit's two equal-sized variants is currently drawn — a
+/// Which of the kit's two equal-sized variants is currently drawn, a
 /// persisted editor setting (see `settings::Settings::icon_pack`), not a
 /// build-time choice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -62,7 +62,7 @@ pub(crate) enum IconPack {
 const RENDER_SIZE: u32 = 32;
 
 /// The rasterized icon for `class` from the requested `pack`, or `None` for
-/// a class the icon kit doesn't cover (falls back to a Lucide glyph — see
+/// a class the icon kit doesn't cover (falls back to a Lucide glyph, see
 /// `explorer::resolve_icon`) or whose SVG failed to parse (a build-time
 /// invariant, not a runtime one: every file under both `assets/icons/default`
 /// variants is checked by this module's own tests).
@@ -90,7 +90,7 @@ pub(crate) fn icon_tile(class: &str, pack: IconPack) -> Option<Arc<RenderImage>>
 /// Every tile resolved so far, keyed by the pack it was read from.
 ///
 /// [`rasterize`] parses an SVG and renders a pixmap on every call, which is
-/// fine once per class per Explorer rebuild but not once per row per frame —
+/// fine once per class per Explorer rebuild but not once per row per frame,
 /// the insert picker (see `shell::explorer_edit::picker`) lists hundreds of
 /// classes and rebuilds its list on every keystroke. The `None`s are cached
 /// too: a class the kit does not cover is the *common* case there, and
@@ -101,8 +101,8 @@ pub(crate) fn icon_tile(class: &str, pack: IconPack) -> Option<Arc<RenderImage>>
 /// cover a class the kit does not (see [`IconOverlay::svg`]), so the class
 /// is the only key that stays correct once one is layered on.
 ///
-/// Bounded by the table itself — at most one entry per mapped class per
-/// variant, a 32x32 RGBA tile each — so it needs no eviction.
+/// Bounded by the table itself, at most one entry per mapped class per
+/// variant, a 32x32 RGBA tile each, so it needs no eviction.
 /// [`set_user_pack`] is the only thing that can invalidate it, and clears
 /// it.
 static TILE_CACHE: RwLock<TileCache> = RwLock::new(TileCache::new());
@@ -136,7 +136,7 @@ fn icon_tile_over(
     rasterize(&file.data)
 }
 
-/// The user's installed icon pack, drawn over the built-in kit — see
+/// The user's installed icon pack, drawn over the built-in kit, see
 /// `crate::packs`. Process-wide because the Explorer resolves icons deep
 /// inside row construction with no handle to the editor's state; set once at
 /// startup and again whenever the Explorer's menu picks another.
@@ -149,7 +149,7 @@ pub(crate) fn set_user_pack(pack: Option<IconOverlay>) {
         *slot = pack.map(Arc::new);
     }
     // Every cached tile was resolved against the overlay that just went
-    // away, including the misses — a pack that covers a class the kit does
+    // away, including the misses, a pack that covers a class the kit does
     // not would otherwise stay invisible until the next launch.
     if let Ok(mut cache) = TILE_CACHE.write() {
         cache.clear();
@@ -179,7 +179,7 @@ impl TileCache {
         }
     }
 
-    /// `Some(hit)` only when this class has been resolved before — the outer
+    /// `Some(hit)` only when this class has been resolved before, the outer
     /// `Option` is "have we looked", the inner one "does the kit cover it".
     fn get(&self, pack: IconPack, class: &str) -> Option<Option<Arc<RenderImage>>> {
         self.of(pack).as_ref()?.get(class).cloned()
@@ -209,7 +209,7 @@ impl TileCache {
 /// (`usvg` refuses a document with no size, so the divisor is never zero.)
 ///
 /// `pub(crate)`: also `action_icons`'s own rasterizer, for the ribbon's
-/// action-icon kit (`assets/icons/actions`) — same 16x16 canvas, same
+/// action-icon kit (`assets/icons/actions`), same 16x16 canvas, same
 /// premultiplied-alpha fixup, no reason for a second copy of either.
 pub(crate) fn rasterize(svg: &[u8]) -> Option<Arc<RenderImage>> {
     rasterize_at(svg, RENDER_SIZE)
