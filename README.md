@@ -79,7 +79,7 @@ That builds everything. The binaries you get:
 | Binary | Crate | What it does |
 |---|---|---|
 | `rbxdump` | `rbx_parser_cli` | Prints the instance tree of a `.rbxm`/`.rbxl`/`.rbxlx`/`.rbxmx` file. `--roundtrip <file>` writes the file back out and diffs it against the original. |
-| `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`). |
+| `rbxlua` | `rbx_parser_cli` | Runs a Luau script against a place file (`rbxlua place.rbxl script.luau [--out out.rbxl] [--print-changes]`), or runs the place's TestEZ specs (`rbxlua test place.rbxl [--junit out.xml]`, see [`docs/testing.md`](docs/testing.md)). |
 | `rbxview` | `rbx_viewer` | A standalone 3D viewer (`rbxview place.rbxl [--screenshot out.png]`), and the server for the browser build (`rbxview --serve`, see below). |
 | `rbxstudio` | `rbx_studio` | The editor (`rbxstudio [--select <name-or-path>] [--run <script.luau>] [--verbose] <place>`, `--help` for the rest). |
 | `rbxcloud` | `rbx_cloud` | A small Open Cloud CLI (`whoami`, `list`, `download`, `asset`). |
