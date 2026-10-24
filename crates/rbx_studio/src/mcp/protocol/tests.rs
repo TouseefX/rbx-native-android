@@ -68,6 +68,8 @@ fn tools_list_names_every_tool_with_a_schema() {
             "script_grep",
             "multi_edit",
             "get_studio_state",
+            "http_get",
+            "skill",
             "list_roblox_studios"
         ]
     );

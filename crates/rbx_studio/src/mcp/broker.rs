@@ -70,6 +70,14 @@ impl Broker {
                 Ok(tools::result(&Value::String(studios), false)),
             ));
         }
+        let name = params
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
+        if let Some(answer) = tools::without_editor(name, &arguments) {
+            return Some(protocol::reply(id, Ok(answer)));
+        }
         let wanted = params
             .get("arguments")
             .and_then(|arguments| arguments.get("studio_id"))

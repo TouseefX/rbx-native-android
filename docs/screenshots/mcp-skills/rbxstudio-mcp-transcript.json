@@ -1,0 +1,376 @@
+[
+ {
+  "method": "initialize",
+  "params": {
+   "protocolVersion": "2025-06-18",
+   "capabilities": {},
+   "clientInfo": {
+    "name": "probe",
+    "version": "1"
+   }
+  },
+  "answer": {
+   "protocolVersion": "2025-06-18",
+   "capabilities": {
+    "tools": {}
+   },
+   "serverInfo": {
+    "name": "rbx-native",
+    "version": "0.1.0"
+   },
+   "instructions": "Reads the place open in the rbx-native editor and edits its scripts: browse and inspect instances, read, search and grep scripts, and change or create them with multi_edit, each call one undo step. Instances are named by dotted paths from the DataModel, as in game.Workspace.Model.Part."
+  }
+ },
+ {
+  "method": "tools/list",
+  "params": {},
+  "answer": {
+   "tools": [
+    {
+     "name": "http_get",
+     "description": "Fetches a page of Roblox's documentation as text: the Engine API reference (https://create.roblox.com/docs/reference/engine/classes/<Class>.md, also datatypes/, enums/, globals/, libraries/), creator guides (https://create.roblox.com/docs/<path>.md), the Cloud API (https://create.roblox.com/docs/cloud/...), performance guides, and the llms.txt indexes (https://create.roblox.com/docs/llms.txt, .../reference/engine/llms.txt, .../cloud/llms.txt). Roblox's creator-docs repository on GitHub is allowed too; nothing else is. With query, only the lines holding it (ignoring case) are returned, with context_lines around each, or one line saying nothing matched.",
+     "inputSchema": {
+      "type": "object",
+      "properties": {
+       "url": {
+        "type": "string",
+        "description": "The page to fetch, such as https://create.roblox.com/docs/reference/engine/classes/TweenService.md."
+       },
+       "query": {
+        "type": "string",
+        "description": "A keyword to search the page for. Only matching lines and their context are returned."
+       },
+       "context_lines": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Lines kept on each side of a match. Defaults to 3."
+       },
+       "return_full": {
+        "type": "boolean",
+        "description": "With query: return the whole page when the query matches, instead of excerpts."
+       },
+       "studio_id": {
+        "type": "string",
+        "description": "The editor to act on, from list_roblox_studios. May be left out when only one editor is open."
+       }
+      },
+      "required": [
+       "url"
+      ]
+     }
+    },
+    {
+     "name": "skill",
+     "description": "Returns detailed guidance and best practices for one kind of Roblox work, to read before doing it. Called without a name, lists every skill with a one-line description. Skills cover Luau scripting, UI design that fits the game, UX, accessibility, animation and tweening, client/server security, data persistence, monetization, analytics and live configs, Server Authority, input across devices, performance, debugging, testing and searching the documentation with http_get.",
+     "inputSchema": {
+      "type": "object",
+      "properties": {
+       "name": {
+        "type": "string",
+        "enum": [
+         "accessibility",
+         "animation",
+         "data-persistence",
+         "debugging",
+         "docs-search",
+         "input-and-devices",
+         "live-ops",
+         "luau-scripting",
+         "monetization",
+         "performance",
+         "security",
+         "server-authority",
+         "testing",
+         "ui-design",
+         "ux-patterns"
+        ],
+        "description": "The skill to read. Leave it out to list them all."
+       },
+       "studio_id": {
+        "type": "string",
+        "description": "The editor to act on, from list_roblox_studios. May be left out when only one editor is open."
+       }
+      },
+      "required": []
+     }
+    }
+   ]
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "list_roblox_studios",
+   "arguments": {}
+  },
+  "answer": {
+   "isError": false,
+   "text": "{\"studios\":[{\"id\":\"f6f098b53796e934\",\"name\":\"ShopTest.rbxl\"}]}",
+   "length": 62
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "skill",
+   "arguments": {
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "Available skills:\n- accessibility: Accessibility rules for in-game Roblox UI: contrast ratios, readable text sizes, honouring the player's PreferredTextSize, PreferredTransparency and ReducedMotionEnabled settings, colour-independent signalling, localization room, captions for audio cues and input alternatives. Pull it before finishing any UI and whenever text, colour or motion is involved.\n- animation: UI tweening with TweenService (durations, easing choices, press feedback, reduced motion) and character animation practice (Animator, AnimationTrack, priorities, markers, replication, ownership...",
+   "length": 4486
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "skill",
+   "arguments": {
+    "name": "no-such-skill",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": true,
+   "text": "Unknown skill: no-such-skill\n\nAvailable skills:\n- accessibility: Accessibility rules for in-game Roblox UI: contrast ratios, readable text sizes, honouring the player's PreferredTextSize, PreferredTransparency and ReducedMotionEnabled settings, colour-independent signalling, localization room, captions for audio cues and input alternatives. Pull it before finishing any UI and whenever text, colour or motion is involved.\n- animation: UI tweening with TweenService (durations, easing choices, press feedback, reduced motion) and character animation practice (Animator, AnimationTrack, priorities, m...",
+   "length": 4516
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "skill",
+   "arguments": {
+    "name": "docs-search",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "# Skill: docs-search\n\n# Searching the Roblox documentation\n\nRoblox APIs change: members get deprecated, new classes appear, limits move.\nBefore you write code against an API you are not certain about, read its page\nwith `http_get`. A wrong method name costs the user a debugging session; a\nlookup costs one call.\n\n## Where things are\n\n`create.roblox.com/docs` serves every page as Markdown when `.md` is added to\nits URL, and lists its pages in `llms.txt` indexes.\n\n| What | URL |\n|---|---|\n| A class | `https://create.roblox.com/docs/reference/engine/classes/<ClassName>.md` |\n| A datatype (CFrame, ...",
+   "length": 5285
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/TweenService.md",
+    "query": "EasingStyle",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "https://create.roblox.com/docs/reference/engine/classes/TweenService.md\n7 matches for \"EasingStyle\":\n\n 99: \n100: local tweenInfo = TweenInfo.new(\n101: \t2, -- Time\n102: \tEnum.EasingStyle.Linear, -- EasingStyle\n103: \tEnum.EasingDirection.Out, -- EasingDirection\n104: \t-1, -- RepeatCount (when less than zero the tween will loop indefinitely)\n105: \ttrue, -- Reverses (tween will reverse once reaching its goal)\n...\n135: local goal = {}\n136: goal.Position = Vector3.new(50, 10, 0)\n137: \n138: local tweenInfo = TweenInfo.new(10, Enum.EasingStyle.Linear)\n139: \n140: local tween = TweenService:Create(part, ...",
+   "length": 2120
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/TweenService.md",
+    "query": "zzqqxx",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "No match for \"zzqqxx\" in https://create.roblox.com/docs/reference/engine/classes/TweenService.md",
+   "length": 96
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/TweenService.md",
+    "query": "Cancel",
+    "context_lines": 2,
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "https://create.roblox.com/docs/reference/engine/classes/TweenService.md\n3 matches for \"Cancel\":\n\n 42: Note that [Tweens](/docs/reference/engine/classes/Tween.md) can interpolate multiple properties at the same\n 43: time, but they must not be interpolating the same property. If two tweens\n 44: attempt to modify the same property, the initial tween will be cancelled and\n 45: overwritten by the most recent tween.\n 46: \n...\n111: tween:Play()\n112: task.wait(10)\n113: tween:Cancel() -- cancel the animation after 10 seconds\n114: ```\n115: \n...\n248: tween:Play()\n249: task.wait(10)\n250: tween:Cancel() --...",
+   "length": 653
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/Tween.md",
+    "query": "Cancel",
+    "return_full": true,
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "---\nname: Tween\nlast_updated: 2026-10-23T19:09:27Z\ninherits:\n  - TweenBase\n  - Instance\n  - Object\ntype: class\nmemory_category: Instances\nsummary: \"The Tween object controls the playback of an interpolation.\"\n---\n\n# Class: Tween\n\n> The [Tween](/docs/reference/engine/classes/Tween.md) object controls the playback of an interpolation.\n\n## Description\n\nThe [Tween](/docs/reference/engine/classes/Tween.md) object controls the playback of an interpolation. Creating\nand configuring a [Tween](/docs/reference/engine/classes/Tween.md) is done with the [TweenService:Create()](/docs/reference/engine/class...",
+   "length": 11618
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/Tween.md",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "---\nname: Tween\nlast_updated: 2026-10-23T19:09:27Z\ninherits:\n  - TweenBase\n  - Instance\n  - Object\ntype: class\nmemory_category: Instances\nsummary: \"The Tween object controls the playback of an interpolation.\"\n---\n\n# Class: Tween\n\n> The [Tween](/docs/reference/engine/classes/Tween.md) object controls the playback of an interpolation.\n\n## Description\n\nThe [Tween](/docs/reference/engine/classes/Tween.md) object controls the playback of an interpolation. Creating\nand configuring a [Tween](/docs/reference/engine/classes/Tween.md) is done with the [TweenService:Create()](/docs/reference/engine/class...",
+   "length": 11618
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/TweenService",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "Engine Class\nTweenService\nNot Creatable\nService\n## Summary\nMethods\nCreate(instance: Instance,tweenInfo: TweenInfo,propertyTable: Dictionary):Tween\nGetValue(alpha: number,easingStyle: Enum.EasingStyle,easingDirection: Enum.EasingDirection):number\nSmoothDamp(current: Variant,target: Variant,velocity: Variant,smoothTime: number,maxSpeed: number?,dt: number?):Tuple\nInherited Members\n58 inherited from Instance\n6 inherited from Object\nCode Samples\nTween Creation\nlocal TweenService = game:GetService(\"TweenService\")\n\nlocal part = Instance.new(\"Part\")\npart.Position = Vector3.new(0, 10, 0)\npart.Color = ...",
+   "length": 4073
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://example.com/index.md",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": true,
+   "text": "URL not allowed: https://example.com/index.md. Allowed: https://create.roblox.com/docs/ (Engine API reference, guides, Cloud API, llms.txt indexes) and Roblox's creator-docs repository on GitHub",
+   "length": 194
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/NoSuchClassXyz.md",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": true,
+   "text": "HTTP 404 fetching https://create.roblox.com/docs/reference/engine/classes/NoSuchClassXyz.md",
+   "length": 91
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/ui/index.md",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "---\ntitle: User interface\ndescription: Explore the wide variety of user interface elements that players can interact with.\n---\n\nYou can quickly create high-quality graphical user interfaces with minimal scripting requirements using built-in [UI objects](#ui-objects). Depending on where you create it, UI renders either [on-screen](#on-screen-ui) or [within a game's 3D world](#in-game-ui).\n\n## On-screen UI\n\n[On-screen containers](../ui/on-screen-containers.md) hold UI objects that you want to display on a player's screen, including [frames](../ui/frames.md), [labels](../ui/labels.md), [buttons](...",
+   "length": 5392
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/cloud/llms.txt",
+    "query": "game pass",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "https://create.roblox.com/docs/cloud/llms.txt\n2 matches for \"game pass\":\n\n160: - [Developer products](/docs/cloud/reference/features/developer-products.md)\n161: - [Experiments](/docs/cloud/reference/features/experiments.md)\n162: - [Game Events](/docs/cloud/reference/features/virtual-events.md)\n163: - [Game passes](/docs/cloud/reference/features/game-passes.md)\n164: - [Generative AI](/docs/cloud/reference/features/generative-ai.md)\n165: - [Groups](/docs/cloud/reference/features/groups.md)\n166: - [Interactions](/docs/cloud/reference/features/interactions.md)\n...\n243: - [Developer products](/docs...",
+   "length": 1018
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://github.com/Roblox/libmp/releases/download/latest/SKILL.md",
+    "query": "MicroProfiler",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "https://github.com/Roblox/libmp/releases/download/latest/SKILL.md\n13 matches for \"MicroProfiler\":\n\n  1: ---\n  2: name: perf-profiling\n  3: description: Analyze fine-grained performance data provided by the MicroProfiler through the LibMP Luau module. Use it to investigate CPU and GPU bottlenecks, identify the causes of frame-time spikes, and analyze memory allocations by subsystem.\n  4: ---\n  5: \n  6: # Roblox Performance Profiling\n...\n  9: \n 10: LibMP is a Luau module used to profile the performance of Roblox games. Profiling can be done in the game client's or server's scripts in real time (...",
+   "length": 8035
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "http://create.roblox.com/docs/llms.txt",
+    "query": "tween",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": true,
+   "text": "URL not allowed: http://create.roblox.com/docs/llms.txt. Allowed: https://create.roblox.com/docs/ (Engine API reference, guides, Cloud API, llms.txt indexes) and Roblox's creator-docs repository on GitHub",
+   "length": 204
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "http_get",
+   "arguments": {
+    "url": "https://create.roblox.com/docs/reference/engine/classes/TweenService.md",
+    "query": "tweeninfo easingstyle",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "No match for \"tweeninfo easingstyle\" in https://create.roblox.com/docs/reference/engine/classes/TweenService.md",
+   "length": 111
+  }
+ },
+ {
+  "method": "tools/call",
+  "params": {
+   "name": "inspect_instance",
+   "arguments": {
+    "path": "StarterGui.TackleShop.Drawer.Body.List",
+    "studio_id": "f6f098b53796e934"
+   }
+  },
+  "answer": {
+   "isError": false,
+   "text": "{\"name\":\"List\",\"className\":\"ScrollingFrame\",\"path\":\"StarterGui.TackleShop.Drawer.Body.List\",\"properties\":{\"Active\":false,\"AnchorPoint\":\"0, 0\",\"Archivable\":true,\"AutoLocalize\":true,\"AutomaticCanvasSize\":\"Enum.AutomaticSize.Y\",\"AutomaticSize\":\"Enum.AutomaticSize.None\",\"BackgroundColor3\":\"0.6392157077789307, 0.6352941393852234, 0.6470588445663452\",\"BackgroundTransparency\":1.0,\"BorderColor3\":\"0.10588235408067703, 0.16470588743686676, 0.2078431397676468\",\"BorderMode\":\"Enum.BorderMode.Outline\",\"BorderSizePixel\":0,\"BottomImage\":\"rbxasset://textures/ui/Scroll/scroll-bottom.png\",\"BottomImageContent\":\"C...",
+   "length": 3631
+  }
+ }
+]
