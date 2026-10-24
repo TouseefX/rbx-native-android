@@ -60,6 +60,12 @@ end
 
 Only the largest `BlurEffect.Size` in `Lighting` applies, so reuse one named instance instead of adding more. Put the dim frame in a separate ScreenGui with `ScreenInsets = None` so it reaches the screen edges, and the content in one with `CoreUISafeInsets`.
 
+## No card: the screen is the container
+
+Good sleek menus have no panel behind the content: the blurred, dimmed world is the background and rows float on it in a centred column (settings, player menu) or a full-height side sheet runs along one edge (shop detail). Do not wrap the content in a rounded dark card in the middle of the screen; with a card it reads as the generic dark-card UI no matter how clean the rows are. If you need grouping, use spacing and a small secondary-colour section label, not a box.
+
+For a static preview (a screenshot of the edit view), also leave a `BlurEffect` with `Size` about 20 in `Lighting` while you show the open menu, or the frosted look cannot be judged; remove it or set `Size` to 0 before shipping so the world is sharp when no menu is open.
+
 ## Recipe: row
 
 ```lua

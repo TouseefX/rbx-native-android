@@ -167,15 +167,64 @@ Use one display font for headers and buttons and one readable body font. Never A
 
 Every shop item, currency and HUD button needs an icon. Text-only buttons are a tell. If no matching asset exists, draw one with `ui-style-icons` and upload it with `store_image`. Use one icon style across the whole game.
 
-## 5. Build order
+## 5. Composition: HUD and menus must not collide
+
+Generated UI most often fails here: each piece looks fine, but at phone size the shop panel runs into the left rail, the currency pill sits under the close button, a sticker covers a title. Plan the screen as zones before building:
+
+| Zone | Holds |
+| --- | --- |
+| Left edge strip (about 12 to 15 percent wide) | button rail |
+| Top-left / bottom-left corner | currency |
+| Top centre strip (about 12 percent tall) | nav, round info, compass |
+| Right edge strip | boosts, daily reward, kill feed, secondary menu |
+| Bottom corners (lower 30 percent) | kept free for thumbstick and jump on touch |
+| Centre (what is left) | modals: shop, inventory, settings |
+
+Rules:
+
+- A modal is sized to the centre zone at the smallest viewport (phone landscape, about 844x390), not to the screen. Use `UISizeConstraint.MaxSize` plus a Scale size that leaves the edge strips free, and `AnchorPoint` 0.5,0.5.
+- Or hide what it would cover: when a full menu opens, hide the rail and nav (`Visible = false`, or fade them) and keep only the currency it spends. Most top games do this. Decide per menu and write it down.
+- Every element stays fully on screen. Nothing hangs off an edge unless it is a deliberate bleed decoration.
+- Overlaps are only deliberate: a badge on a corner, a banner sticking out of a panel's top edge, a close button on a corner. Deliberate overlaps never cover text: give the title right padding equal to the sticker's width, keep badges in the corner outside the label.
+- Inside grids, labels must fit the tile at phone size: shorten names, or `TextScaled` with a `UITextSizeConstraint` and a `MinTextSize`, never let a badge sit on the name.
+
+Check it numerically, not by eye. Run this in Studio (command bar or the MCP's code tool) with the menus visible; it lists top-level pieces that intersect or leave the screen:
+
+```lua
+local gui = game:GetService("StarterGui")
+local cam = workspace.CurrentCamera.ViewportSize
+local items = {}
+for _, sg in gui:GetChildren() do
+	if sg:IsA("ScreenGui") and sg.Enabled then
+		for _, c in sg:GetChildren() do
+			if c:IsA("GuiObject") and c.Visible then table.insert(items, c) end
+		end
+	end
+end
+local function rect(o) return o.AbsolutePosition, o.AbsolutePosition + o.AbsoluteSize end
+for i, a in items do
+	local a0, a1 = rect(a)
+	if a0.X < 0 or a0.Y < 0 or a1.X > cam.X or a1.Y > cam.Y then print("off screen:", a:GetFullName()) end
+	for j = i + 1, #items do
+		local b0, b1 = rect(items[j])
+		if a0.X < b1.X and b0.X < a1.X and a0.Y < b1.Y and b0.Y < a1.Y then
+			print("overlap:", a:GetFullName(), "<>", items[j]:GetFullName())
+		end
+	end
+end
+```
+
+Repeat at a phone-sized viewport (Studio's device emulator) and fix every line it prints that you did not intend. A full-screen dim or backdrop frame overlaps everything by design; skip it.
+
+## 6. Build order
 
 1. Choose the style and write down: palette (hex), fonts, corner radius, stroke weight, light direction, motion style.
 2. Build reusable pieces as functions: `makeButton(color, label, icon)`, `makePanel(title, color)`, `makeCurrency(icon, amount)`. Every button in the game comes from the same function so they match.
 3. Build the HUD, then each menu. Hide menus by default (`Visible = false`) and open them from HUD buttons.
 4. Add motion (`ui-style-motion`).
-5. Run the checklist below, then look at it at phone size.
+5. Run the overlap check from section 5 and the checklist below, then look at it at phone size.
 
-## 6. Self-review checklist (run before showing UI)
+## 7. Self-review checklist (run before showing UI)
 
 Answer honestly. Any "yes" in the first group means rework.
 
@@ -194,6 +243,7 @@ Answer honestly. Any "yes" in the first group means rework.
 - Does every item and currency have an icon in one consistent style?
 
 **Does it work?**
+- When the shop is open, does anything collide with it, or did you decide which HUD pieces hide? Does any sticker or badge cover text? Does anything hang off the screen?
 - Every tappable thing at least 48x48 px at phone size, 8 px apart?
 - Nothing under the top bar, the thumbstick or the jump button?
 - Text readable at phone size (14 px minimum body)?
