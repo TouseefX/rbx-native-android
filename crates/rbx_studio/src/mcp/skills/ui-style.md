@@ -165,6 +165,8 @@ Use one display font for headers and buttons and one readable body font. Never A
 
 ### Icons and item art
 
+Robux prices always carry the Robux symbol (draw your own hexagon-style mark in the UI's icon style), never a coin or gem icon; soft-currency prices carry that currency's icon. Mixing them up misleads players about what they pay with.
+
 Every shop item, currency and HUD button needs an icon. Text-only buttons are a tell. If no matching asset exists, draw one with `ui-style-icons` and upload it with `store_image`. Use one icon style across the whole game.
 
 ## 5. Composition: HUD and menus must not collide
