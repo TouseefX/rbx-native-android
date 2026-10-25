@@ -1,120 +1,200 @@
 ---
 name: ui-style-motion
-description: UI motion per style for Roblox: TweenService timings and easing for open/close, hover, press squash, counters, notifications and idle loops; punchy Back/Elastic pops for cartoony and trendy, short Quad/Sine fades for sleek, fast linear for military, slow fades for horror; reduced-motion and how much is too much.
+description: The signature motion every Roblox UI must ship, per style: a LocalScript with staggered panel and tile entrance, bouncy or snappy open and close, hover and press feedback, shine sweep on featured offers, currency count-up and one idle pulse on the CTA. TweenService recipes and timings for cartoony, trendy, striking, sleek, pastel, military and horror, layout gotchas, a performance guard, reduced motion and how much is too much.
 ---
 
 # UI motion by style
 
-Pull `ui-style` first. Motion is part of the style: the same button must move differently in a pet sim and a war sim.
+Pull `ui-style` first. Motion is part of the style and part of the "wow": the first second after a menu opens is what makes a UI feel made by a studio. The same shop must move differently in a pet sim and a war sim. Static UI is unfinished UI.
 
-## Facts
+## What every build ships (hard rule)
 
-- `TweenInfo.new(time, easingStyle, easingDirection, repeatCount, reverses, delayTime)`; defaults 1 s, Quad, Out, 0, false, 0 (source: `reference/engine/datatypes/TweenInfo.yaml`).
-- `Enum.EasingStyle`: Linear, Sine, Quad, Cubic, Quart, Quint, Exponential, Circular, Back, Bounce, Elastic. `Enum.EasingDirection`: In, Out, InOut.
-- `GuiObject:TweenSize` / `TweenPosition` are deprecated. Use `TweenService:Create`.
-- Tween `UIScale.Scale` for pops instead of `Size`: it scales children, strokes and text together and does not fight layouts.
-- Do not tween `UIStroke.Thickness` on text: glyphs re-render and flicker (UIStroke docs).
-- `CanvasGroup.GroupTransparency` fades a whole panel in one tween.
-- Connect `Activated` for clicks, `MouseEnter`/`MouseLeave` for hover (desktop only, so hover must never be the only feedback), `InputBegan`/`InputEnded` on the button for press-down state.
+A `LocalScript` named `UIMotion` inside each ScreenGui (it runs from the player's PlayerGui copy, so it uses `script.Parent`). It must drive all of these:
 
-## Timing table
+1. **Entrance**: when the UI first appears and each time a panel opens, the panel comes in with the style's open motion, then its children arrive in a stagger: header, tabs, tiles one by one, the detail pane, the CTA last.
+2. **Open and close** in the style's character, with a shared helper so every panel moves the same way.
+3. **Hover and press** on every button: hover lift, press squash, a release that settles.
+4. **Count-up** on every currency number when it changes, and on first show.
+5. **Shine sweep** on the featured offer or premium button.
+6. **One idle pulse** on the main CTA or the one claimable thing.
 
-| Style | Open | Close | Hover | Press | Easing |
+Write the signature motion down with the identity before building ("pops in with a jelly bounce, tiles drop in left to right, the coin counter rolls"). It can be the game's signature detail.
+
+## Facts and gotchas
+
+- `TweenInfo.new(time, easingStyle, easingDirection, repeatCount, reverses, delayTime)`; defaults 1 s, Quad, Out (source: `reference/engine/datatypes/TweenInfo.yaml`). Use `delayTime` for staggers instead of `task.wait` loops.
+- A new tween on the same property cancels the old one; tweens on different properties run together. Keep the last tween per object and `:Cancel()` it before starting the next, so a quick reopen never fights a close.
+- `GuiObject:TweenSize`/`TweenPosition` are deprecated. Use `TweenService:Create`.
+- **Children of a `UIListLayout` or `UIGridLayout` ignore `Position`**: the layout places them. To move a tile, tween a `UIScale` inside it, or put the tile's content in an inner `Content` frame and tween that frame's `Position`. Tweening the tile itself does nothing.
+- Tween `UIScale.Scale` for pops instead of `Size`: it scales children, strokes and text together and does not re-run layouts. Nested `UIScale`s multiply, so this works on top of the root fit scale.
+- Do not tween `TextSize` or a text `UIStroke.Thickness`: text re-shapes every frame and flickers. Scale it with `UIScale`.
+- `CanvasGroup.GroupTransparency` fades a whole subtree in one property, but every CanvasGroup renders to its own texture, renders blank if texture memory runs out (the budget follows the client's quality level), and resizing it re-allocates the texture. Use at most one per open panel, never one per tile, never around the whole HUD.
+- Shine: tween a `UIGradient.Offset` on a white overlay, not a rotated frame in a CanvasGroup. No extra texture.
+- `GuiService.ReducedMotionEnabled` (read-only boolean) is true when the player asked for reduced motion. Check it: drop loops and shines, turn pops and slides into short fades.
+- `GuiObject.Interactable = false` stops a button reacting while its panel is closing.
+- `Activated` fires for mouse, touch and gamepad. `MouseEnter`/`MouseLeave` are desktop only, so hover is never the only feedback. Use `InputBegan`/`InputEnded` for press-down state, and play the press from `Activated` too for gamepad.
+
+## Signature motion per style
+
+| Style | Panel open | Stagger (children) | Hover / press | Close | Signature extras |
 | --- | --- | --- | --- | --- | --- |
-| Cartoony | 0.35 s scale 0.6 to 1 | 0.15 s to 0.8 and fade | 0.12 s scale 1.06 | 0.06 s scale 0.9, release Back Out 0.2 s | Back Out (overshoot), Elastic Out for rewards |
-| Trendy | 0.25 s scale 0.85 to 1 | 0.12 s | 0.1 s scale 1.05 | face drops onto lip | Back Out, Quad Out |
-| Striking | 0.4 s slide in from a diagonal plus rotate 6 to 0 | 0.15 s | glow transparency 0.6 to 0.3 | 0.06 s 0.92 | Back Out, Exponential Out |
-| Sleek | 0.2 s fade plus 12 px slide up | 0.15 s fade | 0.12 s transparency only | 0.08 s transparency darker | Quad Out, Sine Out |
-| Military | 0.12 s wipe or fade | 0.08 s | 0.06 s accent underline | instant tint | Quad Out, Linear |
-| Horror | 0.8 to 1.5 s fade | 0.6 s | none or slow glow | none | Sine InOut |
-| Pastel / hangout | 0.25 s slide up from bottom | 0.18 s | 0.12 s 1.04 | 0.06 s 0.95 | Back Out (small overshoot), Quad Out |
+| Cartoony | UIScale 0.5 to 1, 0.4 s Back Out, plus Rotation 4 to 0 | tiles UIScale 0 to 1, 0.3 s Back Out, 0.04 s apart | 1.06 in 0.1 s / 0.9 in 0.06 s, release Back Out 0.25 s | 0.15 s Back In to 0.7 | sticker wobble, coin "+N" float, Elastic only on rewards |
+| Trendy | UIScale 0.8 to 1, 0.25 s Back Out | tiles UIScale 0.6 to 1, 0.2 s Back Out, 0.03 s apart | 1.05 / face sinks onto lip | 0.12 s Quad In | number punch 1.15 on change |
+| Striking | slide from a diagonal plus Rotation 6 to 0, 0.4 s Exponential Out | cards fan in from the centre, 0.06 s apart | glow up / 0.92 | 0.15 s | sparkles twinkle, light rays rotate slowly |
+| Sleek | fade (CanvasGroup) plus 16 px slide up, 0.25 s Quint Out | Content frames 12 px up plus fade, 0.2 s Quint Out, 0.025 s apart | 0.12 s transparency / 0.08 s darker | 0.15 s fade | soft count-up, underline glides between tabs |
+| Pastel / hangout | 24 px slide up plus fade, 0.3 s Back Out (small overshoot) | tiles 8 px up plus UIScale 0.9 to 1, 0.03 s apart | 1.04 / 0.95 | 0.18 s | heart or sparkle pop on favourite |
+| Military | clip wipe left to right, 0.15 s Linear | rows slide in from left 24 px, 0.1 s Quad Out, 0.02 s apart | instant accent bar / instant tint | 0.08 s | count-up ticks like a readout, brackets snap to the selection |
+| Horror | 0.8 to 1.2 s Sine fade | none, or one slow flicker | none or slow glow | 0.6 s | rare flicker on the title |
 
-## Recipe: button feedback (cartoony / trendy)
+Cap the whole entrance (open plus stagger) at about 0.6 s for military and sleek and 0.8 s for cartoony. With many tiles, shrink the gap so the last one starts by 0.35 s.
+
+## The motion script
+
+One script per ScreenGui. Fill in the style values from the table, keep the helpers. The names (`Shop`, `Grid`, `Featured`, `BuyButton`) are whatever your build uses.
 
 ```lua
+-- UIMotion (LocalScript inside the ScreenGui)
 local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
+local gui = script.Parent
+local REDUCED = GuiService.ReducedMotionEnabled
+
+local active = {}
+local function tween(obj, info, goal)
+	if active[obj] then active[obj]:Cancel() end
+	local t = TweenService:Create(obj, info, goal)
+	active[obj] = t
+	t:Play()
+	return t
+end
+local function scaleOf(obj)
+	local s = obj:FindFirstChild("MotionScale")
+	if not s then
+		s = Instance.new("UIScale")
+		s.Name = "MotionScale"
+		s.Parent = obj
+	end
+	return s
+end
+
+-- style values (cartoony shown)
+local OPEN = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local TILE_TIME, TILE_GAP = 0.3, 0.04
+
+local function pop(obj, from, delay)
+	local s = scaleOf(obj)
+	s.Scale = REDUCED and 1 or from
+	tween(s, TweenInfo.new(TILE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, delay), { Scale = 1 })
+end
+
+local function open(panel)
+	panel.Visible = true
+	local s = scaleOf(panel)
+	s.Scale = REDUCED and 1 or 0.5
+	tween(s, OPEN, { Scale = 1 })
+	if not REDUCED then
+		panel.Rotation = 4
+		tween(panel, OPEN, { Rotation = 0 })
+	end
+	local i = 0
+	for _, child in panel:GetDescendants() do
+		if child:GetAttribute("Stagger") then -- tag tiles, tabs, CTA in the build
+			i += 1
+			pop(child, 0, 0.12 + math.min(i * TILE_GAP, 0.35))
+		end
+	end
+end
+
+local function close(panel)
+	local t = tween(scaleOf(panel), TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0.7 })
+	t.Completed:Once(function(state)
+		if state == Enum.PlaybackState.Completed then panel.Visible = false end
+	end)
+end
 
 local function juicy(button)
-	local scale = button:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-	scale.Parent = button
-	local face = button:FindFirstChild("Face") -- the raised layer over the lip
-	local rest = face and face.Position
-	local function to(s, t, style)
-		TweenService:Create(scale, TweenInfo.new(t, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = s }):Play()
+	local s = scaleOf(button)
+	local function to(v, time, style)
+		tween(s, TweenInfo.new(time, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = v })
 	end
-	button.MouseEnter:Connect(function() to(1.06, 0.12) end)
-	button.MouseLeave:Connect(function() to(1, 0.12) end)
-	button.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			to(0.92, 0.06)
-			if face then face.Position = rest + UDim2.fromScale(0, 0.08) end -- sink onto the lip
-		end
-	end)
-	button.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			to(1, 0.25, Enum.EasingStyle.Back)
-			if face then face.Position = rest end
-		end
+	local function down(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then to(0.9, 0.06) end
+	end
+	button.MouseEnter:Connect(function() to(1.06, 0.1) end)
+	button.MouseLeave:Connect(function() to(1, 0.1) end)
+	button.InputBegan:Connect(down)
+	button.InputEnded:Connect(function() to(1, 0.25, Enum.EasingStyle.Back) end)
+	button.Activated:Connect(function()
+		s.Scale = 0.9
+		to(1, 0.25, Enum.EasingStyle.Back)
 	end)
 end
-```
 
-Pair the press with a short click sound (one per game, quiet). Gamepad users get `Activated` only, so also play the pop from `Activated`.
-
-## Recipe: panel open / close
-
-```lua
-local function openPanel(panel)
-	local scale = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-	scale.Parent = panel
-	scale.Scale = 0.6
-	panel.Visible = true
-	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-end
-
-local function closePanel(panel)
-	local scale = panel:FindFirstChildOfClass("UIScale")
-	local t = TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.8 })
-	t.Completed:Once(function() panel.Visible = false end)
-	t:Play()
-end
-```
-
-Sleek version: wrap the panel in a `CanvasGroup`, tween `GroupTransparency` 1 to 0 and `Position` 12 px up, 0.2 s Quad Out. No scale.
-
-## Recipe: counters
-
-Never snap a currency number. Tween a NumberValue and format on change:
-
-```lua
-local function countTo(label, from, to)
+local function countUp(label, to, prefix)
 	local v = Instance.new("NumberValue")
-	v.Value = from
-	v.Changed:Connect(function(n) label.Text = string.format("$%s", formatNumber(math.floor(n))) end)
-	local t = TweenService:Create(v, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Value = to })
+	local function show(n)
+		label.Text = (prefix or "") .. string.format("%d", math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+	end
+	v.Changed:Connect(show)
+	show(0)
+	local t = TweenService:Create(v, TweenInfo.new(REDUCED and 0 or 0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Value = to })
 	t.Completed:Once(function() v:Destroy() end)
 	t:Play()
 end
+
+local function shine(card) -- card holds a full-size white Frame "Shine" with a UIGradient
+	local g = card.Shine.UIGradient
+	g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 1),
+		NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(0.55, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	g.Rotation = 20
+	task.spawn(function()
+		while card.Parent and not REDUCED do
+			g.Offset = Vector2.new(-1, 0)
+			if card.Visible then
+				TweenService:Create(g, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { Offset = Vector2.new(1, 0) }):Play()
+			end
+			task.wait(3.5)
+		end
+	end)
+end
+
+local function pulse(holder) -- a plain Frame wrapping the CTA button
+	if REDUCED then return end
+	local s = Instance.new("UIScale")
+	s.Name = "PulseScale"
+	s.Parent = holder
+	TweenService:Create(s, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Scale = 1.05 }):Play()
+end
 ```
 
-Cartoony and trendy add a quick 1.15 pop on the currency icon and a floating "+250" label that rises 40 px and fades over 0.8 s. Sleek and military only tick the number.
+Then wire it: `juicy` every `GuiButton` in the gui (`gui:GetDescendants()`), `countUp` each currency label with its value, `shine(Featured)`, `pulse(BuyHolder)`, run `open` on the HUD clusters and on any panel shown at join, and connect each nav button to `open`/`close` its panel. The pulse goes on a holder frame around the CTA, not the button: give each object one `UIScale`, and the holder's pulse then multiplies with the button's press scale instead of fighting it.
 
-## Recipe: idle attention loops
+The shine overlay needs `ClipsDescendants` on the card (or the card's corner shape) so the white band stays inside, `BackgroundColor3` white, `BackgroundTransparency` 0, and a `UIGradient` whose transparency does the work. Give the overlay the card's `UICorner` too.
 
-Only for the single thing that needs attention (claimable reward, new item):
+## Style notes
 
-```lua
-local wiggle = TweenService:Create(button, TweenInfo.new(0.12, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 3, true, 0), { Rotation = 6 })
--- run every 4 to 6 seconds while the reward is claimable, stop when claimed
-```
+- **Sleek**: replace `pop` with a fade-and-rise. Wrap the panel in one `CanvasGroup`, tween `GroupTransparency` 1 to 0 and `Position` 16 px up. For staggered children, tween each child's inner `Content` frame from 12 px lower to rest, and fade its own transparencies from 1 (record each `BackgroundTransparency`, `ImageTransparency`, `TextTransparency` target first). No scale on panels, no Back easing.
+- **Military**: the panel sits in a clipping frame whose width tweens from 0 to full (Linear 0.15 s), rows slide from 24 px left. Count-ups use Linear, short. No overshoot anywhere, no wobble, no pulse except a slow colour pulse on an objective.
+- **Pastel**: like sleek but with a small Back overshoot and a scale from 0.9; a quick heart pop (UIScale 0 to 1.2 to 1) on favourite.
+- **Striking**: the featured card sweeps in on a diagonal; scatter sparkles and twinkle two or three of them (scale 0.8 to 1.1, 1.2 s Sine loop). Still only one CTA pulse.
 
-Shine sweep on a premium button: a white rotated frame inside a `CanvasGroup`, tween its `Position.X.Scale` from -0.5 to 1.5 over 0.6 s, repeat every 3 s.
+## Performance guard
+
+- One `TweenService` tween per animated property; never drive UI from `RenderStepped` unless a curve truly needs it.
+- An entrance plays at most about 40 tweens at once. More than that, animate rows or groups instead of every item.
+- Loops (pulse, shine, twinkle) stop or skip while their panel is hidden. A `while` loop checks `Visible` and `Parent`.
+- At most one `CanvasGroup` per open panel. Never tween a `CanvasGroup`'s `Size`.
+- Cancel the previous tween on an object before the next. Never stack.
+- `ImageLabel`s with the same image reuse one texture; keep art at 2x display size, not bigger.
 
 ## How much is too much
 
-- One idle loop on screen at a time. Two moving things compete; five feel cheap.
-- No motion longer than 0.4 s on something the player opens often (shop, inventory). Long animations make the UI feel slow by the third visit.
-- Elastic only for reward moments (level up, hatch, claim), never on a button the player presses all the time.
-- Never block input during an animation: let a second tap close or skip.
-- Respect reduced motion: if your game has a settings toggle, swap pops for fades and drop idle loops. Rotation and scale loops can be uncomfortable for some players.
-- The anti-pattern has no motion at all, or the same fade on everything. Motion should carry the style.
+- One idle loop on screen at a time (the CTA pulse or the claimable reward wiggle), plus the shine on one featured card. A third moving thing is noise.
+- Anything the player opens often (shop, inventory) finishes its entrance in 0.6 to 0.8 s. A slow entrance feels sluggish by the third visit.
+- Elastic only for reward moments (level up, hatch, claim).
+- Never block input during an animation: a second tap closes or skips.
+- The overshoot stays small: Back Out on a scale from 0.5 to 1 is plenty. Never scale above 1.1 for hover.
+- The anti-pattern is no motion at all, or the same fade on everything. Motion should carry the style.
