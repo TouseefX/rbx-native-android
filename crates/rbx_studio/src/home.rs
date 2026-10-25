@@ -84,6 +84,20 @@ pub(crate) fn remember(place: RecentPlace) -> Result<(), SettingsError> {
     write_atomic(&path, &bytes)
 }
 
+/// Drops `path` from Recent. Its link stays in `links.json`, so the file
+/// still knows its place when it is opened again.
+pub(crate) fn forget(path: &Path) -> Result<(), SettingsError> {
+    let file = recent_path().ok_or(SettingsError::NoConfigDir)?;
+    let list = without(read_recent(&file), path);
+    let bytes = serde_json::to_vec_pretty(&list).expect("RecentPlace serializes");
+    write_atomic(&file, &bytes)
+}
+
+fn without(mut list: Vec<RecentPlace>, path: &Path) -> Vec<RecentPlace> {
+    list.retain(|place| place.path != path);
+    list
+}
+
 fn recent_path() -> Option<PathBuf> {
     default_config_dir().map(|dir| dir.join("recent.json"))
 }
@@ -336,6 +350,12 @@ mod tests {
         let list = with_remembered(full, place("new", None));
         assert_eq!(list.len(), RECENT_LIMIT);
         assert_eq!(list[0].path, PathBuf::from("new"));
+    }
+
+    #[test]
+    fn forgetting_drops_only_that_place() {
+        let list = vec![place("a", None), place("b", Some(7))];
+        assert_eq!(without(list, Path::new("a")), vec![place("b", Some(7))]);
     }
 
     #[test]

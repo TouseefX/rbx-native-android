@@ -112,7 +112,12 @@ impl HomeWindow {
                 this.refreshing = false;
                 let ids = match listing {
                     Ok(listing) => {
-                        let ids = listing.experiences.iter().map(|e| e.universe_id).collect();
+                        let ids = listing
+                            .experiences
+                            .iter()
+                            .map(|e| e.universe_id)
+                            .chain(this.recent.iter().filter_map(|p| p.universe_id))
+                            .collect();
                         this.set_groups(listing.groups.clone());
                         this.cache.listing = listing.clone();
                         this.cache.save(user_id);
@@ -174,6 +179,8 @@ impl HomeWindow {
             .iter()
             .chain(self.cache.group_games.values().flatten())
             .map(|e| e.universe_id)
+            // Recent's icon view shows linked places' icons too.
+            .chain(self.recent.iter().filter_map(|p| p.universe_id))
             .collect();
         cx.spawn(async move |this, cx| {
             let icons = cx.background_spawn(async move { cached_icons(&ids) }).await;
