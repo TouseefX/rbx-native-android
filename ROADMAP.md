@@ -2737,6 +2737,27 @@ both the plain fetch failure and the silent fall back to a default
   is dropped the first time its port refuses. Instances are named
   `Workspace.Model.Part`, with or without `game.` in front, names with dots
   included.
+- [x] **The MCP server's Luau, viewport and Play tools, and the rest of
+  Studio's tool list.** `tools/list` now serves real Studio's 28 tools
+  word for word: names, titles, annotations, descriptions and argument
+  schemas, `studio_id` marked required like Studio (it can still be left
+  out while one editor is open), and a test diffs the list against
+  Studio's. `execute_luau` runs on Edit (one undo step), the playtest's
+  Server (`loadstring`) or its Client (bytecode through a vendored Fiu
+  interpreter), errors read `AssistantCommand:<line>:`.
+  `start_stop_play`, `get_console_output` and `screen_capture` (the
+  viewport, or the embedded game during Play, camera pose optional) go
+  through the shell, and `subagent` runs explore, screen_capture and
+  unit_test agents on the client's own model over MCP sampling.
+  `character_navigation`, `user_keyboard_input` and `user_mouse_input`
+  play the running game with real OS input into the embedded client.
+  `search_asset` and `insert_asset` reach the Creator Store and your
+  inventory through Open Cloud, `upload_image` and `store_image` upload
+  pictures, `http_get` reads Roblox's docs, and `skill` hands out the
+  editor's own skills (scripting, UI styles, UX, growth and more).
+  `segment_mesh` and `generate_texture` take the selection when
+  `instance_path` is left out, as Studio does. The Play capture on
+  Windows and the Win32 input have not been run on a real Windows PC.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):
@@ -3038,31 +3059,14 @@ both the plain fetch failure and the silent fall back to a default
   not a default this project should ship opinionated about.
 
 ### Editor
-- [ ] 📋 **The MCP server's Luau, viewport and Play tools**: the
-  server (see "What's been implemented" → Editor) still lacks what lets
-  an AI client run the session, matching the
-  shape (not the exact tool surface) of Roblox's own built-in Studio MCP
-  server (checked against `studio/mcp.md` rather than assumed, real,
-  current, `stdio`-transport, ships in Studio itself, lets an AI client
-  read/write scripts, run Luau, inspect the DataModel, and drive
-  playtesting). Most of what is left is a thin protocol wrapper around
-  capabilities this project already has or already plans:
-  `execute_luau` over the existing Command Bar's DataModel access,
-  `screen_capture` over the viewport, and
-  `start_stop_play`/`get_console_output` over Play (see
-  [Play / Test workflow](#play--test-workflow)) and the Output dock. Two sub-capabilities are **not** reachable the same
-  way: `search_asset`/`insert_asset` depend on Roblox's Creator Store/
-  Creator Inventory catalog, the same
-  [Toolbox/marketplace parity](#explicitly-impossible-without-robloxs-engine)
-  wall as everywhere else in this document, arbitrary third-party assets
-  aren't fetchable, and `generate_mesh`/`generate_material` are AI
-  content generation, covered separately under
-  [Possible via a workaround](#ai-content-generation) below. Whatever this
-  project exposes over MCP is still bound by the same file-format rule as
-  every other write path in this list: an MCP-driven edit has to go
-  through the same real-property DOM mutation any other editor action
-  does, not a shortcut that could write something a saved place file
-  can't actually represent.
+- [ ] 📋 **The MCP server's AI generation tools and the package flag**:
+  `generate_mesh`, `generate_material`, `generate_procedural_model`,
+  `segment_mesh` and `generate_texture` are listed with Studio's schemas
+  and check their arguments, then refuse, because Roblox runs that
+  generation only for Studio and no public API reaches it
+  (`wait_job_finished` never finds a job for the same reason).
+  `insert_asset` always answers `isPackage: false`, since Open Cloud does
+  not say whether an asset is a package.
 
 - [ ] 📋 **Update planning: countdown icons on autopilot** (concept by
   [@MiniDev](https://vm.tiktok.com/ZN8AFbRwp/), see Acknowledgements).
