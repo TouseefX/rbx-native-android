@@ -103,6 +103,21 @@ mod tests {
     }
 
     #[test]
+    fn saved_types_follow_the_dump_and_name_the_blobs_it_leaves_out() {
+        let db = ReflectionDatabase::shared();
+        assert_eq!(db.saved_type("ImageLabel", "Image"), Some("ContentId"));
+        assert_eq!(db.saved_type("ImageLabel", "ImageContent"), Some("Content"));
+        assert_eq!(db.saved_type("Script", "Source"), Some("ProtectedString"));
+        assert_eq!(
+            db.saved_type("Terrain", "MaterialColors"),
+            Some("BinaryString")
+        );
+        assert_eq!(db.saved_type("Part", "Tags"), Some("BinaryString"));
+        assert_eq!(db.saved_type("Part", "Name"), Some("string"));
+        assert_eq!(db.saved_type("Part", "NotAProperty"), None);
+    }
+
+    #[test]
     fn an_unset_content_id_takes_its_twins_default() {
         assert_eq!(
             default("ParticleEmitter", "Texture"),
