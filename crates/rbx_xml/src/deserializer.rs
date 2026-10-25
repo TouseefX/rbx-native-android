@@ -257,6 +257,30 @@ mod tests {
     }
 
     #[test]
+    fn shared_string_tags_read_like_a_binary_string_and_round_trip() {
+        let xml = r#"
+            <roblox version="4">
+                <SharedStrings>
+                    <SharedString md5="k1">Q29pbgBIYXphcmQA</SharedString>
+                </SharedStrings>
+                <Item class="Part" referent="RBXA">
+                    <Properties><SharedString name="Tags">k1</SharedString></Properties>
+                </Item>
+            </roblox>
+        "#;
+
+        let dom = deserialize(xml).unwrap();
+        let part = dom.get(dom.root_refs()[0]).unwrap();
+        assert_eq!(part.tags(), ["Coin", "Hazard"]);
+
+        let again = deserialize(&crate::serialize(&dom).unwrap()).unwrap();
+        assert_eq!(
+            again.get(again.root_refs()[0]).unwrap().tags(),
+            ["Coin", "Hazard"]
+        );
+    }
+
+    #[test]
     fn unknown_type_element_degrades_to_unknown_variant() {
         let xml = r#"
             <roblox version="4">
