@@ -82,10 +82,12 @@ impl Shell {
             self.flush_script_edits(cx);
         }
         let studio = self.mcp_studio();
+        let play = self.play_input();
         for request in requests {
             let mut session = Session::new(self.edit_dom(), &self.properties, &studio);
             session.client = self.live_dom(View::Client);
             session.server = self.live_dom(View::Server);
+            session.play = play.clone();
             let reply = mcp::protocol::handle(request.line(), &mut session);
             let planned = session.planned.take();
             if let Some(edit) = planned {

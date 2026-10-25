@@ -4,6 +4,7 @@
 mod datamodel;
 mod edit;
 mod luau;
+mod input;
 mod scripts;
 mod studio;
 mod tree;
@@ -132,6 +133,7 @@ pub(super) fn list() -> Value {
     if let Value::Array(tools) = &mut tools {
         tools.extend(luau::schemas());
         tools.push(super::broker::subagent_schema());
+        tools.extend(input::schemas());
         for tool in tools.iter_mut() {
             tool["inputSchema"]["properties"]["studio_id"] = string(
                 "The editor to act on, from list_roblox_studios. May be left out when only one \
@@ -184,6 +186,9 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
         "script_search" => scripts::search(arguments, session),
         "script_grep" => scripts::grep(arguments, session),
         "multi_edit" => edit::multi_edit(arguments, session),
+        input::NAVIGATION => input::navigation(arguments, session),
+        input::KEYBOARD => input::keyboard(arguments, session),
+        input::MOUSE => input::mouse(arguments, session),
         STUDIO_STATE => Ok(studio::state(session.studio)),
         LIST_STUDIOS => Ok(studio::list(session.studio)),
         luau::EXECUTE_LUAU => luau::execute(arguments, session),

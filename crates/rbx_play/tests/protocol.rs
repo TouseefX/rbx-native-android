@@ -1,4 +1,4 @@
-use rbx_play::protocol::{Command, CommandBody, DeviceReport, Metrics, Side, Uplink};
+use rbx_play::protocol::{Command, CommandBody, DeviceReport, Located, Metrics, Side, Uplink};
 use serde_json::json;
 
 fn set_tags() -> CommandBody {
@@ -144,4 +144,63 @@ fn command_with_set_tags_round_trips() {
 fn pointer_body_serializes_to_wire_shape() {
     let value = serde_json::to_value(CommandBody::Pointer { inside: false }).expect("serialize");
     assert_eq!(value, json!({ "type": "pointer", "inside": false }));
+}
+
+#[test]
+fn input_commands_serialize_to_wire_shape() {
+    let navigate = CommandBody::Navigate {
+        path: None,
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+        speed: 0.5,
+    };
+    assert_eq!(
+        serde_json::to_value(navigate).expect("serialize"),
+        json!({ "type": "navigate", "x": 1.0, "y": 2.0, "z": 3.0, "speed": 0.5 })
+    );
+    let locate = CommandBody::Locate {
+        path: Some("LocalPlayer.PlayerGui.Gui.Button".to_owned()),
+    };
+    assert_eq!(
+        serde_json::to_value(locate).expect("serialize"),
+        json!({ "type": "locate", "path": "LocalPlayer.PlayerGui.Gui.Button" })
+    );
+    assert_eq!(
+        serde_json::to_value(CommandBody::TypeText {
+            text: "hi".to_owned(),
+            path: None
+        })
+        .expect("serialize"),
+        json!({ "type": "type_text", "text": "hi" })
+    );
+}
+
+#[test]
+fn located_reads_the_probes_answer_with_or_without_a_point() {
+    let screen: Located =
+        serde_json::from_str(r#"{"inset_x":0,"inset_y":58,"width":1342,"height":794}"#)
+            .expect("parse");
+    assert_eq!((screen.x, screen.y, screen.inset_y), (None, None, 58.0));
+    let point: Located = serde_json::from_str(
+        r#"{"x":200,"y":130,"inset_x":0,"inset_y":58,"width":1342,"height":794}"#,
+    )
+    .expect("parse");
+    assert_eq!((point.x, point.y), (Some(200.0), Some(130.0)));
+}
+
+#[test]
+fn a_client_ack_with_its_side_still_reads_as_an_ack() {
+    let ack: Uplink = serde_json::from_value(
+        json!({ "type": "ack", "id": 4, "ok": true, "result": "Success", "side": "client" }),
+    )
+    .expect("parse");
+    assert_eq!(
+        ack,
+        Uplink::Ack {
+            id: 4,
+            ok: true,
+            result: "Success".to_owned()
+        }
+    );
 }
