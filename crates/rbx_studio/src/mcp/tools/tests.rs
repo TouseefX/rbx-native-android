@@ -95,6 +95,46 @@ fn get_studio_state_answers_in_studios_three_lines() {
 }
 
 #[test]
+fn the_list_holds_the_shell_tools_with_their_required_arguments() {
+    let tools = super::list();
+    let required = |name: &str| -> Vec<String> {
+        let tool = tools
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["name"] == name)
+            .unwrap_or_else(|| panic!("{name} is not listed"));
+        serde_json::from_value(tool["inputSchema"]["required"].clone()).unwrap()
+    };
+    assert_eq!(required("execute_luau"), ["code", "datamodel_type"]);
+    assert_eq!(required("start_stop_play"), ["is_start"]);
+    assert!(required("get_console_output").is_empty());
+    assert_eq!(required("screen_capture"), ["capture_id"]);
+}
+
+#[test]
+fn get_studio_state_lists_the_live_data_models_during_play() {
+    let studio = Studio {
+        play: PlayState::Playing,
+        ..studio()
+    };
+    assert_eq!(
+        super::studio::state(&studio),
+        "- Current Studio Mode: Play\n- Available DataModels: Edit, Client, Server\n- Focused \
+         DataModel in the viewport: Client"
+    );
+    let showing = Studio {
+        play: PlayState::ShowingLive,
+        ..studio
+    };
+    assert_eq!(
+        super::studio::state(&showing),
+        "- Current Studio Mode: Play\n- Available DataModels: Client, Server\n- Focused \
+         DataModel in the viewport: Client"
+    );
+}
+
+#[test]
 fn list_roblox_studios_names_this_editor_with_its_place_id_when_linked() {
     let dom = place();
     assert_eq!(

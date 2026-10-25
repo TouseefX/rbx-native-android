@@ -297,6 +297,43 @@ impl Embedded {
         self.conn.flush().map_err(x11)
     }
 
+    /// The window's whole contents as `(width, height, RGBA)`.
+    pub fn capture(&self) -> Result<(u32, u32, Vec<u8>), EmbedError> {
+        use x11rb::protocol::xproto::ImageFormat;
+
+        let g = self
+            .conn
+            .get_geometry(self.window)
+            .map_err(x11)?
+            .reply()
+            .map_err(x11)?;
+        let (w, h) = (u32::from(g.width), u32::from(g.height));
+        let image = self
+            .conn
+            .get_image(
+                ImageFormat::Z_PIXMAP,
+                self.window,
+                0,
+                0,
+                g.width,
+                g.height,
+                !0,
+            )
+            .map_err(x11)?
+            .reply()
+            .map_err(x11)?;
+        if image.depth != 24 && image.depth != 32 {
+            return Err(EmbedError::X11(format!(
+                "unsupported window depth {}",
+                image.depth
+            )));
+        }
+        if image.data.len() != (w as usize) * (h as usize) * 4 {
+            return Err(EmbedError::X11("unexpected image size".into()));
+        }
+        Ok((w, h, super::bgrx_to_rgba(&image.data)))
+    }
+
     /// Unmaps the window, so a client about to be killed does not flash on
     /// the desktop when `Drop` hands it back to the root.
     pub fn hide(&self) {

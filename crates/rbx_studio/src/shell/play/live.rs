@@ -261,6 +261,18 @@ impl Shell {
         self.play.live.stash.is_some()
     }
 
+    /// `view`'s live tree while the game runs: the shown one sits in
+    /// `self.dom`, the other in `self.play.live`.
+    pub(in crate::shell) fn live_dom(&self, view: View) -> Option<&WeakDom> {
+        if self.play.phase != super::Phase::Running {
+            return None;
+        }
+        if self.live_shown() && self.play.live.view == view {
+            return Some(&self.dom);
+        }
+        Some(&self.play.live.tree(view).dom)
+    }
+
     /// The edited place: `self.dom`, or the stashed one while live.
     pub(in crate::shell) fn edit_dom(&self) -> &WeakDom {
         edit_dom_of(&self.dom, &self.play.live)

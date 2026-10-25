@@ -2,8 +2,8 @@ use rbx_dom::WeakDom;
 use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Value};
 
-use super::handle;
-use crate::mcp::{PlayState, Session, Studio};
+use super::{handle, job_reply, Reply};
+use crate::mcp::{image_content, text_content, Job, PlayState, Session, Studio};
 use crate::properties::Properties;
 
 fn reply(line: &str) -> Option<Value> {
@@ -68,6 +68,11 @@ fn tools_list_names_every_tool_with_a_schema() {
             "script_grep",
             "multi_edit",
             "get_studio_state",
+            "execute_luau",
+            "start_stop_play",
+            "get_console_output",
+            "screen_capture",
+            "subagent",
             "list_roblox_studios"
         ]
     );
@@ -110,6 +115,48 @@ fn malformed_and_unknown_messages_are_json_rpc_errors() {
     )
     .unwrap();
     assert_eq!(tool["error"]["code"], -32602);
+}
+
+#[test]
+fn a_shell_tool_is_handed_back_as_a_job() {
+    let dom = WeakDom::new();
+    let properties = Properties::new(ReflectionDatabase::embedded());
+    let studio = Studio {
+        id: "a1".to_owned(),
+        name: "Arena".to_owned(),
+        place_id: None,
+        play: PlayState::Edit,
+    };
+    let mut session = Session::new(&dom, &properties, &studio);
+    let line = r#"{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"get_console_output","arguments":{}}}"#;
+    match handle(line, &mut session) {
+        Some(Reply::Job { id, job }) => {
+            assert_eq!(id, json!(9));
+            assert_eq!(job, Job::Console);
+        }
+        _ => panic!("expected a job"),
+    }
+    assert!(session.job.is_none());
+}
+
+#[test]
+fn job_reply_answers_text_images_and_errors() {
+    let text: Value =
+        serde_json::from_str(&job_reply(json!(1), Ok(vec![text_content("Game Started")]))).unwrap();
+    assert_eq!(text["id"], 1);
+    assert_eq!(text["result"]["isError"], false);
+    assert_eq!(text["result"]["content"][0]["text"], "Game Started");
+
+    let image: Value =
+        serde_json::from_str(&job_reply(json!(2), Ok(vec![image_content(b"jpg")]))).unwrap();
+    assert_eq!(
+        image["result"]["content"][0],
+        json!({ "type": "image", "data": "anBn", "mimeType": "image/jpeg" })
+    );
+
+    let failed: Value = serde_json::from_str(&job_reply(json!(3), Err("boom".to_owned()))).unwrap();
+    assert_eq!(failed["result"]["isError"], true);
+    assert_eq!(failed["result"]["content"][0]["text"], "boom");
 }
 
 #[test]

@@ -2,6 +2,7 @@
 
 mod globals;
 mod host;
+mod report;
 mod resume;
 #[cfg(test)]
 mod tests;
@@ -28,6 +29,7 @@ use crate::LuaError;
 pub(crate) use globals::install_globals;
 pub(crate) use host::compile_in;
 use host::{CommandBar, CommandBarHooks};
+pub use report::Reported;
 
 /// How long [`Runtime::run`] waits on a script's sleeping threads before
 /// abandoning them.

@@ -791,4 +791,32 @@ impl Headless {
     pub fn take_frame(&mut self) -> Result<Option<Rendered>, String> {
         self.offscreen.take_frame()
     }
+
+    /// Draws one frame at `width`×`height` right now and returns it: from the
+    /// current viewpoint, or from `at` (eye, look-at, in studs) at the current
+    /// field of view. The camera is only borrowed: neither the controller nor
+    /// the viewpoint the host flies from changes.
+    pub fn capture(
+        &mut self,
+        width: u32,
+        height: u32,
+        at: Option<([f32; 3], [f32; 3])>,
+    ) -> Result<Rendered, String> {
+        self.offscreen.take_frame()?;
+        let from = match at {
+            Some((eye, look_at)) => {
+                let mut pose = camera::look_at_pose(Vec3::from(eye), Vec3::from(look_at));
+                if let Viewpoint::Free(current) = self.from {
+                    pose.fov_degrees = current.fov_degrees;
+                }
+                Viewpoint::Free(pose)
+            }
+            None => self.from,
+        };
+        self.offscreen.set_elapsed(self.start.elapsed());
+        self.offscreen.queue_frame((width, height), from)?;
+        self.offscreen
+            .take_frame()?
+            .ok_or_else(|| "the frame was not drawn".to_string())
+    }
 }
