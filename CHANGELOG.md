@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-25
+
+- **A splash screen at start-up.** A bare `rbxstudio` now opens a small
+  window where the two halves of the logo spin in from far away and land
+  on the README logo, in under a second, while the stored key loads.
+  Home or the setup wizard opens as soon as both are done. Reduce Motion
+  shows the finished logo straight away, and opening a place from the
+  command line skips it. (@chteau)
+
 ## 2026-10-21
 
 - **The editor tabs close.** Script Editor, UI Editor and Animation Editor
