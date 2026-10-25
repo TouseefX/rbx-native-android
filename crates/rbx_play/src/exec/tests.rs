@@ -105,12 +105,14 @@ fn client_error_is_not_ok() {
 }
 
 #[test]
-fn client_syntax_error_names_the_chunk_like_the_server() {
+fn client_syntax_error_reads_like_the_other_sides() {
     let client = command(Side::Client, "local = 1").unwrap_err();
-    let (ok, server) = run(&vm(), Side::Server, "local = 1");
-    assert!(!ok);
-    assert!(client.starts_with("AssistantCommand:1: "), "{client}");
-    assert!(server.ends_with(&client), "{server} / {client}");
+    assert!(
+        client.starts_with("syntax error: AssistantCommand:1: "),
+        "{client}"
+    );
+    // The test VM's `loadstring` reports through mlua, as the Edit side does.
+    assert_eq!(run(&vm(), Side::Server, "local = 1"), (false, client));
 }
 
 #[test]
