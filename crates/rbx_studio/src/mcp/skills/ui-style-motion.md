@@ -48,6 +48,13 @@ Write the signature motion down with the identity before building ("pops in with
 
 Cap the whole entrance (open plus stagger) at about 0.6 s for military and sleek and 0.8 s for cartoony. With many tiles, shrink the gap so the last one starts by 0.35 s.
 
+### Entrance rules that keep it from looking broken
+
+- **Never show an empty container.** Children start while the panel is still opening (at 30 to 40 percent of the open time), so the panel is never on screen blank for more than about 0.1 s. A big empty panel waiting for its tiles looks like a loading bug.
+- **A group enters as one unit.** A tile, its backing, its art, its decoration and its labels move and fade together. Tag the tile, not its parts. Nothing decorative (a disc, a glow, a pattern, a badge) may be visible before the container it belongs to.
+- **Record fade targets once.** For fade-ins, store each object's resting transparency at startup (as an attribute) before anything animates, and fade back to that value. Reading the current transparency while a tween is running captures a half-faded value and leaves parts invisible.
+- **Order follows reading order**: header, tabs, then tiles left to right and top to bottom, the detail pane, the CTA last.
+
 ## The motion script
 
 One script per ScreenGui. Fill in the style values from the table, keep the helpers. The names (`Shop`, `Grid`, `Featured`, `BuyButton`) are whatever your build uses.
