@@ -252,6 +252,7 @@ fn main() {
             None => std::env::var(command_bar::RUN_VARIABLE).ok(),
         },
         verbose,
+        configure: None,
     };
 
     // Everything read from the config directory beyond `settings.json`, in one
