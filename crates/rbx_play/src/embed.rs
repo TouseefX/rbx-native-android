@@ -10,7 +10,9 @@
 //!   window there, and this module does not exist.
 //!
 //! Both back ends expose the same `Embedded` / `FocusFollow` API over
-//! `WindowId`, the platform's native window handle.
+//! `WindowId`, the platform's native window handle, and the same `Input`:
+//! real mouse and keyboard events into the client's window, the way a
+//! person's reach it (XTest on Linux, `SendInput` on Windows).
 
 #[cfg(target_os = "linux")]
 mod x11;
@@ -27,6 +29,17 @@ pub use win32::*;
 pub type WindowId = u32;
 #[cfg(windows)]
 pub type WindowId = isize;
+
+/// A mouse button [`Input`] presses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Button {
+    Left,
+    Right,
+}
+
+/// How long a click holds its button down, and a wheel notch its press:
+/// the client reads its input once a frame.
+pub const CLICK_HOLD: std::time::Duration = std::time::Duration::from_millis(30);
 
 /// Pixel rect in the parent window's coordinates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
