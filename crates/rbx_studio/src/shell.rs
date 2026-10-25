@@ -8,6 +8,7 @@ mod animation;
 mod argon_diff_window;
 mod argon_sync;
 mod attributes_panel;
+mod avatar_dock;
 mod brick_color;
 mod change_class;
 pub(crate) mod chrome;
@@ -356,6 +357,7 @@ pub(crate) struct Shell {
     /// The Security Audit dock's cached findings; see `shell::security_audit`.
     audit: security_audit::AuditState,
     loren: loren_panel::LorenState,
+    avatar: avatar_dock::AvatarDock,
     style_scroll: ScrollHandle,
     /// The UI Editor document's own state, its sub-tab, the screen on the
     /// canvas, the pan and zoom, the gesture in flight. See
@@ -875,6 +877,7 @@ impl Shell {
             audit: Default::default(),
             layers: layers::LayerState::load(&path),
             loren: loren_panel::LorenState::default(),
+            avatar: avatar_dock::AvatarDock::default(),
             style_scroll: ScrollHandle::new(),
             ui,
             anim: animation::Animation::new(cx).with_seams(anim_sheet_height, anim_names_width),
@@ -1168,6 +1171,7 @@ impl Shell {
         shell.apply_debug_tests(cx);
         shell.apply_debug_layers(cx);
         shell.apply_debug_loren(cx);
+        shell.apply_debug_avatar_settings(cx);
 
         // `RBX_STUDIO_UI_EDITOR` (see `shell::ui_editor`): after the selection
         // blocks, so the screen they selected into is the one on the canvas.

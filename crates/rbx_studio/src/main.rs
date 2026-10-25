@@ -92,6 +92,7 @@ mod accent;
 mod align;
 mod anim_editor;
 mod argon_client;
+mod avatar_settings;
 mod beta;
 mod camera;
 mod change_class;
