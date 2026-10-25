@@ -8,7 +8,7 @@ mod tests;
 
 use serde_json::{json, Value};
 
-use super::{tools, Session};
+use super::{tools, Inserting, Session};
 
 /// Newest first; an `initialize` asking for another version is answered
 /// with the newest, which is how the specification says to decline it.
@@ -76,6 +76,12 @@ pub(crate) enum Reply {
     Now(String),
     /// A tool's [`super::Deferred`] work, which gives the reply once run.
     Later(Box<dyn FnOnce() -> String + Send>),
+    /// An `insert_asset` call: `fetch` runs off the UI thread, the shell
+    /// writes its result into the place, then [`answer`] replies to `id`.
+    Insert {
+        id: Value,
+        fetch: Inserting,
+    },
 }
 
 impl Reply {
@@ -84,6 +90,11 @@ impl Reply {
         match self {
             Reply::Now(text) => text,
             Reply::Later(work) => work(),
+            // Only the shell holds a place to write into.
+            Reply::Insert { id, .. } => answer(
+                id,
+                Err("insert_asset needs an editor window to insert into".to_owned()),
+            ),
         }
     }
 }
@@ -99,6 +110,9 @@ pub(crate) fn handle(line: &str, session: &mut Session) -> Option<Reply> {
         "tools/call" => tools::call(&params, session),
         _ => session_free(&method, &params),
     };
+    if let Some(fetch) = session.inserting.take() {
+        return Some(Reply::Insert { id, fetch });
+    }
     if let Some(work) = session.deferred.take() {
         return Some(Reply::Later(Box::new(move || {
             reply(id, Ok(tools::finished(work())))
@@ -121,6 +135,11 @@ pub(crate) fn answer_alone(method: &str, params: &Value) -> Option<Result<Value,
 fn session_free(method: &str, params: &Value) -> Result<Value, Failure> {
     answer_alone(method, params)
         .unwrap_or_else(|| Err((METHOD_NOT_FOUND, format!("method not found: {method}"))))
+}
+
+/// The reply to a tool call whose outcome came after the call was read.
+pub(crate) fn answer(id: Value, outcome: Result<Value, String>) -> String {
+    reply(id, Ok(tools::finished(outcome)))
 }
 
 pub(crate) fn reply(id: Value, outcome: Result<Value, Failure>) -> String {

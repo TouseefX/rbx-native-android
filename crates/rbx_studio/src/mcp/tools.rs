@@ -1,6 +1,7 @@
 //! The tools a client can call, named and shaped after Studio's own MCP
 //! server's, and the dotted paths they name instances by.
 
+mod assets;
 mod edit;
 mod scripts;
 mod studio;
@@ -16,6 +17,7 @@ use serde_json::{json, Value};
 use super::protocol::{Failure, INVALID_PARAMS};
 use super::Session;
 
+pub(crate) use assets::{inserted, Insertion};
 pub(crate) use edit::{apply as apply_edit, ScriptEdit};
 pub(crate) use studio::{LIST_STUDIOS, STUDIOS_KEY, STUDIO_STATE};
 
@@ -124,6 +126,7 @@ pub(super) fn list() -> Value {
         ),
     ]);
     if let Value::Array(tools) = &mut tools {
+        tools.extend(assets::list());
         for tool in tools.iter_mut() {
             tool["inputSchema"]["properties"]["studio_id"] = string(
                 "The editor to act on, from list_roblox_studios. May be left out when only one \
@@ -178,7 +181,10 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
         "multi_edit" => edit::multi_edit(arguments, session),
         STUDIO_STATE => Ok(studio::state(session.studio)),
         LIST_STUDIOS => Ok(studio::list(session.studio)),
-        _ => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
+        _ => match assets::run(name, arguments, session) {
+            Some(outcome) => outcome,
+            None => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
+        },
     })
 }
 

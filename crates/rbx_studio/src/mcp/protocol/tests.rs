@@ -68,6 +68,14 @@ fn tools_list_names_every_tool_with_a_schema() {
             "script_grep",
             "multi_edit",
             "get_studio_state",
+            "search_asset",
+            "insert_asset",
+            "upload_image",
+            "store_image",
+            "generate_mesh",
+            "generate_material",
+            "generate_procedural_model",
+            "wait_job_finished",
             "list_roblox_studios"
         ]
     );
@@ -106,7 +114,7 @@ fn malformed_and_unknown_messages_are_json_rpc_errors() {
     assert_eq!(unknown["id"], 5);
 
     let tool = reply(
-        r#"{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"generate_mesh"}}"#,
+        r#"{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"teleport_player"}}"#,
     )
     .unwrap();
     assert_eq!(tool["error"]["code"], -32602);

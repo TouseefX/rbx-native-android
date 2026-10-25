@@ -22,7 +22,9 @@
 //! planned there ([`Session::planned`]); the shell applies it through the
 //! same DOM write and undo history a script tab's own edits take. Only a
 //! grep, whose Luau pattern has no bound on how long it takes, runs off that
-//! thread, over a copy of the scripts ([`Session::deferred`]).
+//! thread, over a copy of the scripts ([`Session::deferred`]). An
+//! `insert_asset` downloads off that thread too ([`Session::inserting`]), and
+//! the shell then writes what came back into the place like any other insert.
 
 pub(crate) mod bridge;
 pub(crate) mod broker;
@@ -36,7 +38,7 @@ use rbx_dom::WeakDom;
 
 use crate::properties::Properties;
 
-pub(crate) use tools::{apply_edit, ScriptEdit};
+pub(crate) use tools::{apply_edit, inserted, Insertion, ScriptEdit};
 
 /// The command-line flag that turns `rbxstudio` into the [`bridge`].
 pub(crate) const BRIDGE_FLAG: &str = "--mcp";
@@ -54,11 +56,18 @@ pub(crate) struct Session<'a> {
     /// The work a tool with no bound on how long it takes (`script_grep`)
     /// left to run off the UI thread; what it returns is the tool's answer.
     pub(crate) deferred: Option<Deferred>,
+    /// The download an `insert_asset` call started, which the shell runs off
+    /// the UI thread and then grafts into the place as one undo step.
+    pub(crate) inserting: Option<Inserting>,
 }
 
 /// Runs over a copy of what it reads, so the editor stays responsive however
 /// long it takes, and the place can change meanwhile.
 pub(crate) type Deferred = Box<dyn FnOnce() -> Result<serde_json::Value, String> + Send>;
+
+/// Fetches what an `insert_asset` call adds; nothing in the place changes
+/// until the shell grafts its [`Insertion`] on the UI thread.
+pub(crate) type Inserting = Box<dyn FnOnce() -> Result<Insertion, String> + Send>;
 
 impl<'a> Session<'a> {
     pub(crate) fn new(dom: &'a WeakDom, properties: &'a Properties, studio: &'a Studio) -> Self {
@@ -68,6 +77,7 @@ impl<'a> Session<'a> {
             studio,
             planned: None,
             deferred: None,
+            inserting: None,
         }
     }
 }
