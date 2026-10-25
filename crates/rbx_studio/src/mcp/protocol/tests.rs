@@ -78,8 +78,8 @@ fn shape(tool: &Value) -> (String, Vec<String>, Vec<String>) {
 }
 
 /// Studio's own `tools/list`: a fresh dump from `RBX_MCP_STUDIO_TOOLS_FIXTURE`
-/// when set (a first line starting with `#` is skipped), else the copy this
-/// editor serves.
+/// when set (a first line starting with `#` is skipped), else the list this
+/// editor serves, which mirrors Studio's names and arguments.
 fn studio_tools() -> Vec<Value> {
     let text = match std::env::var_os("RBX_MCP_STUDIO_TOOLS_FIXTURE") {
         Some(path) => std::fs::read_to_string(path).unwrap(),
@@ -98,6 +98,8 @@ fn studio_tools() -> Vec<Value> {
         .clone()
 }
 
+/// Our list mirrors Studio's names and arguments; the descriptions are our
+/// own, so they are not compared.
 #[test]
 fn tools_list_matches_studios_names_and_arguments() {
     let answer = reply(r#"{"jsonrpc":"2.0","id":3,"method":"tools/list"}"#).unwrap();

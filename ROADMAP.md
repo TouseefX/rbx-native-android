@@ -2738,10 +2738,10 @@ both the plain fetch failure and the silent fall back to a default
   `Workspace.Model.Part`, with or without `game.` in front, names with dots
   included.
 - [x] **The MCP server's Luau, viewport and Play tools, and the rest of
-  Studio's tool list.** `tools/list` now serves real Studio's 28 tools
-  word for word: names, titles, annotations, descriptions and argument
-  schemas, `studio_id` marked required like Studio (it can still be left
-  out while one editor is open), and a test diffs the list against
+  Studio's tool list.** `tools/list` now mirrors real Studio's 28 tools:
+  names, titles, annotations and argument schemas, with descriptions in
+  our own words, `studio_id` marked required like Studio (it can still be
+  left out while one editor is open), and a test diffs the list against
   Studio's. `execute_luau` runs on Edit (one undo step), the playtest's
   Server (`loadstring`) or its Client (bytecode through a vendored Fiu
   interpreter), errors read `AssistantCommand:<line>:`.

@@ -36,13 +36,14 @@ const ROOT: &str = "game";
 /// try again.
 type Outcome = Result<Value, String>;
 
-/// Studio's own `tools/list` (`StudioMCP`), word for word: names, titles,
-/// annotations, descriptions and argument schemas, so a client or prompt
-/// written for Studio works unchanged.
+/// `tools/list`, mirroring Studio's own (`StudioMCP`) names, titles,
+/// annotations and argument schemas, so a client or prompt written for
+/// Studio works unchanged. The descriptions are ours and say what this
+/// editor does.
 const STUDIO_TOOLS: &str = include_str!("tools/studio_tools.json");
 
-/// `tools/list`'s answer: Studio's, with the `skill` entry naming this
-/// editor's skills. Studio requires `studio_id` on every call and says so;
+/// `tools/list`'s answer, with the `skill` entry naming this editor's
+/// skills. Studio requires `studio_id` on every call and says so;
 /// here it may still be left out while only one editor is open.
 pub(super) fn list() -> Value {
     let mut tools: Value = serde_json::from_str(STUDIO_TOOLS).expect("studio_tools.json parses");

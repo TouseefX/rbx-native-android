@@ -2,18 +2,18 @@
   {
     "name": "upload_image",
     "title": "Upload Image",
-    "description": "Upload a batch of images from http server to Roblox Asset Server, returning imagePath to assetId map, such as {\"http://localhost/image.png\" : \"rbxassetid://12345678\", \"https://www.figma.com/api/mcp/asset/6dcff81e-b394-4640-b3b1-123456789\" : \"rbxassetid://12345679\"}.",
+    "description": "Downloads each web image (http or https URL) and uploads it to Roblox as a Decal asset owned by the API key's user, through Open Cloud. Answers a map from each URL to its rbxassetid:// id, which works in any image property. Up to 20 images per call; PNG, JPEG or BMP. The key needs asset:read and asset:write.",
     "inputSchema": {
       "properties": {
         "imagePaths": {
-          "description": "An array of image paths to be uploaded.",
+          "description": "Web addresses of the images (http or https), at most 20.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -34,11 +34,11 @@
   {
     "name": "search_game_tree",
     "title": "Game Tree",
-    "description": "Explore the Roblox game hierarchy tree with flat JSON output.\nReturns an array of JSON objects representing instances in the Data Model, showing names, paths, and relationships.\nUse optional filters to narrow down results by path, instance type, or keywords.\nFor detailed inspection of a specific instance's properties and attributes, use the Inspect Instance tool.\n\nOUTPUT FORMAT:\nArray of objects with:\n{\n  \"name\": \"InstanceName\",\n  \"className\": \"Part\", \n  \"fullPath\": \"Workspace.Folder.InstanceName\",\n  \"parentName\": \"Folder\",\n  \"childSummary\": \"5 children (3 Part, 2 Script)\",  // Present if depth limit reached and children exist\n  \"unexploredChildCount\": 5  // Present if depth limit reached with matching children\n}\n\nDEPTH LIMITING:\n- Default max_depth: 3 levels from start point (absolute traversal depth)\n- Absolute max: 10 levels\n- max_depth limits how deep into the hierarchy we traverse, regardless of filters\n- Beyond max_depth, children are summarized with counts by class type\n- Nodes at depth limit show: \"unexploredChildCount\" and \"childSummary\"\n\nEXAMPLES (every call must pass datamodel_type: use \"Edit\" in edit mode, or \"Client\"/\"Server\" during a playtest -- \"Edit\" is rejected while playing):\n- Full tree (3 levels): search_game_tree(datamodel_type: \"Edit\")\n- Workspace only: search_game_tree(datamodel_type: \"Edit\", path: \"Workspace\")\n- ServerScriptService: search_game_tree(datamodel_type: \"Edit\", path: \"ServerScriptService\")\n- All base scripts: search_game_tree(datamodel_type: \"Edit\", instance_type: \"BaseScript\")\n- All parts: search_game_tree(datamodel_type: \"Edit\", instance_type: \"Part\")\n- By keywords: search_game_tree(datamodel_type: \"Edit\", keywords: \"player, character\")\n- Deep exploration: search_game_tree(datamodel_type: \"Edit\", max_depth: 6)\n- Combined filters: search_game_tree(datamodel_type: \"Edit\", path: \"Workspace\", instance_type: \"Part\", keywords: \"red\")\n- Client tree during a playtest: search_game_tree(datamodel_type: \"Client\", path: \"Players\")\n- Server tree during a playtest: search_game_tree(datamodel_type: \"Server\", path: \"Workspace\")\n",
+    "description": "Lists the instances of a tree as flat JSON, one object per instance with name, className, fullPath and parentName. An instance at the depth limit whose children were left out also carries unexploredChildCount and a childSummary of their classes.\n\nStart from path to look at one branch, and narrow with instance_type (an IsA check) and keywords. max_depth defaults to 3 and stops at 10; head_limit caps the list at 200 by default. Use inspect_instance to see one instance's properties.\n\ndatamodel_type picks the tree: Edit for the place being edited, Client or Server while a playtest runs.\n\nExamples:\n- search_game_tree(datamodel_type: \"Edit\", path: \"Workspace\")\n- search_game_tree(datamodel_type: \"Edit\", instance_type: \"BaseScript\")\n- search_game_tree(datamodel_type: \"Edit\", keywords: \"door, key\", max_depth: 6)\n- search_game_tree(datamodel_type: \"Server\", path: \"Players\")",
     "inputSchema": {
       "properties": {
         "datamodel_type": {
-          "description": "The target datamodel to operate on, the tool can only be performed in those datamodel types. call get_studio_state to get current available datamodel types. if the target datamodel is not available in current mode, consider using start_stop_play to switch to the desired mode and then use the tools. This is a required argument.",
+          "description": "Which tree to read: Edit is the edited place, Client and Server are the running playtest's. get_studio_state tells which ones exist right now; start_stop_play starts or stops a playtest.",
           "enum": [
             "Edit",
             "Client",
@@ -47,27 +47,27 @@
           "type": "string"
         },
         "head_limit": {
-          "description": "Maximum number of results to return. Default: 200. Prevents overwhelming output for large trees.",
+          "description": "Most instances to list. 200 when left out.",
           "type": "number"
         },
         "instance_type": {
-          "description": "Filter by ClassName using IsA() check. Examples: 'BasePart', 'BaseScript', 'GuiObject', 'Model', 'Folder'. Case sensitive.",
+          "description": "Only list instances whose class is or inherits this one, like BasePart or GuiObject. Exact case.",
           "type": "string"
         },
         "keywords": {
-          "description": "Filter by instance name keywords (case-insensitive). Separate multiple keywords with commas or spaces. Instance name must contain at least one keyword. Examples: 'player', 'red, blue', 'button door'",
+          "description": "Only list instances whose name holds one of these words, ignoring case. Split them with commas or spaces.",
           "type": "string"
         },
         "max_depth": {
-          "description": "Maximum absolute depth to traverse from start point. Default: 3, Absolute max: 10. Limits how deep we explore in the hierarchy regardless of filters. Beyond this depth, children are summarized instead of expanded.",
+          "description": "How many levels below the start to walk. 3 when left out, 10 at most. Deeper children are only counted.",
           "type": "number"
         },
         "path": {
-          "description": "Start exploration from this path. Examples: 'Workspace', 'ServerScriptService', 'Workspace.Models'. Path is case-sensitive.",
+          "description": "Where to start, as a dotted path such as Workspace.Map. Exact case. The whole tree when left out.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -88,15 +88,15 @@
   {
     "name": "script_search",
     "title": "File Search",
-    "description": "Fast script search based on fuzzy matching against script names.\nUse if you know part of the script name but don't know where it's located exactly.\nResponse will be capped to 10 results.\nMake your query more specific if need to filter results further.\nNote: Pattern matching is not supported such as asterisk (*) or question mark (?) wildcards.\n",
+    "description": "Finds scripts by name, matching loosely: the whole name first, then names that start with or hold the keyword, then names that hold its letters in order. Good when you know roughly what a script is called but not where it lives. Answers at most 10 paths. No wildcards.",
     "inputSchema": {
       "properties": {
         "keywords": {
-          "description": "The comma-separated keywords string to search for in the game's scripts. Each keyword is case-insensitive.",
+          "description": "One or more words to look for in script names, split with commas. Case does not matter.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -117,15 +117,15 @@
   {
     "name": "skill",
     "title": "Skill",
-    "description": "Retrieve detailed knowledge, best practices, or reference material for a specific skill.\nSkills provide domain-specific expertise that helps you produce better, more accurate results.\n\n<available_skills>\n  <skill>\n    <name>rbx-create-skill</name>\n    <source>Roblox</source>\n    <description>Guide the user through authoring or modifying a custom skill. Use when the user wants to create, edit, update, or rename a skill.</description>\n  </skill>\n  <skill>\n    <name>rbx-debug</name>\n    <source>Roblox</source>\n    <description>Programmatically add breakpoints and inspect thread information to debug Roblox Studio games via MCP, plugins, or command scripts. Use as a more robust tool to investigate scripting bugs or verify script behavior beyond static analysis.</description>\n  </skill>\n  <skill>\n    <name>rbx-device-simulator-lua</name>\n    <source>Roblox</source>\n    <description>Control the Studio Device Simulator to test UI across device form factors. Use when switching devices, testing orientations, running multi-device comparisons, or verifying UI layout via MCP tools (execute_luau + screen_capture).</description>\n  </skill>\n  <skill>\n    <name>rbx-docs-search</name>\n    <source>Roblox</source>\n    <description>Look up Roblox documentation using the http_get tool — Engine API reference, creator guides (avatar, characters, Studio workflows), cloud API, and docs indexes. Use when you need accurate API details or how-to guidance.</description>\n  </skill>\n  <skill>\n    <name>rbx-perf-profiling</name>\n    <source>Roblox</source>\n    <description>Analyze fine-grained performance data provided by the MicroProfiler through the LibMP Luau module. Use it to investigate CPU and GPU bottlenecks, identify the causes of frame-time spikes, and analyze memory allocations by subsystem.</description>\n  </skill>\n  <skill>\n    <name>rbx-scene-analysis</name>\n    <source>Roblox</source>\n    <description>Analyze and optimize Roblox scenes using SceneAnalysisService — rendering, memory, instance composition, unparented instances, and animation/audio assets. Use when investigating performance, memory, or leaks in a place.</description>\n  </skill>\n  <skill>\n    <name>rbx-unit-test</name>\n    <source>Roblox</source>\n    <description>Write, run, and debug Luau unit tests for ModuleScripts in Roblox Studio. Use this skill only when the user asks to add unit tests, improve test coverage, run existing tests, or debug failing tests. Do not use it for playtesting, gameplay QA, or validating visuals and UI feel.</description>\n  </skill>\n</available_skills>\n\nWhen to use skills:\n1. When the task involves a domain covered by an available skill\n2. When you need best practices or conventions before writing or reviewing code\n3. When you are unsure about the correct patterns or APIs for a specific area\n\nImportant:\n1. Invoke the skill BEFORE writing code or taking action, not after\n2. Follow the returned guidance closely in your response\n3. Do not mention a skill without actually invoking it first",
+    "description": "Loads a guide for one kind of Roblox work, such as UI style, data saving or security, written for this editor. Each one holds conventions and pitfalls worth knowing before you start.\n\n<available_skills>\n</available_skills>\n\nLoad the matching skill before you write code or change the place, then follow what it says. Only name a skill to the user after loading it.",
     "inputSchema": {
       "properties": {
         "skill_name": {
-          "description": "The name of the skill to retrieve. Options: rbx-create-skill, rbx-debug, rbx-device-simulator-lua, rbx-docs-search, rbx-perf-profiling, rbx-scene-analysis, rbx-unit-test",
+          "description": "Which skill to load.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -146,34 +146,34 @@
   {
     "name": "multi_edit",
     "title": "Multi-Edit",
-    "description": "Makes multiple edits to a single script in one operation. More efficient than multiple single edits.\nCan also create new scripts if the path doesn't exist (will need to specify className).\n\nExample Call (correct):\n- Args: {\"file_path\":\"ReplicatedStorage.Platformer.Constants\",\"edits\":[{\"old_string\":\"JUMP_COOLDOWN = 0.15\",\"new_string\":\"JUMP_COOLDOWN = 0.3\"}]}\n\nPath Format:\n- Use dot notation like \"game.ServerScriptService.MyScript\"\n\nCreating New Scripts:\n- If the script doesn't exist, it will be created using the provided className\n- className is required when creating new scripts\n- First edit with empty old_string (\"\") sets the initial content\n- Subsequent edits work normally on the created content\n\nBefore Using:\n- Read or search file to understand existing script contents\n- For new scripts, provide className and start with empty old_string to set initial content\n\nImportant Notes:\n- All edits are applied in sequence, in the order provided\n- Each edit operates on the result of the previous edit\n- All edits must be valid for the operation to succeed - atomic operation\n- Plan edits carefully to avoid conflicts between sequential operations\n\nCritical Requirements:\n- old_string must match script contents exactly (including whitespace)\n- old_string and new_string must be different\n- className required only when creating new scripts\n- For new files: first edit can have empty old_string to set initial content\n\nWhen Making Edits:\n- Ensure all edits result in correct, runnable code\n- Don't leave code in a broken state\n- Use replace_all for renaming variables across the entire script\n",
+    "description": "Replaces text in one script's Source, several replacements in one call. Each edit applies to the text the previous one left. Every edit is checked first: if any old_string is missing, the script is left as it was. The change is one undo step.\n\nTo make a new script, give a file_path that does not exist yet (only its last part may be new), set className, and start with an edit whose old_string is empty to write its first text.\n\nExample: {\"file_path\": \"ReplicatedStorage.Config\", \"edits\": [{\"old_string\": \"SPEED = 16\", \"new_string\": \"SPEED = 20\"}], \"datamodel_type\": \"Edit\"}\n\nRead the script first. old_string has to match exactly, spaces included, and differ from new_string. Set replace_all to change every copy, such as when renaming a variable.",
     "inputSchema": {
       "properties": {
         "className": {
-          "description": "The class name of the script to create (e.g., 'Script', 'LocalScript', 'ModuleScript'). Required only when creating new scripts, leave empty if script already exists.",
+          "description": "Script, LocalScript or ModuleScript. Only needed when the script is new.",
           "type": "string"
         },
         "datamodel_type": {
-          "description": "The target datamodel to operate on, the tool can only be performed in those datamodel types. call get_studio_state to get current available datamodel types. if the target datamodel is not available in current mode, consider using start_stop_play to switch to the desired mode and then use the tools. This is a required argument.",
+          "description": "Has to be Edit: only the edited place can be changed, a playtest's trees are rebuilt each run.",
           "enum": [
             "Edit"
           ],
           "type": "string"
         },
         "edits": {
-          "description": "An array of edit operations. For new scripts, first edit can have empty old_string to set initial content.",
+          "description": "The replacements, applied one after another.",
           "items": {
             "properties": {
               "new_string": {
-                "description": "The text to replace it with (must be different from old_string)",
+                "description": "What goes in its place. Must differ from old_string.",
                 "type": "string"
               },
               "old_string": {
-                "description": "The text to replace (must match exactly). Use empty string for new script initial content.",
+                "description": "Exact text to find. Empty only for the first edit of a new script.",
                 "type": "string"
               },
               "replace_all": {
-                "description": "Replace all occurrences of old_string (optional, defaults to false)",
+                "description": "Change every copy instead of requiring exactly one. False by default.",
                 "type": "boolean"
               }
             },
@@ -186,11 +186,11 @@
           "type": "array"
         },
         "file_path": {
-          "description": "The dot-notation path of the script (e.g., 'game.ServerScriptService.MyScript'). Will be created if it doesn't exist.",
+          "description": "Dotted path of the script, like ServerScriptService.Main; game. in front is optional.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -213,15 +213,15 @@
   {
     "name": "start_stop_play",
     "title": "Start/Stop Play",
-    "description": "Start play the game or stop the play.",
+    "description": "Starts a playtest of the place in the embedded Roblox client, or stops the running one and goes back to editing.",
     "inputSchema": {
       "properties": {
         "is_start": {
-          "description": "true to start the game, false to stop the game and return to edit mode.",
+          "description": "true starts a playtest, false stops it.",
           "type": "boolean"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -242,11 +242,11 @@
   {
     "name": "get_console_output",
     "title": "Get Console Output",
-    "description": "Get the console output from the Studio output log.",
+    "description": "Reads the editor's Output panel: prints, warnings and errors from the place and the playtest. Long logs keep only their newest 20000 characters.",
     "inputSchema": {
       "properties": {
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -266,15 +266,15 @@
   {
     "name": "user_mouse_input",
     "title": "User Mouse Input",
-    "description": "Send one or more mouse actions in order: moveTo, mouseButtonDown, mouseButtonUp, mouseButtonClick, scrollUp, scrollDown, or wait. For mouseButtonDown, mouseButtonUp, and mouseButtonClick, set mouse_button to \"left\" or \"right\". After the first step that sets position (x/y or instance_path), later steps may omit coordinates and reuse that position.",
+    "description": "Plays mouse steps into the running playtest's client as real OS input to its window. A step moves the pointer (moveTo), presses, releases or clicks a button (mouse_button says which), turns the wheel (scrollUp, scrollDown) or pauses (wait). A step without a position reuses the last one given. Steps run one by one, so a bad step stops the call after the earlier ones have happened.",
     "inputSchema": {
       "properties": {
         "actions": {
-          "description": "Ordered list of mouse actions to perform.",
+          "description": "The steps, in order.",
           "items": {
             "properties": {
               "action": {
-                "description": "The mouse action for this step.",
+                "description": "What this step does.",
                 "enum": [
                   "moveTo",
                   "mouseButtonDown",
@@ -287,11 +287,11 @@
                 "type": "string"
               },
               "instance_path": {
-                "description": "The instance path that the mouse should be moved to. for example: \"LocalPlayer.PlayerGui.Frame\", \"game.Workspace.Folder.Frame\". The path should start with game, LocalPlayer, or Workspace. If instance_path is provided, x and y will be ignored, vice versa.",
+                "description": "Move to the centre of this GuiObject instead of x and y: a dotted path from game, Workspace or LocalPlayer, such as LocalPlayer.PlayerGui.Menu.Play.",
                 "type": "string"
               },
               "mouse_button": {
-                "description": "Required when action is mouseButtonDown, mouseButtonUp, or mouseButtonClick.",
+                "description": "left or right. Needed for the three button steps.",
                 "enum": [
                   "left",
                   "right"
@@ -299,15 +299,15 @@
                 "type": "string"
               },
               "wait_time_ms": {
-                "description": "Delay in milliseconds before the next step. Required for wait; range 0 to 10000.",
+                "description": "Pause in milliseconds after this step, 0 to 10000. Needed for a wait step.",
                 "type": "number"
               },
               "x": {
-                "description": "Screen X coordinate. Omit if instance_path is set or a prior step already established position (reused for scroll, mouse button actions, etc.).",
+                "description": "Horizontal GUI position in pixels. Leave out to reuse the last position, or when instance_path is set.",
                 "type": "number"
               },
               "y": {
-                "description": "Screen Y coordinate. Omit if instance_path is set or a prior step already established position (reused for scroll, mouse button actions, etc.).",
+                "description": "Vertical GUI position in pixels. Leave out to reuse the last position, or when instance_path is set.",
                 "type": "number"
               }
             },
@@ -319,14 +319,14 @@
           "type": "array"
         },
         "datamodel_type": {
-          "description": "The target datamodel to operate on, the tool can only be performed in those datamodel types. call get_studio_state to get current available datamodel types. if the target datamodel is not available in current mode, consider using start_stop_play to switch to the desired mode and then use the tools. This is a required argument.",
+          "description": "Has to be Client: input goes to the playtest's client.",
           "enum": [
             "Client"
           ],
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -348,15 +348,15 @@
   {
     "name": "store_image",
     "title": "Store Image",
-    "description": "Load an image from a local file path and return an IMAGEID_<id> URI that can be passed to other tools (e.g. as attachedImageUri for generate_procedural_model).\nUse this tool when you need to convert a local image file into an image URI that other tools accept.\nSupported formats: png, jpg, jpeg. Max file size: 5MB.",
+    "description": "Keeps a local image for this editor session and answers an IMAGEID_<id> handle that tools taking an attached image accept. Nothing is uploaded. PNG or JPEG, 5 MB at most.",
     "inputSchema": {
       "properties": {
         "filePath": {
-          "description": "Absolute path to a local image file (png, jpg, or jpeg).",
+          "description": "Full path of a .png, .jpg or .jpeg file on this computer.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -377,27 +377,27 @@
   {
     "name": "http_get",
     "title": "HTTP GET",
-    "description": "Fetches the content of a URL via HTTP GET request. Returns the response body as text.\n\nOptionally searches the fetched content for a keyword (query parameter). When a query is provided:\n- Returns only the matching sections with surrounding context lines, saving context window space.\n- Returns a short \"no match\" message if the keyword isn't found.\n- Use context_lines to control how many lines of context around each match (default: 3).\n- Use return_full: true to get the entire document when the keyword matches.\n\nWithout a query, the full response body is returned.\n\nOnly the following URL patterns are allowed:\n- https://create.roblox.com/docs/reference/engine (Roblox Engine API docs — URLs must end with .md or be llms.txt)\n- https://create.roblox.com/docs/cloud (Roblox Cloud API docs — URLs must end with .md or be llms.txt)\n- https://create.roblox.com/docs/performance-optimization (Roblox Performance Optimization docs — URLs must end with .md or be llms.txt)\n- https://github.com/Roblox/libmp (Roblox LibMP repository — URLs must end with .md or be llms.txt)\n- https://create.roblox.com/docs (Roblox Creator docs (guides, tutorials, etc.) — URLs must end with .md or be llms.txt)\n\nAny URL that does not match one of the above rules will be rejected.\nOnly GET requests are supported. The full URL must be provided.\n\nExamples:\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Part.md\")\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Part.md\", query: \"Anchored\")\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/BasePart.md\", query: \"Position\", context_lines: 10)\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Part.md\", query: \"Anchored\", return_full: true)\n",
+    "description": "Reads a page of Roblox's documentation and answers it as text (HTML is turned into plain text). Give query to get only the lines around each hit instead of the whole page.\n\nReachable over https:\n- create.roblox.com/docs/... (Engine API reference, guides, Cloud API). Any page is served as Markdown with .md added to its URL, and llms.txt files index each section.\n- github.com/Roblox/creator-docs/... and raw.githubusercontent.com/Roblox/creator-docs/..., the source of those docs.\n- github.com/Roblox/libmp/releases/download/...\nAnything else is refused, redirects included.\n\nExamples:\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Humanoid.md\")\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Humanoid.md\", query: \"WalkSpeed\", context_lines: 6)",
     "inputSchema": {
       "properties": {
         "context_lines": {
-          "description": "Lines of surrounding context per match. Only meaningful when query is provided. Default: 3.",
+          "description": "Lines to show before and after each hit. 3 by default. Only used with query.",
           "type": "number"
         },
         "query": {
-          "description": "Optional keyword to search for in the fetched content (case-insensitive literal match). When provided, only matching sections are returned.",
+          "description": "A word or phrase to look for, ignoring case. Only the matching parts of the page come back.",
           "type": "string"
         },
         "return_full": {
-          "description": "If true and query matches, return the entire document instead of just matched sections. Only meaningful when query is provided. Default: false.",
+          "description": "With query: answer the whole page when the word is found. False by default.",
           "type": "boolean"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "url": {
-          "description": "The full URL to fetch. Must match one of the allowed URL patterns.",
+          "description": "The whole https address of the page, inside the places listed above.",
           "type": "string"
         }
       },
@@ -418,38 +418,38 @@
   {
     "name": "character_navigation",
     "title": "Character Navigation",
-    "description": "Navigate the character to the given position, or instance.",
+    "description": "Walks the player's character in the running playtest to a point or to an instance, along a computed path with Humanoid:MoveTo, at a scaled WalkSpeed. Answers once the character gets there.",
     "inputSchema": {
       "properties": {
         "datamodel_type": {
-          "description": "The target datamodel to operate on, the tool can only be performed in those datamodel types. call get_studio_state to get current available datamodel types. if the target datamodel is not available in current mode, consider using start_stop_play to switch to the desired mode and then use the tools. This is a required argument.",
+          "description": "Has to be Client: the walk runs in the playtest's client.",
           "enum": [
             "Client"
           ],
           "type": "string"
         },
         "instance_path": {
-          "description": "The instance path that the character should be moved to. for example: \"game.Workspace.Part\",\"game.Workspace.Model\". The path should start with game, LocalPlayer, or Workspace.",
+          "description": "Walk to this instance instead of x, y and z: a dotted path from game, Workspace or LocalPlayer, such as Workspace.Checkpoint.",
           "type": "string"
         },
         "speed_multiplier": {
-          "description": "speed multiplier, default is 1.0, 0.5 is half speed, 2.0 is double speed. minimum is 0.1, maximum is 10.0.",
+          "description": "Multiplies the walk speed: 1 is normal, 0.5 half, 2 double. Between 0.1 and 10.",
           "type": "number"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "x": {
-          "description": "The x coordinate to move the character to. Required if instance_path is not provided.",
+          "description": "X of the point to walk to, in studs. Needed without instance_path.",
           "type": "number"
         },
         "y": {
-          "description": "The y coordinate to move the character to. Required if instance_path is not provided.",
+          "description": "Y of the point to walk to, in studs. Needed without instance_path.",
           "type": "number"
         },
         "z": {
-          "description": "The z coordinate to move the character to. Required if instance_path is not provided.",
+          "description": "Z of the point to walk to, in studs. Needed without instance_path.",
           "type": "number"
         }
       },
@@ -470,27 +470,27 @@
   {
     "name": "script_read",
     "title": "Read File",
-    "description": "Reads a script from the Roblox workspace. The output will be returned with line numbers in format: LINE_NUMBER→LINE_CONTENT.\nWhen using this tool to gather information, ensure you gather the COMPLETE context to fulfill the user's request.\n\nUsage:\n- This tool reads the entire script by default to provide complete context\n- You can read multiple scripts in parallel for efficiency\n- If you need to find specific symbols across multiple scripts, use the grep search tool\n- Avoid re-reading the same script unless the script may have changed since the last read\n- For very large scripts (thousands of lines), consider using grep_search to locate specific functions or patterns first\n\nPath Format:\n- The path needs to be a full path, with no wildcard matching\n- Use dot notation like \"game.ServerScriptService.MyScript\"\n- Script must already exist (use `file_search` or `grep_search` to find the script path first)\n- Will only read existing scripts, never creates new ones\n",
+    "description": "Answers a script's Source with a number before each line (number, then an arrow, then the text). The whole script by default, or a range of lines. The script has to exist: find its path with script_search or script_grep first. Several scripts can be read in parallel.",
     "inputSchema": {
       "properties": {
         "end_line_one_indexed_inclusive": {
-          "description": "The one-indexed line number to end reading at (inclusive). Required if should_read_entire_file is false.",
+          "description": "Last line to answer, counting from 1. Needed when should_read_entire_file is false.",
           "type": "integer"
         },
         "should_read_entire_file": {
-          "description": "Whether to read the entire script. Defaults to true. Must be set to false when providing a line range.",
+          "description": "True (the default) answers every line; set false to pass a range.",
           "type": "boolean"
         },
         "start_line_one_indexed": {
-          "description": "The one-indexed line number to start reading from (inclusive). Required if should_read_entire_file is false.",
+          "description": "First line to answer, counting from 1. Needed when should_read_entire_file is false.",
           "type": "integer"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "target_file": {
-          "description": "The dot-notation path of the script to read (e.g., 'game.ServerScriptService.MyScript')",
+          "description": "Dotted path of the script, like ServerScriptService.Main; game. in front is optional.",
           "type": "string"
         }
       },
@@ -511,11 +511,11 @@
   {
     "name": "get_studio_state",
     "title": "Get Studio State",
-    "description": "Get the state of the studio, including current play state and available datamodel types. If the studio state is not expected, please call start_stop_play tool to start or stop the play.",
+    "description": "Says what the editor is doing: editing or playtesting, which trees (Edit, Client, Server) tools can reach right now, and which one the viewport shows. Use start_stop_play to change it.",
     "inputSchema": {
       "properties": {
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -535,31 +535,31 @@
   {
     "name": "screen_capture",
     "title": "Screen Capture",
-    "description": "Capture current edit-time screen, return the image data. If camera_position and look_at_position are provided, the camera will be temporarily set to the camera_position and look at the look_at_position.",
+    "description": "Takes a JPEG of the viewport: the edited place, or the game itself while a playtest runs. Give camera_position and look_at_position together to aim the camera there for the shot; the camera goes back afterwards.",
     "inputSchema": {
       "properties": {
         "camera_position": {
-          "description": "The position of the camera to capture the screen from.",
+          "description": "Where the camera stands for the shot, in studs.",
           "items": {
-            "description": "The x, y, z coordinate of the camera position.",
+            "description": "x, y and z.",
             "type": "number"
           },
           "type": "array"
         },
         "capture_id": {
-          "description": "Capture identifier such as 'ScreenCapture_1', 'ScreenCapture_2', etc.",
+          "description": "A name for this shot, such as Shot_1.",
           "type": "string"
         },
         "look_at_position": {
-          "description": "The position to look at.",
+          "description": "The point the camera faces, in studs.",
           "items": {
-            "description": "The x, y, z coordinate of the look at position.",
+            "description": "x, y and z.",
             "type": "number"
           },
           "type": "array"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -580,15 +580,15 @@
   {
     "name": "script_grep",
     "title": "Grep Search",
-    "description": "Runs a search for a string pattern over all script contents in the game. To avoid overwhelming output, the results are capped at 50 matches.",
+    "description": "Searches every script's Source line by line for a Luau string pattern (plain text works too) and answers each hit's path, line number and text, stopping at 50. A pattern with more than three .*, .+ or .- is refused because it can take minutes on one long line.",
     "inputSchema": {
       "properties": {
         "query": {
-          "description": "The string or Luau pattern to search for.",
+          "description": "The text or Luau pattern to find.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -609,19 +609,19 @@
   {
     "name": "wait_job_finished",
     "title": "Wait Job Finished",
-    "description": "Wait for a background job to finish. Returns the final status and details when the job reaches a terminal state (Completed, Failed, or Cancelled).\n\nPass the jobId returned when a tool was called with its 'async' argument set to true.\n\nOnly call this tool when:\n- The user EXPLICITLY asks to wait for a backgrounded job to finish (e.g. \"wait for it to complete\", \"let me know when it's done\")\n- You need to confirm a job's result before performing a follow-up action that depends on it",
+    "description": "Waits for a job a generation tool started with async set. None of those tools can run in this editor, so no job ever exists, and this answers that the id names nothing.",
     "inputSchema": {
       "properties": {
         "jobId": {
-          "description": "The jobId returned when a tool was called with its 'async' argument set to true.",
+          "description": "The id a generation call answered.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "timeout": {
-          "description": "Maximum time in seconds to wait for the job to finish. Defaults to 600 seconds.",
+          "description": "Longest wait in seconds. 600 by default.",
           "type": "number"
         }
       },
@@ -642,27 +642,27 @@
   {
     "name": "generate_procedural_model",
     "title": "Primitive Generation",
-    "description": "Creates 3D objects built from primitive parts (blocks, spheres, cylinders, wedges) as a ProceduralModel with configurable attributes.\nUse this tool when the user wants to:\n- Create or build a 3D object, model, character, creature, vehicle, building, scenery, or any physical thing in the workspace\n- Generate something from a reference image\n- Create an object with tunable parameters (e.g. \"add attributes to control head size, arm length, color\")\n- Build anything described as \"procedural\", \"parametric\", \"configurable\", or \"with attributes\"\n\nThe output is a ProceduralModel: a scripted model whose appearance is controlled by user-editable attributes (like size, color, proportions). The user can tweak these attributes after generation without regenerating.\n\nThe tool automatically inserts the generated model into the workspace. You do not need to run any code afterward.\n\nCRITICAL: This is a long-running generative tool. Default to calling it with the 'async' argument set to true, which runs the generation in the background and returns immediately with a jobId. Handle other tasks while the generation is in-progress, and only call the 'wait_job_finished' tool when you absolutely need the result.",
+    "description": "In Studio, builds a model out of primitive parts with attributes that tune it. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
     "inputSchema": {
       "properties": {
         "async": {
-          "description": "Run this tool asynchronously and return immediately with a jobId, without blocking on completion. Use this when you want to kick off the work (e.g. several generations at once, or when the user does not need to wait for the result) and continue with other tasks. The tool runs in the background and updates its own UI. Poll the returned jobId with the wait_job_finished tool only when you actually need the final result. If you DO need the result before proceeding, omit this argument (or set it false) and call the tool normally.",
+          "description": "Accepted for compatibility. Nothing is generated here, so no job is ever started.",
           "type": "boolean"
         },
         "attachedImageUri": {
-          "description": "The image URI (IMAGEID_<id>) from the user's attached image. Always pass this when the user provides a reference image.",
+          "description": "An IMAGEID_<id> handle from store_image to use as a reference.",
           "type": "string"
         },
         "partNames": {
-          "description": "List of part names that define the structure of the generated model. Accepts a comma-separated string (e.g. 'body, left wheel, right wheel, door') or a JSON array of strings (e.g. ['body', 'left wheel', 'right wheel', 'door']). Required when segmentation='explicit'. Maximum 8 parts (excess will be truncated).",
+          "description": "Part names, as a comma list or a JSON array of strings; up to 8. Needed when segmentation is explicit.",
           "type": "string"
         },
         "prompt": {
-          "description": "A text description of what to create and what attributes to expose.\nPass the user's own words. If they mention specific configurable properties (e.g. \"head size\", \"arm length\", \"wheel count\"), include those in the prompt so the generated model exposes them as editable attributes.\nIf an image is attached and the user gave no text description, pass an empty string.\nDo NOT describe or interpret the attached image — only pass the user's own words.\n",
+          "description": "What to build and which attributes it should expose, in the user's words.",
           "type": "string"
         },
         "segmentation": {
-          "description": "Controls how the model is broken into parts. Pick based on the user's wording:\n- Omit (or \"auto\"): user did NOT mention parts/segmentation (e.g. \"generate a car\"). The tool will derive parts automatically via an internal LLM call.\n- \"none\": user explicitly asked for no parts / a single piece (e.g. \"generate a car with no parts\", \"as one mesh\", \"single piece\").\n- \"explicit\": user named specific parts (e.g. \"a car with body and wheels\"). You MUST also pass partNames with the user's listed parts (max 8).\n",
+          "description": "How the result would be split into parts: auto (or left out) picks parts itself, none keeps one piece, explicit uses the names in partNames.",
           "enum": [
             "auto",
             "none",
@@ -671,7 +671,7 @@
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -692,22 +692,22 @@
   {
     "name": "segment_mesh",
     "title": "Mesh Segmentation",
-    "description": "Segments an existing mesh into named sub-parts using AI. Requires a source MeshPart or Model and up to 5 part names (e.g. [\"head\", \"body\", \"tail\"]). Returns a new Model containing the segmented parts, inserted as a sibling of the source.",
+    "description": "In Studio, splits a mesh into named parts with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
     "inputSchema": {
       "properties": {
         "instance_path": {
-          "description": "Full Studio path to the source MeshPart or Model, e.g. \"Workspace.Model1.Part2\". Resolved directly — no live Studio selection required. If omitted, falls back to the current Studio selection (which must be exactly one MeshPart or Model).",
+          "description": "Dotted path of the MeshPart or Model to work on, like Workspace.Car.Body. Without it, the editor's selection is used, and it has to be exactly one MeshPart or Model.",
           "type": "string"
         },
         "parts": {
-          "description": "List of part names to segment the mesh into (max 5). Example: [\"head\", \"body\", \"tail\"].",
+          "description": "Names of the parts to split into, up to 5, like [\"blade\", \"handle\"].",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -728,19 +728,19 @@
   {
     "name": "generate_texture",
     "title": "Texture Generation",
-    "description": "Re-textures an existing mesh using AI, given a text prompt describing the desired look. Requires a source MeshPart or Model. Replaces the source in place.",
+    "description": "In Studio, gives a mesh a new texture from a prompt with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
     "inputSchema": {
       "properties": {
         "hintImage": {
-          "description": "Optional reference image guiding the texture style. When provided, textPrompt may be an empty string.",
+          "description": "A reference image for the look; with one, textPrompt may be empty.",
           "type": "object"
         },
         "instance_path": {
-          "description": "Full Studio path to the source MeshPart or Model, e.g. \"Workspace.Model1.Part2\". Resolved directly — no live Studio selection required. If omitted, falls back to the current Studio selection (which must be exactly one MeshPart or Model).",
+          "description": "Dotted path of the MeshPart or Model to work on, like Workspace.Car.Body. Without it, the editor's selection is used, and it has to be exactly one MeshPart or Model.",
           "type": "string"
         },
         "model": {
-          "description": "Generation mode. \"Fast\" (default) trades quality for speed. \"Quality\" is a research preview and can vary in results; it first generates a reference image from an automatically selected view, so it takes longer.",
+          "description": "Fast or Quality.",
           "enum": [
             "Fast",
             "Quality"
@@ -748,11 +748,11 @@
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "textPrompt": {
-          "description": "Text description of the desired texture/appearance, e.g. \"rusty metal\".",
+          "description": "The look to give the mesh, like \"mossy stone\".",
           "type": "string"
         }
       },
@@ -773,15 +773,15 @@
   {
     "name": "user_keyboard_input",
     "title": "User Keyboard Input",
-    "description": "Send one or more keyboard inputs to the game in order. Each step is keyDown, keyUp, keyPress (keyDown then keyUp), textInput, or wait.",
+    "description": "Plays keyboard steps into the running playtest's client, in order: keyDown, keyUp, keyPress (down then up), textInput or wait. Keys are real OS input to its window; textInput puts text straight into the focused TextBox. Steps run one by one, so a bad step stops the call after the earlier ones have happened.",
     "inputSchema": {
       "properties": {
         "actions": {
-          "description": "Ordered list of keyboard actions to perform.",
+          "description": "The steps, in order.",
           "items": {
             "properties": {
               "action": {
-                "description": "The keyboard action for this step.",
+                "description": "What this step does.",
                 "enum": [
                   "keyDown",
                   "keyUp",
@@ -792,11 +792,11 @@
                 "type": "string"
               },
               "instance_path": {
-                "description": "The instance path that the keyboard input should be sent to. for example: \"LocalPlayer.PlayerGui.Frame\", \"game.Workspace.Folder.Frame\". The path should start with game, LocalPlayer, or Workspace.",
+                "description": "The GuiObject the input is meant for: a dotted path from game, Workspace or LocalPlayer, such as LocalPlayer.PlayerGui.Menu.Play.",
                 "type": "string"
               },
               "key_code": {
-                "description": "The key code to send to the game. Required when action is keyDown, keyUp, or keyPress.",
+                "description": "The Enum.KeyCode name of the key. Needed for keyDown, keyUp and keyPress.",
                 "enum": [
                   "None",
                   "Backspace",
@@ -1085,11 +1085,11 @@
                 "type": "string"
               },
               "text_inputs": {
-                "description": "The text to send to the game. Required when action is textInput.",
+                "description": "Text to type. Needed for textInput.",
                 "type": "string"
               },
               "wait_time_ms": {
-                "description": "The time to wait in milliseconds before the next action, required for wait action, range from 0 to 10000.",
+                "description": "Pause in milliseconds after this step, 0 to 10000. Needed for a wait step.",
                 "type": "number"
               }
             },
@@ -1101,14 +1101,14 @@
           "type": "array"
         },
         "datamodel_type": {
-          "description": "The target datamodel to operate on, the tool can only be performed in those datamodel types. call get_studio_state to get current available datamodel types. if the target datamodel is not available in current mode, consider using start_stop_play to switch to the desired mode and then use the tools. This is a required argument.",
+          "description": "Has to be Client: input goes to the playtest's client.",
           "enum": [
             "Client"
           ],
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -1130,23 +1130,23 @@
   {
     "name": "generate_mesh",
     "title": "Mesh Generation",
-    "description": "Generates a textured mesh from a prompt using AI.",
+    "description": "In Studio, makes a textured mesh from a prompt with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
     "inputSchema": {
       "properties": {
         "async": {
-          "description": "Run this tool asynchronously and return immediately with a jobId, without blocking on completion. Use this when you want to kick off the work (e.g. several generations at once, or when the user does not need to wait for the result) and continue with other tasks. The tool runs in the background and updates its own UI. Poll the returned jobId with the wait_job_finished tool only when you actually need the final result. If you DO need the result before proceeding, omit this argument (or set it false) and call the tool normally.",
+          "description": "Accepted for compatibility. Nothing is generated here, so no job is ever started.",
           "type": "boolean"
         },
         "maxTriangles": {
-          "description": "The maximum number of triangles for the generated mesh. If provided, this must be between 12 and 20000 (inclusive).",
+          "description": "Triangle budget, from 12 to 20000.",
           "type": "number"
         },
         "partNames": {
-          "description": "List of part names defining the schema for the generated mesh. Accepts a comma-separated string (e.g. 'body, left wheel, right wheel') or a JSON array of strings (e.g. ['body', 'left wheel', 'right wheel']). Required when segmentation='explicit'. Maximum 8 parts (excess will be truncated).",
+          "description": "Part names, as a comma list or a JSON array of strings; up to 8. Needed when segmentation is explicit.",
           "type": "string"
         },
         "segmentation": {
-          "description": "Controls how the mesh is broken into parts. Pick based on the user's wording:\n- Omit (or \"auto\"): user did NOT mention parts/segmentation (e.g. \"generate a car\"). The tool will derive parts automatically via an internal LLM call.\n- \"none\": user explicitly asked for no parts / a single piece (e.g. \"generate a car with no parts\", \"as one mesh\", \"single piece\").\n- \"explicit\": user named specific parts (e.g. \"a car with body and wheels\"). You MUST also pass partNames with the user's listed parts (max 8).\n",
+          "description": "How the result would be split into parts: auto (or left out) picks parts itself, none keeps one piece, explicit uses the names in partNames.",
           "enum": [
             "auto",
             "none",
@@ -1155,18 +1155,18 @@
           "type": "string"
         },
         "size": {
-          "description": "The generation's bounding box size. The generation will try to fit within this volume. Try to approximate a good size based on textPrompt.",
+          "description": "Box the mesh should fit in, in studs.",
           "properties": {
             "x": {
-              "description": "X dimension scalar.",
+              "description": "Width.",
               "type": "number"
             },
             "y": {
-              "description": "Y dimension scalar.",
+              "description": "Height.",
               "type": "number"
             },
             "z": {
-              "description": "Z dimension scalar.",
+              "description": "Depth.",
               "type": "number"
             }
           },
@@ -1178,11 +1178,11 @@
           "type": "object"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "textPrompt": {
-          "description": "The text prompt describing the mesh to generate.",
+          "description": "What the mesh should be.",
           "type": "string"
         }
       },
@@ -1203,23 +1203,23 @@
   {
     "name": "subagent",
     "title": "Subagent",
-    "description": "Launch a specialized subagent to handle complex, multi-step tasks autonomously.\nSubagents are independent AI assistants with restricted tool access and specialized instructions.\n\n<available_subagents>\n  <subagent>\n    <name>explore</name>\n    <description>Fast agent specialized for exploring codebases and searching for information. Use this when you need to:\n- Find files by patterns (e.g., \"scripts with 'player' in the name\")\n- Search code for keywords or patterns (e.g., \"how are touch events handled?\")\n- Answer questions about the codebase structure\n- Query the current game state via Luau execution\n- Understand existing game architecture before making changes\n- Gather context from multiple files before deciding on an approach</description>\n  </subagent>\n</available_subagents>\n\nWhen to use subagents:\n1. When you need to explore the codebase before making decisions\n2. When a task requires multiple search/read steps across many files\n3. When you're uncertain about the right approach and need autonomous investigation\n4. To separate concerns (e.g., explore first, then modify)\n\nImportant:\n1. Subagents return a final text result summarizing their work\n2. You cannot have a back-and-forth conversation with a subagent\n3. Subagents cannot spawn other subagents (no nesting)\n4. Choose the most specific subagent for your task",
+    "description": "Hands a task to a helper agent that works alone and answers once with a summary. It runs on your own model: the editor has none, so it asks the client through MCP sampling (sampling/createMessage), and a client without sampling cannot use this tool. It gets at most 30 turns.\n\n<available_subagents>\n  <subagent>\n    <name>explore</name>\n    <description>Looks around the place without changing it: the game tree, instances, scripts, the console, the editor's state, and execute_luau to check facts.</description>\n  </subagent>\n  <subagent>\n    <name>screen_capture</name>\n    <description>Finds what the task is about, aims the camera at it with screen_capture and describes what the shots show.</description>\n  </subagent>\n  <subagent>\n    <name>unit_test</name>\n    <description>Writes tests as ModuleScripts under ServerStorage.UnitTest.Cases, runs them on the Server during a playtest and reports PASS or FAIL for each.</description>\n  </subagent>\n</available_subagents>\n\nGood for searches that take many reads, or to look around before changing anything. You cannot talk back and forth with it, and it cannot start subagents of its own.",
     "inputSchema": {
       "properties": {
         "description": {
-          "description": "A short 3-5 word description of the task in present continuous tense (e.g., 'Exploring player spawn logic', 'Finding lighting scripts'). Used for display.",
+          "description": "A few words on what it is doing, for display, like \"Finding the spawn code\".",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "subagent_type": {
-          "description": "The type of subagent to invoke. Options: explore, screen_capture, unit_test",
+          "description": "explore, screen_capture or unit_test.",
           "type": "string"
         },
         "task": {
-          "description": "Detailed task description and instructions for the subagent. Be specific about what you need the subagent to do and what information to return.",
+          "description": "What the subagent should do and what it should report back. Be specific.",
           "type": "string"
         }
       },
@@ -1242,15 +1242,15 @@
   {
     "name": "execute_luau",
     "title": "Execute Luau",
-    "description": "Executes Luau code in Roblox Studio. Returns the result of the executed code or an error message if the code fails to execute.\n\nCode runs on Studio's main thread; until it yields, Studio is frozen, the script can't be stopped, and the MCP connection may drop. For heavy work (bulk instance creation or edits, procedural or terrain generation, large loops), split it into logical chunks (e.g. per region, or batches of ~1000 items) and call `task.wait()` once per chunk, not per item. When creating many instances, build each chunk in a container outside the DataModel and parent it before that chunk's `task.wait()`. The cost of a .Parent write into the DataModel scales with the total size of the subtree being inserted (all descendants), so parenting one large container is itself a single unyielding operation that can freeze Studio or drop the connection, no matter how incrementally the container was built. Keeping each flushed subtree small (one chunk's worth) bounds the cost of every .Parent write. A loop that waits for state to change (e.g. `while not ready do`) must call `task.wait()` inside it.",
+    "description": "Runs Luau and answers its first return value as text (a bare expression answers its value), or the error with its line as AssistantCommand:<line>:.\n\n- Edit runs in the editor's own Luau runtime against the edited place, and the whole run is one undo step.\n- Server runs inside the playtest's server with loadstring.\n- Client runs inside the playtest's client through a bundled Luau interpreter, since the client has no loadstring.\n\nA run that has not finished after 100 seconds is answered as timed out. Break big jobs into chunks with a task.wait() between them, and put a task.wait() inside any loop that waits for something to change.",
     "inputSchema": {
       "properties": {
         "code": {
-          "description": "The Luau code to execute.",
+          "description": "The Luau source to run.",
           "type": "string"
         },
         "datamodel_type": {
-          "description": "The target datamodel to operate on, the tool can only be performed in those datamodel types. call get_studio_state to get current available datamodel types. if the target datamodel is not available in current mode, consider using start_stop_play to switch to the desired mode and then use the tools. This is a required argument.",
+          "description": "Where it runs: Edit (the edited place), or Server or Client while a playtest runs.",
           "enum": [
             "Edit",
             "Client",
@@ -1259,7 +1259,7 @@
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -1281,11 +1281,11 @@
   {
     "name": "generate_material",
     "title": "Material Generation",
-    "description": "Returns the BaseMaterial and Name of the generated MaterialVariant. To use, these must both be set to the Material and MaterialVariant properties of BaseParts, respectively.",
+    "description": "In Studio, makes a MaterialVariant from a description with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
     "inputSchema": {
       "properties": {
         "async": {
-          "description": "Run this tool asynchronously and return immediately with a jobId, without blocking on completion. Use this when you want to kick off the work (e.g. several generations at once, or when the user does not need to wait for the result) and continue with other tasks. The tool runs in the background and updates its own UI. Poll the returned jobId with the wait_job_finished tool only when you actually need the final result. If you DO need the result before proceeding, omit this argument (or set it false) and call the tool normally.",
+          "description": "Accepted for compatibility. Nothing is generated here, so no job is ever started.",
           "type": "boolean"
         },
         "baseMaterial": {
@@ -1347,7 +1347,7 @@
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -1371,15 +1371,15 @@
   {
     "name": "inspect_instance",
     "title": "Inspect Instance",
-    "description": "Inspect a specific Roblox instance to get all its properties, attributes, and children summary.\nReturns detailed information about instances including all readable properties, custom attributes, \nand a comprehensive summary of immediate children and recursive child counts.\nIf multiple instances match the same path, all matches will be returned.\nUse this tool after using GameTree to explore specific instances in detail.\n\nSINGLE MATCH OUTPUT FORMAT:\n{\n  \"name\": \"MyPart\",\n  \"className\": \"Part\",\n  \"path\": \"Workspace.MyPart\",\n  \"uniqueId\": \"1234567890ABCDEF\",\n  \"properties\": {\n    \"Anchored\": true,\n    \"CanCollide\": true,\n    \"CFrame.Position\": \"0, 10, 0\",\n    \"CFrame.Rotation\": \"1, 0, 0, 0, 1, 0, 0, 0, 1\",\n    // ... all other readable properties\n  },\n  \"attributes\": {\n    \"CustomTag\": \"PlayerSpawn\",\n    \"SpawnDelay\": 5,\n    \"IsActive\": true\n  },\n  \"children\": {\n    \"immediateChildren\": [\n      {\n        \"className\": \"Part\",\n        \"path\": \"Workspace.MyPart.ChildPart\"\n      },\n      {\n        \"className\": \"Model\",\n        \"path\": \"Workspace.MyPart.ChildModel\"\n      }\n    ],\n    \"childrenCount\": 2,\n    \"totalDescendants\": 8\n  }\n}\n\nCHILDREN SUMMARY FIELDS:\n- immediateChildren: Array of direct children with className and path only (no name, childCount, or uniqueId)\n- childrenCount: Number of direct children\n- totalDescendants: Total count of all descendants (children, children's children, etc.)\n\nuniqueId is included for the main inspected instance when available. This is a unique identifier for each instance in the DataModel.\n\nMULTIPLE MATCHES OUTPUT FORMAT:\n{\n  \"matches\": [\n    { \n      \"name\": \"MyPart\", \n      \"className\": \"Part\", \n      \"path\": \"Workspace.MyPart\",\n      \"uniqueId\": \"RBX1234567890ABCDEF\",\n      \"properties\": {...}, \n      \"attributes\": {...},\n      \"children\": {...}\n    },\n    { \n      \"name\": \"MyPart\", \n      \"className\": \"MeshPart\", \n      \"path\": \"Workspace.MyPart\",\n      \"uniqueId\": \"RBX9876543210FEDCBA\",\n      \"properties\": {...}, \n      \"attributes\": {...},\n      \"children\": {...}\n    }\n  ],\n  \"count\": 2,\n  \"totalFound\": 2,\n  \"note\": \"Multiple instances found with path 'Workspace.MyPart'. All 2 matches are included below.\"\n}\n\nWHEN TOO MANY MATCHES (>20):\n{\n  \"matches\": [ /* first 20 matches with full details */ ],\n  \"count\": 20,\n  \"totalFound\": 45,\n  \"note\": \"Multiple instances found with path 'Workspace.Part'.\",\n  \"warning\": \"Found 45 total matches, but only showing first 20 due to output limits. Consider using a more specific path to narrow down results.\"\n}\n\nPATH SPECIFICATION:\n- Use dot notation: \"Workspace.Model.Part\"\n- Can include or omit \"game.\" prefix\n- Path must match instance hierarchy\n- If multiple instances have the same name at the same level, all will be returned\n- Maximum of 20 matches will be returned (with warning if more exist)\n\nEXAMPLES:\n- Inspect with children: InspectInstance(path: \"Workspace.Baseplate\")\n- Multiple matches: InspectInstance(path: \"Workspace.Part\") → Returns up to 20 Parts with children summary\n- Case-insensitive: InspectInstance(path: \"workspace.baseplate\")\n- Inspect script: InspectInstance(path: \"ServerScriptService.MainScript\")\n- Inspect GUI: InspectInstance(path: \"StarterGui.ScreenGui.Frame\")\n- With game prefix: InspectInstance(path: \"game.Workspace.Model\")\n\nCHILDREN SUMMARY USE CASES:\n- Understand instance hierarchy structure\n- Count total descendants for performance considerations\n- See immediate children for navigation purposes\n- Identify complex models with many nested children\n- Plan traversal strategies for large hierarchies\n",
+    "description": "Reports one instance in full as JSON: name, className, path, uniqueId, every property with a value, its attributes, and its children (each direct child's className and path, the child count and the descendant count). Long text such as a script's Source is summarized; read it with script_read.\n\nThe path ignores case, and game. in front is optional. When siblings share the name, every match comes back under matches with count and totalFound, at most 20 of them, with a warning when there were more.\n\nExamples:\n- inspect_instance(path: \"Workspace.SpawnLocation\")\n- inspect_instance(path: \"startergui.hud.coins\")",
     "inputSchema": {
       "properties": {
         "path": {
-          "description": "Path to the instance(s) to inspect using dot notation (case-insensitive). Returns detailed properties, attributes, and children summary. If multiple instances match, up to 20 will be returned with a warning if more exist. Example: 'Workspace.Model.Part' or 'workspace.model.part'",
+          "description": "Dotted path of the instance, like Workspace.Map.Door. Case does not matter.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -1400,11 +1400,11 @@
   {
     "name": "search_asset",
     "title": "Search Asset",
-    "description": "Searches for assets across Creator Store (public marketplace) and Creator Inventory (user/group/universe).\nUse this tool to find assets by keyword before inserting them with insert_asset.\nReturns a list of matching assets with metadata (name, type, source, price).\n\nScope controls where to search:\n- 'auto' (default): waterfalls through universe inventory → universe's owning group → user inventory → Creator Store. Best for general \"find me an X\" requests.\n- 'creator_store': searches only the marketplace. Use this when the user wants marketplace assets, paid assets, or when using price/creator filters.\n- 'user': searches the user's personal inventory only.\n- 'group': searches the universe's owning group by default. Pass groupId or groupName to search a different group instead. If the universe has no owning group and you don't pass a groupId, the response lists the user's groups so you can retry.\n- 'universe': searches the current universe's inventory only.\n\nTargeting a specific group: when the user names a particular group (\"in my group X\" / \"in group 12345\"), set scope='group' AND pass groupId or groupName to constrain to that one group. groupId/groupName are only valid with scope='group'; combining with any other scope (including 'auto') is rejected.\n\nResult attribution: each inventory result includes `creatorId` (string, the group or user ID that owns the asset) and `creatorName` (the group/user name when known). `creatorId` semantics depend on `source`: for source='inventory' coming from a group, it's the group ID.\n\nEvery scope='group' or scope='auto' response includes a `groups` field listing { id, name } for each of the user's groups (when the user has any). Use these to make a follow-up scope='group' + groupId call when the default (the universe's owning group, or the first relevant group) doesn't match what the user wants.\n\nEvery response also includes a `context` field describing the current Studio session: { userId, universeId, isPublished, creatorType ('User'/'Group' when published), creatorId, creatorName }. Use this to ground answers about which place is being edited and to disambiguate \"in my group\" requests.\n\nCross-owner inserts caution: when an inventory result's creatorId differs from context.creatorId (the place's owner), inserting it brings another owner's asset into this place. The user may have access to view the asset but might not intend or have the authority to share it across owners. Before calling insert_asset on a cross-owner result, name the source (the asset's creatorName) and the destination (context.creatorName or universe), and ask the user for explicit consent.\n\nWhen to use price filters: If the user asks for paid/premium assets or specifies a price range, set scope='creator_store' and use priceFilter, minPriceCents, and/or maxPriceCents. These filters only apply to Creator Store searches.\nWhen to use asset type: If the user asks for a specific asset type (audio, decals, meshes, packages, etc.), set assetType to filter results. The inventory API requires exactly one assetType per call and defaults to 'Model' when omitted, so cross-type discovery requires explicit assetType=Image / Audio / etc. Packages are stored as Models with a Package subtype — set assetType='Package' to find them (do not search for the word \"package\" as a query).\nInventory results (source='inventory') are always insertable. Creator Store results may occasionally be restricted — if insert fails, try the next result.\nEach result includes a thumbnailUrl (Roblox Thumbnails API). Fetch it to get JSON with data[0].imageUrl pointing to a CDN image of the asset — useful for visually comparing assets before inserting.\n",
+    "description": "Looks for assets to insert with insert_asset, through Open Cloud with the editor's API key. Answers each result's id, name, type, source, price and a thumbnailUrl, plus a context field naming the key's user and, for a place linked to Roblox, its universe and owner.\n\nscope:\n- creator_store: the Creator Store. The key needs creator-store-product:read.\n- user: the key owner's inventory. The key needs user.inventory-item:read.\n- group: Open Cloud lists no group inventory, so this finds what the group published on the Creator Store. Pick the group with groupId or groupName; the answer lists the user's groups under groups.\n- universe: refused, since Open Cloud lists no universe inventory.\n- auto (default): tries each source in turn; skipped ones and why are under skippedSources.\n\nPrice, tag, facet and verified filters only apply to the Creator Store. Inventory searches look at one assetType at a time (Model when left out); for packages, set assetType to Package rather than searching the word.\n\nBefore inserting a result owned by someone other than the place's owner, tell the user whose it is and ask first.",
     "inputSchema": {
       "properties": {
         "assetType": {
-          "description": "Filter by asset type. Use 'Image' for user-uploaded images (most decals/textures uploaded today are stored as Image, not Decal). Use 'Package' when the user asks about packages — packages are Models with a Package subtype, so a keyword search for 'package' won't find them.",
+          "description": "Kind of asset. Image for uploaded images (most textures today), Package for packages.",
           "enum": [
             "Model",
             "Audio",
@@ -1418,15 +1418,15 @@
           "type": "string"
         },
         "audioMaxDuration": {
-          "description": "Maximum audio duration in seconds (only when assetType='Audio').",
+          "description": "Longest audio length in seconds, with assetType Audio.",
           "type": "number"
         },
         "audioMinDuration": {
-          "description": "Minimum audio duration in seconds (only when assetType='Audio').",
+          "description": "Shortest audio length in seconds, with assetType Audio.",
           "type": "number"
         },
         "excludeSources": {
-          "description": "With scope='auto': skip these sources from the waterfall.",
+          "description": "With scope auto: sources to leave out.",
           "items": {
             "enum": [
               "user",
@@ -1439,22 +1439,22 @@
           "type": "array"
         },
         "facets": {
-          "description": "Additional keywords to refine the search (Creator Store only, ignored for inventory scopes). Facets narrow results by related concepts — e.g. for a 'lion' search: 'mane', 'safari', 'realistic', 'animated'. Available facets depend on the query.",
+          "description": "Extra words that narrow a Creator Store search; the answer may suggest some under availableFacets.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "groupId": {
-          "description": "Numeric group ID to constrain group inventory searches to a single group. Only valid with scope='group'. Mutually exclusive with groupName.",
+          "description": "The group to search, by numeric id. Only with scope group; not together with groupName.",
           "type": "string"
         },
         "groupName": {
-          "description": "Group name to constrain group inventory searches to a single group. Matched case-insensitively against the user's groups. Only valid with scope='group'. If the name doesn't match any of the user's groups, the response includes a `groups` field listing valid options. Mutually exclusive with groupId.",
+          "description": "The group to search, by name, ignoring case. Only with scope group; not together with groupId.",
           "type": "string"
         },
         "includeSources": {
-          "description": "With scope='auto': only search these sources (e.g. ['user', 'creator_store']).",
+          "description": "With scope auto: the only sources to try, like [\"user\", \"creator_store\"].",
           "items": {
             "enum": [
               "user",
@@ -1467,19 +1467,19 @@
           "type": "array"
         },
         "maxPriceCents": {
-          "description": "Maximum price in cents. Requires scope='creator_store'. Use with minPriceCents for a price range.",
+          "description": "Highest price in cents. Creator Store only.",
           "type": "number"
         },
         "maxResults": {
-          "description": "Number of results to return (1-20, default 5).",
+          "description": "How many results, 1 to 20. 5 by default.",
           "type": "number"
         },
         "minPriceCents": {
-          "description": "Minimum price in cents. Requires scope='creator_store'. Use with maxPriceCents for a price range (e.g. minPriceCents=100, maxPriceCents=5000).",
+          "description": "Lowest price in cents. Creator Store only.",
           "type": "number"
         },
         "priceFilter": {
-          "description": "Price filter. Requires scope='creator_store'. 'free' returns only free assets, 'paid' returns only paid assets, 'all' (default) returns both.",
+          "description": "free, paid or all (the default). Creator Store only.",
           "enum": [
             "free",
             "paid",
@@ -1488,11 +1488,11 @@
           "type": "string"
         },
         "query": {
-          "description": "Search term. Can be empty when filtering by assetType alone (e.g. to list all packages). Supports multi-term search with '+' (e.g. 'red+car') and exact phrase with quotes (e.g. '\"red+car\"').",
+          "description": "What to look for. May be empty to list by assetType alone.",
           "type": "string"
         },
         "scope": {
-          "description": "Where to search. 'auto' (default) waterfalls through all available sources. Use explicit scope to target a single source.",
+          "description": "Where to look; see the list above.",
           "enum": [
             "auto",
             "creator_store",
@@ -1503,18 +1503,18 @@
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         },
         "tags": {
-          "description": "Tags to filter by (Creator Store only, ignored for inventory scopes). Tags are category labels like 'Vehicle', 'Airplane', 'Fantasy'.",
+          "description": "Creator Store category labels, like Vehicle or Medieval, treated as extra facets.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "verifiedCreatorsOnly": {
-          "description": "Only return results from verified creators (Creator Store only).",
+          "description": "Only results from verified creators. Creator Store only.",
           "type": "boolean"
         }
       },
@@ -1534,19 +1534,19 @@
   {
     "name": "insert_asset",
     "title": "Insert Asset",
-    "description": "Inserts an asset into the game by its numeric Roblox asset ID.\nUse this tool when you have a specific asset ID to insert directly, rather than searching the Creator Store.\nThe asset will be loaded, validated, and placed in the scene.\nAlways provide assetName when you know the name of the asset (e.g. from search results or user request). The inserted instance will be named using assetName — if omitted, it defaults to a generic name.\nSupports models, meshes, images/decals, audio, video, animations, and packages.\n",
+    "description": "Downloads an asset by id and adds it to the place. A model, package or mesh part lands in a Model named after the asset, an animation as its KeyframeSequence, an image or decal as a Decal, audio as a Sound, a video as a VideoFrame, and a bare mesh as an anchored MeshPart. It keeps the position it was published with. Each inserted root is tagged Assistant:<guid>, and the answer names the tag.\n\nPass assetName whenever you know the asset's name, such as from search_asset.",
     "inputSchema": {
       "properties": {
         "assetId": {
-          "description": "Numeric Roblox asset ID to insert.",
+          "description": "The asset's numeric id.",
           "type": "string"
         },
         "assetName": {
-          "description": "Name for the inserted instance in the game tree. Always provide this when you know the asset name (e.g. from search_asset results). If omitted, defaults to a generic name.",
+          "description": "Name for what gets inserted. Without it, the Creator Store or Assets API name is used, else the class.",
           "type": "string"
         },
         "assetType": {
-          "description": "Asset type hint. If provided, skips the metadata API lookup and uses this type directly. Use when the caller already knows the asset type (e.g. from inventory search results). 'Image' and 'Decal' both insert as a Decal instance.",
+          "description": "What the asset is, used when the download does not say. Image and Decal both insert a Decal.",
           "enum": [
             "Model",
             "Package",
@@ -1561,11 +1561,11 @@
           "type": "string"
         },
         "parentPath": {
-          "description": "DataModel path to parent the asset under (e.g. game.Workspace.Folder1). Defaults to workspace.",
+          "description": "Dotted path to insert under, like Workspace.Props. Workspace when left out or not found.",
           "type": "string"
         },
         "studio_id": {
-          "description": "Selects Roblox Studio instance, use the list_roblox_studios tool to get available instances",
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
           "type": "string"
         }
       },
@@ -1585,7 +1585,7 @@
   },
   {
     "name": "list_roblox_studios",
-    "description": "Lists the connected Roblox Studio instances so a call can be directed at one. Several instances are commonly open at once, so every tool call must include a `studio_id` identifying the target instance — call this tool first to obtain the ids. Each result has an `id` and a human-readable `name` (including its place id or file name); use the `name` to choose the intended instance, confirming with the user before modifying their game.",
+    "description": "Lists the open editors this server can reach, each with an id and a name (its place file, plus the place id when linked to Roblox). Pass the id as studio_id to pick which one a call goes to. Check with the user before changing a place you picked by name alone.",
     "inputSchema": {
       "properties": {},
       "type": "object"

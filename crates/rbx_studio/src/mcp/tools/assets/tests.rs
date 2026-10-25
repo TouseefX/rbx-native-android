@@ -194,7 +194,7 @@ fn mesh_edit_tools_carry_studios_titles_and_annotations() {
             tool["inputSchema"]["properties"]["studio_id"]["description"]
                 .as_str()
                 .unwrap()
-                .starts_with("Selects Roblox Studio instance")
+                .starts_with("Which editor to act on")
         );
     }
 }

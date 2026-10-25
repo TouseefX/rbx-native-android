@@ -79,7 +79,7 @@ fn the_listed_tool_names_every_skill_where_studio_lists_its_own() {
         !description.contains("rbx-debug"),
         "Studio's own skills stay out"
     );
-    assert!(description.ends_with("without actually invoking it first"));
+    assert!(description.ends_with("Only name a skill to the user after loading it."));
     for skill in skills() {
         assert!(description.contains(&format!("<name>{}</name>", skill.name)));
         assert!(options.contains(skill.name));

@@ -71,9 +71,9 @@ fn skills() -> impl Iterator<Item = Skill> {
     FILES.iter().filter_map(|file| parse(file))
 }
 
-/// Fills Studio's `skill` entry with this editor's skills, where Studio
-/// lists its own: the `<available_skills>` block of the description and the
-/// options of `skill_name`.
+/// Fills the `skill` entry with this editor's skills: the
+/// `<available_skills>` block of the description and the options of
+/// `skill_name`.
 pub(super) fn describe(tool: &mut Value) {
     let description = tool["description"].as_str().unwrap_or_default();
     let (Some(start), Some(end)) = (
@@ -98,10 +98,8 @@ pub(super) fn describe(tool: &mut Value) {
     );
     let names: Vec<&str> = skills().map(|skill| skill.name).collect();
     tool["description"] = Value::String(description);
-    tool["inputSchema"]["properties"][SKILL_NAME]["description"] = Value::String(format!(
-        "The name of the skill to retrieve. Options: {}",
-        names.join(", ")
-    ));
+    tool["inputSchema"]["properties"][SKILL_NAME]["description"] =
+        Value::String(format!("Which skill to load. One of: {}", names.join(", ")));
 }
 
 pub(super) fn call(arguments: &Value) -> Outcome {
