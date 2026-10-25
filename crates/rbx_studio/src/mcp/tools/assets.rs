@@ -27,22 +27,6 @@ pub(crate) use insert::{inserted, Insertion};
 /// stand-in for `apis.roblox.com`, for captures and tests without a key.
 const MOCK_VARIABLE: &str = "RBX_STUDIO_MCP_ASSETS_MOCK";
 
-/// Every tool this module answers, in `tools/list` order.
-pub(super) fn list() -> Vec<Value> {
-    vec![
-        search::schema(),
-        insert::schema(),
-        images::upload_schema(),
-        images::store_schema(),
-        generate::mesh_schema(),
-        generate::material_schema(),
-        generate::procedural_schema(),
-        generate::segment_schema(),
-        generate::texture_schema(),
-        generate::wait_schema(),
-    ]
-}
-
 /// `None` for a tool this module does not answer.
 pub(super) fn run(name: &str, arguments: &Value, session: &mut Session) -> Option<Outcome> {
     Some(match name {
@@ -51,7 +35,9 @@ pub(super) fn run(name: &str, arguments: &Value, session: &mut Session) -> Optio
         images::UPLOAD => images::upload(arguments, session),
         images::STORE => images::store(arguments),
         generate::MESH | generate::MATERIAL | generate::PROCEDURAL => generate::refuse(name),
-        generate::SEGMENT | generate::TEXTURE => generate::mesh_edit(name, session.dom, arguments),
+        generate::SEGMENT | generate::TEXTURE => {
+            generate::mesh_edit(name, session.dom, &session.selection, arguments)
+        }
         generate::WAIT => generate::wait(arguments),
         _ => return None,
     })

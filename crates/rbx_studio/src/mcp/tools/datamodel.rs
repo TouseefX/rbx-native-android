@@ -2,27 +2,10 @@
 //! or, during a playtest, the game's Client or Server tree.
 
 use rbx_dom::WeakDom;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use super::text_argument;
 use crate::mcp::{DataModel, PlayState, Session, Studio};
-
-pub(super) fn datamodel_type() -> Value {
-    json!({
-        "type": "string",
-        "enum": [EDIT_DATAMODEL],
-        "description": "The data model to act on. Only Edit can be edited.",
-    })
-}
-
-pub(super) fn any_datamodel_type() -> Value {
-    json!({
-        "type": "string",
-        "enum": ["Edit", "Client", "Server"],
-        "description": "The data model to read. Defaults to Edit, the edited place; Client and \
-            Server exist only during a playtest.",
-    })
-}
 
 /// A `datamodel_type` argument, read; `None` when none is given.
 pub(super) fn datamodel_argument(arguments: &Value) -> Result<Option<DataModel>, String> {

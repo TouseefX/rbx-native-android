@@ -182,9 +182,7 @@ fn search_game_tree_reads_a_live_tree_and_refuses_a_missing_one() {
     );
     assert_eq!(
         super::search(&json!({ "datamodel_type": "Server" }), &session),
-        Err(
-"Server datamodel is not available in Play mode".to_owned()
-        )
+        Err("Server datamodel is not available in Play mode".to_owned())
     );
     assert_eq!(
         super::search(&json!({ "datamodel_type": "Nope" }), &session),

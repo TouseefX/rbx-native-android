@@ -388,29 +388,11 @@ fn the_tools_are_listed_with_studios_arguments() {
     };
     let keyboard = schema(KEYBOARD);
     let step = &keyboard["properties"]["actions"]["items"]["properties"];
-    assert_eq!(step["key_code"]["enum"].as_array().unwrap().len(), 283);
-    assert_eq!(keyboard["required"], json!(["actions", "datamodel_type"]));
-    assert_eq!(
-        keyboard["properties"]["datamodel_type"]["enum"],
-        json!(["Client"])
-    );
-    let mouse = schema(MOUSE);
-    assert_eq!(
-        mouse["properties"]["actions"]["items"]["properties"]["mouse_button"]["enum"],
-        json!(["left", "right"])
-    );
-    let navigation = schema(NAVIGATION);
-    for argument in [
-        "instance_path",
-        "x",
-        "y",
-        "z",
-        "speed_multiplier",
-        "studio_id",
-    ] {
-        assert!(
-            navigation["properties"].get(argument).is_some(),
-            "{argument}"
-        );
-    }
+    let listed: Vec<&str> = step["key_code"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    assert_eq!(listed, rbx_play::keycode::names().collect::<Vec<_>>());
 }

@@ -75,9 +75,7 @@ fn execute_luau_names_its_data_model() {
             "execute_luau",
             json!({ "code": "x", "datamodel_type": "Client" })
         ),
-        Err(
-"Client datamodel is not available in Starting mode".to_owned()
-        )
+        Err("Client datamodel is not available in Starting mode".to_owned())
     );
     assert!(run(
         PlayState::Edit,

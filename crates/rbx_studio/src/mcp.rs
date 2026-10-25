@@ -67,6 +67,9 @@ pub(crate) struct Session<'a> {
     /// The download an `insert_asset` call started, which the shell runs off
     /// the UI thread and then grafts into the place as one undo step.
     pub(crate) inserting: Option<Inserting>,
+    /// The Explorer selection in the edited place, which a tool whose
+    /// `instance_path` is left out works on, as Studio's do.
+    pub(crate) selection: Vec<rbx_dom::Ref>,
 }
 
 /// A running playtest as the input tools reach it, from any thread.
@@ -147,6 +150,7 @@ impl<'a> Session<'a> {
             job: None,
             play: None,
             inserting: None,
+            selection: Vec::new(),
         }
     }
 }

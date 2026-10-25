@@ -14,9 +14,9 @@
 mod answer;
 
 use rbx_cloud::{Client, StoreCategory, StoreCreator, StoreSearch};
-use serde_json::{json, Value};
+use serde_json::Value;
 
-use super::super::{string, text_argument, tool, Outcome};
+use super::super::{text_argument, Outcome};
 use super::{client, key_owner};
 use crate::mcp::Session;
 use answer::{Answer, Context};
@@ -41,75 +41,6 @@ const TYPES: [(&str, StoreCategory, &[&str]); 8] = [
     ("Video", StoreCategory::Video, &["VIDEO"]),
     ("Package", StoreCategory::Model, &["PACKAGE"]),
 ];
-
-const SOURCES: [&str; 4] = ["universe", "group", "user", "creator_store"];
-
-pub(super) fn schema() -> Value {
-    let sources = json!({ "type": "array", "items": { "type": "string", "enum": SOURCES } });
-    let mut include = sources.clone();
-    include["description"] = json!("With scope='auto': only search these sources.");
-    let mut exclude = sources;
-    exclude["description"] = json!("With scope='auto': skip these sources.");
-    tool(
-        NAME,
-        "Searches for assets across the Creator Store (public marketplace) and Creator \
-         Inventory (user/group/universe), to find one by keyword before inserting it with \
-         insert_asset. Returns matching assets with their id, name, type, source and price.\n\
-         Scope: 'auto' (default) waterfalls through universe inventory, the universe's owning \
-         group, your inventory, then the Creator Store; 'creator_store', 'user', 'group' and \
-         'universe' search one source. Open Cloud lists no group or universe inventory: a group \
-         search finds what the group published on the Creator Store, and a universe search is \
-         refused.\nPrice filters, facets and tags apply to Creator Store searches. Every \
-         answer carries a `context` (who you are, whether the place is published and who owns \
-         it) and, for 'auto' and 'group', the groups you manage.",
-        json!({
-            "query": string("Search term. May be empty when filtering by assetType alone."),
-            "assetType": {
-                "type": "string",
-                "enum": TYPES.map(|(name, ..)| name),
-                "description": "Filter by asset type. Defaults to Model. Packages are Models \
-                    with a Package subtype: use 'Package' rather than the word as a query.",
-            },
-            "scope": {
-                "type": "string",
-                "enum": ["auto", "creator_store", "user", "group", "universe"],
-                "description": "Where to search. 'auto' (default) waterfalls through every \
-                    source.",
-            },
-            "includeSources": include,
-            "excludeSources": exclude,
-            "groupId": string("Numeric group id to search, with scope='group' only."),
-            "groupName": string("A group you manage, matched ignoring case, with scope='group' only."),
-            "facets": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "More keywords to refine a Creator Store search, such as those \
-                    a previous answer listed in availableFacets.",
-            },
-            "tags": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Category labels such as Vehicle or Fantasy. Open Cloud's search \
-                    has no tag filter, so they refine a Creator Store search as facets do.",
-            },
-            "priceFilter": {
-                "type": "string",
-                "enum": ["free", "paid", "all"],
-                "description": "Only free or only paid Creator Store assets. Defaults to all.",
-            },
-            "minPriceCents": { "type": "number", "description": "Minimum Creator Store price in cents." },
-            "maxPriceCents": { "type": "number", "description": "Maximum Creator Store price in cents." },
-            "verifiedCreatorsOnly": {
-                "type": "boolean",
-                "description": "Only Creator Store results from verified creators.",
-            },
-            "audioMinDuration": { "type": "number", "description": "Minimum audio length in seconds (assetType='Audio')." },
-            "audioMaxDuration": { "type": "number", "description": "Maximum audio length in seconds (assetType='Audio')." },
-            "maxResults": { "type": "number", "description": "Number of results to return (1-20, default 5)." },
-        }),
-        &[],
-    )
-}
 
 pub(super) fn run(arguments: &Value, session: &mut Session) -> Outcome {
     let request = match Request::parse(arguments, session.studio.place_id) {
