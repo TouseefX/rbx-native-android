@@ -37,6 +37,8 @@ pub(super) fn list() -> Vec<Value> {
         generate::mesh_schema(),
         generate::material_schema(),
         generate::procedural_schema(),
+        generate::segment_schema(),
+        generate::texture_schema(),
         generate::wait_schema(),
     ]
 }
@@ -49,6 +51,7 @@ pub(super) fn run(name: &str, arguments: &Value, session: &mut Session) -> Optio
         images::UPLOAD => images::upload(arguments, session),
         images::STORE => images::store(arguments),
         generate::MESH | generate::MATERIAL | generate::PROCEDURAL => generate::refuse(name),
+        generate::SEGMENT | generate::TEXTURE => generate::mesh_edit(name, session.dom, arguments),
         generate::WAIT => generate::wait(arguments),
         _ => return None,
     })

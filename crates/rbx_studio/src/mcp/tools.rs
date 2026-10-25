@@ -128,10 +128,13 @@ pub(super) fn list() -> Value {
     if let Value::Array(tools) = &mut tools {
         tools.extend(assets::list());
         for tool in tools.iter_mut() {
-            tool["inputSchema"]["properties"]["studio_id"] = string(
-                "The editor to act on, from list_roblox_studios. May be left out when only one \
-                 editor is open.",
-            );
+            let id = &mut tool["inputSchema"]["properties"]["studio_id"];
+            if id.is_null() {
+                *id = string(
+                    "The editor to act on, from list_roblox_studios. May be left out when only \
+                     one editor is open.",
+                );
+            }
         }
         tools.push(tool(
             LIST_STUDIOS,

@@ -139,6 +139,8 @@ fn every_asset_tool_is_listed_with_a_studio_id() {
         "generate_mesh",
         "generate_material",
         "generate_procedural_model",
+        "segment_mesh",
+        "generate_texture",
         "wait_job_finished",
     ] {
         let tool = tools
@@ -169,4 +171,82 @@ fn generation_says_why_it_cannot_run() {
     let (error, text) = run(&dom, "wait_job_finished", json!({ "jobId": "j1" }));
     assert!(error);
     assert!(text.starts_with("No job found with id: j1."), "{text}");
+}
+
+#[test]
+fn mesh_edit_tools_carry_studios_titles_and_annotations() {
+    let tools = super::super::list();
+    for (name, title) in [
+        ("segment_mesh", "Mesh Segmentation"),
+        ("generate_texture", "Texture Generation"),
+    ] {
+        let tool = tools
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|tool| tool["name"] == name)
+            .unwrap();
+        assert_eq!(tool["title"], title);
+        assert_eq!(tool["annotations"]["title"], title);
+        assert_eq!(tool["annotations"]["destructiveHint"], true);
+        assert_eq!(tool["annotations"]["readOnlyHint"], false);
+        assert!(
+            tool["inputSchema"]["properties"]["studio_id"]["description"]
+                .as_str()
+                .unwrap()
+                .starts_with("Selects Roblox Studio instance")
+        );
+    }
+}
+
+#[test]
+fn mesh_edit_tools_validate_before_they_refuse() {
+    let mut dom = place();
+    let workspace = dom.root_refs()[0];
+    dom.new_instance("MeshPart", "Rock", Some(workspace));
+    let segment = |arguments| run(&dom, "segment_mesh", arguments);
+    let texture = |arguments| run(&dom, "generate_texture", arguments);
+
+    let (error, text) = segment(json!({ "instance_path": "Workspace.Rock" }));
+    assert!(
+        error && text.contains("missing the `parts` argument"),
+        "{text}"
+    );
+    let (_, text) = segment(
+        json!({ "instance_path": "Workspace.Rock", "parts": ["a", "b", "c", "d", "e", "f"] }),
+    );
+    assert!(text.contains("at most 5"), "{text}");
+    let (_, text) = segment(json!({ "parts": ["a"] }));
+    assert!(text.contains("instance_path is required"), "{text}");
+    let (_, text) = segment(json!({ "instance_path": "Workspace.Nope", "parts": ["a"] }));
+    assert!(
+        text.contains("No instance found at path: Workspace.Nope"),
+        "{text}"
+    );
+    let (_, text) = segment(json!({ "instance_path": "Workspace.Tower.Door", "parts": ["a"] }));
+    assert!(
+        text.contains("is a Part, not a MeshPart or Model"),
+        "{text}"
+    );
+    for path in ["Workspace.Rock", "Workspace.Tower"] {
+        let (error, text) = segment(json!({ "instance_path": path, "parts": ["a", "b"] }));
+        assert!(
+            error && text.contains("segment_mesh is not available in rbx-native"),
+            "{text}"
+        );
+    }
+
+    let (_, text) = texture(json!({ "instance_path": "Workspace.Rock" }));
+    assert!(text.contains("missing the `textPrompt` argument"), "{text}");
+    let (_, text) =
+        texture(json!({ "textPrompt": "rust", "instance_path": "Workspace.Tower.Door" }));
+    assert!(text.contains("not a MeshPart or Model"), "{text}");
+    let (error, text) = texture(json!({ "textPrompt": "rust", "instance_path": "Workspace.Rock" }));
+    assert!(
+        error && text.contains("generate_texture is not available in rbx-native"),
+        "{text}"
+    );
+    let (_, text) =
+        texture(json!({ "hintImage": {}, "textPrompt": "", "instance_path": "Workspace.Rock" }));
+    assert!(text.contains("generate_texture is not available"), "{text}");
 }
