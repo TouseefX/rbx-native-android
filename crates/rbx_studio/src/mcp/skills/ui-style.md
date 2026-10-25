@@ -113,6 +113,7 @@ cap.MaxSize = Vector2.new(110, 110)
 cap.Parent = button
 ```
 
+- `UIAspectRatioConstraint` only shrinks a box to fit inside its own Size (default `AspectType = FitWithinMaxSize`). A box sized `(0, 0, 0, 24)` stays 0 wide and everything inside it vanishes. Give both axes a real size, or set `AspectType = ScaleWithParentSize`.
 - Panels: `Size = UDim2.fromScale(0.62, 0.72)` plus `UIAspectRatioConstraint` (for example 1.45) plus `UISizeConstraint.MaxSize` around 980x680.
 - Centre with `AnchorPoint = Vector2.new(0.5, 0.5)` and `Position = UDim2.fromScale(0.5, 0.5)`.
 - Text: `TextScaled = true` plus `UITextSizeConstraint` (`MaxTextSize` 36 to 48 for headers, `MinTextSize` 12) so it never balloons. Or fixed `TextSize` inside a container driven by `UIScale`.
