@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 
-use super::{call, parse, schema, skills, FILES};
+use super::{call, parse, skills, FILES};
 
 fn text(outcome: Result<Value, String>) -> (bool, String) {
     match outcome {
@@ -49,9 +49,9 @@ fn no_name_lists_the_catalogue() {
 
 #[test]
 fn a_name_returns_that_skill_ignoring_case() {
-    let (failed, body) = text(call(&json!({ "name": "UI-Design" })));
+    let (failed, body) = text(call(&json!({ "name": "UI-Style" })));
     assert!(!failed);
-    assert!(body.starts_with("# Skill: ui-design\n\n"));
+    assert!(body.starts_with("# Skill: ui-style\n\n"));
     assert!(!body.contains("\ndescription:"));
 }
 
@@ -63,9 +63,34 @@ fn an_unknown_name_fails_with_the_catalogue() {
 }
 
 #[test]
-fn the_schema_enumerates_every_name() {
-    let names = &schema()["inputSchema"]["properties"]["name"]["enum"];
-    assert_eq!(names.as_array().unwrap().len(), FILES.len());
+fn the_listed_tool_names_every_skill_where_studio_lists_its_own() {
+    let tools = crate::mcp::tools::list();
+    let tool = tools
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "skill")
+        .unwrap();
+    let description = tool["description"].as_str().unwrap();
+    let options = tool["inputSchema"]["properties"]["skill_name"]["description"]
+        .as_str()
+        .unwrap();
+    assert!(
+        !description.contains("rbx-debug"),
+        "Studio's own skills stay out"
+    );
+    assert!(description.ends_with("without actually invoking it first"));
+    for skill in skills() {
+        assert!(description.contains(&format!("<name>{}</name>", skill.name)));
+        assert!(options.contains(skill.name));
+    }
+}
+
+#[test]
+fn skill_name_is_studios_argument() {
+    let (failed, body) = text(call(&json!({ "skill_name": "growth-analytics" })));
+    assert!(!failed);
+    assert!(body.starts_with("# Skill: growth-analytics\n\n"));
 }
 
 #[test]

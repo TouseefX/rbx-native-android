@@ -7,11 +7,12 @@
 #[cfg(test)]
 mod tests;
 
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use super::{text_argument, Outcome};
 
 pub(super) const NAME: &str = "skill";
+const SKILL_NAME: &str = "skill_name";
 
 const FILES: &[&str] = &[
     include_str!("../skills/accessibility.md"),
@@ -19,6 +20,10 @@ const FILES: &[&str] = &[
     include_str!("../skills/data-persistence.md"),
     include_str!("../skills/debugging.md"),
     include_str!("../skills/docs-search.md"),
+    include_str!("../skills/growth-analytics.md"),
+    include_str!("../skills/growth-monetization.md"),
+    include_str!("../skills/growth-promotion.md"),
+    include_str!("../skills/growth-retention.md"),
     include_str!("../skills/input-and-devices.md"),
     include_str!("../skills/live-ops.md"),
     include_str!("../skills/luau-scripting.md"),
@@ -27,7 +32,14 @@ const FILES: &[&str] = &[
     include_str!("../skills/security.md"),
     include_str!("../skills/server-authority.md"),
     include_str!("../skills/testing.md"),
-    include_str!("../skills/ui-design.md"),
+    include_str!("../skills/ui-style-cartoony.md"),
+    include_str!("../skills/ui-style-genres.md"),
+    include_str!("../skills/ui-style-icons.md"),
+    include_str!("../skills/ui-style-motion.md"),
+    include_str!("../skills/ui-style-sleek.md"),
+    include_str!("../skills/ui-style-striking.md"),
+    include_str!("../skills/ui-style-trendy.md"),
+    include_str!("../skills/ui-style.md"),
     include_str!("../skills/ux-patterns.md"),
 ];
 
@@ -59,29 +71,43 @@ fn skills() -> impl Iterator<Item = Skill> {
     FILES.iter().filter_map(|file| parse(file))
 }
 
-pub(super) fn schema() -> Value {
+/// Fills Studio's `skill` entry with this editor's skills, where Studio
+/// lists its own: the `<available_skills>` block of the description and the
+/// options of `skill_name`.
+pub(super) fn describe(tool: &mut Value) {
+    let description = tool["description"].as_str().unwrap_or_default();
+    let (Some(start), Some(end)) = (
+        description.find("<available_skills>"),
+        description.find("</available_skills>"),
+    ) else {
+        return;
+    };
+    let entries: String = skills()
+        .map(|skill| {
+            format!(
+                "  <skill>\n    <name>{}</name>\n    <source>rbx-native</source>\n    \
+                 <description>{}</description>\n  </skill>\n",
+                skill.name, skill.description
+            )
+        })
+        .collect();
+    let description = format!(
+        "{}<available_skills>\n{entries}{}",
+        &description[..start],
+        &description[end..]
+    );
     let names: Vec<&str> = skills().map(|skill| skill.name).collect();
-    super::tool(
-        NAME,
-        "Returns detailed guidance and best practices for one kind of Roblox work, to read \
-         before doing it. Called without a name, lists every skill with a one-line \
-         description. Skills cover Luau scripting, UI design that fits the game, UX, \
-         accessibility, animation and tweening, client/server security, data persistence, \
-         monetization, analytics and live configs, Server Authority, input across devices, \
-         performance, debugging, testing and searching the documentation with http_get.",
-        json!({
-            "name": {
-                "type": "string",
-                "enum": names,
-                "description": "The skill to read. Leave it out to list them all.",
-            },
-        }),
-        &[],
-    )
+    tool["description"] = Value::String(description);
+    tool["inputSchema"]["properties"][SKILL_NAME]["description"] = Value::String(format!(
+        "The name of the skill to retrieve. Options: {}",
+        names.join(", ")
+    ));
 }
 
 pub(super) fn call(arguments: &Value) -> Outcome {
-    let Some(wanted) = text_argument(arguments, "name").map(str::trim) else {
+    // Studio's argument is `skill_name`; a bare `name` is taken as well.
+    let wanted = text_argument(arguments, SKILL_NAME).or_else(|| text_argument(arguments, "name"));
+    let Some(wanted) = wanted.map(str::trim).filter(|name| !name.is_empty()) else {
         return Ok(Value::String(catalogue()));
     };
     skills()
