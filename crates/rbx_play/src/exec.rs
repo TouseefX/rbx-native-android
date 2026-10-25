@@ -41,8 +41,8 @@ pub fn exec_module_source() -> String {
 }
 
 /// A bare expression yields its value, so `return <source>` goes first.
-/// A syntax error reads `AssistantCommand:<line>: <message>`, as the Server
-/// side's `loadstring` and the Edit side name the chunk.
+/// A syntax error reads `syntax error: AssistantCommand:<line>: <message>`,
+/// word for word what the Edit side answers.
 fn compile(source: &str) -> Result<Vec<u8>, String> {
     let compiler = mlua::chunk::Compiler::new();
     compiler
@@ -50,7 +50,14 @@ fn compile(source: &str) -> Result<Vec<u8>, String> {
         .or_else(|_| compiler.compile(source))
         .map_err(|error| match error {
             // The compiler has no chunk name: its message starts at the line.
-            mlua::Error::SyntaxError { message, .. } => format!("AssistantCommand:{message}"),
+            mlua::Error::SyntaxError {
+                message,
+                incomplete_input,
+            } => mlua::Error::SyntaxError {
+                message: format!("AssistantCommand:{message}"),
+                incomplete_input,
+            }
+            .to_string(),
             other => other.to_string(),
         })
 }
