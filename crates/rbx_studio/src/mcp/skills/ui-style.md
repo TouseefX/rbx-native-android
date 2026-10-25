@@ -115,6 +115,7 @@ cap.Parent = button
 
 - `UIAspectRatioConstraint` only shrinks a box to fit inside its own Size (default `AspectType = FitWithinMaxSize`). A box sized `(0, 0, 0, 24)` stays 0 wide and everything inside it vanishes. Give both axes a real size, or set `AspectType = ScaleWithParentSize`.
 - Panels: `Size = UDim2.fromScale(0.62, 0.72)` plus `UIAspectRatioConstraint` (for example 1.45) plus `UISizeConstraint.MaxSize` around 980x680.
+- Fill the panel. Content starts right under the header, never centred vertically in a tall area, and a shop shows at least 8 items in a wrapping `UIGridLayout` plus a featured card or detail pane, so no more than a quarter of the panel is empty. A single short row floating in a big void reads as an unfinished template.
 - Centre with `AnchorPoint = Vector2.new(0.5, 0.5)` and `Position = UDim2.fromScale(0.5, 0.5)`.
 - Text: `TextScaled = true` plus `UITextSizeConstraint` (`MaxTextSize` 36 to 48 for headers, `MinTextSize` 12) so it never balloons. Or fixed `TextSize` inside a container driven by `UIScale`.
 - Alternative for pixel-designed UI: author in Offset at 1280x720 and put one `UIScale` on the root, set from the viewport:
