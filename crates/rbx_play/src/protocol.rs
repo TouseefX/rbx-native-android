@@ -436,6 +436,17 @@ pub enum CommandBody {
     /// Run Luau on the server through `loadstring`; the ack carries the
     /// `tostring` of its first return value.
     Eval { source: String },
+    /// Runs Luau on `side` for execute_luau; acked with `ok` and the
+    /// serialized first return value (or the error). Server code is `source`
+    /// (loadstring); client code is `bytecode`, Luau bytecode as lowercase
+    /// hex, run by the vendored Fiu interpreter (the client has no loadstring).
+    Exec {
+        side: Side,
+        #[serde(default)]
+        source: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        bytecode: String,
+    },
     /// Replace a server Script's source and re-run it (hot reload).
     Reload { path: String, source: String },
     /// `game:Shutdown()`-like: kick everyone, then stop polling.
