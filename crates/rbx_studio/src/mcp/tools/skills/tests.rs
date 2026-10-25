@@ -106,8 +106,11 @@ fn front_matter_needs_both_fields() {
 
 #[test]
 fn a_crlf_checkout_parses_the_same() {
-    let crlf: &'static str = Box::leak(FILES[0].replace('\n', "\r\n").into_boxed_str());
-    let (lf, crlf) = (parse(FILES[0]).unwrap(), parse(crlf).unwrap());
+    // Built from LF so the test means the same on a CRLF checkout.
+    let leak = |text: String| -> &'static str { Box::leak(text.into_boxed_str()) };
+    let lf = leak(FILES[0].replace("\r\n", "\n"));
+    let crlf = leak(lf.replace('\n', "\r\n"));
+    let (lf, crlf) = (parse(lf).unwrap(), parse(crlf).unwrap());
     assert_eq!((lf.name, lf.description), (crlf.name, crlf.description));
     assert_eq!(lf.body.lines().next(), crlf.body.lines().next());
 }
