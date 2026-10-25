@@ -137,6 +137,7 @@ mod settings;
 mod settle;
 mod shell;
 mod shortcuts;
+mod splash;
 mod strip;
 mod style_editor;
 mod sun;
@@ -280,11 +281,17 @@ fn main() {
         shell::install_key_bindings(cx);
         workspace_view::install_key_bindings(cx);
         menu_bar::install_key_bindings(cx);
+        // Only a bare launch: opening a place blocks this thread, which
+        // would freeze the logo mid-spin.
+        let splash = path.is_none().then(|| splash::open(cx)).flatten();
 
         cx.spawn(async move |cx| {
             // The stored key has to be in `rbx_cloud` before `load`: the
             // place's asset downloads authenticate with it.
             let has_key = key_store::restore(cx).await;
+            if let Some(splash) = splash {
+                splash.finished(cx).await;
+            }
             let boot = EditorBoot {
                 settings,
                 launch,
