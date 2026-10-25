@@ -15,6 +15,7 @@ local Live = require(ReplicatedStorage:WaitForChild("__rbxnative_live"))
 
 local Debug = require(ReplicatedStorage:WaitForChild("__rbxnative_debug"))
 local Print = require(ReplicatedStorage:WaitForChild("__rbxnative_print"))
+local Exec = require(ReplicatedStorage:WaitForChild("__rbxnative_exec"))
 -- Game scripts' MarketplaceService is rewritten to this module's proxy
 -- (test purchases); start it before any of them prompts.
 require(ReplicatedStorage:WaitForChild("__rbxnative_market")).start()
@@ -319,6 +320,16 @@ local function handle(cmd)
 			end
 		else
 			handleLive(cmd)
+		end
+	elseif kind == "exec" then
+		if cmd.side == "client" then
+			if tester then
+				remote:FireClient(tester, { kind = "cmd", command = cmd })
+			else
+				table.insert(forLater, cmd)
+			end
+		else
+			Exec.server(cmd, ack)
 		end
 	elseif kind == "eval" then
 		local fn, err = loadstring(cmd.source)

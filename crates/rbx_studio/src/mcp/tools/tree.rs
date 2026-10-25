@@ -13,7 +13,7 @@ use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Map, Value};
 
 use super::{
-    count_argument, edit_datamodel, path_of, required_text, resolve, resolve_all, text_argument,
+    count_argument, datamodel_dom, path_of, required_text, resolve, resolve_all, text_argument,
     values, Outcome, ROOT,
 };
 use crate::mcp::Session;
@@ -47,8 +47,7 @@ impl Filter<'_> {
 }
 
 pub(super) fn search(arguments: &Value, session: &Session) -> Outcome {
-    edit_datamodel(arguments)?;
-    let dom = session.dom;
+    let dom = datamodel_dom(arguments, session)?;
     let place = session.studio.name.as_str();
     // `None` is the DataModel: a search from the top starts at the place.
     let start: Option<Ref> = match text_argument(arguments, "path").map(str::trim) {
@@ -162,16 +161,16 @@ fn child_summary(dom: &WeakDom, children: &[Ref]) -> String {
 
 pub(super) fn inspect(arguments: &Value, session: &Session) -> Outcome {
     let path = required_text(arguments, "path")?;
-    let dom = session.dom;
+    let dom = datamodel_dom(arguments, session)?;
     let matches = resolve_all(dom, path);
     let answer = match matches.as_slice() {
         [] => return Err(format!("Could not find any instances at path '{path}'")),
-        [only] => report(*only, session),
+        [only] => report(dom, *only, session),
         all => {
             let shown = all.len().min(MAX_MATCHES);
             let mut answer = json!({
                 "matches": all.iter().take(MAX_MATCHES)
-                    .map(|&reference| report(reference, session))
+                    .map(|&reference| report(dom, reference, session))
                     .collect::<Vec<_>>(),
                 "count": shown,
                 "totalFound": all.len(),
@@ -194,8 +193,7 @@ pub(super) fn inspect(arguments: &Value, session: &Session) -> Outcome {
 }
 
 /// One instance, as `inspect_instance` reports it.
-fn report(reference: Ref, session: &Session) -> Value {
-    let dom = session.dom;
+fn report(dom: &WeakDom, reference: Ref, session: &Session) -> Value {
     let Some(instance) = dom.get(reference) else {
         return Value::Null;
     };

@@ -36,7 +36,7 @@ use rbx_dom::WeakDom;
 
 use crate::properties::Properties;
 
-pub(crate) use tools::{apply_edit, ScriptEdit};
+pub(crate) use tools::{apply_edit, image_content, text_content, ScriptEdit};
 
 /// The command-line flag that turns `rbxstudio` into the [`bridge`].
 pub(crate) const BRIDGE_FLAG: &str = "--mcp";
@@ -54,7 +54,58 @@ pub(crate) struct Session<'a> {
     /// The work a tool with no bound on how long it takes (`script_grep`)
     /// left to run off the UI thread; what it returns is the tool's answer.
     pub(crate) deferred: Option<Deferred>,
+    /// A running playtest's client tree, only while one runs.
+    pub(crate) client: Option<&'a WeakDom>,
+    /// A running playtest's server tree, only while one runs.
+    pub(crate) server: Option<&'a WeakDom>,
+    /// Work only the shell can do, asked for by the call just made.
+    pub(crate) job: Option<Job>,
 }
+
+/// One of the trees a tool can reach, named as Studio's `datamodel_type`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DataModel {
+    Edit,
+    Client,
+    Server,
+}
+
+impl DataModel {
+    pub(crate) fn parse(text: &str) -> Option<DataModel> {
+        match text {
+            "Edit" => Some(DataModel::Edit),
+            "Client" => Some(DataModel::Client),
+            "Server" => Some(DataModel::Server),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            DataModel::Edit => "Edit",
+            DataModel::Client => "Client",
+            DataModel::Server => "Server",
+        }
+    }
+}
+
+/// Work only the shell can do; the call is answered once it is done.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Job {
+    /// `execute_luau`.
+    Luau { code: String, datamodel: DataModel },
+    /// `start_stop_play`.
+    Play { start: bool },
+    /// `get_console_output`.
+    Console,
+    /// `screen_capture`: an eye and the point it looks at, in studs.
+    Capture {
+        camera: Option<([f32; 3], [f32; 3])>,
+    },
+}
+
+/// MCP `content` blocks, or the error text (answered with `isError: true`).
+pub(crate) type JobOutcome = Result<Vec<serde_json::Value>, String>;
 
 /// Runs over a copy of what it reads, so the editor stays responsive however
 /// long it takes, and the place can change meanwhile.
@@ -68,6 +119,9 @@ impl<'a> Session<'a> {
             studio,
             planned: None,
             deferred: None,
+            client: None,
+            server: None,
+            job: None,
         }
     }
 }

@@ -30,7 +30,7 @@ pub use debugger::{Breakpoint, Frame, Paused, Resume, Variable, STOPPED};
 pub use mlua::Error as LuaError;
 pub use output::{LineKind, Output};
 pub use printed::{PrintPart, PrintValue, TableDump, TableEntry};
-pub use runtime::{RunError, RunState, Runtime, Step};
+pub use runtime::{Reported, RunError, RunState, Runtime, Step};
 
 /// Whether `source` compiles as Luau (nothing runs). `Err` is the
 /// compiler's message, e.g. a syntax error or "too many upvalues".

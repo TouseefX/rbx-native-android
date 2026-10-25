@@ -29,20 +29,18 @@ pub(super) fn list(studio: &Studio) -> Value {
     Value::String(json!({ STUDIOS_KEY: [describe(studio)] }).to_string())
 }
 
-/// Studio's own three lines. A playtest here runs in a real Roblox client,
-/// not in the editor, so the edited place is the only data model a tool can
-/// reach. While the viewport shows a running playtest's tree, tools still
-/// read the edited place but `multi_edit` waits for it to come back.
+/// Studio's own three lines. Unlike Studio, the edited place stays
+/// reachable during a playtest beside its client and server, until the
+/// editor shows the playtest's own tree.
 pub(super) fn state(studio: &Studio) -> Value {
-    let focused = match studio.play {
-        PlayState::ShowingLive => {
-            "a running playtest (Edit is read-only until it is switched back)"
-        }
-        _ => "Edit",
+    let (available, focused) = match studio.play {
+        PlayState::Playing => ("Edit, Client, Server", "Client"),
+        PlayState::ShowingLive => ("Client, Server", "Client"),
+        PlayState::Edit | PlayState::Starting => ("Edit", "Edit"),
     };
     Value::String(format!(
-        "- Current Studio Mode: {}\n- Available DataModels: Edit\n- Focused DataModel in the \
-         viewport: {focused}",
+        "- Current Studio Mode: {}\n- Available DataModels: {available}\n- Focused DataModel in \
+         the viewport: {focused}",
         studio.play.label()
     ))
 }
