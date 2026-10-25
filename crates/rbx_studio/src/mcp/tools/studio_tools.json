@@ -1,0 +1,1601 @@
+[
+  {
+    "name": "upload_image",
+    "title": "Upload Image",
+    "description": "Downloads each web image (http or https URL) and uploads it to Roblox as a Decal asset owned by the API key's user, through Open Cloud. Answers a map from each URL to its rbxassetid:// id, which works in any image property. Up to 20 images per call; PNG, JPEG or BMP. The key needs asset:read and asset:write.",
+    "inputSchema": {
+      "properties": {
+        "imagePaths": {
+          "description": "Web addresses of the images (http or https), at most 20.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "imagePaths",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Upload Image",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "search_game_tree",
+    "title": "Game Tree",
+    "description": "Lists the instances of a tree as flat JSON, one object per instance with name, className, fullPath and parentName. An instance at the depth limit whose children were left out also carries unexploredChildCount and a childSummary of their classes.\n\nStart from path to look at one branch, and narrow with instance_type (an IsA check) and keywords. max_depth defaults to 3 and stops at 10; head_limit caps the list at 200 by default. Use inspect_instance to see one instance's properties.\n\ndatamodel_type picks the tree: Edit for the place being edited, Client or Server while a playtest runs.\n\nExamples:\n- search_game_tree(datamodel_type: \"Edit\", path: \"Workspace\")\n- search_game_tree(datamodel_type: \"Edit\", instance_type: \"BaseScript\")\n- search_game_tree(datamodel_type: \"Edit\", keywords: \"door, key\", max_depth: 6)\n- search_game_tree(datamodel_type: \"Server\", path: \"Players\")",
+    "inputSchema": {
+      "properties": {
+        "datamodel_type": {
+          "description": "Which tree to read: Edit is the edited place, Client and Server are the running playtest's. get_studio_state tells which ones exist right now; start_stop_play starts or stops a playtest.",
+          "enum": [
+            "Edit",
+            "Client",
+            "Server"
+          ],
+          "type": "string"
+        },
+        "head_limit": {
+          "description": "Most instances to list. 200 when left out.",
+          "type": "number"
+        },
+        "instance_type": {
+          "description": "Only list instances whose class is or inherits this one, like BasePart or GuiObject. Exact case.",
+          "type": "string"
+        },
+        "keywords": {
+          "description": "Only list instances whose name holds one of these words, ignoring case. Split them with commas or spaces.",
+          "type": "string"
+        },
+        "max_depth": {
+          "description": "How many levels below the start to walk. 3 when left out, 10 at most. Deeper children are only counted.",
+          "type": "number"
+        },
+        "path": {
+          "description": "Where to start, as a dotted path such as Workspace.Map. Exact case. The whole tree when left out.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "datamodel_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Game Tree",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "script_search",
+    "title": "File Search",
+    "description": "Finds scripts by name, matching loosely: the whole name first, then names that start with or hold the keyword, then names that hold its letters in order. Good when you know roughly what a script is called but not where it lives. Answers at most 10 paths. No wildcards.",
+    "inputSchema": {
+      "properties": {
+        "keywords": {
+          "description": "One or more words to look for in script names, split with commas. Case does not matter.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "keywords",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "File Search",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "skill",
+    "title": "Skill",
+    "description": "Loads a guide for one kind of Roblox work, such as UI style, data saving or security, written for this editor. Each one holds conventions and pitfalls worth knowing before you start.\n\n<available_skills>\n</available_skills>\n\nLoad the matching skill before you write code or change the place, then follow what it says. Only name a skill to the user after loading it.",
+    "inputSchema": {
+      "properties": {
+        "skill_name": {
+          "description": "Which skill to load.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_name",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Skill",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "multi_edit",
+    "title": "Multi-Edit",
+    "description": "Replaces text in one script's Source, several replacements in one call. Each edit applies to the text the previous one left. Every edit is checked first: if any old_string is missing, the script is left as it was. The change is one undo step.\n\nTo make a new script, give a file_path that does not exist yet (only its last part may be new), set className, and start with an edit whose old_string is empty to write its first text.\n\nExample: {\"file_path\": \"ReplicatedStorage.Config\", \"edits\": [{\"old_string\": \"SPEED = 16\", \"new_string\": \"SPEED = 20\"}], \"datamodel_type\": \"Edit\"}\n\nRead the script first. old_string has to match exactly, spaces included, and differ from new_string. Set replace_all to change every copy, such as when renaming a variable.",
+    "inputSchema": {
+      "properties": {
+        "className": {
+          "description": "Script, LocalScript or ModuleScript. Only needed when the script is new.",
+          "type": "string"
+        },
+        "datamodel_type": {
+          "description": "Has to be Edit: only the edited place can be changed, a playtest's trees are rebuilt each run.",
+          "enum": [
+            "Edit"
+          ],
+          "type": "string"
+        },
+        "edits": {
+          "description": "The replacements, applied one after another.",
+          "items": {
+            "properties": {
+              "new_string": {
+                "description": "What goes in its place. Must differ from old_string.",
+                "type": "string"
+              },
+              "old_string": {
+                "description": "Exact text to find. Empty only for the first edit of a new script.",
+                "type": "string"
+              },
+              "replace_all": {
+                "description": "Change every copy instead of requiring exactly one. False by default.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "old_string",
+              "new_string"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "file_path": {
+          "description": "Dotted path of the script, like ServerScriptService.Main; game. in front is optional.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_path",
+        "edits",
+        "datamodel_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Multi-Edit",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "start_stop_play",
+    "title": "Start/Stop Play",
+    "description": "Starts a playtest of the place in the embedded Roblox client, or stops the running one and goes back to editing.",
+    "inputSchema": {
+      "properties": {
+        "is_start": {
+          "description": "true starts a playtest, false stops it.",
+          "type": "boolean"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "is_start",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Start/Stop Play",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "get_console_output",
+    "title": "Get Console Output",
+    "description": "Reads the editor's Output panel: prints, warnings and errors from the place and the playtest. Long logs keep only their newest 20000 characters.",
+    "inputSchema": {
+      "properties": {
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Get Console Output",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "user_mouse_input",
+    "title": "User Mouse Input",
+    "description": "Plays mouse steps into the running playtest's client as real OS input to its window. A step moves the pointer (moveTo), presses, releases or clicks a button (mouse_button says which), turns the wheel (scrollUp, scrollDown) or pauses (wait). A step without a position reuses the last one given. Steps run one by one, so a bad step stops the call after the earlier ones have happened.",
+    "inputSchema": {
+      "properties": {
+        "actions": {
+          "description": "The steps, in order.",
+          "items": {
+            "properties": {
+              "action": {
+                "description": "What this step does.",
+                "enum": [
+                  "moveTo",
+                  "mouseButtonDown",
+                  "mouseButtonUp",
+                  "mouseButtonClick",
+                  "scrollUp",
+                  "scrollDown",
+                  "wait"
+                ],
+                "type": "string"
+              },
+              "instance_path": {
+                "description": "Move to the centre of this GuiObject instead of x and y: a dotted path from game, Workspace or LocalPlayer, such as LocalPlayer.PlayerGui.Menu.Play.",
+                "type": "string"
+              },
+              "mouse_button": {
+                "description": "left or right. Needed for the three button steps.",
+                "enum": [
+                  "left",
+                  "right"
+                ],
+                "type": "string"
+              },
+              "wait_time_ms": {
+                "description": "Pause in milliseconds after this step, 0 to 10000. Needed for a wait step.",
+                "type": "number"
+              },
+              "x": {
+                "description": "Horizontal GUI position in pixels. Leave out to reuse the last position, or when instance_path is set.",
+                "type": "number"
+              },
+              "y": {
+                "description": "Vertical GUI position in pixels. Leave out to reuse the last position, or when instance_path is set.",
+                "type": "number"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "datamodel_type": {
+          "description": "Has to be Client: input goes to the playtest's client.",
+          "enum": [
+            "Client"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actions",
+        "datamodel_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "User Mouse Input",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "store_image",
+    "title": "Store Image",
+    "description": "Keeps a local image for this editor session and answers an IMAGEID_<id> handle that tools taking an attached image accept. Nothing is uploaded. PNG or JPEG, 5 MB at most.",
+    "inputSchema": {
+      "properties": {
+        "filePath": {
+          "description": "Full path of a .png, .jpg or .jpeg file on this computer.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Store Image",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "http_get",
+    "title": "HTTP GET",
+    "description": "Reads a page of Roblox's documentation and answers it as text (HTML is turned into plain text). Give query to get only the lines around each hit instead of the whole page.\n\nReachable over https:\n- create.roblox.com/docs/... (Engine API reference, guides, Cloud API). Any page is served as Markdown with .md added to its URL, and llms.txt files index each section.\n- github.com/Roblox/creator-docs/... and raw.githubusercontent.com/Roblox/creator-docs/..., the source of those docs.\n- github.com/Roblox/libmp/releases/download/...\nAnything else is refused, redirects included.\n\nExamples:\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Humanoid.md\")\n- http_get(url: \"https://create.roblox.com/docs/reference/engine/classes/Humanoid.md\", query: \"WalkSpeed\", context_lines: 6)",
+    "inputSchema": {
+      "properties": {
+        "context_lines": {
+          "description": "Lines to show before and after each hit. 3 by default. Only used with query.",
+          "type": "number"
+        },
+        "query": {
+          "description": "A word or phrase to look for, ignoring case. Only the matching parts of the page come back.",
+          "type": "string"
+        },
+        "return_full": {
+          "description": "With query: answer the whole page when the word is found. False by default.",
+          "type": "boolean"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "url": {
+          "description": "The whole https address of the page, inside the places listed above.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "HTTP GET",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "character_navigation",
+    "title": "Character Navigation",
+    "description": "Walks the player's character in the running playtest to a point or to an instance, along a computed path with Humanoid:MoveTo, at a scaled WalkSpeed. Answers once the character gets there.",
+    "inputSchema": {
+      "properties": {
+        "datamodel_type": {
+          "description": "Has to be Client: the walk runs in the playtest's client.",
+          "enum": [
+            "Client"
+          ],
+          "type": "string"
+        },
+        "instance_path": {
+          "description": "Walk to this instance instead of x, y and z: a dotted path from game, Workspace or LocalPlayer, such as Workspace.Checkpoint.",
+          "type": "string"
+        },
+        "speed_multiplier": {
+          "description": "Multiplies the walk speed: 1 is normal, 0.5 half, 2 double. Between 0.1 and 10.",
+          "type": "number"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "x": {
+          "description": "X of the point to walk to, in studs. Needed without instance_path.",
+          "type": "number"
+        },
+        "y": {
+          "description": "Y of the point to walk to, in studs. Needed without instance_path.",
+          "type": "number"
+        },
+        "z": {
+          "description": "Z of the point to walk to, in studs. Needed without instance_path.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "datamodel_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Character Navigation",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "script_read",
+    "title": "Read File",
+    "description": "Answers a script's Source with a number before each line (number, then an arrow, then the text). The whole script by default, or a range of lines. The script has to exist: find its path with script_search or script_grep first. Several scripts can be read in parallel.",
+    "inputSchema": {
+      "properties": {
+        "end_line_one_indexed_inclusive": {
+          "description": "Last line to answer, counting from 1. Needed when should_read_entire_file is false.",
+          "type": "integer"
+        },
+        "should_read_entire_file": {
+          "description": "True (the default) answers every line; set false to pass a range.",
+          "type": "boolean"
+        },
+        "start_line_one_indexed": {
+          "description": "First line to answer, counting from 1. Needed when should_read_entire_file is false.",
+          "type": "integer"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "target_file": {
+          "description": "Dotted path of the script, like ServerScriptService.Main; game. in front is optional.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_file",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Read File",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "get_studio_state",
+    "title": "Get Studio State",
+    "description": "Says what the editor is doing: editing or playtesting, which trees (Edit, Client, Server) tools can reach right now, and which one the viewport shows. Use start_stop_play to change it.",
+    "inputSchema": {
+      "properties": {
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Get Studio State",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "screen_capture",
+    "title": "Screen Capture",
+    "description": "Takes a JPEG of the viewport: the edited place, or the game itself while a playtest runs. Give camera_position and look_at_position together to aim the camera there for the shot; the camera goes back afterwards.",
+    "inputSchema": {
+      "properties": {
+        "camera_position": {
+          "description": "Where the camera stands for the shot, in studs.",
+          "items": {
+            "description": "x, y and z.",
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "capture_id": {
+          "description": "A name for this shot, such as Shot_1.",
+          "type": "string"
+        },
+        "look_at_position": {
+          "description": "The point the camera faces, in studs.",
+          "items": {
+            "description": "x, y and z.",
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "capture_id",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Screen Capture",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "script_grep",
+    "title": "Grep Search",
+    "description": "Searches every script's Source line by line for a Luau string pattern (plain text works too) and answers each hit's path, line number and text, stopping at 50. A pattern with more than three .*, .+ or .- is refused because it can take minutes on one long line.",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "description": "The text or Luau pattern to find.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Grep Search",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wait_job_finished",
+    "title": "Wait Job Finished",
+    "description": "Waits for a job a generation tool started with async set. None of those tools can run in this editor, so no job ever exists, and this answers that the id names nothing.",
+    "inputSchema": {
+      "properties": {
+        "jobId": {
+          "description": "The id a generation call answered.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "timeout": {
+          "description": "Longest wait in seconds. 600 by default.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "jobId",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Wait Job Finished",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "generate_procedural_model",
+    "title": "Primitive Generation",
+    "description": "In Studio, builds a model out of primitive parts with attributes that tune it. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
+    "inputSchema": {
+      "properties": {
+        "async": {
+          "description": "Accepted for compatibility. Nothing is generated here, so no job is ever started.",
+          "type": "boolean"
+        },
+        "attachedImageUri": {
+          "description": "An IMAGEID_<id> handle from store_image to use as a reference.",
+          "type": "string"
+        },
+        "partNames": {
+          "description": "Part names, as a comma list or a JSON array of strings; up to 8. Needed when segmentation is explicit.",
+          "type": "string"
+        },
+        "prompt": {
+          "description": "What to build and which attributes it should expose, in the user's words.",
+          "type": "string"
+        },
+        "segmentation": {
+          "description": "How the result would be split into parts: auto (or left out) picks parts itself, none keeps one piece, explicit uses the names in partNames.",
+          "enum": [
+            "auto",
+            "none",
+            "explicit"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Primitive Generation",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "segment_mesh",
+    "title": "Mesh Segmentation",
+    "description": "In Studio, splits a mesh into named parts with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
+    "inputSchema": {
+      "properties": {
+        "instance_path": {
+          "description": "Dotted path of the MeshPart or Model to work on, like Workspace.Car.Body. Without it, the editor's selection is used, and it has to be exactly one MeshPart or Model.",
+          "type": "string"
+        },
+        "parts": {
+          "description": "Names of the parts to split into, up to 5, like [\"blade\", \"handle\"].",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parts",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Mesh Segmentation",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "generate_texture",
+    "title": "Texture Generation",
+    "description": "In Studio, gives a mesh a new texture from a prompt with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
+    "inputSchema": {
+      "properties": {
+        "hintImage": {
+          "description": "A reference image for the look; with one, textPrompt may be empty.",
+          "type": "object"
+        },
+        "instance_path": {
+          "description": "Dotted path of the MeshPart or Model to work on, like Workspace.Car.Body. Without it, the editor's selection is used, and it has to be exactly one MeshPart or Model.",
+          "type": "string"
+        },
+        "model": {
+          "description": "Fast or Quality.",
+          "enum": [
+            "Fast",
+            "Quality"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "textPrompt": {
+          "description": "The look to give the mesh, like \"mossy stone\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "textPrompt",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Texture Generation",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "user_keyboard_input",
+    "title": "User Keyboard Input",
+    "description": "Plays keyboard steps into the running playtest's client, in order: keyDown, keyUp, keyPress (down then up), textInput or wait. Keys are real OS input to its window; textInput puts text straight into the focused TextBox. Steps run one by one, so a bad step stops the call after the earlier ones have happened.",
+    "inputSchema": {
+      "properties": {
+        "actions": {
+          "description": "The steps, in order.",
+          "items": {
+            "properties": {
+              "action": {
+                "description": "What this step does.",
+                "enum": [
+                  "keyDown",
+                  "keyUp",
+                  "keyPress",
+                  "textInput",
+                  "wait"
+                ],
+                "type": "string"
+              },
+              "instance_path": {
+                "description": "The GuiObject the input is meant for: a dotted path from game, Workspace or LocalPlayer, such as LocalPlayer.PlayerGui.Menu.Play.",
+                "type": "string"
+              },
+              "key_code": {
+                "description": "The Enum.KeyCode name of the key. Needed for keyDown, keyUp and keyPress.",
+                "enum": [
+                  "None",
+                  "Backspace",
+                  "Tab",
+                  "Clear",
+                  "Return",
+                  "Pause",
+                  "Escape",
+                  "Space",
+                  "QuotedDouble",
+                  "Hash",
+                  "Dollar",
+                  "Percent",
+                  "Ampersand",
+                  "Quote",
+                  "LeftParenthesis",
+                  "RightParenthesis",
+                  "Asterisk",
+                  "Plus",
+                  "Comma",
+                  "Minus",
+                  "Period",
+                  "Slash",
+                  "Zero",
+                  "One",
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Colon",
+                  "Semicolon",
+                  "LessThan",
+                  "Equals",
+                  "GreaterThan",
+                  "Question",
+                  "At",
+                  "LeftBracket",
+                  "BackSlash",
+                  "RightBracket",
+                  "Caret",
+                  "Underscore",
+                  "Backquote",
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E",
+                  "F",
+                  "G",
+                  "H",
+                  "I",
+                  "J",
+                  "K",
+                  "L",
+                  "M",
+                  "N",
+                  "O",
+                  "P",
+                  "Q",
+                  "R",
+                  "S",
+                  "T",
+                  "U",
+                  "V",
+                  "W",
+                  "X",
+                  "Y",
+                  "Z",
+                  "LeftCurly",
+                  "Pipe",
+                  "RightCurly",
+                  "Tilde",
+                  "Delete",
+                  "World0",
+                  "World1",
+                  "World2",
+                  "World3",
+                  "World4",
+                  "World5",
+                  "World6",
+                  "World7",
+                  "World8",
+                  "World9",
+                  "World10",
+                  "World11",
+                  "World12",
+                  "World13",
+                  "World14",
+                  "World15",
+                  "World16",
+                  "World17",
+                  "World18",
+                  "World19",
+                  "World20",
+                  "World21",
+                  "World22",
+                  "World23",
+                  "World24",
+                  "World25",
+                  "World26",
+                  "World27",
+                  "World28",
+                  "World29",
+                  "World30",
+                  "World31",
+                  "World32",
+                  "World33",
+                  "World34",
+                  "World35",
+                  "World36",
+                  "World37",
+                  "World38",
+                  "World39",
+                  "World40",
+                  "World41",
+                  "World42",
+                  "World43",
+                  "World44",
+                  "World45",
+                  "World46",
+                  "World47",
+                  "World48",
+                  "World49",
+                  "World50",
+                  "World51",
+                  "World52",
+                  "World53",
+                  "World54",
+                  "World55",
+                  "World56",
+                  "World57",
+                  "World58",
+                  "World59",
+                  "World60",
+                  "World61",
+                  "World62",
+                  "World63",
+                  "World64",
+                  "World65",
+                  "World66",
+                  "World67",
+                  "World68",
+                  "World69",
+                  "World70",
+                  "World71",
+                  "World72",
+                  "World73",
+                  "World74",
+                  "World75",
+                  "World76",
+                  "World77",
+                  "World78",
+                  "World79",
+                  "World80",
+                  "World81",
+                  "World82",
+                  "World83",
+                  "World84",
+                  "World85",
+                  "World86",
+                  "World87",
+                  "World88",
+                  "World89",
+                  "World90",
+                  "World91",
+                  "World92",
+                  "World93",
+                  "World94",
+                  "World95",
+                  "KeypadZero",
+                  "KeypadOne",
+                  "KeypadTwo",
+                  "KeypadThree",
+                  "KeypadFour",
+                  "KeypadFive",
+                  "KeypadSix",
+                  "KeypadSeven",
+                  "KeypadEight",
+                  "KeypadNine",
+                  "KeypadPeriod",
+                  "KeypadDivide",
+                  "KeypadMultiply",
+                  "KeypadMinus",
+                  "KeypadPlus",
+                  "KeypadEnter",
+                  "KeypadEquals",
+                  "Up",
+                  "Down",
+                  "Right",
+                  "Left",
+                  "Insert",
+                  "Home",
+                  "End",
+                  "PageUp",
+                  "PageDown",
+                  "F1",
+                  "F2",
+                  "F3",
+                  "F4",
+                  "F5",
+                  "F6",
+                  "F7",
+                  "F8",
+                  "F9",
+                  "F10",
+                  "F11",
+                  "F12",
+                  "F13",
+                  "F14",
+                  "F15",
+                  "NumLock",
+                  "CapsLock",
+                  "ScrollLock",
+                  "RightShift",
+                  "LeftShift",
+                  "RightControl",
+                  "LeftControl",
+                  "RightAlt",
+                  "LeftAlt",
+                  "RightMeta",
+                  "LeftMeta",
+                  "LeftSuper",
+                  "RightSuper",
+                  "Mode",
+                  "Compose",
+                  "Help",
+                  "Print",
+                  "SysReq",
+                  "Break",
+                  "Menu",
+                  "Power",
+                  "Euro",
+                  "Undo",
+                  "ButtonX",
+                  "ButtonY",
+                  "ButtonA",
+                  "ButtonB",
+                  "ButtonR1",
+                  "ButtonL1",
+                  "ButtonR2",
+                  "ButtonL2",
+                  "ButtonR3",
+                  "ButtonL3",
+                  "ButtonStart",
+                  "ButtonSelect",
+                  "DPadLeft",
+                  "DPadRight",
+                  "DPadUp",
+                  "DPadDown",
+                  "Thumbstick1",
+                  "Thumbstick2",
+                  "Thumbstick1Up",
+                  "Thumbstick1Down",
+                  "Thumbstick1Left",
+                  "Thumbstick1Right",
+                  "Thumbstick2Up",
+                  "Thumbstick2Down",
+                  "Thumbstick2Left",
+                  "Thumbstick2Right",
+                  "MouseLeftButton",
+                  "MouseRightButton",
+                  "MouseMiddleButton",
+                  "MouseBackButton",
+                  "MouseNoButton",
+                  "MouseX",
+                  "MouseY",
+                  "MousePosition",
+                  "TouchPosition",
+                  "MouseWheel",
+                  "TrackpadPan",
+                  "TrackpadPinch",
+                  "MouseDelta",
+                  "TouchDelta",
+                  "TouchPinch",
+                  "ButtonCenter",
+                  "ButtonBack",
+                  "ButtonUp",
+                  "ButtonDown",
+                  "ButtonLeft",
+                  "ButtonRight"
+                ],
+                "type": "string"
+              },
+              "text_inputs": {
+                "description": "Text to type. Needed for textInput.",
+                "type": "string"
+              },
+              "wait_time_ms": {
+                "description": "Pause in milliseconds after this step, 0 to 10000. Needed for a wait step.",
+                "type": "number"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "datamodel_type": {
+          "description": "Has to be Client: input goes to the playtest's client.",
+          "enum": [
+            "Client"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actions",
+        "datamodel_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "User Keyboard Input",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "generate_mesh",
+    "title": "Mesh Generation",
+    "description": "In Studio, makes a textured mesh from a prompt with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
+    "inputSchema": {
+      "properties": {
+        "async": {
+          "description": "Accepted for compatibility. Nothing is generated here, so no job is ever started.",
+          "type": "boolean"
+        },
+        "maxTriangles": {
+          "description": "Triangle budget, from 12 to 20000.",
+          "type": "number"
+        },
+        "partNames": {
+          "description": "Part names, as a comma list or a JSON array of strings; up to 8. Needed when segmentation is explicit.",
+          "type": "string"
+        },
+        "segmentation": {
+          "description": "How the result would be split into parts: auto (or left out) picks parts itself, none keeps one piece, explicit uses the names in partNames.",
+          "enum": [
+            "auto",
+            "none",
+            "explicit"
+          ],
+          "type": "string"
+        },
+        "size": {
+          "description": "Box the mesh should fit in, in studs.",
+          "properties": {
+            "x": {
+              "description": "Width.",
+              "type": "number"
+            },
+            "y": {
+              "description": "Height.",
+              "type": "number"
+            },
+            "z": {
+              "description": "Depth.",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "type": "object"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "textPrompt": {
+          "description": "What the mesh should be.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "textPrompt",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Mesh Generation",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "subagent",
+    "title": "Subagent",
+    "description": "Hands a task to a helper agent that works alone and answers once with a summary. It runs on your own model: the editor has none, so it asks the client through MCP sampling (sampling/createMessage), and a client without sampling cannot use this tool. It gets at most 30 turns.\n\n<available_subagents>\n  <subagent>\n    <name>explore</name>\n    <description>Looks around the place without changing it: the game tree, instances, scripts, the console, the editor's state, and execute_luau to check facts.</description>\n  </subagent>\n  <subagent>\n    <name>screen_capture</name>\n    <description>Finds what the task is about, aims the camera at it with screen_capture and describes what the shots show.</description>\n  </subagent>\n  <subagent>\n    <name>unit_test</name>\n    <description>Writes tests as ModuleScripts under ServerStorage.UnitTest.Cases, runs them on the Server during a playtest and reports PASS or FAIL for each.</description>\n  </subagent>\n</available_subagents>\n\nGood for searches that take many reads, or to look around before changing anything. You cannot talk back and forth with it, and it cannot start subagents of its own.",
+    "inputSchema": {
+      "properties": {
+        "description": {
+          "description": "A few words on what it is doing, for display, like \"Finding the spawn code\".",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "subagent_type": {
+          "description": "explore, screen_capture or unit_test.",
+          "type": "string"
+        },
+        "task": {
+          "description": "What the subagent should do and what it should report back. Be specific.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "description",
+        "subagent_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Subagent",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "execute_luau",
+    "title": "Execute Luau",
+    "description": "Runs Luau and answers its first return value as text (a bare expression answers its value), or the error with its line as AssistantCommand:<line>:.\n\n- Edit runs in the editor's own Luau runtime against the edited place, and the whole run is one undo step.\n- Server runs inside the playtest's server with loadstring.\n- Client runs inside the playtest's client through a bundled Luau interpreter, since the client has no loadstring.\n\nA run that has not finished after 100 seconds is answered as timed out. Break big jobs into chunks with a task.wait() between them, and put a task.wait() inside any loop that waits for something to change.",
+    "inputSchema": {
+      "properties": {
+        "code": {
+          "description": "The Luau source to run.",
+          "type": "string"
+        },
+        "datamodel_type": {
+          "description": "Where it runs: Edit (the edited place), or Server or Client while a playtest runs.",
+          "enum": [
+            "Edit",
+            "Client",
+            "Server"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "datamodel_type",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Execute Luau",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "generate_material",
+    "title": "Material Generation",
+    "description": "In Studio, makes a MaterialVariant from a description with AI. This editor has no way to run it: Roblox offers no public API for its AI generation, so the call checks its arguments and then says why it cannot go ahead.",
+    "inputSchema": {
+      "properties": {
+        "async": {
+          "description": "Accepted for compatibility. Nothing is generated here, so no job is ever started.",
+          "type": "boolean"
+        },
+        "baseMaterial": {
+          "enum": [
+            "Plastic",
+            "SmoothPlastic",
+            "Wood",
+            "WoodPlanks",
+            "Marble",
+            "Basalt",
+            "Slate",
+            "CrackedLava",
+            "Concrete",
+            "Limestone",
+            "Granite",
+            "Pavement",
+            "Brick",
+            "Pebble",
+            "Cobblestone",
+            "Rock",
+            "Sandstone",
+            "CorrodedMetal",
+            "DiamondPlate",
+            "Foil",
+            "Metal",
+            "Grass",
+            "LeafyGrass",
+            "Sand",
+            "Fabric",
+            "Snow",
+            "Mud",
+            "Ground",
+            "Asphalt",
+            "Salt",
+            "Ice",
+            "Glacier",
+            "Cardboard",
+            "Carpet",
+            "CeramicTiles",
+            "ClayRoofTiles",
+            "RoofShingles",
+            "Leather",
+            "Plaster",
+            "Rubber"
+          ],
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialPattern": {
+          "enum": [
+            "Regular",
+            "Organic"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "materialPattern",
+        "materialId",
+        "baseMaterial",
+        "materialDescription",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Material Generation",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "inspect_instance",
+    "title": "Inspect Instance",
+    "description": "Reports one instance in full as JSON: name, className, path, uniqueId, every property with a value, its attributes, and its children (each direct child's className and path, the child count and the descendant count). Long text such as a script's Source is summarized; read it with script_read.\n\nThe path ignores case, and game. in front is optional. When siblings share the name, every match comes back under matches with count and totalFound, at most 20 of them, with a warning when there were more.\n\nExamples:\n- inspect_instance(path: \"Workspace.SpawnLocation\")\n- inspect_instance(path: \"startergui.hud.coins\")",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "description": "Dotted path of the instance, like Workspace.Map.Door. Case does not matter.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Inspect Instance",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "search_asset",
+    "title": "Search Asset",
+    "description": "Looks for assets to insert with insert_asset, through Open Cloud with the editor's API key. Answers each result's id, name, type, source, price and a thumbnailUrl, plus a context field naming the key's user and, for a place linked to Roblox, its universe and owner.\n\nscope:\n- creator_store: the Creator Store. The key needs creator-store-product:read.\n- user: the key owner's inventory. The key needs user.inventory-item:read.\n- group: Open Cloud lists no group inventory, so this finds what the group published on the Creator Store. Pick the group with groupId or groupName; the answer lists the user's groups under groups.\n- universe: refused, since Open Cloud lists no universe inventory.\n- auto (default): tries each source in turn; skipped ones and why are under skippedSources.\n\nPrice, tag, facet and verified filters only apply to the Creator Store. Inventory searches look at one assetType at a time (Model when left out); for packages, set assetType to Package rather than searching the word.\n\nBefore inserting a result owned by someone other than the place's owner, tell the user whose it is and ask first.",
+    "inputSchema": {
+      "properties": {
+        "assetType": {
+          "description": "Kind of asset. Image for uploaded images (most textures today), Package for packages.",
+          "enum": [
+            "Model",
+            "Audio",
+            "Mesh",
+            "MeshPart",
+            "Image",
+            "Decal",
+            "Video",
+            "Package"
+          ],
+          "type": "string"
+        },
+        "audioMaxDuration": {
+          "description": "Longest audio length in seconds, with assetType Audio.",
+          "type": "number"
+        },
+        "audioMinDuration": {
+          "description": "Shortest audio length in seconds, with assetType Audio.",
+          "type": "number"
+        },
+        "excludeSources": {
+          "description": "With scope auto: sources to leave out.",
+          "items": {
+            "enum": [
+              "user",
+              "group",
+              "universe",
+              "creator_store"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "facets": {
+          "description": "Extra words that narrow a Creator Store search; the answer may suggest some under availableFacets.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "groupId": {
+          "description": "The group to search, by numeric id. Only with scope group; not together with groupName.",
+          "type": "string"
+        },
+        "groupName": {
+          "description": "The group to search, by name, ignoring case. Only with scope group; not together with groupId.",
+          "type": "string"
+        },
+        "includeSources": {
+          "description": "With scope auto: the only sources to try, like [\"user\", \"creator_store\"].",
+          "items": {
+            "enum": [
+              "user",
+              "group",
+              "universe",
+              "creator_store"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxPriceCents": {
+          "description": "Highest price in cents. Creator Store only.",
+          "type": "number"
+        },
+        "maxResults": {
+          "description": "How many results, 1 to 20. 5 by default.",
+          "type": "number"
+        },
+        "minPriceCents": {
+          "description": "Lowest price in cents. Creator Store only.",
+          "type": "number"
+        },
+        "priceFilter": {
+          "description": "free, paid or all (the default). Creator Store only.",
+          "enum": [
+            "free",
+            "paid",
+            "all"
+          ],
+          "type": "string"
+        },
+        "query": {
+          "description": "What to look for. May be empty to list by assetType alone.",
+          "type": "string"
+        },
+        "scope": {
+          "description": "Where to look; see the list above.",
+          "enum": [
+            "auto",
+            "creator_store",
+            "user",
+            "group",
+            "universe"
+          ],
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Creator Store category labels, like Vehicle or Medieval, treated as extra facets.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verifiedCreatorsOnly": {
+          "description": "Only results from verified creators. Creator Store only.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Search Asset",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "insert_asset",
+    "title": "Insert Asset",
+    "description": "Downloads an asset by id and adds it to the place. A model, package or mesh part lands in a Model named after the asset, an animation as its KeyframeSequence, an image or decal as a Decal, audio as a Sound, a video as a VideoFrame, and a bare mesh as an anchored MeshPart. It keeps the position it was published with. Each inserted root is tagged Assistant:<guid>, and the answer names the tag.\n\nPass assetName whenever you know the asset's name, such as from search_asset.",
+    "inputSchema": {
+      "properties": {
+        "assetId": {
+          "description": "The asset's numeric id.",
+          "type": "string"
+        },
+        "assetName": {
+          "description": "Name for what gets inserted. Without it, the Creator Store or Assets API name is used, else the class.",
+          "type": "string"
+        },
+        "assetType": {
+          "description": "What the asset is, used when the download does not say. Image and Decal both insert a Decal.",
+          "enum": [
+            "Model",
+            "Package",
+            "Mesh",
+            "MeshPart",
+            "Image",
+            "Decal",
+            "Audio",
+            "Video",
+            "Animation"
+          ],
+          "type": "string"
+        },
+        "parentPath": {
+          "description": "Dotted path to insert under, like Workspace.Props. Workspace when left out or not found.",
+          "type": "string"
+        },
+        "studio_id": {
+          "description": "Which editor to act on: an id from list_roblox_studios. May be left out while only one editor is open.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assetId",
+        "studio_id"
+      ],
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Insert Asset",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "list_roblox_studios",
+    "description": "Lists the open editors this server can reach, each with an id and a name (its place file, plus the place id when linked to Roblox). Pass the id as studio_id to pick which one a call goes to. Check with the user before changing a place you picked by name alone.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "annotations": {
+      "title": "List Roblox Studios",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+]

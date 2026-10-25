@@ -19,9 +19,7 @@ const USER_AGENT: &str = concat!("rbx-native/", env!("CARGO_PKG_VERSION"));
 pub struct Client {
     agent: ureq::Agent,
     api_key: Option<ApiKey>,
-    /// Asset-delivery roots (anonymous, keyed) a test points at a local
-    /// server.
-    #[cfg(test)]
+    /// Asset-delivery roots (anonymous, keyed) overriding the real ones.
     pub(crate) asset_roots: Option<(String, String)>,
     apis_root: String,
 }
@@ -57,7 +55,6 @@ impl Client {
         Client {
             agent: config.into(),
             api_key,
-            #[cfg(test)]
             asset_roots: None,
             apis_root: "https://apis.roblox.com".to_string(),
         }
@@ -69,7 +66,16 @@ impl Client {
         self
     }
 
-    #[allow(dead_code)]
+    /// Points asset delivery (anonymous and keyed roots, each the URL an asset id is appended to) at another server: a local mock.
+    pub fn with_asset_delivery_roots(
+        mut self,
+        anonymous: impl Into<String>,
+        keyed: impl Into<String>,
+    ) -> Self {
+        self.asset_roots = Some((anonymous.into(), keyed.into()));
+        self
+    }
+
     pub(crate) fn apis_url(&self, path: &str) -> String {
         format!("{}{}", self.apis_root, path)
     }

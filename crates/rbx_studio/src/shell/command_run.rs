@@ -4,6 +4,8 @@
 //! and changed reaches the Output panel, the Explorer and the viewport as it
 //! happens, the editor stays live while a script waits.
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 use gpui_kit::{Context, Task, Window};
@@ -82,6 +84,40 @@ impl Shell {
     pub(super) fn run_command(&mut self, source: &str, cx: &mut Context<Self>) -> bool {
         let compiled = rbx_lua::compile_check(source, "=Command bar").is_ok();
         self.command_bar.remember(source);
+        let _ = self.run_with(source, cx, |runtime, source| {
+            runtime.start(source);
+        });
+        compiled
+    }
+
+    /// `run_command` for MCP's execute_luau: the same undo step and Output
+    /// rows, with the first returned value serialized into the answer.
+    pub(super) fn run_command_reported(
+        &mut self,
+        source: &str,
+        cx: &mut Context<Self>,
+    ) -> rbx_lua::Reported {
+        let mut reported = None;
+        let started = self.run_with(source, cx, |runtime, source| {
+            reported = Some(runtime.start_reported(source, rbx_play::exec::PROBE_SERIALIZE));
+        });
+        match (reported, started) {
+            (Some(reported), _) => reported,
+            (None, Err(err)) => Rc::new(RefCell::new(Some(Err(err)))),
+            (None, Ok(())) => Rc::new(RefCell::new(Some(Err(
+                "the Command Bar could not start the code".to_owned(),
+            )))),
+        }
+    }
+
+    /// Opens the run's undo step, builds the runtime if needed, lets `start`
+    /// queue the code and resumes once. Err when the runtime cannot be built.
+    fn run_with(
+        &mut self,
+        source: &str,
+        cx: &mut Context<Self>,
+        start: impl FnOnce(&mut Runtime, &str),
+    ) -> Result<(), String> {
         // Snapshotted before the run touches anything, whether or not it ends
         // up mutating, see `shell::history`. The run's changes all join this
         // one entry (see `command_bar::undo`).
@@ -94,19 +130,20 @@ impl Shell {
             match Runtime::lent(&mut self.dom, self.database.clone()) {
                 Ok(runtime) => self.command_run.runtime = Some(runtime),
                 Err(err) => {
-                    self.show_run_error(&err.to_string());
+                    let message = err.to_string();
+                    self.show_run_error(&message);
                     cx.notify();
-                    return compiled;
+                    return Err(message);
                 }
             }
         }
         if let Some(runtime) = self.command_run.runtime.as_mut() {
-            runtime.start(source);
+            start(runtime, source);
         }
         if let Some(wait) = self.command_step(cx) {
             self.arm_command_timer(wait, cx);
         }
-        compiled
+        Ok(())
     }
 
     /// Stops whatever a run left waiting: its sleeping threads, timers and

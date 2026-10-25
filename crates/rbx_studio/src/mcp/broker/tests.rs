@@ -8,12 +8,12 @@ use rbx_dom::{Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 use serde_json::{json, Value};
 
-use super::{Broker, NOT_RUNNING};
+use super::{Broker, Client, NOT_RUNNING};
 use crate::mcp::endpoint::{file_of, Endpoint, Server};
 use crate::mcp::{apply_edit, protocol, PlayState, Session, Studio};
 use crate::properties::Properties;
 
-fn scratch(name: &str) -> PathBuf {
+pub(super) fn scratch(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!(
         "rbx-native-mcp-broker-{name}-{}",
         std::process::id()
@@ -25,14 +25,14 @@ fn scratch(name: &str) -> PathBuf {
 /// An editor serving a one-script place on a thread of its own, answering
 /// exactly as `shell::mcp` does: a planned edit is applied before the reply
 /// goes back. Stops, and takes its file back, when dropped.
-struct Editor {
-    id: String,
+pub(super) struct Editor {
+    pub(super) id: String,
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
 }
 
 impl Editor {
-    fn start(dir: &Path, name: &str) -> Editor {
+    pub(super) fn start(dir: &Path, name: &str) -> Editor {
         let server = Server::start(dir).unwrap();
         let id = server.endpoint().studio_id.clone();
         let stop = Arc::new(AtomicBool::new(false));
@@ -83,7 +83,7 @@ impl Drop for Editor {
 fn request(broker: &mut Broker, method: &str, params: Value) -> Value {
     let line = json!({ "jsonrpc": "2.0", "id": 9, "method": method, "params": params });
     let reply = broker
-        .handle(&line.to_string())
+        .handle(&line.to_string(), &mut NoClient)
         .expect("a request is answered");
     serde_json::from_str(&reply).unwrap()
 }
@@ -110,7 +110,16 @@ fn studios(broker: &mut Broker) -> Value {
     listed["studios"].clone()
 }
 
-const MAIN: &str = "game.ServerScriptService.Main";
+/// A client that is never asked anything these tests expect answered.
+pub(super) struct NoClient;
+
+impl Client for NoClient {
+    fn request(&mut self, method: &str, _params: Value) -> Result<Value, String> {
+        Err(format!("{method} is not answered here"))
+    }
+}
+
+pub(super) const MAIN: &str = "game.ServerScriptService.Main";
 
 #[test]
 fn with_no_editor_the_protocol_still_answers_and_tools_say_why_not() {
@@ -129,7 +138,10 @@ fn with_no_editor_the_protocol_still_answers_and_tools_say_why_not() {
         (true, NOT_RUNNING.to_owned())
     );
     assert!(broker
-        .handle(r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#)
+        .handle(
+            r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+            &mut NoClient
+        )
         .is_none());
     let unknown = request(&mut broker, "resources/list", json!({}));
     assert_eq!(unknown["error"]["code"], -32601);
@@ -243,9 +255,25 @@ fn an_editor_that_closed_or_never_was_is_reported_and_its_file_cleared() {
 fn a_call_that_timed_out_is_reported_as_possibly_still_applying() {
     let timed_out = super::unanswered(
         "a1",
+        Duration::from_secs(30),
         Some(std::io::Error::from(std::io::ErrorKind::WouldBlock)),
     );
     assert!(timed_out.contains("may still apply"), "{timed_out}");
-    let closed = super::unanswered("a1", None);
+    let closed = super::unanswered("a1", Duration::from_secs(30), None);
     assert_eq!(closed, "studio a1 stopped answering: it closed");
+}
+
+#[test]
+fn documentation_tools_answer_with_no_editor_open() {
+    let mut broker = Broker::new(scratch("docs"));
+    let (failed, listing) = tool(&mut broker, "skill", json!({}));
+    assert!(!failed);
+    assert!(listing.starts_with("Available skills:"));
+    let (failed, refusal) = tool(
+        &mut broker,
+        "http_get",
+        json!({ "url": "https://example.com/a.md", "studio_id": "gone" }),
+    );
+    assert!(failed);
+    assert!(refusal.starts_with("URL not allowed"));
 }

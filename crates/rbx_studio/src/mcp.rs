@@ -22,7 +22,9 @@
 //! planned there ([`Session::planned`]); the shell applies it through the
 //! same DOM write and undo history a script tab's own edits take. Only a
 //! grep, whose Luau pattern has no bound on how long it takes, runs off that
-//! thread, over a copy of the scripts ([`Session::deferred`]).
+//! thread, over a copy of the scripts ([`Session::deferred`]). An
+//! `insert_asset` downloads off that thread too ([`Session::inserting`]), and
+//! the shell then writes what came back into the place like any other insert.
 
 pub(crate) mod bridge;
 pub(crate) mod broker;
@@ -36,7 +38,7 @@ use rbx_dom::WeakDom;
 
 use crate::properties::Properties;
 
-pub(crate) use tools::{apply_edit, ScriptEdit};
+pub(crate) use tools::{apply_edit, image_content, inserted, text_content, Insertion, ScriptEdit};
 
 /// The command-line flag that turns `rbxstudio` into the [`bridge`].
 pub(crate) const BRIDGE_FLAG: &str = "--mcp";
@@ -54,11 +56,86 @@ pub(crate) struct Session<'a> {
     /// The work a tool with no bound on how long it takes (`script_grep`)
     /// left to run off the UI thread; what it returns is the tool's answer.
     pub(crate) deferred: Option<Deferred>,
+    /// A running playtest's client tree, only while one runs.
+    pub(crate) client: Option<&'a WeakDom>,
+    /// A running playtest's server tree, only while one runs.
+    pub(crate) server: Option<&'a WeakDom>,
+    /// Work only the shell can do, asked for by the call just made.
+    pub(crate) job: Option<Job>,
+    /// The running playtest the input tools act on; `None` outside Play.
+    pub(crate) play: Option<PlayInput>,
+    /// The download an `insert_asset` call started, which the shell runs off
+    /// the UI thread and then grafts into the place as one undo step.
+    pub(crate) inserting: Option<Inserting>,
+    /// The Explorer selection in the edited place, which a tool whose
+    /// `instance_path` is left out works on, as Studio's do.
+    pub(crate) selection: Vec<rbx_dom::Ref>,
 }
+
+/// A running playtest as the input tools reach it, from any thread.
+#[derive(Clone)]
+pub(crate) struct PlayInput {
+    /// The client's probe: where a GuiObject is, walking the character,
+    /// typing into a TextBox.
+    pub(crate) probe: rbx_play::channel::Requester,
+    /// The embedded client's window, for real mouse and key events; `None`
+    /// while it is not embedded or another document hides the 3D view.
+    #[cfg(any(target_os = "linux", windows))]
+    pub(crate) window: Option<rbx_play::embed::WindowId>,
+}
+
+/// One of the trees a tool can reach, named as Studio's `datamodel_type`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DataModel {
+    Edit,
+    Client,
+    Server,
+}
+
+impl DataModel {
+    pub(crate) fn parse(text: &str) -> Option<DataModel> {
+        match text {
+            "Edit" => Some(DataModel::Edit),
+            "Client" => Some(DataModel::Client),
+            "Server" => Some(DataModel::Server),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            DataModel::Edit => "Edit",
+            DataModel::Client => "Client",
+            DataModel::Server => "Server",
+        }
+    }
+}
+
+/// Work only the shell can do; the call is answered once it is done.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Job {
+    /// `execute_luau`.
+    Luau { code: String, datamodel: DataModel },
+    /// `start_stop_play`.
+    Play { start: bool },
+    /// `get_console_output`.
+    Console,
+    /// `screen_capture`: an eye and the point it looks at, in studs.
+    Capture {
+        camera: Option<([f32; 3], [f32; 3])>,
+    },
+}
+
+/// MCP `content` blocks, or the error text (answered with `isError: true`).
+pub(crate) type JobOutcome = Result<Vec<serde_json::Value>, String>;
 
 /// Runs over a copy of what it reads, so the editor stays responsive however
 /// long it takes, and the place can change meanwhile.
 pub(crate) type Deferred = Box<dyn FnOnce() -> Result<serde_json::Value, String> + Send>;
+
+/// Fetches what an `insert_asset` call adds; nothing in the place changes
+/// until the shell grafts its [`Insertion`] on the UI thread.
+pub(crate) type Inserting = Box<dyn FnOnce() -> Result<Insertion, String> + Send>;
 
 impl<'a> Session<'a> {
     pub(crate) fn new(dom: &'a WeakDom, properties: &'a Properties, studio: &'a Studio) -> Self {
@@ -68,6 +145,12 @@ impl<'a> Session<'a> {
             studio,
             planned: None,
             deferred: None,
+            client: None,
+            server: None,
+            job: None,
+            play: None,
+            inserting: None,
+            selection: Vec::new(),
         }
     }
 }

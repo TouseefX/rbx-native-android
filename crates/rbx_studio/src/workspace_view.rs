@@ -937,6 +937,15 @@ impl WorkspaceView {
         self.pump.park(parked);
     }
 
+    /// One frame of the viewport for `screen_capture`, from `at` (eye,
+    /// look-at) or the current view; the answer arrives on the receiver.
+    pub(crate) fn capture(
+        &self,
+        at: Option<([f32; 3], [f32; 3])>,
+    ) -> Option<std::sync::mpsc::Receiver<pump::Captured>> {
+        Some(self.pump.capture(at))
+    }
+
     /// Moves the free camera to `eye`, looking at `target`, keeping its
     /// field of view: the Animation Editor framing the rig it binds, and a
     /// snapped view.

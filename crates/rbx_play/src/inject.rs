@@ -31,6 +31,12 @@ pub const TOUCH_NAME: &str = "__rbxnative_touch";
 pub const PROBE_TOUCH_INPUT: &str = include_str!("probe/touch_input.luau");
 /// `__rbxnative_record`: playtest sampling and `shared.rbxnative` (see `crate::record`).
 pub const PROBE_RECORD: &str = include_str!("probe/record.luau");
+/// `__rbxnative_input`: the client's half of the MCP input tools.
+pub const PROBE_INPUT: &str = include_str!("probe/input.luau");
+pub const INPUT_NAME: &str = "__rbxnative_input";
+/// `__rbxnative_stats`: the server probe's once-a-second playtest stats.
+pub const PROBE_STATS: &str = include_str!("probe/stats.luau");
+pub const STATS_NAME: &str = "__rbxnative_stats";
 pub const DEBUG_NAME: &str = "__rbxnative_debug";
 pub const CODEC_NAME: &str = "__rbxnative_codec";
 pub const LIVE_NAME: &str = "__rbxnative_live";
@@ -68,6 +74,7 @@ pub struct Injected {
     pub touch: Ref,
     pub touch_input: Ref,
     pub record: Ref,
+    pub input: Ref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,6 +129,24 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
     remove_named(dom, rs, TOUCH_NAME);
     remove_named(dom, rs, crate::touch::TOUCH_INPUT_NAME);
     remove_named(dom, rs, crate::record::RECORD_NAME);
+    remove_named(dom, rs, crate::exec::SERIALIZE_NAME);
+    remove_named(dom, rs, crate::exec::FIU_NAME);
+    remove_named(dom, rs, crate::exec::EXEC_NAME);
+    remove_named(dom, rs, STATS_NAME);
+
+    for (name, source) in [
+        (
+            crate::exec::SERIALIZE_NAME,
+            crate::exec::PROBE_SERIALIZE.to_owned(),
+        ),
+        (crate::exec::FIU_NAME, crate::exec::PROBE_FIU.to_owned()),
+        (crate::exec::EXEC_NAME, crate::exec::exec_module_source()),
+        (STATS_NAME, PROBE_STATS.to_owned()),
+    ] {
+        let module = dom.new_instance("ModuleScript", name, Some(rs));
+        set_prop(dom, module, "Source", Variant::String(source));
+    }
+    remove_named(dom, rs, INPUT_NAME);
 
     let record = dom.new_instance("ModuleScript", crate::record::RECORD_NAME, Some(rs));
     set_prop(
@@ -166,6 +191,14 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         touch_input,
         "Source",
         Variant::String(PROBE_TOUCH_INPUT.to_owned()),
+    );
+
+    let input = dom.new_instance("ModuleScript", INPUT_NAME, Some(rs));
+    set_prop(
+        dom,
+        input,
+        "Source",
+        Variant::String(PROBE_INPUT.to_owned()),
     );
 
     let codec = dom.new_instance("ModuleScript", CODEC_NAME, Some(rs));
@@ -230,6 +263,7 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         touch,
         touch_input,
         record,
+        input,
     })
 }
 
@@ -310,3 +344,40 @@ const INCOMPLETE_CLASSES: [&str; 4] = [
     "IntersectOperation",
     "SurfaceAppearance",
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn injects_exec_modules_with_source() {
+        let mut dom = WeakDom::new();
+        dom.new_instance("DataModel", "Game", None);
+        let config = ProbeConfig {
+            base_url: "https://example.test".to_owned(),
+            token: "t".to_owned(),
+            session: "s".to_owned(),
+        };
+        inject(&mut dom, &config).unwrap();
+        let mut stack: Vec<Ref> = dom.root_refs().to_vec();
+        let mut found = Vec::new();
+        while let Some(r) = stack.pop() {
+            let Some(inst) = dom.get(r) else { continue };
+            if [
+                crate::exec::SERIALIZE_NAME,
+                crate::exec::FIU_NAME,
+                crate::exec::EXEC_NAME,
+                STATS_NAME,
+            ]
+            .contains(&inst.name())
+            {
+                found.push(matches!(
+                    inst.properties().get("Source"),
+                    Some(Variant::String(s)) if !s.is_empty()
+                ));
+            }
+            stack.extend_from_slice(inst.children());
+        }
+        assert_eq!(found, vec![true; 4]);
+    }
+}
