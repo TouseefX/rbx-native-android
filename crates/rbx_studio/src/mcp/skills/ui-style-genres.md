@@ -12,12 +12,12 @@ Pull `ui-style` first for the genre map and shared rules. These are conventions 
 Tactical, information-dense, quiet. The UI is an instrument, not a toy. Aimed at older players.
 
 - **Layout**: health and armour bottom-left, ammo and weapon bottom-right, compass strip or minimap top-centre or top-left, kill feed top-right, objective/score top-centre, hit markers at the crosshair. Menus (loadout, shop) are full-screen with a left category list and a right detail pane.
-- **Shape**: square corners (radius 0, at most 2 px). Thin 1 px strokes in white at 0.7 to 0.85 transparency. Corner brackets instead of full borders (four small L shapes). Diagonal cut corners on headers via a rotated square at the corner.
+- **Shape**: sharp everywhere: radius 0 on every panel, row, bar, chip, badge, button and the close button. No pills, no round avatars unless a written reason (a circular radar). Thin 1 px strokes in white at 0.7 to 0.85 transparency. Corner brackets instead of full borders (four small L shapes). Diagonal cut corners on headers via a rotated square at the corner.
 - **Type**: RobotoCondensed or Oswald for labels, all caps; RobotoMono or BuilderMono for numbers (ammo, coordinates, timers, prices); Michroma or Sarpanch only for one big header. No stroke on text, or a 1 px black stroke at 0.5 transparency for readability over bright scenes.
 - **Palette**: desaturated. Panels `#0B0E0C` at 0.35 to 0.5 transparency, text `#E7E9E2`, secondary `#8D948A`, accent amber `#F2B233` or olive `#9BA86A`, danger `#D9412B`, friendly `#5FA8D3`. No saturated green buy buttons: the purchase button is the accent fill with dark text.
-- **Icons**: flat silhouettes (weapon side views, magazines), single colour, no outline or a hairline outline, sharp joins.
+- **Icons**: weapon side views with each weapon's own silhouette (stock, grip, magazine, rail, barrel), light metal in a hard three-step tone with darker polymer parts, a dark hairline, sharp joins (see the rifle in `ui-style-icons`). Small HUD glyphs (ammo, grenade) can be flat single-colour silhouettes.
 - **Motion**: fast and linear-ish, 0.08 to 0.15 s, Quad Out. Number tickers for ammo, a short flash for hits, a small shake on damage. No bounce, no squash, no sparkles.
-- **Shop**: called Armory or Loadout. Weapon list left (name, class, a stat bar), weapon render centre-right in a ViewportFrame, stat bars (damage, range, fire rate) as thin segmented bars, price in mono with a small currency icon, "EQUIP" / "PURCHASE" in the accent.
+- **Shop**: called Armory or Loadout. Weapon list left (name, class, a stat bar), weapon art centre-right filling its pane (an SVG illustration or a ViewportFrame), stat bars (damage, range, fire rate) as thin segmented bars, price in mono with a small currency icon, "EQUIP" / "PURCHASE" in the accent.
 
 ```lua
 local MONO = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium)
@@ -79,7 +79,7 @@ local frame = new("ImageLabel", { Image = ORNATE_FRAME, BackgroundTransparency =
 
 - **Phone UI**: a phone frame bottom-right or centre (rounded rect, radius 28 to 36 px, dark bezel 6 px), an app grid inside (4 columns of rounded-square app icons with labels), each app opens a full-phone page. Players already know this metaphor.
 - **Palette**: pastel. Pink `#FFC8DD`, lavender `#CDB4FF`, mint `#B8F2E6`, butter `#FFF1B8`, sky `#BDE0FE`, text `#3A3047`, white panels.
-- **Shape**: big radius (16 to 24 px), soft drop shadow (a black frame at 0.88 to 0.92 transparency offset 4 to 6 px down, same radius), thin 2 px stroke in a darker pastel or none.
+- **Shape**: rounded everywhere, big radius (16 to 24 px on panels, pills on chips and tabs, inner boxes radius minus padding), soft drop shadow (a black frame at 0.88 to 0.92 transparency offset 4 to 6 px down, same radius), thin 2 px stroke in a darker pastel or none.
 - **Type**: Nunito (Bold for headers, Regular for body) or FredokaOne for a bubblier game. Text in dark plum, not black.
 - **Icons**: soft two-tone, rounded, slight highlight, no thick black outline.
 - **Motion**: gentle Back Out pops (0.2 s, small overshoot), slide-up sheets.
