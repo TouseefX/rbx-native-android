@@ -8,7 +8,7 @@ mod tests;
 
 use serde_json::{json, Value};
 
-use super::{tools, Session};
+use super::{tools, Job, JobOutcome, Session};
 
 /// Newest first; an `initialize` asking for another version is answered
 /// with the newest, which is how the specification says to decline it.
@@ -76,6 +76,11 @@ pub(crate) enum Reply {
     Now(String),
     /// A tool's [`super::Deferred`] work, which gives the reply once run.
     Later(Box<dyn FnOnce() -> String + Send>),
+    /// Work only the shell can do; [`job_reply`] answers it once done.
+    Job {
+        id: Value,
+        job: Job,
+    },
 }
 
 impl Reply {
@@ -84,6 +89,12 @@ impl Reply {
         match self {
             Reply::Now(text) => text,
             Reply::Later(work) => work(),
+            // Only the shell can do a job, and it takes this reply itself
+            // rather than waiting on it.
+            Reply::Job { id, job } => job_reply(
+                id,
+                Err(format!("this editor cannot run {job:?} without its window")),
+            ),
         }
     }
 }
@@ -99,6 +110,9 @@ pub(crate) fn handle(line: &str, session: &mut Session) -> Option<Reply> {
         "tools/call" => tools::call(&params, session),
         _ => session_free(&method, &params),
     };
+    if let Some(job) = session.job.take() {
+        return Some(Reply::Job { id, job });
+    }
     if let Some(work) = session.deferred.take() {
         return Some(Reply::Later(Box::new(move || {
             reply(id, Ok(tools::finished(work())))
@@ -130,6 +144,15 @@ pub(crate) fn reply(id: Value, outcome: Result<Value, Failure>) -> String {
     }
 }
 
+/// The whole JSON-RPC line answering a [`Reply::Job`] once it is done.
+pub(crate) fn job_reply(id: Value, outcome: JobOutcome) -> String {
+    let (content, is_error) = match outcome {
+        Ok(content) => (content, false),
+        Err(message) => (vec![tools::text_content(&message)], true),
+    };
+    reply(id, Ok(json!({ "content": content, "isError": is_error })))
+}
+
 fn initialize(params: &Value) -> Value {
     let asked = params.get("protocolVersion").and_then(Value::as_str);
     let version = PROTOCOL_VERSIONS
@@ -143,8 +166,10 @@ fn initialize(params: &Value) -> Value {
         "serverInfo": { "name": "rbx-native", "version": env!("CARGO_PKG_VERSION") },
         "instructions": "Reads the place open in the rbx-native editor and edits its scripts: \
             browse and inspect instances, read, search and grep scripts, and change or create \
-            them with multi_edit, each call one undo step. Instances are named by dotted paths \
-            from the DataModel, as in game.Workspace.Model.Part.",
+            them with multi_edit, each call one undo step. Runs Luau in the edited place or, \
+            during a playtest, in its Client or Server, starts and stops play, reads the \
+            Output and captures the viewport. Instances are named by dotted paths from the \
+            DataModel, as in game.Workspace.Model.Part.",
     })
 }
 

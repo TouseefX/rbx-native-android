@@ -148,6 +148,51 @@ fn search_game_tree_words_a_cut_off_or_empty_result_as_studio_does() {
 }
 
 #[test]
+fn search_game_tree_reads_a_live_tree_and_refuses_a_missing_one() {
+    use crate::mcp::{PlayState, Session, Studio};
+    use crate::properties::Properties;
+    use rbx_dom::WeakDom;
+    use rbx_reflection::ReflectionDatabase;
+
+    let dom = place();
+    let mut client = WeakDom::new();
+    let workspace = client.new_instance("Workspace", "Workspace", None);
+    client.new_instance("Part", "LiveOnly", Some(workspace));
+    let properties = Properties::new(ReflectionDatabase::embedded());
+    let studio = Studio {
+        play: PlayState::Playing,
+        ..super::super::tests::studio()
+    };
+    let mut session = Session::new(&dom, &properties, &studio);
+    session.client = Some(&client);
+    let found = super::search(
+        &json!({ "keywords": "LiveOnly", "datamodel_type": "Client" }),
+        &session,
+    )
+    .unwrap();
+    let rows: Value = serde_json::from_str(found.as_str().unwrap()).unwrap();
+    assert_eq!(rows[0]["fullPath"], "Workspace.LiveOnly");
+    assert_eq!(
+        super::inspect(
+            &json!({ "path": "Workspace.LiveOnly", "datamodel_type": "Client" }),
+            &session
+        )
+        .map(|_| ()),
+        Ok(())
+    );
+    assert_eq!(
+        super::search(&json!({ "datamodel_type": "Server" }), &session),
+        Err(
+"Server datamodel is not available in Play mode".to_owned()
+        )
+    );
+    assert_eq!(
+        super::search(&json!({ "datamodel_type": "Nope" }), &session),
+        Err("Invalid datamodel_type: Nope".to_owned())
+    );
+}
+
+#[test]
 fn inspect_instance_reports_studios_fields_with_typed_values() {
     let dom = place();
     let tower = json_of(

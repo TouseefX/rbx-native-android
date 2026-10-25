@@ -1,7 +1,9 @@
 //! The tools a client can call, named and shaped after Studio's own MCP
 //! server's, and the dotted paths they name instances by.
 
+mod datamodel;
 mod edit;
+mod luau;
 mod scripts;
 mod studio;
 mod tree;
@@ -15,6 +17,7 @@ use serde_json::{json, Value};
 
 use super::protocol::{Failure, INVALID_PARAMS};
 use super::Session;
+use datamodel::{any_datamodel_type, datamodel_dom, datamodel_type, edit_datamodel};
 
 pub(crate) use edit::{apply as apply_edit, ScriptEdit};
 pub(crate) use studio::{LIST_STUDIOS, STUDIOS_KEY, STUDIO_STATE};
@@ -46,7 +49,7 @@ pub(super) fn list() -> Value {
                 "keywords": string("Only instances whose name contains one of these, ignoring case. Separate several with commas or spaces."),
                 "max_depth": integer("How many levels below the start to go. Defaults to 3, at most 10."),
                 "head_limit": integer("The most instances to return. Defaults to 200."),
-                "datamodel_type": datamodel_type(),
+                "datamodel_type": any_datamodel_type(),
             }),
             &[],
         ),
@@ -55,7 +58,10 @@ pub(super) fn list() -> Value {
             "Returns an instance's class, every property it carries, its attributes and tags, \
              and its children and descendant count. The path ignores case; when siblings share \
              a name, every match is returned, up to 20.",
-            json!({ "path": string("The instance, such as Workspace.Baseplate. game. in front is optional.") }),
+            json!({
+                "path": string("The instance, such as Workspace.Baseplate. game. in front is optional."),
+                "datamodel_type": any_datamodel_type(),
+            }),
             &["path"],
         ),
         tool(
@@ -124,6 +130,8 @@ pub(super) fn list() -> Value {
         ),
     ]);
     if let Value::Array(tools) = &mut tools {
+        tools.extend(luau::schemas());
+        tools.push(super::broker::subagent_schema());
         for tool in tools.iter_mut() {
             tool["inputSchema"]["properties"]["studio_id"] = string(
                 "The editor to act on, from list_roblox_studios. May be left out when only one \
@@ -178,6 +186,10 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
         "multi_edit" => edit::multi_edit(arguments, session),
         STUDIO_STATE => Ok(studio::state(session.studio)),
         LIST_STUDIOS => Ok(studio::list(session.studio)),
+        luau::EXECUTE_LUAU => luau::execute(arguments, session),
+        luau::START_STOP_PLAY => luau::start_stop(arguments, session),
+        luau::CONSOLE_OUTPUT => luau::console(session),
+        luau::SCREEN_CAPTURE => luau::capture(arguments, session),
         _ => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
     })
 }
@@ -189,7 +201,23 @@ pub(super) fn result(value: &Value, is_error: bool) -> Value {
         Value::String(text) => text.clone(),
         other => serde_json::to_string_pretty(other).unwrap_or_default(),
     };
-    json!({ "content": [{ "type": "text", "text": text }], "isError": is_error })
+    json!({ "content": [text_content(&text)], "isError": is_error })
+}
+
+/// An MCP text content block.
+pub(crate) fn text_content(text: &str) -> Value {
+    json!({ "type": "text", "text": text })
+}
+
+/// An MCP image content block holding a JPEG, as Studio's screen_capture
+/// answers.
+pub(crate) fn image_content(jpeg: &[u8]) -> Value {
+    use base64::Engine;
+    json!({
+        "type": "image",
+        "data": base64::engine::general_purpose::STANDARD.encode(jpeg),
+        "mimeType": "image/jpeg",
+    })
 }
 
 fn tool(name: &str, description: &str, properties: Value, required: &[&str]) -> Value {
@@ -210,29 +238,6 @@ fn integer(description: &str) -> Value {
 
 fn boolean(description: &str) -> Value {
     json!({ "type": "boolean", "description": description })
-}
-
-fn datamodel_type() -> Value {
-    json!({
-        "type": "string",
-        "enum": [EDIT_DATAMODEL],
-        "description": "The data model to act on. Only Edit is reachable: see get_studio_state.",
-    })
-}
-
-/// The one data model tools reach: see `studio::state`.
-const EDIT_DATAMODEL: &str = "Edit";
-
-/// Refuses a `datamodel_type` other than [`EDIT_DATAMODEL`]; none given is
-/// the edited place.
-fn edit_datamodel(arguments: &Value) -> Result<(), String> {
-    match text_argument(arguments, "datamodel_type") {
-        Some(other) if other != EDIT_DATAMODEL => Err(format!(
-            "only the {EDIT_DATAMODEL} data model is reachable here, not {other}: a playtest \
-             runs in a real Roblox client, outside the editor"
-        )),
-        _ => Ok(()),
-    }
 }
 
 fn text_argument<'a>(arguments: &'a Value, name: &str) -> Option<&'a str> {

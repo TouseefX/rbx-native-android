@@ -131,6 +131,10 @@ impl OutputEntry {
         &self.source
     }
 
+    pub(crate) fn feedback(&self) -> &Feedback {
+        &self.feedback
+    }
+
     /// Whether this entry answers a free-text search, matched against both
     /// halves of what the row actually shows, the command that was run and
     /// the result beside it. Case-insensitive, because nobody searching a log
@@ -185,6 +189,11 @@ pub(crate) struct OutputLog {
 }
 
 impl OutputLog {
+    /// Every entry, oldest first.
+    pub(crate) fn entries(&self) -> &[OutputEntry] {
+        &self.entries
+    }
+
     /// Appends one run, dropping the oldest entry first if the log is
     /// already at [`CAP`], same drop-oldest shape as `History::push`.
     pub(crate) fn push(&mut self, source: &str, feedback: Feedback) {
