@@ -829,6 +829,8 @@ impl Shell {
         if !matches!(self.play.phase, Phase::Running) {
             return None;
         }
+        // Without an embedded window (macOS) the session only gates the probe.
+        #[cfg_attr(not(any(target_os = "linux", windows)), allow(unused_variables))]
         let running = self.play.session.as_ref()?;
         Some(crate::mcp::PlayInput {
             probe: self.play.link.as_ref()?.channel.requester(),
