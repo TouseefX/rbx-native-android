@@ -103,3 +103,11 @@ fn front_matter_needs_both_fields() {
         ("a", "b: c", "body")
     );
 }
+
+#[test]
+fn a_crlf_checkout_parses_the_same() {
+    let crlf: &'static str = Box::leak(FILES[0].replace('\n', "\r\n").into_boxed_str());
+    let (lf, crlf) = (parse(FILES[0]).unwrap(), parse(crlf).unwrap());
+    assert_eq!((lf.name, lf.description), (crlf.name, crlf.description));
+    assert_eq!(lf.body.lines().next(), crlf.body.lines().next());
+}

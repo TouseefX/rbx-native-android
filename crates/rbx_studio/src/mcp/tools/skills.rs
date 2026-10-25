@@ -52,8 +52,9 @@ struct Skill {
 /// `file` split into its front matter's `name` and `description` and the
 /// text after it; `None` for a file without both.
 fn parse(file: &'static str) -> Option<Skill> {
-    let rest = file.strip_prefix("---\n")?;
-    let end = rest.find("\n---\n")?;
+    // Matched without the line end: a Windows checkout turns them into CRLF.
+    let rest = file.strip_prefix("---")?;
+    let end = rest.find("\n---")?;
     let field = |key: &str| {
         rest[..end].lines().find_map(|line| {
             let value = line.strip_prefix(key)?.strip_prefix(':')?.trim();
@@ -63,7 +64,7 @@ fn parse(file: &'static str) -> Option<Skill> {
     Some(Skill {
         name: field("name")?,
         description: field("description")?,
-        body: rest[end + 5..].trim_start(),
+        body: rest[end + 4..].trim_start(),
     })
 }
 
