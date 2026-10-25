@@ -70,7 +70,7 @@ inviteButton.Activated:Connect(function()
 end)
 ```
 
-  (`production/promotion/invite-prompts.md`; `PromptGameInvite` also takes an `ExperienceInviteOptions` to customise the invite.) Reward the inviter only when the friend actually plays, and with in-game items, never Robux.
+  (`production/promotion/invite-prompts.md`; `PromptGameInvite` also takes an `ExperienceInviteOptions` to customise the invite.) Reward the inviter only when the friend actually plays, and with in-game items or badges, never Robux. The friend referral system (`referral-system.md`) fills `Player:GetJoinData().ReferredByPlayerId` for every kind of invite, so you can reward both inviter and invitee and show a reward banner on the invite modal. Invite options (`ExperienceInviteOptions`: prompt message, target friend, launch data) are in `invite-prompts.md`.
 - **Party and co-op**: shared goals (server-wide boss, community progress bar), trading where allowed (`IsPaidItemTradingAllowed`), private servers for groups.
 - **Referral system** and share links: `production/promotion/referral-system.md`, `share-links.md`.
 
@@ -79,7 +79,8 @@ end)
 Bring players back with a message about something that matters to them (`production/promotion/experience-notifications.md`, `reference/engine/classes/ExperienceNotificationService.yaml`):
 
 - Players opt in through `ExperienceNotificationService:PromptOptIn()`, called from a LocalScript after `CanPromptOptInAsync()` returns true (wrap both in `pcall`). Ask at a moment that makes sense ("Want a ping when your eggs hatch?"), never on join.
-- Notifications are sent from the server side through Open Cloud's user notification API, using a notification string you create in the Creator Dashboard. One notification per user per day per experience; recipients must be 13+ and opted in; the experience needs at least 100 visits.
+- Create a notification string in the Creator Dashboard, then send from the server with the Luau package from the Creator Store, or through the Open Cloud API (`production/promotion/experience-notifications.md`, `cloud/guides/experience-notifications.md`). One notification per user per day per experience, delivery is not guaranteed; recipients must be 13+ and opted in; the experience needs at least 100 visits and no moderation action.
+- Never require opt-in to play or progress. No fake time pressure, no "free item" bait, no ads disguised as account notices (`includes/experience-notifications/guidelines.md`).
 - Content must be personalised and actionable ("Your crops are ready to harvest!", "You're 2 races from finishing the weekly challenge"), not generic ads ("New cars dropped, check them out!") (`includes/experience-notifications/guidelines.md`).
 
 ```lua

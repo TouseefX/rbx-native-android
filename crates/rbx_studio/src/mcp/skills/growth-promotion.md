@@ -59,7 +59,7 @@ Best practice from the same page: original imagery and naming, add your own spin
 
 ## Ads Manager
 
-- Sponsored and search ads run from Ads Manager (`production/promotion/ads-manager.md`, `advertise-on-roblox.md`, `search-ads.md`). Search ads target up to 10 exact-match keywords per ad set. Reporting and billing in `reporting-and-billing.md`.
+- Sponsored and search ads run from Ads Manager (`production/promotion/ads-manager.md`, `advertise-on-roblox.md`, `search-ads.md`). Campaigns have one goal: Plays (broad reach, new traffic), Earnings (players likely to spend, higher cost per play, limited availability) or Engagement. Search ads run as a Visits objective and target up to 10 exact-match keywords per ad set. Ads Manager needs an account aged 13+ with a verified email; Robux can be converted to ad credit, which is permanent and one-way. Reporting and billing in `reporting-and-billing.md`.
 - Use ads to test, not to rescue: run a small budget for a few days, compare the play-through and D1 of ad users with organic ones. If ad users bounce, the problem is the first session or the promise the creative makes.
 - Ad creative follows the same rules as thumbnails: real gameplay, one clear promise.
 - Ads must comply with the advertising standards (`comply-with-advertising-standards.md`).
