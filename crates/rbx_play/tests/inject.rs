@@ -203,6 +203,11 @@ fn market_modules_are_placed_in_replicated_storage() {
             rbx_play::record::RECORD_NAME,
             rbx_play::inject::PROBE_RECORD,
         ),
+        (
+            injected.input,
+            rbx_play::inject::INPUT_NAME,
+            rbx_play::inject::PROBE_INPUT,
+        ),
     ] {
         assert_eq!(dom.parent(r), Some(rs));
         assert_eq!(dom.get(r).unwrap().class(), "ModuleScript");

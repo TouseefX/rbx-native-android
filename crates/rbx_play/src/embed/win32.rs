@@ -10,6 +10,10 @@
 //! on the client focuses it natively and `FocusFollow` needs no thread.
 //! `Drop` hands the window back to the desktop with its original styles.
 
+mod input;
+
+pub use input::Input;
+
 use super::{visible_parts, EmbedError, Rect, WindowId};
 use std::time::{Duration, Instant};
 

@@ -2,6 +2,7 @@
 //! `std::net`, one thread per connection, `Connection: close` on every reply.
 //! Routes and status codes are documented in `crate::protocol`.
 
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -33,11 +34,28 @@ struct Shared {
     wake: Condvar,
     shutdown: AtomicBool,
     events: mpsc::Sender<Uplink>,
+    /// Commands a [`Requester`] is waiting on, by id: their ack goes to the
+    /// waiter instead of `events`.
+    waiters: Mutex<HashMap<u64, mpsc::Sender<(bool, String)>>>,
 }
 
 impl Shared {
     fn lock(&self) -> MutexGuard<'_, Queue> {
         self.queue.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn waiters(&self) -> MutexGuard<'_, HashMap<u64, mpsc::Sender<(bool, String)>>> {
+        self.waiters.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn queue_command(&self, body: CommandBody) -> u64 {
+        let mut q = self.lock();
+        q.last_id += 1;
+        let id = q.last_id;
+        q.commands.push(Command { id, body });
+        drop(q);
+        self.wake.notify_all();
+        id
     }
 }
 
@@ -60,6 +78,7 @@ impl ChannelServer {
             wake: Condvar::new(),
             shutdown: AtomicBool::new(false),
             events: tx,
+            waiters: Mutex::new(HashMap::new()),
         });
         let accept_shared = Arc::clone(&shared);
         std::thread::Builder::new()
@@ -100,24 +119,75 @@ impl ChannelServer {
         q.epoch += 1;
         drop(q);
         self.shared.wake.notify_all();
+        self.end_requests();
     }
 
     /// Queues a command for the probe; returns its id (1, 2, 3, …).
     /// Wakes any held `/v1/poll` whose `since` is below it.
     pub fn send(&self, body: CommandBody) -> u64 {
-        let mut q = self.shared.lock();
-        q.last_id += 1;
-        let id = q.last_id;
-        q.commands.push(Command { id, body });
-        drop(q);
-        self.shared.wake.notify_all();
-        id
+        self.shared.queue_command(body)
+    }
+
+    /// A handle that sends commands and waits for their acks from any
+    /// thread, while `events` stays with the thread that drains it.
+    pub fn requester(&self) -> Requester {
+        Requester {
+            shared: Arc::clone(&self.shared),
+        }
+    }
+
+    /// The playtest ended: every [`Requester::request`] still waiting
+    /// returns [`RequestError::Ended`].
+    pub fn end_requests(&self) {
+        self.shared.waiters().clear();
     }
 
     /// Everything the probe has posted, in arrival order. An `Ack` also
     /// removes its command from the queue so it is not re-sent.
     pub fn events(&self) -> &mpsc::Receiver<Uplink> {
         &self.events
+    }
+}
+
+/// Sends commands and waits for each one's ack. Cloned freely; it keeps the
+/// channel's state alive but not its listener.
+#[derive(Clone)]
+pub struct Requester {
+    shared: Arc<Shared>,
+}
+
+/// Why a [`Requester::request`] has no result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RequestError {
+    /// The probe ran the command and it failed; carries its error text.
+    Failed(String),
+    /// No ack within the timeout.
+    TimedOut,
+    /// The playtest ended first (`ChannelServer::end_requests`).
+    Ended,
+}
+
+impl Requester {
+    /// Queues `body` and waits up to `timeout` for its ack: the ack's text
+    /// when it succeeded.
+    pub fn request(&self, body: CommandBody, timeout: Duration) -> Result<String, RequestError> {
+        let (tx, rx) = mpsc::channel();
+        // Registered before the command is queued, so its ack cannot
+        // arrive with no one waiting for it.
+        let id = {
+            let mut waiters = self.shared.waiters();
+            let id = self.shared.queue_command(body);
+            waiters.insert(id, tx);
+            id
+        };
+        let answer = rx.recv_timeout(timeout);
+        self.shared.waiters().remove(&id);
+        match answer {
+            Ok((true, result)) => Ok(result),
+            Ok((false, error)) => Err(RequestError::Failed(error)),
+            Err(mpsc::RecvTimeoutError::Timeout) => Err(RequestError::TimedOut),
+            Err(mpsc::RecvTimeoutError::Disconnected) => Err(RequestError::Ended),
+        }
     }
 }
 
@@ -243,8 +313,12 @@ fn handle(shared: &Shared, mut stream: TcpStream) -> std::io::Result<()> {
             match serde_json::from_slice::<Vec<Uplink>>(&body) {
                 Ok(batch) => {
                     for up in batch {
-                        if let Uplink::Ack { id, .. } = &up {
+                        if let Uplink::Ack { id, ok, result } = &up {
                             shared.lock().commands.retain(|c| c.id != *id);
+                            if let Some(waiter) = shared.waiters().remove(id) {
+                                let _ = waiter.send((*ok, result.clone()));
+                                continue;
+                            }
                         }
                         let _ = shared.events.send(up);
                     }

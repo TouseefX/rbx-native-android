@@ -300,8 +300,23 @@ local LIVE_COMMANDS = {
 	debug_watch = true,
 }
 
+-- The MCP input tools' commands: the client runs and acks them itself.
+local CLIENT_COMMANDS = {
+	navigate = true,
+	locate = true,
+	type_text = true,
+}
+
 local function handle(cmd)
 	local kind = cmd.type
+	if CLIENT_COMMANDS[kind] then
+		if tester then
+			remote:FireClient(tester, { kind = "cmd", command = cmd })
+		else
+			table.insert(forLater, cmd)
+		end
+		return
+	end
 	if kind == "pointer" then
 		-- Only the latest matters, and only to a client that is playing.
 		if tester then
