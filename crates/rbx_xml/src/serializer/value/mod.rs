@@ -14,7 +14,7 @@ mod sequence;
 mod udim;
 mod vector;
 
-use rbx_dom::Variant;
+use rbx_dom::{Content, Variant};
 
 use crate::error::XmlError;
 use crate::serializer::writer::Writer;
@@ -40,7 +40,45 @@ pub(crate) fn string_property(writer: &mut Writer, name_value: &str) {
     scalar::string(writer, "Name", name_value);
 }
 
-pub(crate) fn encode(writer: &mut Writer, name: &str, value: &Variant) -> Result<(), XmlError> {
+/// `saved` is the type Studio saves the property as (see
+/// `ReflectionDatabase::saved_type`). A value whose `Variant` alone would pick
+/// another tag is written under that one instead, since Studio drops a
+/// property that arrives under the wrong tag: a ContentId held as a String or
+/// a URI goes out as `Content`/`url`, a Content held as a String as
+/// `Content`/`uri`, script `Source` as `ProtectedString`, and a binary blob
+/// held as a String as `BinaryString`.
+pub(crate) fn encode(
+    writer: &mut Writer,
+    name: &str,
+    value: &Variant,
+    saved: Option<&str>,
+) -> Result<(), XmlError> {
+    match (saved, value) {
+        (Some("ContentId"), Variant::String(uri) | Variant::Content(Content::Uri(uri))) => {
+            content::content_id(writer, name, uri)
+        }
+        (Some("ContentId"), Variant::Content(Content::None)) => {
+            content::content_id(writer, name, "")
+        }
+        (Some("Content"), Variant::String(uri)) => {
+            let value = match uri.as_str() {
+                "" => Content::None,
+                _ => Content::Uri(uri.clone()),
+            };
+            content::content(writer, name, &value)
+        }
+        (Some("ProtectedString"), Variant::String(text)) => {
+            scalar::protected_string(writer, name, text)
+        }
+        (Some("BinaryString"), Variant::String(text)) => {
+            scalar::binary_string(writer, name, text.as_bytes())
+        }
+        _ => encode_variant(writer, name, value)?,
+    }
+    Ok(())
+}
+
+fn encode_variant(writer: &mut Writer, name: &str, value: &Variant) -> Result<(), XmlError> {
     match value {
         Variant::String(text) => scalar::string(writer, name, text),
         Variant::Bool(b) => scalar::bool_value(writer, name, *b),

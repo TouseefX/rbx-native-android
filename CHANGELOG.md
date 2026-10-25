@@ -2,6 +2,15 @@
 
 ## 2026-10-25
 
+- **Images and scripts survive a `.rbxlx` save.** We wrote `Decal.Texture`,
+  `ImageLabel.Image` and every other asset id as a plain `<string>`, and
+  script `Source` too, so Studio dropped them all and every image was gone
+  when you opened the file there. Now each property goes out under the tag
+  Studio saves it with, looked up in the API dump: asset ids as `Content`,
+  `Source` as `ProtectedString`, `Tags` and the other blobs as
+  `BinaryString`. Opening a file Studio 0.744 saved works now too: it
+  stores `Tags` as a `SharedString` and we dropped them, so tagged parts
+  showed no tags. (@chteau)
 - **Avatar Settings dock.** Avatar › Settings (the orange guy with the
   gear, first on the tab like in Studio) opens Studio's Avatar Settings
   dock: General, Body, Clothing, Accessories and Movement down a sidebar,
