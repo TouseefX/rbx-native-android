@@ -22,6 +22,7 @@
 pub mod channel;
 #[cfg(any(target_os = "linux", windows))]
 pub mod embed;
+pub mod exec;
 pub mod gamepad;
 pub mod inject;
 pub mod instrument;
