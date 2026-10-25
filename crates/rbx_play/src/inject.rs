@@ -34,6 +34,9 @@ pub const PROBE_RECORD: &str = include_str!("probe/record.luau");
 /// `__rbxnative_input`: the client's half of the MCP input tools.
 pub const PROBE_INPUT: &str = include_str!("probe/input.luau");
 pub const INPUT_NAME: &str = "__rbxnative_input";
+/// `__rbxnative_stats`: the server probe's once-a-second playtest stats.
+pub const PROBE_STATS: &str = include_str!("probe/stats.luau");
+pub const STATS_NAME: &str = "__rbxnative_stats";
 pub const DEBUG_NAME: &str = "__rbxnative_debug";
 pub const CODEC_NAME: &str = "__rbxnative_codec";
 pub const LIVE_NAME: &str = "__rbxnative_live";
@@ -129,6 +132,7 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
     remove_named(dom, rs, crate::exec::SERIALIZE_NAME);
     remove_named(dom, rs, crate::exec::FIU_NAME);
     remove_named(dom, rs, crate::exec::EXEC_NAME);
+    remove_named(dom, rs, STATS_NAME);
 
     for (name, source) in [
         (
@@ -137,6 +141,7 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         ),
         (crate::exec::FIU_NAME, crate::exec::PROBE_FIU.to_owned()),
         (crate::exec::EXEC_NAME, crate::exec::exec_module_source()),
+        (STATS_NAME, PROBE_STATS.to_owned()),
     ] {
         let module = dom.new_instance("ModuleScript", name, Some(rs));
         set_prop(dom, module, "Source", Variant::String(source));
@@ -362,6 +367,7 @@ mod tests {
                 crate::exec::SERIALIZE_NAME,
                 crate::exec::FIU_NAME,
                 crate::exec::EXEC_NAME,
+                STATS_NAME,
             ]
             .contains(&inst.name())
             {
@@ -372,6 +378,6 @@ mod tests {
             }
             stack.extend_from_slice(inst.children());
         }
-        assert_eq!(found, vec![true; 3]);
+        assert_eq!(found, vec![true; 4]);
     }
 }
