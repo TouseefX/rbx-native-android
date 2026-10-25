@@ -262,3 +262,18 @@ fn a_call_that_timed_out_is_reported_as_possibly_still_applying() {
     let closed = super::unanswered("a1", Duration::from_secs(30), None);
     assert_eq!(closed, "studio a1 stopped answering: it closed");
 }
+
+#[test]
+fn documentation_tools_answer_with_no_editor_open() {
+    let mut broker = Broker::new(scratch("docs"));
+    let (failed, listing) = tool(&mut broker, "skill", json!({}));
+    assert!(!failed);
+    assert!(listing.starts_with("Available skills:"));
+    let (failed, refusal) = tool(
+        &mut broker,
+        "http_get",
+        json!({ "url": "https://example.com/a.md", "studio_id": "gone" }),
+    );
+    assert!(failed);
+    assert!(refusal.starts_with("URL not allowed"));
+}

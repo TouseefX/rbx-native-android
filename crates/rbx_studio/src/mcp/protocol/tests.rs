@@ -68,6 +68,8 @@ fn tools_list_names_every_tool_with_a_schema() {
             "script_grep",
             "multi_edit",
             "get_studio_state",
+            "http_get",
+            "skill",
             "execute_luau",
             "start_stop_play",
             "get_console_output",
