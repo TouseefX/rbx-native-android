@@ -75,6 +75,8 @@ fn tools_list_names_every_tool_with_a_schema() {
             "generate_mesh",
             "generate_material",
             "generate_procedural_model",
+            "segment_mesh",
+            "generate_texture",
             "wait_job_finished",
             "list_roblox_studios"
         ]
