@@ -211,6 +211,7 @@ Use one spacing scale at the 1280x720 reference: **4, 8, 12, 16, 24, 32**. Every
 - A grid fills its rows. With 7 items in a 4-column grid, either add one, use 7 that fit another column count, or let it scroll. Never a big blank half-row in a fixed panel.
 - A detail or preview pane is full top to bottom: big art, name and tag, a short description, stats, price and the action. A tall preview box with a small icon in the middle is empty space.
 - Content starts right under the header, never centred in a tall void.
+- Hero art fills its pane: in a preview or detail pane the illustration takes at least 60 percent of the pane's width (or height for a tall object). A small rifle floating in a big dark box is empty space.
 
 ### Icons and item art are images, never Frames
 
@@ -222,7 +223,7 @@ Every build ships a LocalScript that drives the signature motion from `ui-style-
 
 ### Audit script
 
-Run with the menus visible (command bar or the MCP code tool). It flags missing padding, text that does not fit, children spilling out of their parent, and corner mistakes for the decision you wrote down:
+Run it as its own command after the build, with the menus visible (command bar or the MCP code tool). In the same chunk that created the UI nothing is laid out yet, so every label reports as not fitting. It flags missing padding, text that does not fit, children spilling out of their parent, and corner mistakes for the decision you wrote down:
 
 ```lua
 local ROUNDED = true -- your corner decision
@@ -249,6 +250,13 @@ end
 
 Fix every line it prints that is not deliberate (a close button on a corner, a badge that overhangs on purpose, a reasoned corner exception).
 
+### Details that give it away
+
+- Tabs and chips are sized to their text (`AutomaticSize = X` plus side padding 16), with one gap between them. Fixed-width tabs leave uneven gaps around short and long labels.
+- A selected-state marker (underline, dot, bar) sits inside the element's padding or flush on its edge, never half hanging off it.
+- Use at most four button hues in one cluster (a rail, a tab row). A rainbow of fills reads as noise.
+- Every number has its unit or icon, every price its currency mark, every count its label. No orphan numbers.
+
 ## 7. Composition: HUD and menus must not collide
 
 Generated UI most often fails here: each piece looks fine, but at phone size the shop panel runs into the left rail, the currency pill sits under the close button, a sticker covers a title. Plan the screen as zones before building:
@@ -264,7 +272,7 @@ Generated UI most often fails here: each piece looks fine, but at phone size the
 
 Rules:
 
-- A modal is sized to the centre zone at the smallest viewport (phone landscape, about 844x390), not to the screen. Use `UISizeConstraint.MaxSize` plus a Scale size that leaves the edge strips free, and `AnchorPoint` 0.5,0.5.
+- A modal is sized to the centre zone at the narrowest root, not to the screen. Check it with numbers: at 4:3 (1024x768) the root is 1280 reference units wide, so a centred modal of width `w` starts at `(1280 - w) / 2`. Every HUD piece that stays visible must end at least 16 left of that, counting anything that overhangs the modal (a title banner, a sticker, the close button). A 880 wide shop starts at 200, so a 260 wide wallet at 16 collides. Shrink the modal, move the HUD piece, or hide it while the modal is open.
 - Or hide what it would cover: when a full menu opens, hide the rail and nav (`Visible = false`, or fade them) and keep only the currency it spends. Most top games do this. Decide per menu and write it down.
 - Every element stays fully on screen. Nothing hangs off an edge unless it is a deliberate bleed decoration.
 - Overlaps are only deliberate: a badge on a corner, a banner sticking out of a panel's top edge, a close button on a corner. Deliberate overlaps never cover text: give the title right padding equal to the sticker's width, keep badges in the corner outside the label.
@@ -344,6 +352,8 @@ Answer honestly. Any "yes" in the first group means rework.
 - Is every panel filled or sized to its content, with no blank region over about 15 percent?
 - Is every icon and item art an image drawn from SVG, never Frames? Does each item have a real silhouette (an egg is egg-shaped, a rifle has a stock, grip, magazine and barrel), two-tone shading, a highlight and the style's outline? Does it read at 32 px?
 - Is there a LocalScript with a staggered entrance, a styled open, hover and press on every button, a currency count-up, a shine on the featured offer and one idle pulse?
+- Does the entrance never show an empty panel, move each tile as one unit, and leave nothing decorative floating before its container?
+- At 1280 reference width (4:3), does the open modal clear every visible HUD piece by 16, banners and stickers included? Does the hero art fill at least 60 percent of its pane?
 - Would a player guess this was AI-made, or that it still needs a pass? If yes, find out why and fix it.
 
 If you can, take a screenshot and compare it side by side with a top game in the same genre. If yours looks emptier, flatter or more uniform, it is not done.
