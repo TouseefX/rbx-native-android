@@ -104,6 +104,23 @@ impl ReflectionDatabase {
         None
     }
 
+    /// The type Studio saves `class`'s `name` as: the dump's value type, a
+    /// legacy ContentId always spelled `ContentId` whichever spelling the
+    /// dump uses, and `BinaryString` for the instance-wide `Tags` and
+    /// `AttributesSerialize` blobs, which every place saves but the dump
+    /// never lists. `None` for a property neither knows.
+    pub fn saved_type(&self, class: &str, name: &str) -> Option<&str> {
+        if matches!(name, "Tags" | "AttributesSerialize") {
+            return Some("BinaryString");
+        }
+        let property = self.resolve_property(class, name)?;
+        Some(if property.value_type == self.content_id_type {
+            "ContentId"
+        } else {
+            &property.value_type
+        })
+    }
+
     /// `class` and every superclass above it, nearest first; nothing for a
     /// class the dump does not know.
     pub(crate) fn lineage<'a>(&'a self, class: &str) -> impl Iterator<Item = &'a str> + 'a {
