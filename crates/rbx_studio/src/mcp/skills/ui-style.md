@@ -116,9 +116,10 @@ fit()
 
 - Inside `Root`, place HUD pieces with Scale positions and an AnchorPoint at the corner they hug (`Position = UDim2.new(0, 16, 1, -16)`, `AnchorPoint = Vector2.new(0, 1)`), and size them in Offset. Centre modals with `AnchorPoint = Vector2.new(0.5, 0.5)`, `Position = UDim2.fromScale(0.5, 0.5)`.
 - At the 0.6 floor a phone in landscape gives `Root` about 650 reference units of height, so keep every modal at 600 or less tall. Tappable things are at least 64x64 reference (about 40 px on a phone).
+- LocalScripts do not run in edit mode, so the build itself also sets `Root.Size` and `UIScale.Scale` once from `workspace.CurrentCamera.ViewportSize` with the same formula. Otherwise the edit view (and any screenshot taken there) shows the UI at scale 1, clipped.
 - Nested `UIScale`s multiply, so the motion skill's pop `UIScale` on a panel works on top of this one.
 - `UIAspectRatioConstraint` only shrinks a box to fit inside its own Size (default `AspectType = FitWithinMaxSize`). A box sized `(0, 0, 0, 24)` stays 0 wide and everything inside it vanishes. Give both axes a real size, or set `AspectType = ScaleWithParentSize`.
-- Text: fixed `TextSize` from a small type scale (for example 14, 16, 20, 28, 40 at reference). `TextScaled` only for a big number or title that must fill its box, always with a `UITextSizeConstraint`.
+- Text: fixed `TextSize` from a small type scale at reference, for example 18 (captions), 20 (body), 24, 32, 44. At the 0.6 phone floor that is 11 to 12 px for small text, the least a phone can read; never go under 18 at reference. `TextScaled` only for a big number or title that must fill its box, always with a `UITextSizeConstraint`.
 
 ### Touch targets and mobile layout
 
@@ -340,7 +341,7 @@ Answer honestly. Any "yes" in the first group means rework.
 - When the shop is open, does anything collide with it, or did you decide which HUD pieces hide? Does any sticker or badge cover text? Does anything hang off the screen?
 - Every tappable thing at least 64x64 at reference (about 40 px on a phone), 8 apart?
 - Nothing under the top bar, the thumbstick or the jump button?
-- Text readable at phone size (14 px minimum body)?
+- Text readable at phone size: nothing under 18 at reference, body 20 or more?
 - Close button top-right of every modal, reachable with a thumb, plus Escape/B closes?
 - Buttons react on hover and press?
 - Fits at 844x390, 1024x768 and 1920x1080 without overlap?
