@@ -22,6 +22,9 @@ Think of a mobile game sticker sheet: every element is a physical, outlined, sli
 
 ## Palettes
 
+These hex values are a starting point. Shift them toward the game's own world and characters (`ui-style` section 4) so two games in this style never share a palette.
+
+
 Bright candy (pet sim, party game):
 
 | Role | Fill | Lip | Stroke |

@@ -5,7 +5,7 @@ description: Genre UI styles for Roblox games beyond the four base styles: milit
 
 # Genre styles
 
-Pull `ui-style` first for the genre map and shared rules. These are conventions seen across popular games in each genre, not hard rules: match the specific game's world first. Recipes reuse the `new(class, props, children)` helper from the other style files.
+Pull `ui-style` first for the genre map and shared rules. These are conventions seen across popular games in each genre, not hard rules: match the specific game's world first, and give it its own palette, shape idea and signature detail (`ui-style` section 4). Recipes reuse the `new(class, props, children)` helper from the other style files.
 
 ## Military / realistic shooter
 

@@ -20,6 +20,9 @@ Use this when the prompt gives no strong vibe, and for simulators, tycoons, obbi
 
 ## Palette
 
+These hex values are a starting point. Shift them toward the game's own world and characters (`ui-style` section 4) so two games in this style never share a palette.
+
+
 | Role | Fill | Lip / dark shade | Use |
 | --- | --- | --- | --- |
 | Green | `#5BE33B` | `#2E9A1C` | Buy, Sell, Confirm, Rebirth, progress |

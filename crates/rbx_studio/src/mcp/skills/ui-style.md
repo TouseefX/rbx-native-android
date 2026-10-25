@@ -1,6 +1,6 @@
 ---
 name: ui-style
-description: Start here before building or restyling any in-game UI. Reads the feeling behind the prompt and the game's genre, picks a fitting visual style (trendy default, cartoony, sleek, striking, or a genre style), lists the generic "AI made" look to avoid, the shared layout rules every style uses, and the self-review checklist to run before showing UI.
+description: Start here before building or restyling any in-game UI. Reads the feeling behind the prompt and the game's genre, picks a fitting visual style (trendy default, cartoony, sleek, striking, or a genre style), lists the generic "AI made" look to avoid, how to give each game its own identity instead of copying a reference, the shared layout rules every style uses, and the self-review checklist to run before showing UI.
 ---
 
 # Picking a UI style
@@ -68,7 +68,19 @@ Do not produce this. Every item here is a tell:
 
 Why it fails: it carries no genre, no identity, no depth, and no game feel. Real Roblox UI has outlines, depth (lips, shadows, bevels), icons and item art, colour-coded actions and personality in the type.
 
-## 4. Shared rules for every style
+## 4. Give the game its own identity
+
+The style files describe a family, not a template. Their palettes, button recipes and example layouts are references, the same way a UI artist keeps a mood board. A UI that copies them straight is a reskin, and players notice reskins as fast as they notice the "AI made" card. Every game gets its own look inside the chosen style:
+
+1. **Its own palette.** Start from the style's palette, then pull the base and accent from the game itself: the world's sky and ground, the main character, the game's name. A lava obby leans ember orange and charcoal, an ocean pet game leans teal and coral. Keep the action colours readable (green buy, red close), but shift their exact hue so they sit with the base.
+2. **Its own shapes.** Pick one shape idea and repeat it: clipped corners, a leaf-shaped tab, a ticket stub notch, a shield outline, a paw-print badge. Use it on panels, tabs, badges and icon frames so the set reads as one family.
+3. **One signature detail.** Exactly one thing a player would remember: a pattern (stitching, bubbles, hex grid, wood grain, star field), an ornament (a ribbon, a rivet row, a tape strip, a mascot peeking over the title), or a motion quirk (buttons wobble like jelly, the coin counter flips like a scoreboard). One, done well, used in a few places. Three signature details is clutter.
+4. **Its own icons.** Draw the icon set for this game (`ui-style-icons`): the coin carries the game's emblem, the shop icon fits the theme (a cauldron for a witch game, a crate for a military one).
+5. **Beautiful but simple.** Fewer elements, each one finished. Prefer one strong panel with good spacing over many boxes. If a piece has no job, delete it.
+
+Write the identity down before building, next to the palette: "base and accent from X, shape idea Y, signature detail Z". The test: could someone look at your UI and tell which reference screenshot or style example it was copied from? If yes, rework it until they could not.
+
+## 5. Shared rules for every style
 
 ### ScreenGui setup
 
@@ -169,7 +181,7 @@ Robux prices always carry the Robux symbol (draw your own hexagon-style mark in 
 
 Every shop item, currency and HUD button needs an icon. Text-only buttons are a tell. If no matching asset exists, draw one with `ui-style-icons` and upload it with `store_image`. Use one icon style across the whole game.
 
-## 5. Composition: HUD and menus must not collide
+## 6. Composition: HUD and menus must not collide
 
 Generated UI most often fails here: each piece looks fine, but at phone size the shop panel runs into the left rail, the currency pill sits under the close button, a sticker covers a title. Plan the screen as zones before building:
 
@@ -218,15 +230,15 @@ end
 
 Repeat at a phone-sized viewport (Studio's device emulator) and fix every line it prints that you did not intend. A full-screen dim or backdrop frame overlaps everything by design; skip it.
 
-## 6. Build order
+## 7. Build order
 
-1. Choose the style and write down: palette (hex), fonts, corner radius, stroke weight, light direction, motion style.
+1. Choose the style and write down: palette (hex), fonts, corner radius, stroke weight, light direction, motion style, and the identity from section 4 (palette source, shape idea, signature detail).
 2. Build reusable pieces as functions: `makeButton(color, label, icon)`, `makePanel(title, color)`, `makeCurrency(icon, amount)`. Every button in the game comes from the same function so they match.
 3. Build the HUD, then each menu. Hide menus by default (`Visible = false`) and open them from HUD buttons.
 4. Add motion (`ui-style-motion`).
-5. Run the overlap check from section 5 and the checklist below, then look at it at phone size.
+5. Run the overlap check from section 6 and the checklist below, then look at it at phone size.
 
-## 7. Self-review checklist (run before showing UI)
+## 8. Self-review checklist (run before showing UI)
 
 Answer honestly. Any "yes" in the first group means rework.
 
@@ -236,6 +248,7 @@ Answer honestly. Any "yes" in the first group means rework.
 - Is any font Arial, Arimo, Legacy, SourceSans or an unstroked default bold?
 - Are there text-only buttons, emoji icons, or a text "X" close button?
 - Would this UI look the same if the game were a different genre?
+- Could someone tell which reference screenshot or style example this was copied from? Is it the style file's palette and layout unchanged?
 
 **Does it fit?**
 - Can you name the style and say why it fits this genre and this prompt in one sentence?
@@ -243,6 +256,8 @@ Answer honestly. Any "yes" in the first group means rework.
 - Is there one clear primary action per screen, colour-coded?
 - Do buttons have depth appropriate to the style (lip, bevel, shadow, or deliberately flat for sleek/military)?
 - Does every item and currency have an icon in one consistent style?
+- Can you name this game's palette source, shape idea and single signature detail? Would a player recognise this UI as this game's without the title?
+- Is it simple: does every element have a job?
 
 **Does it work?**
 - When the shop is open, does anything collide with it, or did you decide which HUD pieces hide? Does any sticker or badge cover text? Does anything hang off the screen?
