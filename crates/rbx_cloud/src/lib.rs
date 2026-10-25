@@ -7,6 +7,7 @@
 //! for them. See `Client` for the entry point.
 
 mod api_key;
+mod asset_metadata;
 mod assets;
 mod avatar;
 mod client;
@@ -20,16 +21,19 @@ mod games;
 pub mod heartbeats;
 mod introspect;
 mod inventory;
+mod parallel;
 mod places;
 mod publish;
 pub mod quick_login;
 mod retry;
 mod scopes;
 mod thumbnails;
+mod toolbox;
 mod universes;
 mod version_history;
 
 pub use api_key::ApiKey;
+pub use asset_metadata::AssetMetadata;
 pub use assets::AssetContent;
 pub use avatar::{AssetType, Avatar, AvatarAsset, AvatarBodyColors, AvatarScales};
 pub use client::Client;
@@ -45,6 +49,7 @@ pub use experience_settings::{ExperienceSettings, ExperienceUpdate, PlaceSetting
 pub use experiences::{Experience, Experiences, Group};
 pub use games::{Creator, CreatorKind, GameSummary};
 pub use introspect::{KeyInfo, Scope};
+pub use inventory::{InventoryAsset, InventoryPage};
 pub use places::{place_id_from_link, PlaceSummary};
 pub use publish::PublishMode;
 pub use retry::rate_limit_waits;
@@ -52,5 +57,6 @@ pub use scopes::{
     check as check_scopes, Grant, KeyReport, Permission, ScopeCheck, DASHBOARD_API_KEYS_URL,
     PERMISSIONS,
 };
+pub use toolbox::{StoreAsset, StoreCategory, StoreCreator, StorePage, StoreSearch};
 pub use universes::{Owner, Universe, Visibility};
 pub use version_history::{PlaceVersion, VersionPage};
