@@ -552,10 +552,15 @@ pub fn set_attribute(
 }
 
 /// The `CollectionService` tags of an instance: the `Tags` property is the tag
-/// names run together, separated by NUL bytes.
+/// names run together, separated by NUL bytes. Studio 0.744 saves it as a
+/// SharedString, which both readers hand back as `Unknown`, so that reads too.
 pub fn tags(value: Option<&Variant>) -> Vec<&str> {
     let text = match value {
         Some(Variant::String(text)) => text.as_str(),
+        Some(Variant::Unknown { raw, .. }) => match std::str::from_utf8(raw) {
+            Ok(text) => text,
+            Err(_) => return Vec::new(),
+        },
         _ => return Vec::new(),
     };
     text.split('\0').filter(|tag| !tag.is_empty()).collect()
@@ -928,6 +933,16 @@ mod tests {
         let attributes = BTreeMap::from([("Where".to_owned(), Variant::Int64(1))]);
 
         assert_eq!(encode(&attributes, |_| Some("Font".to_owned())), None);
+    }
+
+    #[test]
+    fn tags_read_from_a_shared_string_too() {
+        let value = Variant::Unknown {
+            type_id: 0x1C,
+            raw: b"Coin\0Hazard\0".to_vec(),
+        };
+
+        assert_eq!(tags(Some(&value)), ["Coin", "Hazard"]);
     }
 
     #[test]

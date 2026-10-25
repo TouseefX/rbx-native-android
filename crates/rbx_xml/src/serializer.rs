@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use md5::{Digest, Md5};
 use rbx_dom::{Ref, Variant, WeakDom};
+use rbx_reflection::ReflectionDatabase;
 
 use crate::error::XmlError;
 use writer::Writer;
@@ -81,6 +82,7 @@ fn write_item<'a>(
     // map (see `deserializer`'s `NAME_PROPERTY` redirect), so it is written back
     // as an ordinary `string` property here to match.
     value::string_property(writer, instance.name());
+    let db = ReflectionDatabase::shared();
     for (name, prop_value) in instance.properties() {
         match prop_value {
             Variant::Unknown { type_id: 0x1C, raw } => {
@@ -88,7 +90,12 @@ fn write_item<'a>(
                 writer.leaf("SharedString", &[("name", name)], &key);
                 shared.insert(key, raw);
             }
-            _ => value::encode(writer, name, prop_value)?,
+            _ => value::encode(
+                writer,
+                name,
+                prop_value,
+                db.saved_type(instance.class(), name),
+            )?,
         }
     }
     writer.close("Properties");
@@ -188,34 +195,107 @@ mod tests {
         );
     }
 
+    fn only_root(dom: &WeakDom) -> &Instance {
+        dom.get(dom.root_refs()[0]).unwrap()
+    }
+
     #[test]
-    fn a_texture_stored_as_string_and_as_content_both_round_trip() {
-        // XML writes each instance's value on its own, so the two shapes a
-        // Decal.Texture can hold never have to agree the way a binary column does.
+    fn a_content_id_goes_out_as_a_url_whether_held_as_string_or_content() {
+        // A file loads `Decal.Texture` as a String, a script or Properties
+        // edit sets it as a Content; Studio drops it unless it is a `url`.
+        for texture in [
+            Variant::String("rbxassetid://1".into()),
+            Variant::Content(Content::Uri("rbxassetid://1".into())),
+        ] {
+            let mut dom = WeakDom::new();
+            let decal = dom.new_instance("Decal", "Decal", None);
+            dom.set_property(decal, "Texture", texture).unwrap();
+
+            let xml = serialize(&dom).unwrap();
+            assert!(xml.contains(
+                "<Content name=\"Texture\">\n        <url>rbxassetid://1</url>\n      </Content>"
+            ));
+            let back = crate::deserialize(&xml).unwrap();
+            assert_eq!(
+                only_root(&back).properties().get("Texture"),
+                Some(&Variant::String("rbxassetid://1".into()))
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_content_id_goes_out_as_null_and_reads_back_empty() {
         let mut dom = WeakDom::new();
-        let loaded = dom.new_instance("Decal", "Loaded", None);
-        let set = dom.new_instance("Decal", "Set", None);
-        let string = Variant::String("rbxassetid://1".into());
-        let content = Variant::Content(Content::Uri("rbxassetid://2".into()));
-        dom.set_property(loaded, "Texture", string.clone()).unwrap();
-        dom.set_property(set, "Texture", content.clone()).unwrap();
+        let label = dom.new_instance("ImageLabel", "Label", None);
+        dom.set_property(label, "Image", Variant::Content(Content::None))
+            .unwrap();
 
-        let reloaded = crate::deserialize(&serialize(&dom).unwrap()).unwrap();
+        let xml = serialize(&dom).unwrap();
+        assert!(xml.contains("<Content name=\"Image\">\n        <null></null>"));
+        let back = crate::deserialize(&xml).unwrap();
+        assert_eq!(
+            only_root(&back).properties().get("Image"),
+            Some(&Variant::String(String::new()))
+        );
+    }
 
-        let mut textures: Vec<_> = reloaded
-            .root_refs()
-            .iter()
-            .map(|&r| {
-                reloaded
-                    .get(r)
-                    .unwrap()
-                    .properties()
-                    .get("Texture")
-                    .cloned()
-            })
-            .collect();
-        textures.sort_by_key(|v| format!("{v:?}"));
-        assert_eq!(textures, vec![Some(content), Some(string)]);
+    #[test]
+    fn a_content_held_as_a_string_goes_out_as_a_uri() {
+        let mut dom = WeakDom::new();
+        let label = dom.new_instance("ImageLabel", "Label", None);
+        dom.set_property(
+            label,
+            "ImageContent",
+            Variant::String("rbxassetid://3".into()),
+        )
+        .unwrap();
+
+        let xml = serialize(&dom).unwrap();
+        assert!(xml.contains("<uri>rbxassetid://3</uri>"));
+        let back = crate::deserialize(&xml).unwrap();
+        assert_eq!(
+            only_root(&back).properties().get("ImageContent"),
+            Some(&Variant::Content(Content::Uri("rbxassetid://3".into())))
+        );
+    }
+
+    #[test]
+    fn script_source_goes_out_as_a_protected_string() {
+        let source = Variant::String("if a < b and c > d then print(\"&]]>\") end\n".into());
+        let mut dom = WeakDom::new();
+        let script = dom.new_instance("Script", "Script", None);
+        dom.set_property(script, "Source", source.clone()).unwrap();
+
+        let xml = serialize(&dom).unwrap();
+        assert!(xml.contains("<ProtectedString name=\"Source\">if a &lt; b"));
+        assert!(!xml.contains("<string name=\"Source\">"));
+        let back = crate::deserialize(&xml).unwrap();
+        assert_eq!(only_root(&back).properties().get("Source"), Some(&source));
+    }
+
+    #[test]
+    fn binary_string_properties_held_as_text_go_out_as_base64() {
+        let mut dom = WeakDom::new();
+        let part = dom.new_instance("Part", "Part", None);
+        let tags = Variant::String("Coin".into());
+        dom.set_property(part, "Tags", tags.clone()).unwrap();
+        let terrain = dom.new_instance("Terrain", "Terrain", None);
+        let colors = Variant::String("abc".into());
+        dom.set_property(terrain, "MaterialColors", colors.clone())
+            .unwrap();
+
+        let xml = serialize(&dom).unwrap();
+        assert!(xml.contains("<BinaryString name=\"Tags\">Q29pbg==</BinaryString>"));
+        assert!(xml.contains("<BinaryString name=\"MaterialColors\">YWJj</BinaryString>"));
+        let back = crate::deserialize(&xml).unwrap();
+        let got = |name: &str, key: &str| {
+            back.root_refs()
+                .iter()
+                .find_map(|&r| back.get(r).filter(|i| i.name() == name))
+                .and_then(|i| i.properties().get(key).cloned())
+        };
+        assert_eq!(got("Part", "Tags"), Some(tags));
+        assert_eq!(got("Terrain", "MaterialColors"), Some(colors));
     }
 
     #[test]
