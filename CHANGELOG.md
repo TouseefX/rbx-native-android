@@ -32,6 +32,21 @@
   say why they're greyed out. Home also has a small footer now saying
   it's an unofficial community project, not affiliated with Roblox.
   (@chteau)
+- **Avatar Settings dock.** Avatar › Settings (the orange guy with the
+  gear, first on the tab like in Studio) opens Studio's Avatar Settings
+  dock: General, Body, Clothing, Accessories and Movement down a sidebar,
+  the Player Choice and Consistent Gameplay presets, the avatar type in
+  the "…" menu, and every section from the docs (scale, custom parts and
+  clothes and accessories, build ranges, limit bounds, collision, packs,
+  clips, abilities). It edits the place's `AvatarSettings` rules directly,
+  so every change is one undo step and gets saved with the place, older
+  twin properties kept in step the way Studio writes them. (@chteau)
+
+- **`AvatarSettings` stays hidden.** Studio never lists it in Explorer or
+  offers it to insert, so we don't either, not even with every service
+  shown. It's still in the place and saved as is. Services newer than our
+  list (like `ConfigureServerService`) are hidden by their API dump tag
+  now instead of showing up as stray folders. (@chteau)
 
 ## 2026-10-21
 
