@@ -277,6 +277,34 @@ fn a_deliberately_noisy_service_is_hidden_by_default() {
 }
 
 #[test]
+fn a_service_newer_than_the_list_is_hidden_by_its_dump_tag() {
+    for newer in ["AvatarSettings", "ConfigureServerService"] {
+        assert!(is_known_service(newer), "{newer}");
+        assert!(!is_default_visible(newer), "{newer}");
+    }
+}
+
+#[test]
+fn avatar_settings_stays_out_of_even_the_full_view() {
+    let mut dom = WeakDom::new();
+    insert(&mut dom, 1, "Workspace", "Workspace");
+    insert(&mut dom, 2, "AvatarSettings", "AvatarSettings");
+    insert(&mut dom, 3, "HttpService", "HttpService");
+
+    let explorer = from_dom(&dom);
+    let mut shown = ServiceOverrides::new();
+    shown.insert("AvatarSettings".into(), true);
+
+    let labels: Vec<String> = explorer
+        .items(true, &shown)
+        .iter()
+        .map(|item| item.label.to_string())
+        .collect();
+    assert_eq!(labels, ["Workspace", "HttpService"]);
+    assert_eq!(explorer.items(false, &shown).len(), 1);
+}
+
+#[test]
 fn an_instance_outside_the_known_service_set_is_never_hidden() {
     for real in ["Baseplate", "MyFolder", "SomeThirdPartyPlugin"] {
         assert!(is_default_visible(real), "{real}");

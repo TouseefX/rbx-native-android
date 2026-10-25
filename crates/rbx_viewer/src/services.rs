@@ -115,6 +115,11 @@ const KNOWN_SERVICES: [&str; 55] = [
     "Workspace",
 ];
 
+/// Services Studio's Explorer never lists, not even through Insert Service:
+/// each has an editor of its own (`AvatarSettings` is reached from Avatar ›
+/// Settings). Checked in Studio against a place holding one.
+const NEVER_LISTED: [&str; 1] = ["AvatarSettings"];
+
 /// Where `class` sits in [`SERVICE_ORDER`], if it is one of those.
 pub fn rank(class: &str) -> Option<usize> {
     SERVICE_ORDER.iter().position(|service| *service == class)
@@ -127,15 +132,26 @@ pub fn explorer_rank(class: &str) -> Option<usize> {
 }
 
 /// Whether a root of this class is one of the services this Explorer knows,
-/// shown or not. Asked beside the dump's own `Service` tag because a few of
-/// them (`Packages`, `SerializationService`) are not in the dump at all.
+/// shown or not: listed here, or tagged `Service` in the API dump, which
+/// is how a service Roblox adds after this list was written
+/// (`AvatarSettings`, `ConfigureServerService`) stays out of the default
+/// view instead of reading as a user's own root. The list stays because a
+/// few (`Packages`, `SerializationService`) are not in the dump at all.
 pub fn is_known_service(class: &str) -> bool {
-    rank(class).is_some() || KNOWN_SERVICES.contains(&class)
+    rank(class).is_some()
+        || KNOWN_SERVICES.contains(&class)
+        || rbx_reflection::ReflectionDatabase::shared().is_service(class)
+}
+
+/// Whether Studio lists a root of this class in any view at all, see
+/// [`NEVER_LISTED`].
+pub fn is_ever_listed(class: &str) -> bool {
+    !NEVER_LISTED.contains(&class)
 }
 
 /// Whether Studio's default Explorer view shows a root of this class without
 /// the "show all services" toggle: its 14 fixed services, or anything that is
 /// not one of Roblox's own well-known service classes at all.
 pub fn is_default_visible(class: &str) -> bool {
-    rank(class).is_some() || !KNOWN_SERVICES.contains(&class)
+    rank(class).is_some() || !is_known_service(class)
 }
