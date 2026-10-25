@@ -138,7 +138,7 @@ text("Store", DISPLAY, { Size = UDim2.fromScale(0.6, 0.78), Position = UDim2.fro
 banner.Parent = panel
 ```
 
-Square corners or a small 4 px radius on banners. Add gold corner brackets (small rotated triangles drawn as icons) at the banner's ends.
+The banner follows the UI's corner decision (rounded in a rounded UI, a small radius is fine). Add gold corner brackets (small rotated triangles drawn as icons) at the banner's ends.
 
 ## Recipe: panel
 
