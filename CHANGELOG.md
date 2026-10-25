@@ -8,7 +8,9 @@
   when you opened the file there. Now each property goes out under the tag
   Studio saves it with, looked up in the API dump: asset ids as `Content`,
   `Source` as `ProtectedString`, `Tags` and the other blobs as
-  `BinaryString`. (@chteau)
+  `BinaryString`. Opening a file Studio 0.744 saved works now too: it
+  stores `Tags` as a `SharedString` and we dropped them, so tagged parts
+  showed no tags. (@chteau)
 
 ## 2026-10-21
 
