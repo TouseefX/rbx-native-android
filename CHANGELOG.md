@@ -11,6 +11,27 @@
   `BinaryString`. Opening a file Studio 0.744 saved works now too: it
   stores `Tags` as a `SharedString` and we dropped them, so tagged parts
   showed no tags. (@chteau)
+- **UGC creator roadmap entry and research.** New `ROADMAP.md` item and
+  `docs/research/ugc-creators/README.md` covering what Studio gives people
+  who make avatar items, what rbx-native already has, what's missing and
+  what Roblox doesn't expose. Docs only. (@chteau)
+- **A splash screen at start-up.** A bare `rbxstudio` now opens a small
+  window where the two halves of the logo spin in from far away and land
+  on the README logo, in under a second, while the stored key loads.
+  Home or the setup wizard opens as soon as both are done. Reduce Motion
+  shows the finished logo straight away, and opening a place from the
+  command line skips it. (@chteau)
+- **Recent on Home has an icon view and a menu per place.** A list/icons
+  switch sits next to Recent (it sticks across restarts), and the icons
+  show the linked game's thumbnail. Right click a place, or hit its `…`,
+  for Studio's start page menu: Configure Experience and Configure Place
+  open the place with Game Settings on that page, Open Place page goes to
+  roblox.com, Archive asks first then archives the start place through
+  Open Cloud (needs `asset:write`), and Remove from list drops it from
+  Recent. A file that isn't linked to Roblox only gets Remove, the rest
+  say why they're greyed out. Home also has a small footer now saying
+  it's an unofficial community project, not affiliated with Roblox.
+  (@chteau)
 - **Avatar Settings dock.** Avatar › Settings (the orange guy with the
   gear, first on the tab like in Studio) opens Studio's Avatar Settings
   dock: General, Body, Clothing, Accessories and Movement down a sidebar,
