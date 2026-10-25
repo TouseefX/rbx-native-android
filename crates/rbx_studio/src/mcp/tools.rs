@@ -3,10 +3,12 @@
 
 mod datamodel;
 mod assets;
+mod docs;
 mod edit;
 mod input;
 mod luau;
 mod scripts;
+mod skills;
 mod studio;
 mod tree;
 mod values;
@@ -131,6 +133,8 @@ pub(super) fn list() -> Value {
             json!({}),
             &[],
         ),
+        docs::schema(),
+        skills::schema(),
     ]);
     if let Value::Array(tools) = &mut tools {
         tools.extend(luau::schemas());
@@ -196,6 +200,12 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
         input::KEYBOARD => input::keyboard(arguments, session),
         input::MOUSE => input::mouse(arguments, session),
         STUDIO_STATE => Ok(studio::state(session.studio)),
+        skills::NAME => skills::call(arguments),
+        docs::NAME => {
+            let arguments = arguments.clone();
+            session.deferred = Some(Box::new(move || docs::call(&arguments)));
+            Ok(Value::Null)
+        }
         LIST_STUDIOS => Ok(studio::list(session.studio)),
         luau::EXECUTE_LUAU => luau::execute(arguments, session),
         luau::START_STOP_PLAY => luau::start_stop(arguments, session),
@@ -206,6 +216,18 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
             None => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
         },
     })
+}
+
+/// The answer to a tool that reads nothing of an editor's (`skill`,
+/// `http_get`), which the broker gives itself, so documentation is reachable
+/// with no editor open and a slow fetch never waits on a UI thread.
+pub(super) fn without_editor(name: &str, arguments: &Value) -> Option<Value> {
+    let outcome = match name {
+        skills::NAME => skills::call(arguments),
+        docs::NAME => docs::call(arguments),
+        _ => return None,
+    };
+    Some(finished(outcome))
 }
 
 /// A tool's result: its value as text, pretty JSON for anything but a
