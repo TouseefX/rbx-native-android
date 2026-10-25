@@ -2,6 +2,15 @@
 
 ## 2026-10-25
 
+- **Images and scripts survive a `.rbxlx` save.** We wrote `Decal.Texture`,
+  `ImageLabel.Image` and every other asset id as a plain `<string>`, and
+  script `Source` too, so Studio dropped them all and every image was gone
+  when you opened the file there. Now each property goes out under the tag
+  Studio saves it with, looked up in the API dump: asset ids as `Content`,
+  `Source` as `ProtectedString`, `Tags` and the other blobs as
+  `BinaryString`. Opening a file Studio 0.744 saved works now too: it
+  stores `Tags` as a `SharedString` and we dropped them, so tagged parts
+  showed no tags. (@chteau)
 - **UGC creator roadmap entry and research.** New `ROADMAP.md` item and
   `docs/research/ugc-creators/README.md` covering what Studio gives people
   who make avatar items, what rbx-native already has, what's missing and
