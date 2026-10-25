@@ -54,6 +54,20 @@ pub(crate) struct Session<'a> {
     /// The work a tool with no bound on how long it takes (`script_grep`)
     /// left to run off the UI thread; what it returns is the tool's answer.
     pub(crate) deferred: Option<Deferred>,
+    /// The running playtest the input tools act on; `None` outside Play.
+    pub(crate) play: Option<PlayInput>,
+}
+
+/// A running playtest as the input tools reach it, from any thread.
+#[derive(Clone)]
+pub(crate) struct PlayInput {
+    /// The client's probe: where a GuiObject is, walking the character,
+    /// typing into a TextBox.
+    pub(crate) probe: rbx_play::channel::Requester,
+    /// The embedded client's window, for real mouse and key events; `None`
+    /// while it is not embedded or another document hides the 3D view.
+    #[cfg(any(target_os = "linux", windows))]
+    pub(crate) window: Option<rbx_play::embed::WindowId>,
 }
 
 /// Runs over a copy of what it reads, so the editor stays responsive however
@@ -68,6 +82,7 @@ impl<'a> Session<'a> {
             studio,
             planned: None,
             deferred: None,
+            play: None,
         }
     }
 }
