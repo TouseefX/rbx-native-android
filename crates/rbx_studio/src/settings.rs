@@ -163,6 +163,8 @@ pub(crate) struct Settings {
     /// Row A's editors whose tab was closed, by key (`shell::documents`),
     /// the document tabs' answer to [`SavedLayout::closed`].
     pub(crate) closed_documents: Vec<String>,
+    /// Whether Home lays Recent out as icons rather than the list.
+    pub(crate) recent_icons: bool,
 }
 
 /// A dock layout saved under a name.
@@ -264,6 +266,7 @@ impl Default for Settings {
             device_scaling: crate::device_sim::DisplayScaling::default(),
             device_keyboard_layout: crate::device_sim::KeyboardLayout::system(),
             closed_documents: Vec::new(),
+            recent_icons: false,
         }
     }
 }
@@ -515,6 +518,7 @@ fn load_from(path: &Path) -> Settings {
                     .collect()
             })
             .unwrap_or_default(),
+        recent_icons: value["recent_icons"].as_bool().unwrap_or(false),
     }
 }
 
@@ -786,6 +790,7 @@ fn save_to(settings: &Settings, path: &Path) -> Result<(), SettingsError> {
     value["device_keyboard_layout"] = settings.device_keyboard_layout.key().into();
     value["strip_on_publish"] = settings.strip_on_publish.into();
     value["closed_documents"] = settings.closed_documents.clone().into();
+    value["recent_icons"] = settings.recent_icons.into();
     // A fixed-shape object always serializes; nothing here can fail.
     let bytes = serde_json::to_vec_pretty(&value).expect("settings JSON always serializes");
     write_atomic(path, &bytes)
@@ -1347,6 +1352,20 @@ mod tests {
             read.reduce_motion, None,
             "no recorded choice means follow the desktop, not 'off'"
         );
+    }
+
+    #[test]
+    fn recent_icons_round_trips_and_defaults_to_the_list() {
+        let path = temp_settings_path();
+        let settings = Settings {
+            recent_icons: true,
+            ..Settings::default()
+        };
+        save_to(&settings, &path).expect("save settings");
+        assert!(load_from(&path).recent_icons);
+
+        std::fs::write(&path, b"{}").expect("write settings");
+        assert!(!load_from(&path).recent_icons);
     }
 
     #[test]

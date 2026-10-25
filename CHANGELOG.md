@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-25
+
+- **Recent on Home has an icon view and a menu per place.** A list/icons
+  switch sits next to Recent (it sticks across restarts), and the icons
+  show the linked game's thumbnail. Right click a place, or hit its `…`,
+  for Studio's start page menu: Configure Experience and Configure Place
+  open the place with Game Settings on that page, Open Place page goes to
+  roblox.com, Archive asks first then archives the start place through
+  Open Cloud (needs `asset:write`), and Remove from list drops it from
+  Recent. A file that isn't linked to Roblox only gets Remove, the rest
+  say why they're greyed out. Home also has a small footer now saying
+  it's an unofficial community project, not affiliated with Roblox.
+  (@chteau)
+
 ## 2026-10-21
 
 - **The editor tabs close.** Script Editor, UI Editor and Animation Editor

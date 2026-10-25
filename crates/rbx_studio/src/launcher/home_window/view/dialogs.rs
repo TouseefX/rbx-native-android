@@ -14,6 +14,9 @@ impl HomeWindow {
     pub(super) fn dialog_view(&mut self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let dialog = self.dialog.as_ref()?;
         Some(match dialog {
+            Dialog::Archive { place, busy, error } => self
+                .archive_dialog(place, *busy, error.as_deref(), cx)
+                .into_any_element(),
             Dialog::LocalCopy {
                 experience,
                 path,
