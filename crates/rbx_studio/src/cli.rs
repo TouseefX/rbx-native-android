@@ -133,6 +133,15 @@ pub(crate) struct Launch {
     /// flag is absent.
     pub(crate) run: Option<String>,
     pub(crate) verbose: bool,
+    /// Home's Configure Experience / Configure Place: Game Settings opens
+    /// on that page once the editor is up.
+    pub(crate) configure: Option<Configure>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Configure {
+    Experience,
+    Place,
 }
 
 impl Launch {

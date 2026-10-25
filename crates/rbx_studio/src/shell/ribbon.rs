@@ -100,6 +100,7 @@ impl Shell {
                 self.panel_tiles(cx),
             ],
             Tab::Avatar => {
+                let settings = vec![self.avatar_settings_tile(cx)];
                 let mut tiles = self.rig_tiles(cx);
                 tiles.push(self.animation_tile(cx));
                 tiles.push(
@@ -112,7 +113,7 @@ impl Shell {
                     .into_any_element(),
                 );
                 tiles.push(self.avatar_setup_tile(cx));
-                vec![tiles]
+                vec![settings, tiles]
             }
             Tab::Ui => vec![
                 vec![self.insert_gui(cx).into_any_element()],
@@ -360,6 +361,49 @@ impl Shell {
 
     /// Avatar's Avatar Setup tile: Studio's tool turns a character mesh into
     /// a rig, which is what the auto-rigger does.
+    /// Studio's first Avatar button, in a group of its own: the orange
+    /// figure with a gear that opens the Avatar Settings dock.
+    fn avatar_settings_tile(&self, cx: &mut Context<Self>) -> AnyElement {
+        let size = px(20.);
+        let badge = div()
+            .absolute()
+            .right(px(-2.))
+            .bottom(px(-1.))
+            .size(px(10.))
+            .rounded_full()
+            .bg(tokens::tile())
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(
+                Icon::new(IconName::Cog)
+                    .size(px(9.))
+                    .text_color(tokens::text_full()),
+            );
+        let icon = div()
+            .relative()
+            .flex_none()
+            .size(size)
+            .child(
+                Icon::new(IconName::PersonStanding)
+                    .size_full()
+                    .text_color(tokens::warning()),
+            )
+            .child(badge);
+        let tile = tile_frame("ribbon-avatar-settings", icon, "Settings", true);
+        self.ribbon_nav
+            .claim(tile, cx)
+            .tooltip(|window, cx| {
+                super::tooltip::text(
+                    "Avatar Settings \u{2014} the place's avatar rules",
+                    window,
+                    cx,
+                )
+            })
+            .on_click(cx.listener(|shell, _, _, cx| shell.toggle_avatar_settings(cx)))
+            .into_any_element()
+    }
+
     fn avatar_setup_tile(&self, cx: &mut Context<Self>) -> AnyElement {
         tile(
             &self.ribbon_nav,

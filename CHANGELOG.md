@@ -2,6 +2,51 @@
 
 ## 2026-10-25
 
+- **Images and scripts survive a `.rbxlx` save.** We wrote `Decal.Texture`,
+  `ImageLabel.Image` and every other asset id as a plain `<string>`, and
+  script `Source` too, so Studio dropped them all and every image was gone
+  when you opened the file there. Now each property goes out under the tag
+  Studio saves it with, looked up in the API dump: asset ids as `Content`,
+  `Source` as `ProtectedString`, `Tags` and the other blobs as
+  `BinaryString`. Opening a file Studio 0.744 saved works now too: it
+  stores `Tags` as a `SharedString` and we dropped them, so tagged parts
+  showed no tags. (@chteau)
+- **UGC creator roadmap entry and research.** New `ROADMAP.md` item and
+  `docs/research/ugc-creators/README.md` covering what Studio gives people
+  who make avatar items, what rbx-native already has, what's missing and
+  what Roblox doesn't expose. Docs only. (@chteau)
+- **A splash screen at start-up.** A bare `rbxstudio` now opens a small
+  window where the two halves of the logo spin in from far away and land
+  on the README logo, in under a second, while the stored key loads.
+  Home or the setup wizard opens as soon as both are done. Reduce Motion
+  shows the finished logo straight away, and opening a place from the
+  command line skips it. (@chteau)
+- **Recent on Home has an icon view and a menu per place.** A list/icons
+  switch sits next to Recent (it sticks across restarts), and the icons
+  show the linked game's thumbnail. Right click a place, or hit its `…`,
+  for Studio's start page menu: Configure Experience and Configure Place
+  open the place with Game Settings on that page, Open Place page goes to
+  roblox.com, Archive asks first then archives the start place through
+  Open Cloud (needs `asset:write`), and Remove from list drops it from
+  Recent. A file that isn't linked to Roblox only gets Remove, the rest
+  say why they're greyed out. Home also has a small footer now saying
+  it's an unofficial community project, not affiliated with Roblox.
+  (@chteau)
+- **Avatar Settings dock.** Avatar › Settings (the orange guy with the
+  gear, first on the tab like in Studio) opens Studio's Avatar Settings
+  dock: General, Body, Clothing, Accessories and Movement down a sidebar,
+  the Player Choice and Consistent Gameplay presets, the avatar type in
+  the "…" menu, and every section from the docs (scale, custom parts and
+  clothes and accessories, build ranges, limit bounds, collision, packs,
+  clips, abilities). It edits the place's `AvatarSettings` rules directly,
+  so every change is one undo step and gets saved with the place, older
+  twin properties kept in step the way Studio writes them. (@chteau)
+
+- **`AvatarSettings` stays hidden.** Studio never lists it in Explorer or
+  offers it to insert, so we don't either, not even with every service
+  shown. It's still in the place and saved as is. Services newer than our
+  list (like `ConfigureServerService`) are hidden by their API dump tag
+  now instead of showing up as stray folders. (@chteau)
 - **The MCP server does everything Studio's does.** It serves real Studio's
   full 28-tool list with the same names and arguments, so a client or prompt
   made for Studio just works (the descriptions are our own). New: run Luau

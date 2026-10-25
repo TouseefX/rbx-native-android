@@ -78,6 +78,10 @@ impl HomeWindow {
                         ),
                 )
             })
+            .when(
+                self.page == Page::Recent && !self.recent.is_empty(),
+                |this| this.child(div().ml_auto().child(self.recent_view_toggle(cx))),
+            )
             .when(add_by_link, |this| {
                 this.child(
                     ui::icon_button(
@@ -112,7 +116,7 @@ impl HomeWindow {
 
     pub(super) fn section_head(
         title: &'static str,
-        see_all: Option<Stateful<Div>>,
+        see_all: Option<AnyElement>,
     ) -> impl IntoElement {
         h_flex()
             .h(px(22.))
@@ -137,7 +141,9 @@ impl HomeWindow {
     }
 
     pub(super) fn home_page(&mut self, grid: &Grid, cx: &mut Context<Self>) -> AnyElement {
-        let recent: Vec<RecentPlace> = self.recent.iter().take(5).cloned().collect();
+        // The icons fill one row, as My Games' cards do.
+        let shown = if self.recent_icons { grid.columns } else { 5 };
+        let recent: Vec<RecentPlace> = self.recent.iter().take(shown).cloned().collect();
         let games: Vec<Experience> = match &self.games {
             Games::Loaded(list) => list
                 .experiences
@@ -160,12 +166,16 @@ impl HomeWindow {
             )
             .children(self.recovered_section(cx))
             .when(!recent.is_empty(), |this| {
-                let see_all = self.see_all("recent-see-all", Page::Recent, cx);
+                let tools = h_flex()
+                    .gap(px(8.))
+                    .items_center()
+                    .child(self.recent_view_toggle(cx))
+                    .child(self.see_all("recent-see-all", Page::Recent, cx));
                 this.child(
                     v_flex()
                         .gap(px(12.))
-                        .child(Self::section_head("Recent", Some(see_all)))
-                        .child(self.recent_table(&recent, grid, false, cx)),
+                        .child(Self::section_head("Recent", Some(tools.into_any_element())))
+                        .child(self.recent_body(&recent, grid, false, cx)),
                 )
             })
             .when(self.has_key(), |this| {
@@ -177,7 +187,10 @@ impl HomeWindow {
                 this.child(
                     v_flex()
                         .gap(px(12.))
-                        .child(Self::section_head("My Games", Some(see_all)))
+                        .child(Self::section_head(
+                            "My Games",
+                            Some(see_all.into_any_element()),
+                        ))
                         .child(body),
                 )
             })

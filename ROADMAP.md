@@ -3100,6 +3100,17 @@ both the plain fetch failure and the silent fall back to a default
   Later, the same plan could also restart servers onto the new version and
   send an in-game announcement through MessagingService.
 
+- [ ] 📋 **UGC creator workflow**: build, check, test and upload avatar
+  items (rigid accessories, layered clothing, bodies, dynamic heads) from
+  rbx-native. The auto-rigger, body cages, 3D import and Player / My Avatar
+  are there already. Missing: an Accessory Fitting Tool, a validator with
+  the real budgets (4k triangles, 2048 textures, size per asset type, cage
+  checks), cage authoring for items, a closer layered-clothing deformer and
+  the head side. The upload fee, moderation and Marketplace publish have no
+  documented Open Cloud endpoint, so the last step is a handoff to the
+  Creator Hub. Gap analysis, staged plan and what each stage must be
+  checked against in real Studio: `docs/research/ugc-creators/README.md`.
+
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows
   embeds through `SetParent` (type-checked for the MSVC target only); on

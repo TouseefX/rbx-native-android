@@ -145,13 +145,16 @@ pub(crate) enum Panel {
     /// The place's Loren Services and Controllers as a boot graph
     /// (`shell::loren_panel`). Shut until asked for.
     Loren,
+    /// The place's avatar rules, Studio's Avatar › Settings
+    /// (`shell::avatar_dock`). Shut until asked for.
+    AvatarSettings,
 }
 
 impl Panel {
     /// In the order a fresh layout seats them, which is what makes the
     /// Viewport, Argon and Wally docks tabs beside Output rather than
     /// docks of their own.
-    pub(crate) const ALL: [Panel; 18] = [
+    pub(crate) const ALL: [Panel; 19] = [
         Panel::Explorer,
         Panel::Properties,
         Panel::Output,
@@ -170,6 +173,7 @@ impl Panel {
         Panel::Tests,
         Panel::Layers,
         Panel::Loren,
+        Panel::AvatarSettings,
     ];
 
     /// Where this panel lives in a layout nobody has rearranged, also
@@ -192,7 +196,8 @@ impl Panel {
             | Panel::SecurityAudit
             | Panel::Playtests
             | Panel::Tests
-            | Panel::Loren => Edge::Bottom,
+            | Panel::Loren
+            | Panel::AvatarSettings => Edge::Bottom,
         }
     }
 
@@ -218,6 +223,7 @@ impl Panel {
             Panel::Tests => "Tests",
             Panel::Layers => "Layers",
             Panel::Loren => "Loren",
+            Panel::AvatarSettings => "Avatar Settings",
         }
     }
 
@@ -236,6 +242,7 @@ impl Panel {
                 | Panel::Tests
                 | Panel::Layers
                 | Panel::Loren
+                | Panel::AvatarSettings
         )
     }
 
