@@ -6,6 +6,8 @@ mod games;
 mod notes;
 mod pages;
 mod recent;
+mod recent_grid;
+mod recent_menu;
 mod recovered;
 mod sidebar;
 
@@ -26,6 +28,8 @@ use crate::tokens;
 
 pub(super) const SIDEBAR: f32 = 232.;
 pub(super) const GAP: f32 = 16.;
+/// The `…` button that opens a Recent place's menu.
+pub(super) const MORE: f32 = 24.;
 
 /// The width the page's content gets, and the My Games grid over it:
 /// `clamp(floor((w + 16) / 192), 3, 8)` columns.
@@ -90,6 +94,7 @@ impl HomeWindow {
             Page::MyGames => self.games_page(&grid, cx),
         };
         let dialog = self.dialog_view(cx);
+        let menu = self.recent_menu_view(cx);
         div()
             .relative()
             .size_full()
@@ -134,6 +139,8 @@ impl HomeWindow {
                             ),
                     ),
             )
+            .when(!picker, |this| this.child(disclaimer()))
+            .children(menu)
             .children(dialog)
     }
 }
@@ -329,6 +336,20 @@ pub(super) fn visibility_label(visibility: &Visibility) -> (&'static str, &'stat
         Visibility::Private => ("Private", "lock"),
         Visibility::Other(_) => ("Friends", "users"),
     }
+}
+
+/// The README's disclaimer, shortened, on every Home page.
+fn disclaimer() -> impl IntoElement {
+    h_flex()
+        .h(px(26.))
+        .flex_none()
+        .justify_center()
+        .items_center()
+        .border_t_1()
+        .border_color(tokens::border())
+        .child(ui::text(10.5, 14.).text_color(tokens::text3()).child(
+            "RbxNative is an unofficial community project. It isn\u{2019}t affiliated with or endorsed by Roblox Corporation.",
+        ))
 }
 
 pub(super) fn recent_name(place: &RecentPlace) -> String {

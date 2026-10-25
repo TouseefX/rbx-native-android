@@ -19,7 +19,9 @@
 //!
 //! `NotBrowsable` classes are left out of the list entirely: that tag is
 //! Roblox's own "don't show this in a class picker", so hiding them is
-//! honouring the dump rather than second-guessing it.
+//! honouring the dump rather than second-guessing it. So is a service
+//! Studio keeps out of every view (`explorer::is_ever_listed`), which its
+//! Insert Object picker leaves out too.
 
 use rbx_dom::{Ref, WeakDom};
 use rbx_reflection::ReflectionDatabase;
@@ -48,7 +50,7 @@ pub(crate) fn choices(
     let query = query.trim().to_lowercase();
     let mut choices: Vec<Choice> = database
         .class_names()
-        .filter(|class| database.is_browsable(class))
+        .filter(|class| database.is_browsable(class) && super::is_ever_listed(class))
         .filter(|class| query.is_empty() || class.to_lowercase().contains(&query))
         .map(|class| Choice {
             class: class.to_owned(),
@@ -181,6 +183,13 @@ mod tests {
 
     fn database() -> ReflectionDatabase {
         ReflectionDatabase::embedded()
+    }
+
+    #[test]
+    fn avatar_settings_is_not_offered() {
+        let listed = choices(&database(), Some(DATA_MODEL), "avatar");
+        assert!(listed.iter().all(|choice| choice.class != "AvatarSettings"));
+        assert!(listed.iter().any(|choice| choice.class == "AvatarRules"));
     }
 
     #[test]

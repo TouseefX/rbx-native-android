@@ -18,7 +18,7 @@ mod order;
 #[cfg(test)]
 use rbx_viewer::services::SERVICE_ORDER;
 use rbx_viewer::services::{explorer_rank, rank};
-pub(crate) use rbx_viewer::services::{is_default_visible, is_known_service};
+pub(crate) use rbx_viewer::services::{is_default_visible, is_ever_listed, is_known_service};
 
 /// The user's own choice of which services the default view lists, where it
 /// differs from Studio's (Studio Settings › Explorer & Output › Default
@@ -199,17 +199,16 @@ impl Explorer {
     }
 
     /// The root items to show: all of them, or the ones the default view
-    /// lists (see [`is_listed`]). Cloning a `TreeItem` shares its expansion
+    /// lists (see [`is_listed`]), never one Studio keeps out of every view
+    /// (see [`is_ever_listed`]). Cloning a `TreeItem` shares its expansion
     /// state, so the tree widget and this list stay in agreement.
     pub(crate) fn items(&self, show_all: bool, overrides: &ServiceOverrides) -> Vec<TreeItem> {
         self.all_items
             .iter()
             .filter(|item| {
-                show_all
-                    || self
-                        .classes
-                        .get(&item.id)
-                        .is_none_or(|class| is_listed(class, overrides))
+                self.classes.get(&item.id).is_none_or(|class| {
+                    is_ever_listed(class) && (show_all || is_listed(class, overrides))
+                })
             })
             .cloned()
             .collect()

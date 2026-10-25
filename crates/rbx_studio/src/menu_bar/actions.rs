@@ -253,6 +253,7 @@ pub(super) fn install(shell: &Entity<Shell>, cx: &mut App) {
         (Panel::Playtests, &MenuTogglePlaytests),
         (Panel::Layers, &MenuToggleLayers),
         (Panel::Loren, &MenuToggleLoren),
+        (Panel::AvatarSettings, &MenuToggleAvatarSettings),
     ] {
         toggle.install(panel, shell, cx);
     }
@@ -422,3 +423,4 @@ panel_toggle!(MenuToggleSecurityAudit);
 panel_toggle!(MenuTogglePlaytests);
 panel_toggle!(MenuToggleLayers);
 panel_toggle!(MenuToggleLoren);
+panel_toggle!(MenuToggleAvatarSettings);
