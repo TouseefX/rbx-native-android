@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25
+
+- **UGC creator roadmap entry and research.** New `ROADMAP.md` item and
+  `docs/research/ugc-creators/README.md` covering what Studio gives people
+  who make avatar items, what rbx-native already has, what's missing and
+  what Roblox doesn't expose. Docs only. (@chteau)
+
 ## 2026-10-21
 
 - **The editor tabs close.** Script Editor, UI Editor and Animation Editor
