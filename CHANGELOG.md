@@ -11,6 +11,10 @@
   `BinaryString`. Opening a file Studio 0.744 saved works now too: it
   stores `Tags` as a `SharedString` and we dropped them, so tagged parts
   showed no tags. (@chteau)
+- **UGC creator roadmap entry and research.** New `ROADMAP.md` item and
+  `docs/research/ugc-creators/README.md` covering what Studio gives people
+  who make avatar items, what rbx-native already has, what's missing and
+  what Roblox doesn't expose. Docs only. (@chteau)
 - **A splash screen at start-up.** A bare `rbxstudio` now opens a small
   window where the two halves of the logo spin in from far away and land
   on the README logo, in under a second, while the stored key loads.
