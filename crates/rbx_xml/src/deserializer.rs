@@ -4,7 +4,8 @@
 
 use std::collections::HashMap;
 
-use rbx_dom::{Instance, Ref, Variant, WeakDom};
+use rbx_dom::{Content, Instance, Ref, Variant, WeakDom};
+use rbx_reflection::ReflectionDatabase;
 
 use crate::error::XmlError;
 use crate::value::{self, Ctx};
@@ -95,7 +96,7 @@ fn insert_items(
         // overwrites it below when the file carries one.
         dom.insert(Instance::new(referent, class, class));
         if let Some(properties) = item.child("Properties") {
-            apply_properties(dom, referent, properties, ctx);
+            apply_properties(dom, referent, class, properties, ctx);
         }
         dom.set_parent(referent, parent);
 
@@ -103,7 +104,17 @@ fn insert_items(
     }
 }
 
-fn apply_properties(dom: &mut WeakDom, referent: Ref, properties: &Node, ctx: &Ctx<'_>) {
+// A legacy ContentId (`Decal.Texture`) reads back as the String it holds,
+// empty when unset, the same shape `rbx_binary` reads its String column as,
+// so a place holds one spelling of it whichever format it came from.
+fn apply_properties(
+    dom: &mut WeakDom,
+    referent: Ref,
+    class: &str,
+    properties: &Node,
+    ctx: &Ctx<'_>,
+) {
+    let db = ReflectionDatabase::shared();
     for property in &properties.children {
         let Some(name) = property.attr("name") else {
             continue;
@@ -115,6 +126,17 @@ fn apply_properties(dom: &mut WeakDom, referent: Ref, properties: &Node, ctx: &C
             continue;
         };
 
+        let value = match value {
+            Variant::Content(content @ (Content::None | Content::Uri(_)))
+                if db.saved_type(class, name) == Some("ContentId") =>
+            {
+                Variant::String(match content {
+                    Content::Uri(uri) => uri,
+                    _ => String::new(),
+                })
+            }
+            value => value,
+        };
         match (name, value) {
             (NAME_PROPERTY, Variant::String(new_name)) => instance.set_name(new_name),
             (_, value) => {
@@ -231,6 +253,30 @@ mod tests {
                 type_id: 0x1C,
                 raw: b"tagged".to_vec()
             })
+        );
+    }
+
+    #[test]
+    fn shared_string_tags_read_like_a_binary_string_and_round_trip() {
+        let xml = r#"
+            <roblox version="4">
+                <SharedStrings>
+                    <SharedString md5="k1">Q29pbgBIYXphcmQA</SharedString>
+                </SharedStrings>
+                <Item class="Part" referent="RBXA">
+                    <Properties><SharedString name="Tags">k1</SharedString></Properties>
+                </Item>
+            </roblox>
+        "#;
+
+        let dom = deserialize(xml).unwrap();
+        let part = dom.get(dom.root_refs()[0]).unwrap();
+        assert_eq!(part.tags(), ["Coin", "Hazard"]);
+
+        let again = deserialize(&crate::serialize(&dom).unwrap()).unwrap();
+        assert_eq!(
+            again.get(again.root_refs()[0]).unwrap().tags(),
+            ["Coin", "Hazard"]
         );
     }
 
