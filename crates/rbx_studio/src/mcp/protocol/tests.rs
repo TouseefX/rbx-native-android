@@ -73,6 +73,9 @@ fn tools_list_names_every_tool_with_a_schema() {
             "get_console_output",
             "screen_capture",
             "subagent",
+            "character_navigation",
+            "user_keyboard_input",
+            "user_mouse_input",
             "list_roblox_studios"
         ]
     );

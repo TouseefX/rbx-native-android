@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use rbx_play::channel::{ChannelServer, MAX_BODY};
+use rbx_play::channel::{ChannelServer, RequestError, MAX_BODY};
 use rbx_play::protocol::{Command, CommandBody, LogLevel, Side, Token, Uplink, TOKEN_HEADER};
 
 /// Long enough that a slow CI runner's scheduling noise (macOS runners have
@@ -282,4 +282,91 @@ fn body_over_max_answers_413() {
         &oversized,
     );
     assert_eq!(status, 413);
+}
+
+fn post_ack(port: u16, token: &str, id: u64, ok: bool, result: &str) {
+    let ack = serde_json::to_vec(&vec![Uplink::Ack {
+        id,
+        ok,
+        result: result.to_owned(),
+    }])
+    .expect("encode ack");
+    let (status, _) = request(port, "POST", "/v1/ingest", Some(token), &ack);
+    assert_eq!(status, 204);
+}
+
+#[test]
+fn a_request_gets_its_ack_and_events_never_see_it() {
+    let (server, token) = start();
+    let requester = server.requester();
+    let waiting = thread::spawn(move || {
+        requester.request(CommandBody::Locate { path: None }, Duration::from_secs(10))
+    });
+    let (status, body) = request(server.port(), "GET", "/v1/poll?since=0", Some(&token), &[]);
+    assert_eq!(status, 200);
+    let commands: Vec<Command> = serde_json::from_str(&body).expect("commands");
+    post_ack(
+        server.port(),
+        &token,
+        commands[0].id,
+        true,
+        "{\"width\":800}",
+    );
+    assert_eq!(
+        waiting.join().expect("join"),
+        Ok("{\"width\":800}".to_owned())
+    );
+    assert!(server.events().try_recv().is_err());
+}
+
+#[test]
+fn a_failed_ack_is_the_requests_error() {
+    let (server, token) = start();
+    let requester = server.requester();
+    let waiting = thread::spawn(move || {
+        requester.request(
+            CommandBody::TypeText {
+                text: "x".to_owned(),
+                path: None,
+            },
+            Duration::from_secs(10),
+        )
+    });
+    let (_, body) = request(server.port(), "GET", "/v1/poll?since=0", Some(&token), &[]);
+    let commands: Vec<Command> = serde_json::from_str(&body).expect("commands");
+    post_ack(
+        server.port(),
+        &token,
+        commands[0].id,
+        false,
+        "Instance not found: X",
+    );
+    assert_eq!(
+        waiting.join().expect("join"),
+        Err(RequestError::Failed("Instance not found: X".to_owned()))
+    );
+}
+
+#[test]
+fn ending_requests_wakes_a_waiter_and_a_silent_probe_times_out() {
+    let (server, token) = start();
+    let requester = server.requester();
+    let started = Instant::now();
+    let quiet = requester.request(
+        CommandBody::Locate { path: None },
+        Duration::from_millis(100),
+    );
+    assert_eq!(quiet, Err(RequestError::TimedOut));
+    assert!(started.elapsed() >= Duration::from_millis(100));
+
+    let requester = server.requester();
+    let waiting = thread::spawn(move || {
+        requester.request(CommandBody::Locate { path: None }, Duration::from_secs(30))
+    });
+    // The poll answers once the command is queued, and the waiter registers
+    // before that.
+    let (status, _) = request(server.port(), "GET", "/v1/poll?since=1", Some(&token), &[]);
+    assert_eq!(status, 200);
+    server.end_requests();
+    assert_eq!(waiting.join().expect("join"), Err(RequestError::Ended));
 }

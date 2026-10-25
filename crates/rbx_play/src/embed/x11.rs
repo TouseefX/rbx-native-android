@@ -7,8 +7,10 @@
 //! Flatpak gives the client its own PID namespace, so windows are found by
 //! `WM_CLASS`, not `_NET_WM_PID`.
 
+mod input;
 mod keys;
 
+pub use input::Input;
 pub use keys::Key;
 
 use super::{visible_parts, EmbedError, Rect};

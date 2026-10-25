@@ -31,6 +31,9 @@ pub const TOUCH_NAME: &str = "__rbxnative_touch";
 pub const PROBE_TOUCH_INPUT: &str = include_str!("probe/touch_input.luau");
 /// `__rbxnative_record`: playtest sampling and `shared.rbxnative` (see `crate::record`).
 pub const PROBE_RECORD: &str = include_str!("probe/record.luau");
+/// `__rbxnative_input`: the client's half of the MCP input tools.
+pub const PROBE_INPUT: &str = include_str!("probe/input.luau");
+pub const INPUT_NAME: &str = "__rbxnative_input";
 pub const DEBUG_NAME: &str = "__rbxnative_debug";
 pub const CODEC_NAME: &str = "__rbxnative_codec";
 pub const LIVE_NAME: &str = "__rbxnative_live";
@@ -68,6 +71,7 @@ pub struct Injected {
     pub touch: Ref,
     pub touch_input: Ref,
     pub record: Ref,
+    pub input: Ref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -137,6 +141,7 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         let module = dom.new_instance("ModuleScript", name, Some(rs));
         set_prop(dom, module, "Source", Variant::String(source));
     }
+    remove_named(dom, rs, INPUT_NAME);
 
     let record = dom.new_instance("ModuleScript", crate::record::RECORD_NAME, Some(rs));
     set_prop(
@@ -181,6 +186,14 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         touch_input,
         "Source",
         Variant::String(PROBE_TOUCH_INPUT.to_owned()),
+    );
+
+    let input = dom.new_instance("ModuleScript", INPUT_NAME, Some(rs));
+    set_prop(
+        dom,
+        input,
+        "Source",
+        Variant::String(PROBE_INPUT.to_owned()),
     );
 
     let codec = dom.new_instance("ModuleScript", CODEC_NAME, Some(rs));
@@ -245,6 +258,7 @@ pub fn inject(dom: &mut WeakDom, config: &ProbeConfig) -> Result<Injected, Injec
         touch,
         touch_input,
         record,
+        input,
     })
 }
 

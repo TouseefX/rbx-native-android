@@ -823,6 +823,24 @@ impl Shell {
         running.embedded.as_ref().filter(|_| !running.hidden)
     }
 
+    /// What the MCP input tools reach a running playtest through: its
+    /// probe, and the embedded client's window while the 3D view shows it.
+    pub(in crate::shell) fn play_input(&self) -> Option<crate::mcp::PlayInput> {
+        if !matches!(self.play.phase, Phase::Running) {
+            return None;
+        }
+        let running = self.play.session.as_ref()?;
+        Some(crate::mcp::PlayInput {
+            probe: self.play.link.as_ref()?.channel.requester(),
+            #[cfg(any(target_os = "linux", windows))]
+            window: running
+                .embedded
+                .as_ref()
+                .filter(|_| !running.hidden)
+                .map(|embedded| embedded.window()),
+        })
+    }
+
     /// Cuts the editor's popups out of the embedded game window, so they
     /// show above it (`gpui_base::occlusion` records where they were
     /// painted). Called after every frame while embedded and on each poll.
@@ -886,6 +904,7 @@ impl Shell {
             // matched into it; its probe still holds the current token.
             if let Some(link) = &self.play.link {
                 link.channel.send(rbx_play::protocol::CommandBody::Shutdown);
+                link.channel.end_requests();
             }
             // Hidden before the client is killed and the window handed back
             // to the root, so nothing flashes on the desktop.

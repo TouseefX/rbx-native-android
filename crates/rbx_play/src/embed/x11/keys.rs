@@ -274,6 +274,12 @@ pub(crate) fn spare_keycode(syms: &[u32], per: usize, min: u8) -> Option<u8> {
         .and_then(|(at, _)| u8::try_from(usize::from(min) + at).ok())
 }
 
+/// Types `keys` into `window` on the typing thread, like
+/// [`Embedded::type_keys`], for a caller that holds only the window id.
+pub(super) fn type_into(window: u32, keys: Vec<Key>) -> Result<(), EmbedError> {
+    send(Job::Type { window, keys })
+}
+
 impl Embedded {
     /// Types Escape into the window.
     pub fn press_escape(&self) -> Result<(), EmbedError> {

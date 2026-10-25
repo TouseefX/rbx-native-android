@@ -422,6 +422,21 @@ pub struct WatchItem {
     pub props: Vec<String>,
 }
 
+/// The ack of a `CommandBody::Locate`. GUI coordinates (`x`, `y`, where
+/// `AbsolutePosition` and a mouse `InputObject.Position` are measured) start
+/// below the GUI inset; the viewport is the client's whole drawing area.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Located {
+    #[serde(default)]
+    pub x: Option<f64>,
+    #[serde(default)]
+    pub y: Option<f64>,
+    pub inset_x: f64,
+    pub inset_y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
 /// Editor → probe. `id` is assigned by the channel, strictly increasing.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Command {
@@ -499,6 +514,34 @@ pub enum CommandBody {
     Pointer { inside: bool },
     /// Send `side`'s whole tree again (`Tree` with `reset`).
     Resync { side: Side },
+    /// The client walks its character to the instance at `path` (a
+    /// `BasePart`, or a `Model`'s pivot) or else to `x, y, z`, along a
+    /// computed path at `speed` times its `WalkSpeed`. Acked once it
+    /// arrives, or fails (`probe/input.luau`).
+    Navigate {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        x: f64,
+        y: f64,
+        z: f64,
+        speed: f64,
+    },
+    /// The client's GUI inset and viewport, and the centre of the
+    /// `GuiObject` at `path`, acked as a [`Located`] in JSON.
+    Locate {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+    },
+    /// The client types `text` into its focused `TextBox`, without key
+    /// events; acked `typed`, `chat` (the chat bar has the focus, which a
+    /// game script cannot type into) or `none`. With `path`, the click the
+    /// editor just sent there is given a moment to focus it first.
+    #[serde(rename = "type_text")]
+    TypeText {
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+    },
     /// Debugger: replaces `side`'s active breakpoints. Every line of every
     /// instrumented script (`crate::instrument`) not listed is off.
     #[serde(rename = "debug_set")]

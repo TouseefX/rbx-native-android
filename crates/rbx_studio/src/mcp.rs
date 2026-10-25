@@ -60,6 +60,20 @@ pub(crate) struct Session<'a> {
     pub(crate) server: Option<&'a WeakDom>,
     /// Work only the shell can do, asked for by the call just made.
     pub(crate) job: Option<Job>,
+    /// The running playtest the input tools act on; `None` outside Play.
+    pub(crate) play: Option<PlayInput>,
+}
+
+/// A running playtest as the input tools reach it, from any thread.
+#[derive(Clone)]
+pub(crate) struct PlayInput {
+    /// The client's probe: where a GuiObject is, walking the character,
+    /// typing into a TextBox.
+    pub(crate) probe: rbx_play::channel::Requester,
+    /// The embedded client's window, for real mouse and key events; `None`
+    /// while it is not embedded or another document hides the 3D view.
+    #[cfg(any(target_os = "linux", windows))]
+    pub(crate) window: Option<rbx_play::embed::WindowId>,
 }
 
 /// One of the trees a tool can reach, named as Studio's `datamodel_type`.
@@ -122,6 +136,7 @@ impl<'a> Session<'a> {
             client: None,
             server: None,
             job: None,
+            play: None,
         }
     }
 }
