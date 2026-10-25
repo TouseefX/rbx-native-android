@@ -111,7 +111,7 @@ Rows with a line icon at the left (20 px, 16 px from the edge), label 14 px afte
 
 ## Recipe: primary button
 
-Sleek primary: solid accent or solid white fill (no gradient), dark text, radius 4 to 6 px (or fully round if all buttons in the game are round), Medium weight. Secondary: the translucent row style. No lip, no bevel, no stroke.
+Sleek primary: solid accent or solid white fill (no gradient), dark text, Medium weight. Corners follow the one decision from `ui-style`: either every box small-rounded (rows 4, tiles and buttons 6 to 8, panes 12) or every box sharp. A sharp detail pane next to rounded tiles is the classic sleek mistake. Secondary: the translucent row style. No lip, no bevel, no stroke.
 
 ```lua
 local primary = new("TextButton", { Text = "Purchase", FontFace = MED, TextSize = 17,

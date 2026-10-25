@@ -58,7 +58,7 @@ Do not produce this. Every item here is a tell:
 - A flat dark navy or near-black card (`#11131C`-ish) floating in the middle of the screen.
 - A thin 1 to 2 px purple or electric blue border on that card and on every button inside it.
 - A faint top-to-bottom gradient on the card, same on every element.
-- One corner radius used for everything (usually 8 to 12 px), including the close button.
+- The default 8 to 12 px radius dropped on everything with no thought, or rounded and sharp boxes mixed by accident.
 - Centred title in a default sans (Arial, Arimo, Gotham/Montserrat Bold, Builder Sans Bold) with no stroke, no icon.
 - List rows as outlined rectangles with text like "Sword - 50 coins".
 - A lone green pill "BUY" button.
@@ -97,43 +97,32 @@ gui.Parent = game:GetService("StarterGui")
 - Need the actual numbers? `GuiService:GetGuiInset()` returns two Vector2 (top-left, bottom-right inset). `GuiService.TopbarInset` is a Rect of the free space in the top bar, and it changes at runtime, so listen to its changed signal if you put things there.
 - One ScreenGui per screen (HUD, Shop, Inventory), each with its own `DisplayOrder`. Modals get a higher `DisplayOrder` than the HUD.
 
-### Sizing: Scale with caps
+### Sizing: author at 1280x720, scale with one UIScale
 
-Design at a 1280x720 baseline, size in Scale, then cap with constraints so things do not get huge on a TV or tiny on a phone:
-
-```lua
-button.Size = UDim2.fromScale(0.075, 0.075)
-local ar = Instance.new("UIAspectRatioConstraint")
-ar.AspectRatio = 1 -- width / height
-ar.DominantAxis = Enum.DominantAxis.Height
-ar.Parent = button
-local cap = Instance.new("UISizeConstraint")
-cap.MinSize = Vector2.new(48, 48) -- touch minimum
-cap.MaxSize = Vector2.new(110, 110)
-cap.Parent = button
-```
-
-- `UIAspectRatioConstraint` only shrinks a box to fit inside its own Size (default `AspectType = FitWithinMaxSize`). A box sized `(0, 0, 0, 24)` stays 0 wide and everything inside it vanishes. Give both axes a real size, or set `AspectType = ScaleWithParentSize`.
-- Panels: `Size = UDim2.fromScale(0.62, 0.72)` plus `UIAspectRatioConstraint` (for example 1.45) plus `UISizeConstraint.MaxSize` around 980x680.
-- Fill the panel. Content starts right under the header, never centred vertically in a tall area, and a shop shows at least 8 items in a wrapping `UIGridLayout` plus a featured card or detail pane, so no more than a quarter of the panel is empty. A single short row floating in a big void reads as an unfinished template.
-- Centre with `AnchorPoint = Vector2.new(0.5, 0.5)` and `Position = UDim2.fromScale(0.5, 0.5)`.
-- Text: `TextScaled = true` plus `UITextSizeConstraint` (`MaxTextSize` 36 to 48 for headers, `MinTextSize` 12) so it never balloons. Or fixed `TextSize` inside a container driven by `UIScale`.
-- Alternative for pixel-designed UI: author in Offset at 1280x720 and put one `UIScale` on the root, set from the viewport:
+Production UI is laid out in pixels at a 1280x720 reference, so every padding and gap is an exact step of the spacing scale (section 6). Each ScreenGui holds one transparent `Root` frame with a `UIScale`. A LocalScript resizes `Root` so it always covers the screen in reference units, and everything inside is Offset sized:
 
 ```lua
-local camera = workspace.CurrentCamera
-local scale = root:FindFirstChildOfClass("UIScale")
+local root = gui.Root -- Frame, BackgroundTransparency 1, AnchorPoint 0.5,0.5, Position 0.5,0.5 scale
+local uiScale = root.UIScale
 local function fit()
-	local v = camera.ViewportSize
-	scale.Scale = math.clamp(math.min(v.X / 1280, v.Y / 720), 0.6, 1.6)
+	local v = gui.AbsoluteSize -- the safe area, after ScreenInsets
+	local s = math.clamp(math.min(v.X / 1280, v.Y / 720), 0.6, 1.5)
+	uiScale.Scale = s
+	root.Size = UDim2.fromOffset(v.X / s, v.Y / s)
 end
-camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 fit()
 ```
 
+- Inside `Root`, place HUD pieces with Scale positions and an AnchorPoint at the corner they hug (`Position = UDim2.new(0, 16, 1, -16)`, `AnchorPoint = Vector2.new(0, 1)`), and size them in Offset. Centre modals with `AnchorPoint = Vector2.new(0.5, 0.5)`, `Position = UDim2.fromScale(0.5, 0.5)`.
+- At the 0.6 floor a phone in landscape gives `Root` about 650 reference units of height, so keep every modal at 600 or less tall. Tappable things are at least 64x64 reference (about 40 px on a phone).
+- Nested `UIScale`s multiply, so the motion skill's pop `UIScale` on a panel works on top of this one.
+- `UIAspectRatioConstraint` only shrinks a box to fit inside its own Size (default `AspectType = FitWithinMaxSize`). A box sized `(0, 0, 0, 24)` stays 0 wide and everything inside it vanishes. Give both axes a real size, or set `AspectType = ScaleWithParentSize`.
+- Text: fixed `TextSize` from a small type scale (for example 14, 16, 20, 28, 40 at reference). `TextScaled` only for a big number or title that must fill its box, always with a `UITextSizeConstraint`.
+
 ### Touch targets and mobile layout
 
-- Roblox's adaptive design guide (`production/publishing/adaptive-design.md`) asks for every action to work on touch, gamepad and keyboard, layouts that condense on small screens, and readable non-thin fonts on phones, but gives no minimum touch size. Use at least 48x48 px for anything tappable (Google's Material guidance is 48dp, Apple's is 44pt), and 8 px between targets.
+- Roblox's adaptive design guide (`production/publishing/adaptive-design.md`) asks for every action to work on touch, gamepad and keyboard, layouts that condense on small screens, and readable non-thin fonts on phones, but gives no minimum touch size. Google's Material guidance is 48dp and Apple's is 44pt; with the 0.6 scale floor, 64x64 at reference lands near 40 px on a phone, so treat 64 as the minimum, with 8 between targets.
 - Mobile puts the thumbstick bottom-left and jump bottom-right. Keep the bottom 30 percent of both corners free of your buttons. Put the HUD button rail on the left edge, vertically centred, and currency bottom-left above the thumbstick zone or top-left.
 - Test at phone landscape (about 844x390 viewport), tablet (1024x768), desktop (1920x1080). Nothing may overlap at the phone size.
 - Support every input: connect `GuiButton.Activated` (fires for mouse, touch and gamepad), not `MouseButton1Click` (mouse only). Set `SelectionImageObject` or keep default selection so gamepad users can navigate.
@@ -142,7 +131,7 @@ fit()
 
 - `UIListLayout`: `FillDirection`, `Padding` (UDim), `HorizontalAlignment`, `VerticalAlignment`, `SortOrder = LayoutOrder`, `Wraps`, `HorizontalFlex`/`VerticalFlex` (`Fill`, `SpaceBetween`, `SpaceEvenly`, `SpaceAround`).
 - `UIGridLayout`: `CellSize`, `CellPadding`, `FillDirectionMaxCells`. Good for shop grids. Put it in a `ScrollingFrame` with `AutomaticCanvasSize = Y`.
-- `UIPadding` on every container. Panels: 3 to 5 percent or 16 to 24 px inside. Buttons: 8 to 12 px side padding so text never touches the edge.
+- `UIPadding` on every container, from the spacing scale (section 6).
 - `UIFlexItem` on a child to make it grow or shrink inside a flex list.
 
 ### Strokes, corners, gradients: the facts
@@ -184,7 +173,83 @@ Robux prices always carry the Robux symbol (draw your own hexagon-style mark in 
 
 Every shop item, currency and HUD button needs an icon. Text-only buttons are a tell. If no matching asset exists, draw one with `ui-style-icons` and upload it with `store_image`. Use one icon style across the whole game.
 
-## 6. Composition: HUD and menus must not collide
+## 6. Production bar: hard rules
+
+The goal is UI a player would not guess was AI-made or unfinished, that the developer ships without polishing it. Each rule below is a pass/fail check, not advice.
+
+### Corners: one decision for the whole UI
+
+Decide rounded or sharp once, write it down with the radius values, and apply it to every box: panels, tiles, tabs, buttons, chips, badges, bars, stat segments, item backings, the close button, the scrollbar.
+
+- **Rounded**: every visible box gets a `UICorner` from one small scale (for example 6, 12, 20 px at reference, or `UDim.new(1, 0)` for pills and round badges). A box nested inside another uses the outer radius minus the padding between them (never below 4), so the curves run parallel. A sharp rectangle anywhere in a rounded UI is a bug.
+- **Sharp**: radius 0 everywhere, or the style's cut-corner shape everywhere. No pill, no rounded chip, no circle badge.
+- The icons follow the same decision: round joins and soft shapes for rounded UI, miter joins and hard angles for sharp UI.
+- Mixing is allowed only when the concept calls for it, as one rule you can say in a sentence and write next to the palette: "pet portraits are circles because pets are round, everything else is rounded-square", "the HUD is sharp but the radar is a circle because it is a radar". A mix with no written reason is an accident.
+
+### Spacing: one scale, padding everywhere
+
+Use one spacing scale at the 1280x720 reference: **4, 8, 12, 16, 24, 32**. Every padding, gap and inset is one of those numbers, and the root `UIScale` scales them all together.
+
+| Where | Value |
+| --- | --- |
+| Panel inner padding | 24 (16 on a compact panel) |
+| Between sections inside a panel (header to tabs, tabs to grid) | 16 |
+| Grid cell padding, list padding | 12 (8 in dense lists) |
+| Tile inner padding | 12 |
+| Button side padding | 16, top/bottom 8 |
+| Chip or badge padding | 4 vertical, 8 side |
+| Icon to its label | 8 |
+| Screen edge to HUD | 16 |
+
+- Every container with children has a `UIPadding`. Every `UIListLayout` and `UIGridLayout` has a `Padding`/`CellPadding` from the scale. Sibling groups use the same gap everywhere they repeat.
+- Text never touches an edge. Any text on a fill or in a button sits inside padding at least 8 side, and the text must fit: check `TextFits` is true at phone scale. A label that runs into its button's edge or gets clipped (a compass strip, a long price) is a fail; shorten it, widen the box, or lower the size from the type scale.
+- A stroke takes room: a 3 px `Border` `UIStroke` draws outside the box, so keep at least that much gap to the next sibling and to a clipping parent.
+
+### No empty space
+
+- Every panel is either sized to its content (`AutomaticSize`, or sizes you compute from the item count) or filled with purposeful content. No region larger than about 15 percent of a panel is blank, except deliberate breathing room around hero art.
+- A grid fills its rows. With 7 items in a 4-column grid, either add one, use 7 that fit another column count, or let it scroll. Never a big blank half-row in a fixed panel.
+- A detail or preview pane is full top to bottom: big art, name and tag, a short description, stats, price and the action. A tall preview box with a small icon in the middle is empty space.
+- Content starts right under the header, never centred in a tall void.
+
+### Icons and item art are images, never Frames
+
+Never build an icon or item art out of Frames, UICorners and rotated bars. It always reads as stacked rectangles. Author every icon and item illustration as an SVG (`ui-style-icons`), rasterize it to PNG, show it in an `ImageLabel`/`ImageButton`. Item art in a shop tile or detail pane must be a real illustration with a proper silhouette, two-tone shading, a highlight and the style's outline, readable at 32 px.
+
+### Motion ships with the UI
+
+Every build ships a LocalScript that drives the signature motion from `ui-style-motion`: staggered entrance, a styled open and close, hover and press feedback on every button, count-up on currency, a shine on the featured offer and one idle pulse on the main CTA. Static UI is unfinished UI.
+
+### Audit script
+
+Run with the menus visible (command bar or the MCP code tool). It flags missing padding, text that does not fit, children spilling out of their parent, and corner mistakes for the decision you wrote down:
+
+```lua
+local ROUNDED = true -- your corner decision
+local root = game:GetService("StarterGui")
+local function visible(o) return o.BackgroundTransparency < 1 end
+for _, o in root:GetDescendants() do
+	if o:IsA("GuiObject") then
+		local kids = 0
+		for _, c in o:GetChildren() do if c:IsA("GuiObject") then kids += 1 end end
+		if kids > 0 and visible(o) and not o:FindFirstChildOfClass("UIPadding") then print("no padding:", o:GetFullName()) end
+		if o:IsA("TextLabel") or o:IsA("TextButton") then
+			if o.Text ~= "" and not o.TextFits then print("text does not fit:", o:GetFullName()) end
+		end
+		if visible(o) and (o:FindFirstChildOfClass("UICorner") ~= nil) ~= ROUNDED then print("corner breaks the rule:", o:GetFullName()) end
+		local p = o.Parent
+		if p:IsA("GuiObject") then
+			local a, b = o.AbsolutePosition, o.AbsolutePosition + o.AbsoluteSize
+			local pa, pb = p.AbsolutePosition, p.AbsolutePosition + p.AbsoluteSize
+			if a.X < pa.X - 1 or a.Y < pa.Y - 1 or b.X > pb.X + 1 or b.Y > pb.Y + 1 then print("spills out of parent:", o:GetFullName()) end
+		end
+	end
+end
+```
+
+Fix every line it prints that is not deliberate (a close button on a corner, a badge that overhangs on purpose, a reasoned corner exception).
+
+## 7. Composition: HUD and menus must not collide
 
 Generated UI most often fails here: each piece looks fine, but at phone size the shop panel runs into the left rail, the currency pill sits under the close button, a sticker covers a title. Plan the screen as zones before building:
 
@@ -233,21 +298,22 @@ end
 
 Repeat at a phone-sized viewport (Studio's device emulator) and fix every line it prints that you did not intend. A full-screen dim or backdrop frame overlaps everything by design; skip it.
 
-## 7. Build order
+## 8. Build order
 
-1. Choose the style and write down: palette (hex), fonts, corner radius, stroke weight, light direction, motion style, and the identity from section 4 (palette source, shape idea, signature detail).
+1. Choose the style and write down: palette (hex), fonts, the corner decision and radius values, the spacing scale, stroke weight, light direction, the signature motion, and the identity from section 4 (palette source, shape idea, signature detail).
 2. Build reusable pieces as functions: `makeButton(color, label, icon)`, `makePanel(title, color)`, `makeCurrency(icon, amount)`. Every button in the game comes from the same function so they match.
-3. Build the HUD, then each menu. Hide menus by default (`Visible = false`) and open them from HUD buttons.
-4. Add motion (`ui-style-motion`).
-5. Run the overlap check from section 6 and the checklist below, then look at it at phone size.
+3. Draw the icon set and item art as SVG, rasterize, check each PNG at 32 px (`ui-style-icons`).
+4. Build the HUD, then each menu. Hide menus by default (`Visible = false`) and open them from HUD buttons.
+5. Write the motion LocalScript (`ui-style-motion`).
+6. Run the audit script (section 6), the overlap check (section 7) and the checklist below, then look at it at phone size and play the entrance once.
 
-## 8. Self-review checklist (run before showing UI)
+## 9. Self-review checklist (run before showing UI)
 
 Answer honestly. Any "yes" in the first group means rework.
 
 **Is it the anti-pattern?**
 - Is the main panel a flat dark card with a thin coloured border and nothing else?
-- Is every element the same corner radius and the same border colour?
+- Is every element the same default radius and the same border colour, with no thought behind either?
 - Is any font Arial, Arimo, Legacy, SourceSans or an unstroked default bold?
 - Are there text-only buttons, emoji icons, or a text "X" close button?
 - Would this UI look the same if the game were a different genre?
@@ -264,11 +330,20 @@ Answer honestly. Any "yes" in the first group means rework.
 
 **Does it work?**
 - When the shop is open, does anything collide with it, or did you decide which HUD pieces hide? Does any sticker or badge cover text? Does anything hang off the screen?
-- Every tappable thing at least 48x48 px at phone size, 8 px apart?
+- Every tappable thing at least 64x64 at reference (about 40 px on a phone), 8 apart?
 - Nothing under the top bar, the thumbstick or the jump button?
 - Text readable at phone size (14 px minimum body)?
 - Close button top-right of every modal, reachable with a thumb, plus Escape/B closes?
 - Buttons react on hover and press?
 - Fits at 844x390, 1024x768 and 1920x1080 without overlap?
+
+**Is it production ready?** Any "no" means rework.
+- Is the corner decision the same on every box, or is each exception written down with its reason?
+- Does every container have a `UIPadding` from the scale, does every layout use a gap from the scale, and do repeated groups use the same gap?
+- Does every text sit at least 8 px from its box edge, with `TextFits` true at phone scale? Nothing clipped?
+- Is every panel filled or sized to its content, with no blank region over about 15 percent?
+- Is every icon and item art an image drawn from SVG, never Frames? Does each item have a real silhouette (an egg is egg-shaped, a rifle has a stock, grip, magazine and barrel), two-tone shading, a highlight and the style's outline? Does it read at 32 px?
+- Is there a LocalScript with a staggered entrance, a styled open, hover and press on every button, a currency count-up, a shine on the featured offer and one idle pulse?
+- Would a player guess this was AI-made, or that it still needs a pass? If yes, find out why and fix it.
 
 If you can, take a screenshot and compare it side by side with a top game in the same genre. If yours looks emptier, flatter or more uniform, it is not done.
