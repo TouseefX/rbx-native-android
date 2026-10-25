@@ -817,7 +817,7 @@ impl Shell {
     }
 
     /// The embedded client while it is shown over the 3D view.
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     pub(in crate::shell) fn play_embedded(&self) -> Option<&rbx_play::embed::Embedded> {
         let running = self.play.session.as_ref()?;
         running.embedded.as_ref().filter(|_| !running.hidden)
