@@ -94,6 +94,20 @@ fn save_notice(wrote_local: bool, cloud: Result<(), &str>) -> Notice {
 impl Shell {
     /// Brings Game Settings forward, opening it if it isn't.
     pub(crate) fn open_game_settings(&mut self, cx: &mut Context<Self>) {
+        self.show_game_settings(Tab::BasicInfo, cx);
+    }
+
+    /// Game Settings on the experience's page or the place's.
+    pub(crate) fn configure_game(&mut self, page: crate::cli::Configure, cx: &mut Context<Self>) {
+        let tab = match page {
+            crate::cli::Configure::Experience => Tab::BasicInfo,
+            crate::cli::Configure::Place => Tab::Places,
+        };
+        self.show_game_settings(tab, cx);
+    }
+
+    /// `tab` is where a newly opened window starts; one already open keeps its own.
+    fn show_game_settings(&mut self, tab: Tab, cx: &mut Context<Self>) {
         if let Some(existing) = &self.game_settings {
             if existing
                 .update(cx, |_, window, _| window.activate_window())
@@ -106,14 +120,14 @@ impl Shell {
         // still being updated here.
         let shell = cx.entity();
         cx.defer(move |cx| {
-            let opened = GameSettingsWindow::open(shell.clone(), cx);
+            let opened = GameSettingsWindow::open(shell.clone(), tab, cx);
             shell.update(cx, |shell, _| shell.game_settings = opened);
         });
     }
 }
 
 impl GameSettingsWindow {
-    fn open(shell: Entity<Shell>, cx: &mut App) -> Option<WindowHandle<Root>> {
+    fn open(shell: Entity<Shell>, tab: Tab, cx: &mut App) -> Option<WindowHandle<Root>> {
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                 None,
@@ -133,13 +147,13 @@ impl GameSettingsWindow {
             ..Default::default()
         };
         cx.open_window(options, move |window, cx| {
-            let view = cx.new(|cx| GameSettingsWindow::new(shell, window, cx));
+            let view = cx.new(|cx| GameSettingsWindow::new(shell, tab, window, cx));
             cx.new(|cx| Root::new(view, window, cx))
         })
         .ok()
     }
 
-    fn new(shell: Entity<Shell>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    fn new(shell: Entity<Shell>, tab: Tab, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let mut subscriptions = vec![cx.observe(&shell, |this, shell, cx| {
             let (changes, path, fresh) = {
                 let s = shell.read(cx);
@@ -178,7 +192,7 @@ impl GameSettingsWindow {
         let mut this = GameSettingsWindow {
             link: home::link_of(&path),
             shell,
-            tab: Tab::BasicInfo,
+            tab,
             cloud: CloudDraft::default(),
             local,
             loading: Loading::Idle,

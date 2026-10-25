@@ -21,7 +21,10 @@ use crate::home::{self, RecentPlace};
 
 mod games;
 mod open;
+mod recent_actions;
 mod view;
+
+pub(super) use recent_actions::RecentMenu;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Page {
@@ -74,6 +77,13 @@ pub(super) enum Dialog {
         status: Option<u16>,
         reason: String,
     },
+    /// Recent's Archive, asking first; `busy` while the call runs, `error`
+    /// when Roblox refused it.
+    Archive {
+        place: RecentPlace,
+        busy: bool,
+        error: Option<String>,
+    },
 }
 
 pub(crate) struct HomeWindow {
@@ -83,6 +93,9 @@ pub(crate) struct HomeWindow {
     pub(super) games: Games,
     pub(super) icons: HashMap<u64, Arc<RenderImage>>,
     pub(super) recent: Vec<RecentPlace>,
+    /// Recent as icons rather than the list; saved in settings.
+    pub(super) recent_icons: bool,
+    pub(super) recent_menu: Option<RecentMenu>,
     /// Auto-Recovery copies no editor owns, read as Home opens.
     pub(super) recovered: Vec<crate::recovery::Leftover>,
     pub(super) search: Entity<InputState>,
@@ -186,6 +199,10 @@ impl HomeWindow {
                 },
             ),
         ];
+        let recent_icons = boot
+            .borrow()
+            .as_ref()
+            .is_some_and(|boot| boot.settings.recent_icons);
         let mut this = HomeWindow {
             boot,
             page: match std::env::var(PAGE_VARIABLE).as_deref() {
@@ -197,6 +214,8 @@ impl HomeWindow {
             games: Games::Loading,
             icons: HashMap::new(),
             recent: home::recent(),
+            recent_icons,
+            recent_menu: None,
             recovered: crate::recovery::folder()
                 .map(|folder| crate::recovery::leftovers(&folder))
                 .unwrap_or_default(),
@@ -221,6 +240,7 @@ impl HomeWindow {
         };
         this.reload(cx);
         this.apply_capture_state(window, cx);
+        this.apply_recent_capture(window);
         this
     }
 
