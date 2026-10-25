@@ -93,6 +93,7 @@ impl Shell {
             session.client = self.live_dom(View::Client);
             session.server = self.live_dom(View::Server);
             session.play = play.clone();
+            session.selection = self.selected_all().to_vec();
             let reply = mcp::protocol::handle(request.line(), &mut session);
             let planned = session.planned.take();
             if let Some(edit) = planned {

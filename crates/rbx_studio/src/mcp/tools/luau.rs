@@ -5,10 +5,10 @@
 #[cfg(test)]
 mod tests;
 
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use super::datamodel::{datamodel_argument, require_live};
-use super::{boolean, required_text, string, tool, Outcome};
+use super::{required_text, Outcome};
 use crate::mcp::{Job, Session};
 
 pub(super) const EXECUTE_LUAU: &str = "execute_luau";
@@ -18,64 +18,6 @@ pub(super) const SCREEN_CAPTURE: &str = "screen_capture";
 
 const CAMERA_POSITION: &str = "camera_position";
 const LOOK_AT_POSITION: &str = "look_at_position";
-
-pub(super) fn schemas() -> Vec<Value> {
-    vec![
-        tool(
-            EXECUTE_LUAU,
-            "Executes a Luau snippet in the editor (like the Command Bar, a REPL) and returns the \
-             value of the last expression, or the error. Edit runs on the edited place, each run \
-             one undo step; Client and Server run in the playtest's game. Do not edit script \
-             source with it: use multi_edit.",
-            json!({
-                "code": string("The Luau code to execute. Must NOT be used to edit script source -- use multi_edit for that."),
-                "datamodel_type": {
-                    "type": "string",
-                    "enum": ["Edit", "Client", "Server"],
-                    "description": "The data model to run in. Client and Server exist only during a playtest.",
-                },
-            }),
-            &["code", "datamodel_type"],
-        ),
-        tool(
-            START_STOP_PLAY,
-            "Starts a playtest, or stops it and returns to edit mode. Starting returns once the \
-             game is live.",
-            json!({
-                "is_start": boolean("true to start the game, false to stop the game and return to edit mode."),
-            }),
-            &["is_start"],
-        ),
-        tool(
-            CONSOLE_OUTPUT,
-            "Get the console output from the Studio output log.",
-            json!({}),
-            &[],
-        ),
-        tool(
-            SCREEN_CAPTURE,
-            "Captures the 3D viewport (the running game during a playtest) and returns the \
-             image. If camera_position and look_at_position are given, the camera is set there \
-             for the capture only.",
-            json!({
-                "capture_id": string("Capture identifier such as 'ScreenCapture_1', 'ScreenCapture_2', etc."),
-                CAMERA_POSITION: point("Where the camera is placed for the capture, in studs."),
-                LOOK_AT_POSITION: point("The point the camera looks at, in studs."),
-            }),
-            &["capture_id"],
-        ),
-    ]
-}
-
-fn point(description: &str) -> Value {
-    json!({
-        "type": "array",
-        "items": { "type": "number" },
-        "minItems": 3,
-        "maxItems": 3,
-        "description": description,
-    })
-}
 
 /// The shell answers every job; what a tool returns here is never sent.
 fn leave(session: &mut Session, job: Job) -> Outcome {

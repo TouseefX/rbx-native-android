@@ -106,10 +106,13 @@ fn the_list_holds_the_shell_tools_with_their_required_arguments() {
             .unwrap_or_else(|| panic!("{name} is not listed"));
         serde_json::from_value(tool["inputSchema"]["required"].clone()).unwrap()
     };
-    assert_eq!(required("execute_luau"), ["code", "datamodel_type"]);
-    assert_eq!(required("start_stop_play"), ["is_start"]);
-    assert!(required("get_console_output").is_empty());
-    assert_eq!(required("screen_capture"), ["capture_id"]);
+    assert_eq!(
+        required("execute_luau"),
+        ["code", "datamodel_type", "studio_id"]
+    );
+    assert_eq!(required("start_stop_play"), ["is_start", "studio_id"]);
+    assert_eq!(required("get_console_output"), ["studio_id"]);
+    assert_eq!(required("screen_capture"), ["capture_id", "studio_id"]);
 }
 
 #[test]

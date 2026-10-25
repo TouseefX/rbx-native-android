@@ -101,41 +101,6 @@ impl Kind {
     }
 }
 
-/// The tool as `tools/list` shows it, with Studio's arguments.
-pub(crate) fn schema() -> Value {
-    json!({
-        "name": SUBAGENT,
-        "description": "Launch a specialized subagent to handle complex, multi-step tasks \
-            autonomously. It runs on the MCP client's own model through sampling \
-            (sampling/createMessage), so the client must support sampling.\n\nAvailable \
-            subagents:\n- explore: investigates the place read-only (the tree, scripts, \
-            execute_luau, the console) and answers questions about it.\n- screen_capture: \
-            aims the camera, captures the viewport and describes what it shows.\n- \
-            unit_test: writes tests under ServerStorage.UnitTest, runs them during play and \
-            reports PASS or FAIL.\n\nThe subagent returns one final text result; it cannot \
-            hold a conversation or start other subagents.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "description": "A short 3-5 word description of the task in present continuous tense (e.g., 'Exploring player spawn logic'). Used for display.",
-                },
-                "subagent_type": {
-                    "type": "string",
-                    "enum": ["explore", "screen_capture", "unit_test"],
-                    "description": "The type of subagent to invoke.",
-                },
-                "task": {
-                    "type": "string",
-                    "description": "Detailed task description and instructions for the subagent. Be specific about what you need it to do and what information to return.",
-                },
-            },
-            "required": ["task", "description", "subagent_type"],
-        },
-    })
-}
-
 /// What the model asked for in one reply of the text protocol.
 #[derive(Debug, PartialEq)]
 pub(super) enum Ask {

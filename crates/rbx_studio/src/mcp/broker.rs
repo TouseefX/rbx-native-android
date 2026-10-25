@@ -9,7 +9,6 @@
 //! editor that did not close cleanly, and is removed.
 
 mod subagent;
-pub(crate) use subagent::schema as subagent_schema;
 #[cfg(test)]
 mod tests;
 

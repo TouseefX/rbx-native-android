@@ -217,7 +217,10 @@ fn mesh_edit_tools_validate_before_they_refuse() {
     );
     assert!(text.contains("at most 5"), "{text}");
     let (_, text) = segment(json!({ "parts": ["a"] }));
-    assert!(text.contains("instance_path is required"), "{text}");
+    assert!(
+        text.contains("not exactly one MeshPart or Model (0 selected)"),
+        "{text}"
+    );
     let (_, text) = segment(json!({ "instance_path": "Workspace.Nope", "parts": ["a"] }));
     assert!(
         text.contains("No instance found at path: Workspace.Nope"),
@@ -249,4 +252,40 @@ fn mesh_edit_tools_validate_before_they_refuse() {
     let (_, text) =
         texture(json!({ "hintImage": {}, "textPrompt": "", "instance_path": "Workspace.Rock" }));
     assert!(text.contains("generate_texture is not available"), "{text}");
+}
+
+/// `segment_mesh` without `instance_path`, with `selected` (dotted paths
+/// under Workspace) as the Explorer selection.
+fn segment_selected(dom: &WeakDom, selected: &[&str]) -> String {
+    let properties = Properties::new(ReflectionDatabase::embedded());
+    let studio = studio();
+    let mut session = Session::new(dom, &properties, &studio);
+    session.selection = selected
+        .iter()
+        .map(|path| super::super::resolve(dom, path).unwrap())
+        .collect();
+    let result = call(
+        &json!({ "name": "segment_mesh", "arguments": { "parts": ["a"] } }),
+        &mut session,
+    )
+    .unwrap();
+    result["content"][0]["text"].as_str().unwrap().to_owned()
+}
+
+#[test]
+fn mesh_edit_tools_fall_back_to_exactly_one_selected_mesh_part_or_model() {
+    let mut dom = place();
+    let workspace = dom.root_refs()[0];
+    dom.new_instance("MeshPart", "Rock", Some(workspace));
+    for one in ["Workspace.Rock", "Workspace.Tower"] {
+        let text = segment_selected(&dom, &[one]);
+        assert!(text.contains("segment_mesh is not available"), "{text}");
+    }
+    let text = segment_selected(&dom, &["Workspace.Tower.Door"]);
+    assert!(
+        text.contains("not exactly one MeshPart or Model (1 selected)"),
+        "{text}"
+    );
+    let text = segment_selected(&dom, &["Workspace.Rock", "Workspace.Tower"]);
+    assert!(text.contains("(2 selected)"), "{text}");
 }

@@ -16,7 +16,7 @@ use std::sync::Mutex;
 use rbx_cloud::Client;
 use serde_json::{json, Map, Value};
 
-use super::super::{string, text_argument, tool, Outcome};
+use super::super::{text_argument, Outcome};
 use super::{client, describe, key_owner, uuid};
 use crate::mcp::Session;
 
@@ -36,34 +36,6 @@ const HANDLE_PREFIX: &str = "IMAGEID_";
 
 /// `store_image`'s images, oldest first.
 static STORED: Mutex<VecDeque<(String, Vec<u8>)>> = Mutex::new(VecDeque::new());
-
-pub(super) fn upload_schema() -> Value {
-    tool(
-        UPLOAD,
-        "Uploads a batch of images from an HTTP server to Roblox as image assets you own, \
-         returning an imagePath to assetId map, such as {\"https://example.com/sky.png\": \
-         \"rbxassetid://12345678\"}. A path that fails maps to \"Error Upload: <why>\".",
-        json!({
-            "imagePaths": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "The http or https URLs of the images to upload: PNG, JPEG or BMP.",
-            },
-        }),
-        &["imagePaths"],
-    )
-}
-
-pub(super) fn store_schema() -> Value {
-    tool(
-        STORE,
-        "Loads an image from a local file path and returns an IMAGEID_<id> URI that other tools \
-         accept as an attached image (attachedImageUri). Nothing is uploaded. Supported formats: \
-         png, jpg, jpeg. Max file size: 5MB.",
-        json!({ "filePath": string("Absolute path to a local image file (png, jpg, or jpeg).") }),
-        &["filePath"],
-    )
-}
 
 pub(super) fn upload(arguments: &Value, session: &mut Session) -> Outcome {
     let Some(paths) = arguments.get("imagePaths").and_then(Value::as_array) else {
