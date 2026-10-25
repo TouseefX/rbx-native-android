@@ -10,6 +10,7 @@
 //! on the client focuses it natively and `FocusFollow` needs no thread.
 //! `Drop` hands the window back to the desktop with its original styles.
 
+mod capture;
 mod input;
 
 pub use input::Input;
@@ -264,95 +265,6 @@ impl Embedded {
             }
         }
         Ok(())
-    }
-
-    /// The window's client area as `(width, height, RGBA)`, rendered with
-    /// `PrintWindow(PW_RENDERFULLCONTENT)` so GPU-drawn content is included.
-    pub fn capture(&self) -> Result<(u32, u32, Vec<u8>), EmbedError> {
-        use windows_sys::Win32::Graphics::Gdi::{
-            CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, GetDC, GetDIBits, ReleaseDC,
-            SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
-        };
-        use windows_sys::Win32::Storage::Xps::PrintWindow;
-
-        const PW_RENDERFULLCONTENT: u32 = 2;
-        let h = hwnd(self.window);
-        let mut client = RECT {
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
-        };
-        // SAFETY: `client` is a valid out pointer.
-        if unsafe { GetClientRect(h, &mut client) } == 0 {
-            return Err(failed("GetClientRect"));
-        }
-        let (w, ht) = (client.right - client.left, client.bottom - client.top);
-        if w <= 0 || ht <= 0 {
-            return Err(failed("capture of an empty window"));
-        }
-        let mut pixels = vec![0u8; w as usize * ht as usize * 4];
-        // SAFETY: every GDI object created here is released on all paths
-        // below; `pixels` holds w*ht 32-bit pixels for GetDIBits.
-        let result = unsafe {
-            let screen = GetDC(h);
-            if screen.is_null() {
-                return Err(failed("GetDC"));
-            }
-            let dc = CreateCompatibleDC(screen);
-            let bitmap = CreateCompatibleBitmap(screen, w, ht);
-            let result = if dc.is_null() || bitmap.is_null() {
-                Err(failed("CreateCompatibleBitmap"))
-            } else {
-                let old = SelectObject(dc, bitmap);
-                let printed = PrintWindow(h, dc, PW_RENDERFULLCONTENT);
-                let mut info: BITMAPINFO = std::mem::zeroed();
-                info.bmiHeader = BITMAPINFOHEADER {
-                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                    biWidth: w,
-                    biHeight: -ht,
-                    biPlanes: 1,
-                    biBitCount: 32,
-                    biCompression: BI_RGB,
-                    biSizeImage: 0,
-                    biXPelsPerMeter: 0,
-                    biYPelsPerMeter: 0,
-                    biClrUsed: 0,
-                    biClrImportant: 0,
-                };
-                let rows = if printed == 0 {
-                    0
-                } else {
-                    GetDIBits(
-                        dc,
-                        bitmap,
-                        0,
-                        ht as u32,
-                        pixels.as_mut_ptr().cast(),
-                        &mut info,
-                        DIB_RGB_COLORS,
-                    )
-                };
-                SelectObject(dc, old);
-                if printed == 0 {
-                    Err(failed("PrintWindow"))
-                } else if rows == 0 {
-                    Err(failed("GetDIBits"))
-                } else {
-                    Ok(())
-                }
-            };
-            if !bitmap.is_null() {
-                DeleteObject(bitmap);
-            }
-            if !dc.is_null() {
-                DeleteDC(dc);
-            }
-            ReleaseDC(h, screen);
-            result
-        };
-        result?;
-        Ok((w as u32, ht as u32, super::bgrx_to_rgba(&pixels)))
     }
 
     /// Hides the window, so a client about to be killed does not flash on
