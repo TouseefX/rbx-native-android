@@ -5,7 +5,7 @@ description: How in-game Roblox UI should behave: input on touch, gamepad and mo
 
 # Interaction patterns for in-game UI
 
-Companions: `ui-design` (how it looks), `accessibility` (contrast, text size, reduced motion), `animation` (tweens in depth). Roblox's own split is useful: UI is what the player sees, UX is how they act and move from one choice to the next (source: https://create.roblox.com/docs/production/game-design/ui-ux-design). Claims marked "observed" are common practice in popular games, not documented rules.
+Companions: `ui-style` (how it looks), `accessibility` (contrast, text size, reduced motion), `animation` (tweens in depth). Roblox's own split is useful: UI is what the player sees, UX is how they act and move from one choice to the next (source: https://create.roblox.com/docs/production/game-design/ui-ux-design). Claims marked "observed" are common practice in popular games, not documented rules.
 
 ## 1. Know the device before placing anything
 
