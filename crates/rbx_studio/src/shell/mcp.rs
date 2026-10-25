@@ -1,18 +1,31 @@
 //! Beta Features › MCP server: the shell's end of `crate::mcp`. A timer
 //! drains what clients sent and answers it against the shell's own DOM, on
 //! the UI thread, so a tool always sees the place as the Explorer does, and
-//! applies a `multi_edit` as one undo step.
+//! applies a `multi_edit` as one undo step. An `insert_asset` downloads in
+//! the background and lands the same way, once its asset has arrived.
 
 use std::time::Duration;
 
-use gpui_kit::Context;
+use gpui_kit::{AppContext, Context};
 
 use crate::command_bar::Feedback;
-use crate::mcp::protocol::Reply;
-use crate::mcp::{self, endpoint::Server, PlayState, ScriptEdit, Session, Studio};
+use rbx_dom::Ref;
+use serde_json::Value;
 
+use crate::mcp::endpoint::{Request, Server};
+use crate::mcp::protocol::{self, Reply};
+use crate::mcp::{self, Inserting, Insertion, PlayState, ScriptEdit, Session, Studio};
+
+use super::play::live::View;
 use super::play::Phase;
-use super::Shell;
+use super::{clipboard, Shell};
+
+mod capture;
+mod jobs;
+#[cfg(test)]
+mod tests;
+
+pub(super) use jobs::Jobs;
 
 pub(crate) const BETA_ID: &str = "mcp-server";
 
@@ -64,6 +77,7 @@ impl Shell {
             return;
         };
         let requests = server.drain();
+        self.mcp_poll(cx);
         if requests.is_empty() {
             return;
         }
@@ -73,8 +87,13 @@ impl Shell {
             self.flush_script_edits(cx);
         }
         let studio = self.mcp_studio();
+        let play = self.play_input();
         for request in requests {
             let mut session = Session::new(self.edit_dom(), &self.properties, &studio);
+            session.client = self.live_dom(View::Client);
+            session.server = self.live_dom(View::Server);
+            session.play = play.clone();
+            session.selection = self.selected_all().to_vec();
             let reply = mcp::protocol::handle(request.line(), &mut session);
             let planned = session.planned.take();
             if let Some(edit) = planned {
@@ -92,9 +111,74 @@ impl Shell {
                             .push_warning(&format!("MCP server could not run a tool: {err}"));
                     }
                 }
+                Some(Reply::Job { id, job }) => self.mcp_job(request, id, job, cx),
+                Some(Reply::Insert { id, fetch }) => self.mcp_insert(request, id, fetch, cx),
                 reply => request.answer(reply.map(Reply::wait)),
             }
         }
+    }
+
+    /// Downloads in the background, then inserts on the UI thread; the
+    /// connection waits for this answer before reading its next line.
+    fn mcp_insert(
+        &mut self,
+        request: Request,
+        id: Value,
+        fetch: Inserting,
+        cx: &mut Context<Self>,
+    ) {
+        cx.spawn(async move |shell, cx| {
+            let fetched = cx.background_spawn(async move { fetch() }).await;
+            let outcome = shell
+                .update(cx, |shell, cx| shell.mcp_place(fetched, cx))
+                .unwrap_or_else(|_| Err("the editor closed before the asset arrived".to_owned()));
+            request.answer(Some(protocol::answer(id, outcome)));
+        })
+        .detach();
+    }
+
+    /// Grafts a downloaded asset under the parent the call named, as one
+    /// undo step, and selects it, as Studio's own insert does.
+    fn mcp_place(
+        &mut self,
+        fetched: Result<Insertion, String>,
+        cx: &mut Context<Self>,
+    ) -> Result<Value, String> {
+        let insertion = fetched?;
+        if self.live_shown() {
+            return Err(
+                "the editor is showing a running playtest; switch back to the edited place first"
+                    .to_owned(),
+            );
+        }
+        if self.dom.get(insertion.parent).is_none() {
+            return Err(format!(
+                "asset {} arrived after its parent was deleted; nothing was inserted",
+                insertion.asset_id
+            ));
+        }
+        self.dom.take_changes();
+        let before = self.dom.clone();
+        let content = &insertion.content;
+        let roots: Vec<Ref> = content
+            .root_refs()
+            .iter()
+            .filter_map(|&root| clipboard::graft(&mut self.dom, content, root, insertion.parent))
+            .collect();
+        if roots.is_empty() {
+            return Err(format!(
+                "asset {} holds nothing to insert",
+                insertion.asset_id
+            ));
+        }
+        self.push_history_snapshot(before);
+        let changes = self.dom.take_changes();
+        self.rebuild_explorer(cx);
+        self.reselect(roots.clone(), cx);
+        self.reflect_changes(&changes, cx);
+        self.record_history_change(changes);
+        cx.notify();
+        Ok(mcp::inserted(&self.dom, &roots, &insertion))
     }
 
     fn mcp_studio(&self) -> Studio {

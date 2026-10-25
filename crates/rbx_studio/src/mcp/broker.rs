@@ -1,12 +1,14 @@
 //! What `rbxstudio --mcp` does with each line: answers what every editor
-//! would answer alike, joins every editor's row for `list_roblox_studios`, and hands
-//! every other tool call to the editor its `studio_id` names.
+//! would answer alike, joins every editor's row for `list_roblox_studios`,
+//! runs `subagent` over the client's sampling, and hands every other tool
+//! call to the editor its `studio_id` names.
 //!
 //! Editors are found through their files in the endpoint directory, read
 //! again on every call, so one opened after the client connected is
 //! reachable at once. A file whose port refuses the connection belongs to an
 //! editor that did not close cleanly, and is removed.
 
+mod subagent;
 #[cfg(test)]
 mod tests;
 
@@ -27,8 +29,24 @@ use super::tools::{self, LIST_STUDIOS, STUDIOS_KEY};
 /// generous; it only has to keep a frozen editor from hanging the client.
 const ANSWER_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// The answer timeout for one tool: running Luau, starting a play session
+/// and rendering a frame take far longer than reading the tree.
+pub(super) fn answer_timeout(tool: &str) -> Duration {
+    match tool {
+        "execute_luau" => Duration::from_secs(120),
+        "start_stop_play" => Duration::from_secs(240),
+        "screen_capture" => Duration::from_secs(60),
+        _ => ANSWER_TIMEOUT,
+    }
+}
+
 pub(crate) const NOT_RUNNING: &str = "no editor is serving MCP. Open a place in rbxstudio with \
 Settings › Beta features › MCP server switched on.";
+
+/// Asks the MCP client something, such as `sampling/createMessage`.
+pub(crate) trait Client {
+    fn request(&mut self, method: &str, params: Value) -> Result<Value, String>;
+}
 
 /// One editor's connection, kept for the next call to it.
 struct Connection {
@@ -39,6 +57,10 @@ struct Connection {
 pub(crate) struct Broker {
     dir: PathBuf,
     connections: HashMap<String, Connection>,
+    /// The client advertised `capabilities.sampling`.
+    sampling: bool,
+    /// The client advertised `capabilities.sampling.tools`.
+    sampling_tools: bool,
 }
 
 impl Broker {
@@ -46,16 +68,28 @@ impl Broker {
         Broker {
             dir,
             connections: HashMap::new(),
+            sampling: false,
+            sampling_tools: false,
         }
     }
 
     /// The reply to one line from the client, or `None` when it needs none.
-    pub(crate) fn handle(&mut self, line: &str) -> Option<String> {
+    pub(crate) fn handle(&mut self, line: &str, client: &mut dyn Client) -> Option<String> {
         let (id, method, params) = match protocol::parse(line) {
             Message::Request { id, method, params } => (id, method, params),
             Message::Silent => return None,
             Message::Invalid(reply) => return Some(reply),
         };
+        if method == "initialize" {
+            let sampling = params
+                .get("capabilities")
+                .and_then(|capabilities| capabilities.get("sampling"))
+                .filter(|sampling| !sampling.is_null());
+            self.sampling = sampling.is_some();
+            self.sampling_tools = sampling
+                .and_then(|sampling| sampling.get("tools"))
+                .is_some_and(|tools| !tools.is_null());
+        }
         if let Some(outcome) = protocol::answer_alone(&method, &params) {
             return Some(protocol::reply(id, outcome));
         }
@@ -63,23 +97,43 @@ impl Broker {
             let failure = (METHOD_NOT_FOUND, format!("method not found: {method}"));
             return Some(protocol::reply(id, Err(failure)));
         }
-        if params.get("name").and_then(Value::as_str) == Some(LIST_STUDIOS) {
+        let name = params.get("name").and_then(Value::as_str).unwrap_or("");
+        if name == subagent::SUBAGENT {
+            let arguments = params.get("arguments").cloned().unwrap_or(Value::Null);
+            return Some(protocol::reply(id, Ok(self.subagent(&arguments, client))));
+        }
+        if name == LIST_STUDIOS {
             let studios = json!({ STUDIOS_KEY: self.studios() }).to_string();
             return Some(protocol::reply(
                 id,
                 Ok(tools::result(&Value::String(studios), false)),
             ));
         }
+        let name = params
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
+        if let Some(answer) = tools::without_editor(name, &arguments) {
+            return Some(protocol::reply(id, Ok(answer)));
+        }
         let wanted = params
             .get("arguments")
             .and_then(|arguments| arguments.get("studio_id"))
             .and_then(Value::as_str);
+        Some(self.call(id, wanted, name, line))
+    }
+
+    /// Hands the tools/call `line` for `tool` to the editor `wanted` routes
+    /// to; the reply line, also when no editor answers.
+    fn call(&mut self, id: Value, wanted: Option<&str>, tool: &str, line: &str) -> String {
+        let timeout = answer_timeout(tool);
         let answer = self
             .route(wanted)
-            .and_then(|studio| self.forward(&studio, line));
-        Some(answer.unwrap_or_else(|message| {
+            .and_then(|studio| self.forward(&studio, line, timeout));
+        answer.unwrap_or_else(|message| {
             protocol::reply(id, Ok(tools::result(&Value::String(message), true)))
-        }))
+        })
     }
 
     /// Every editor that answers, each listing itself: an editor answers
@@ -96,7 +150,8 @@ impl Broker {
         self.reachable()
             .iter()
             .filter_map(|studio| {
-                let answer: Value = serde_json::from_str(&self.forward(studio, &ask).ok()?).ok()?;
+                let answer: Value =
+                    serde_json::from_str(&self.forward(studio, &ask, ANSWER_TIMEOUT).ok()?).ok()?;
                 let text = answer["result"]["content"][0]["text"].as_str()?;
                 let listed: Value = serde_json::from_str(text).ok()?;
                 listed.get(STUDIOS_KEY)?.as_array().cloned()
@@ -167,11 +222,21 @@ impl Broker {
             .expect("inserted above"))
     }
 
-    /// Sends one request line to `studio` and reads its one-line answer.
-    fn forward(&mut self, studio: &Endpoint, line: &str) -> Result<String, String> {
+    /// Sends one request line to `studio` and reads its one-line answer,
+    /// waiting at most `timeout` for it.
+    fn forward(
+        &mut self,
+        studio: &Endpoint,
+        line: &str,
+        timeout: Duration,
+    ) -> Result<String, String> {
         let connection = self.connection(studio)?;
         let mut answer = String::new();
-        let sent = writeln!(connection.writer, "{line}")
+        let sent = connection
+            .reader
+            .get_ref()
+            .set_read_timeout(Some(timeout))
+            .and_then(|()| writeln!(connection.writer, "{line}"))
             .and_then(|()| connection.writer.flush())
             .and_then(|()| connection.reader.read_line(&mut answer));
         match sent {
@@ -180,15 +245,15 @@ impl Broker {
             // connection is not kept past a failure.
             failed => {
                 self.connections.remove(&studio.studio_id);
-                Err(unanswered(&studio.studio_id, failed.err()))
+                Err(unanswered(&studio.studio_id, timeout, failed.err()))
             }
         }
     }
 }
 
-/// What the client is told when an editor gave no answer: `None` is a
-/// connection the editor closed.
-fn unanswered(studio_id: &str, failure: Option<std::io::Error>) -> String {
+/// What the client is told when an editor gave no answer within `timeout`:
+/// `None` is a connection the editor closed.
+fn unanswered(studio_id: &str, timeout: Duration, failure: Option<std::io::Error>) -> String {
     match failure {
         // The request is already queued in the editor and still runs once its
         // UI thread gets to it, so a client that simply retried an edit would
@@ -196,7 +261,7 @@ fn unanswered(studio_id: &str, failure: Option<std::io::Error>) -> String {
         Some(err) if matches!(err.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => format!(
             "studio {studio_id} did not answer within {} s; the call may still apply once it \
              does, so check its effect before trying it again",
-            ANSWER_TIMEOUT.as_secs()
+            timeout.as_secs()
         ),
         failure => {
             let why = failure.map_or("it closed".to_owned(), |err| err.to_string());

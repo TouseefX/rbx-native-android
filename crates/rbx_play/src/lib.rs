@@ -14,6 +14,7 @@
 //! - `sober_config`: session-only changes to Sober's `config.json`.
 //! - `netsim`: latency, jitter and loss on the client's UDP game traffic.
 //! - `gamepad`: a virtual gamepad the client sees as hardware (Linux).
+//! - `keycode`: `Enum.KeyCode` names and the OS key that types each one.
 //! - `value`: Roblox values ↔ JSON, both ways, for live properties.
 //! - `live`: a side's live instance tree as a `WeakDom`, from `Tree`/`Diff`/`Props`.
 //! - `embed`: puts the client's window, frameless, into the viewport (Linux
@@ -22,9 +23,11 @@
 pub mod channel;
 #[cfg(any(target_os = "linux", windows))]
 pub mod embed;
+pub mod exec;
 pub mod gamepad;
 pub mod inject;
 pub mod instrument;
+pub mod keycode;
 pub mod launch;
 pub mod live;
 pub mod market;

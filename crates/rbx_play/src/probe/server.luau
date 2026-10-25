@@ -15,6 +15,7 @@ local Live = require(ReplicatedStorage:WaitForChild("__rbxnative_live"))
 
 local Debug = require(ReplicatedStorage:WaitForChild("__rbxnative_debug"))
 local Print = require(ReplicatedStorage:WaitForChild("__rbxnative_print"))
+local Exec = require(ReplicatedStorage:WaitForChild("__rbxnative_exec"))
 -- Game scripts' MarketplaceService is rewritten to this module's proxy
 -- (test purchases); start it before any of them prompts.
 require(ReplicatedStorage:WaitForChild("__rbxnative_market")).start()
@@ -210,48 +211,8 @@ end)
 
 task.spawn(live.snapshot)
 
-local Stats = game:GetService("Stats")
-local beats = 0
-RunService.Heartbeat:Connect(function()
-	beats += 1
-end)
-
-task.spawn(function()
-	while running do
-		local started = os.clock()
-		beats = 0
-		task.wait(1)
-		-- task.wait resumes a little late; rate over the real interval.
-		local m = { fps = beats / math.max(os.clock() - started, 0.001) }
-		local function read(key, f)
-			local okRead, value = pcall(f)
-			if okRead and type(value) == "number" then
-				m[key] = value
-			end
-		end
-		read("physics_fps", function()
-			return workspace:GetRealPhysicsFPS()
-		end)
-		read("memory_mb", function()
-			return Stats:GetTotalMemoryUsageMb()
-		end)
-		read("instances", function()
-			return Stats.InstanceCount
-		end)
-		read("send_kbps", function()
-			return Stats.DataSendKbps
-		end)
-		read("receive_kbps", function()
-			return Stats.DataReceiveKbps
-		end)
-		read("frame_ms", function()
-			return Stats.HeartbeatTime * 1000
-		end)
-		read("players", function()
-			return #Players:GetPlayers()
-		end)
-		queue({ type = "stats", side = "server", metrics = m })
-	end
+require(ReplicatedStorage:WaitForChild("__rbxnative_stats")).start(queue, function()
+	return running
 end)
 
 local function ack(id, ok, result)
@@ -300,8 +261,23 @@ local LIVE_COMMANDS = {
 	debug_watch = true,
 }
 
+-- The MCP input tools' commands: the client runs and acks them itself.
+local CLIENT_COMMANDS = {
+	navigate = true,
+	locate = true,
+	type_text = true,
+}
+
 local function handle(cmd)
 	local kind = cmd.type
+	if CLIENT_COMMANDS[kind] then
+		if tester then
+			remote:FireClient(tester, { kind = "cmd", command = cmd })
+		else
+			table.insert(forLater, cmd)
+		end
+		return
+	end
 	if kind == "pointer" then
 		-- Only the latest matters, and only to a client that is playing.
 		if tester then
@@ -319,6 +295,16 @@ local function handle(cmd)
 			end
 		else
 			handleLive(cmd)
+		end
+	elseif kind == "exec" then
+		if cmd.side == "client" then
+			if tester then
+				remote:FireClient(tester, { kind = "cmd", command = cmd })
+			else
+				table.insert(forLater, cmd)
+			end
+		else
+			Exec.server(cmd, ack)
 		end
 	elseif kind == "eval" then
 		local fn, err = loadstring(cmd.source)

@@ -10,7 +10,9 @@
 //!   window there, and this module does not exist.
 //!
 //! Both back ends expose the same `Embedded` / `FocusFollow` API over
-//! `WindowId`, the platform's native window handle.
+//! `WindowId`, the platform's native window handle, and the same `Input`:
+//! real mouse and keyboard events into the client's window, the way a
+//! person's reach it (XTest on Linux, `SendInput` on Windows).
 
 #[cfg(target_os = "linux")]
 mod x11;
@@ -27,6 +29,17 @@ pub use win32::*;
 pub type WindowId = u32;
 #[cfg(windows)]
 pub type WindowId = isize;
+
+/// A mouse button [`Input`] presses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Button {
+    Left,
+    Right,
+}
+
+/// How long a click holds its button down, and a wheel notch its press:
+/// the client reads its input once a frame.
+pub const CLICK_HOLD: std::time::Duration = std::time::Duration::from_millis(30);
 
 /// Pixel rect in the parent window's coordinates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +72,30 @@ impl std::fmt::Display for EmbedError {
 }
 
 impl std::error::Error for EmbedError {}
+
+/// Converts 4-byte BGRX/BGRA pixels to RGBA with alpha 255 (a trailing
+/// partial pixel is dropped).
+#[cfg(any(target_os = "linux", windows))]
+pub(crate) fn bgrx_to_rgba(bgrx: &[u8]) -> Vec<u8> {
+    bgrx.as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|p| [p[2], p[1], p[0], 255])
+        .collect()
+}
+
+#[cfg(all(test, any(target_os = "linux", windows)))]
+mod tests {
+    use super::bgrx_to_rgba;
+
+    #[test]
+    fn swaps_channels_and_opaques_alpha() {
+        assert_eq!(
+            bgrx_to_rgba(&[1, 2, 3, 0, 10, 20, 30, 7]),
+            vec![3, 2, 1, 255, 30, 20, 10, 255]
+        );
+    }
+}
 
 /// `full` minus every hole, as non-overlapping rects (each hole splits the
 /// remaining pieces into at most four: above, below, left, right). Holes

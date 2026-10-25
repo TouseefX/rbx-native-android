@@ -21,7 +21,7 @@ use crate::client::Client;
 use crate::error::{self, CloudError};
 use crate::universes::Owner;
 
-const CREATE_URL: &str = "https://apis.roblox.com/assets/v1/assets";
+const CREATE_PATH: &str = "/assets/v1/assets";
 
 /// How long processing may take before giving up. Roblox documents no
 /// bound; a one-mesh model is usually done within a few seconds.
@@ -132,8 +132,9 @@ impl Client {
             &boundary,
         );
         let content_type = format!("multipart/form-data; boundary={boundary}");
-        let response = self.post_bytes_raw(CREATE_URL, &content_type, &body)?;
-        let operation = answer(CREATE_URL, response)?;
+        let create_url = self.apis_url(CREATE_PATH);
+        let response = self.post_bytes_raw(&create_url, &content_type, &body)?;
+        let operation = answer(&create_url, response)?;
 
         let started = Instant::now();
         let mut delay = Duration::from_millis(500);
@@ -150,7 +151,7 @@ impl Client {
             }
             std::thread::sleep(delay);
             delay = (delay * 2).min(Duration::from_secs(5));
-            let url = operation_url(&current)?;
+            let url = self.apis_url(&operation_path(&current)?);
             current = answer(&url, self.get_raw(&url, true, true)?)?;
         }
     }
@@ -218,7 +219,7 @@ fn finished(operation: &Value) -> Result<Option<u64>, CloudError> {
         .ok_or_else(|| CloudError::UnexpectedShape("finished upload names no assetId".to_string()))
 }
 
-fn operation_url(operation: &Value) -> Result<String, CloudError> {
+fn operation_path(operation: &Value) -> Result<String, CloudError> {
     let id = operation
         .get("operationId")
         .and_then(Value::as_str)
@@ -230,7 +231,7 @@ fn operation_url(operation: &Value) -> Result<String, CloudError> {
         })
         .filter(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-'))
         .ok_or_else(|| CloudError::UnexpectedShape("upload answered no operation".to_string()))?;
-    Ok(format!("https://apis.roblox.com/assets/v1/operations/{id}"))
+    Ok(format!("/assets/v1/operations/{id}"))
 }
 
 /// The `request` and `fileContent` fields the endpoint takes, as
@@ -387,17 +388,17 @@ mod tests {
         let running = json!({ "path": "operations/abc-123", "done": false });
         assert_eq!(finished(&running).unwrap(), None);
         assert_eq!(
-            operation_url(&running).unwrap(),
-            "https://apis.roblox.com/assets/v1/operations/abc-123"
+            operation_path(&running).unwrap(),
+            "/assets/v1/operations/abc-123"
         );
         let fresh = json!({ "path": "operations/x", "operationId": "abc", "done": false });
-        assert!(operation_url(&fresh).unwrap().ends_with("/abc"));
+        assert!(operation_path(&fresh).unwrap().ends_with("/abc"));
     }
 
     #[test]
     fn an_operation_id_that_could_change_the_url_is_refused() {
         let hostile = json!({ "path": "operations/../../x?y" });
-        assert!(operation_url(&hostile).is_err());
+        assert!(operation_path(&hostile).is_err());
     }
 
     #[test]

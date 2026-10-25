@@ -47,6 +47,17 @@
   shown. It's still in the place and saved as is. Services newer than our
   list (like `ConfigureServerService`) are hidden by their API dump tag
   now instead of showing up as stray folders. (@chteau)
+- **The MCP server does everything Studio's does.** It serves real Studio's
+  full 28-tool list with the same names and arguments, so a client or prompt
+  made for Studio just works (the descriptions are our own). New: run Luau
+  on Edit, Client or Server, start and stop Play, read the console, grab
+  screenshots (also of the game during Play), spawn subagents through the
+  client's model, walk the character and send real mouse and keyboard input,
+  search and insert assets, upload images, read Roblox's docs, and pull
+  skills. The UI skills pick a style that fits the game instead of the usual
+  dark card look, and the growth skills cover analytics, monetization,
+  retention and promotion. The AI generation tools are listed but refuse,
+  since Roblox keeps that backend to Studio. (@chteau)
 
 ## 2026-10-21
 

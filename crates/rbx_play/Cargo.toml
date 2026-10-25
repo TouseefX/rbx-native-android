@@ -19,6 +19,9 @@ percent-encoding = "2"
 # Parsing scripts to instrument them for the Play debugger (`instrument`);
 # the version rbx_studio already uses.
 full_moon = { version = "3", features = ["luau"] }
+# Compiles execute_luau's client code to bytecode for the probe's interpreter,
+# and syntax-checks the probe's Luau sources in tests; already built for rbx_lua.
+mlua = { version = "0.12", features = ["luau"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Embedding the client window; same version rbx_studio uses.
@@ -40,6 +43,7 @@ windows-sys = { version = "0.61", features = [
     "Win32_Networking_WinSock",
     "Win32_Security",
     "Win32_Storage_FileSystem",
+    "Win32_Storage_Xps",
     "Win32_System_IO",
     "Win32_System_LibraryLoader",
     "Win32_System_Pipes",
@@ -51,8 +55,6 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [dev-dependencies]
-# Syntax-checks the probe's Luau sources; already built for rbx_lua.
-mlua = { version = "0.12", features = ["luau"] }
 # examples/live_probe.rs: publish the probed place and health-check the tunnel.
 rbx_binary = { path = "../rbx_binary" }
 rbx_cloud = { path = "../rbx_cloud" }

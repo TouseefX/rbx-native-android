@@ -5,10 +5,12 @@ local codec = require(ReplicatedStorage:WaitForChild("__rbxnative_codec"))
 local Live = require(ReplicatedStorage:WaitForChild("__rbxnative_live"))
 local Debug = require(ReplicatedStorage:WaitForChild("__rbxnative_debug"))
 local Print = require(ReplicatedStorage:WaitForChild("__rbxnative_print"))
+local Exec = require(ReplicatedStorage:WaitForChild("__rbxnative_exec"))
 -- Game scripts' MarketplaceService is rewritten to this module's proxy
 -- (test purchases); start it before any of them prompts.
 require(ReplicatedStorage:WaitForChild("__rbxnative_market")).start()
 local remote = ReplicatedStorage:WaitForChild("__rbxnative_remote")
+local Input = require(ReplicatedStorage:WaitForChild("__rbxnative_input"))
 require(ReplicatedStorage:WaitForChild("__rbxnative_record")).startClient(remote)
 -- Touch controls for a simulated touch device (see the module).
 task.spawn(function()
@@ -82,6 +84,16 @@ remote.OnClientEvent:Connect(function(payload)
 		live.resync()
 	elseif kind == "debug_set" or kind == "debug_resume" or kind == "debug_watch" then
 		Debug.command(cmd)
+	elseif kind == "exec" then
+		Exec.client(cmd, function(id, ok, result)
+			table.insert(outgoing, { type = "ack", id = id, ok = ok, result = result })
+		end)
+	elseif kind == "navigate" or kind == "locate" or kind == "type_text" then
+		-- A walk takes seconds: its own thread, and the ack jumps the queue.
+		task.spawn(function()
+			local ok, result = pcall(Input.handle, cmd)
+			table.insert(outgoing, 1, { type = "ack", id = cmd.id, ok = ok, result = tostring(result) })
+		end)
 	elseif kind == "pointer" then
 		local ok, err = pcall(function()
 			require(ReplicatedStorage:WaitForChild("__rbxnative_touch_input")).setPointerInside(cmd.inside == true)

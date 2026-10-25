@@ -42,7 +42,6 @@ impl Client {
     }
 
     fn anonymous_root(&self) -> &str {
-        #[cfg(test)]
         if let Some((anonymous, _)) = &self.asset_roots {
             return anonymous;
         }
@@ -50,7 +49,6 @@ impl Client {
     }
 
     fn keyed_root(&self) -> &str {
-        #[cfg(test)]
         if let Some((_, keyed)) = &self.asset_roots {
             return keyed;
         }

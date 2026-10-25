@@ -521,6 +521,8 @@ pub(crate) struct Shell {
     output_collapsed: bool,
     /// Beta Features › MCP server's listener; see `shell::mcp`.
     mcp: Option<crate::mcp::endpoint::Server>,
+    /// MCP tool calls waiting on work only the shell can do.
+    mcp_jobs: mcp::Jobs,
     discord: Option<crate::discord_presence::Presence>,
     discord_hide_names: bool,
     /// The Unix timestamp presence was started, keeps Discord's elapsed
@@ -945,6 +947,7 @@ impl Shell {
             window_was_active: true,
             output_collapsed,
             mcp: None,
+            mcp_jobs: mcp::Jobs::default(),
             discord: None,
             discord_hide_names,
             discord_started: 0,

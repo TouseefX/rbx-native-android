@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::client::Client;
 use crate::error::{self, CloudError};
 
-const INTROSPECT_URL: &str = "https://apis.roblox.com/api-keys/v1/introspect";
+const INTROSPECT_PATH: &str = "/api-keys/v1/introspect";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyInfo {
@@ -100,10 +100,11 @@ impl Client {
         let body = IntrospectRequest {
             api_key: key.as_str(),
         };
-        let response = self.post_json_raw(INTROSPECT_URL, true, &body)?;
+        let url = self.apis_url(INTROSPECT_PATH);
+        let response = self.post_json_raw(&url, true, &body)?;
         if !(200..300).contains(&response.status) {
             return Err(error::error_for_status(
-                INTROSPECT_URL,
+                &url,
                 response.status,
                 &response.headers,
             ));
