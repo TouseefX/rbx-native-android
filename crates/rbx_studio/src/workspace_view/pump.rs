@@ -50,8 +50,17 @@ const POSE_SYNC_INTERVAL: Duration = Duration::from_millis(200);
 /// Whole terrain chunks, `None` for one emptied.
 pub(crate) type TerrainChunks = Vec<(rbx_terrain::ChunkKey, Option<Box<[rbx_terrain::Cell]>>)>;
 
+/// What a capture answers with: width, height and RGBA8 rows.
+pub(crate) type Captured = Result<(u32, u32, Vec<u8>), String>;
+
 enum Command {
     Input(CameraInput),
+    /// One synchronous frame for `screen_capture`, drawn even while the
+    /// panel is hidden, from `at` (eye, look-at) or the current view.
+    Capture {
+        at: Option<([f32; 3], [f32; 3])>,
+        reply: Sender<Captured>,
+    },
     /// A wheel event at `at`, in the frame's pixels: scrolls the
     /// `ScrollingFrame` under it if one can take `scroll` (reported back
     /// through [`Ready::scrolls`]), else steps the camera by `camera`
@@ -368,6 +377,18 @@ impl Pump {
     /// [`canvas`]. Sending the same request again costs nothing.
     pub(super) fn canvas(&self, request: Option<canvas::Request>) {
         let _ = self.commands.send(Command::Canvas(request));
+    }
+
+    /// Asks for one frame at the panel's last known size, see
+    /// [`Command::Capture`].
+    pub(super) fn capture(&self, at: Option<([f32; 3], [f32; 3])>) -> Receiver<Captured> {
+        let (reply, answer) = mpsc::channel();
+        if let Err(mpsc::SendError(Command::Capture { reply, .. })) =
+            self.commands.send(Command::Capture { at, reply })
+        {
+            let _ = reply.send(Err("the viewport is closed".to_string()));
+        }
+        answer
     }
 
     /// Drops the viewer (scene, GPU device, decoded assets) while the place
@@ -930,6 +951,18 @@ fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
                 }
                 Err(err) => eprintln!("rbxstudio: plugin adornments failed: {err}"),
             }
+        }
+        Command::Capture { at, reply } => {
+            let (width, height) = *rendering.size;
+            let outcome = if width == 0 || height == 0 {
+                Err("the viewport has no size yet".to_string())
+            } else {
+                rendering
+                    .viewer
+                    .capture(width, height, at)
+                    .map(|rendered| (width, height, rendered.pixels))
+            };
+            let _ = reply.send(outcome);
         }
         Command::Visible(new) => *rendering.visible = new,
         Command::Canvas(request) => rendering.canvas.set(request),

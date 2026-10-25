@@ -700,6 +700,7 @@ impl Shell {
         while let Ok(event) = channel.events().try_recv() {
             changed = true;
             if self.playtests_uplink(&event)
+                || self.mcp_uplink(&event)
                 || self.live_apply(&event, cx)
                 || self.play_debug_event(&event, cx)
             {
@@ -807,6 +808,12 @@ impl Shell {
             cx.notify();
         }
         true
+    }
+
+    /// Sends `body` down the open link; its command id, or `None` with no
+    /// link.
+    pub(in crate::shell) fn play_send(&self, body: rbx_play::protocol::CommandBody) -> Option<u64> {
+        self.play.link.as_ref().map(|link| link.channel.send(body))
     }
 
     /// The embedded client while it is shown over the 3D view.

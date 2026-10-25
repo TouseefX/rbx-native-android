@@ -11,8 +11,16 @@ use crate::command_bar::Feedback;
 use crate::mcp::protocol::Reply;
 use crate::mcp::{self, endpoint::Server, PlayState, ScriptEdit, Session, Studio};
 
+use super::play::live::View;
 use super::play::Phase;
 use super::Shell;
+
+mod capture;
+mod jobs;
+#[cfg(test)]
+mod tests;
+
+pub(super) use jobs::Jobs;
 
 pub(crate) const BETA_ID: &str = "mcp-server";
 
@@ -64,6 +72,7 @@ impl Shell {
             return;
         };
         let requests = server.drain();
+        self.mcp_poll(cx);
         if requests.is_empty() {
             return;
         }
@@ -75,6 +84,8 @@ impl Shell {
         let studio = self.mcp_studio();
         for request in requests {
             let mut session = Session::new(self.edit_dom(), &self.properties, &studio);
+            session.client = self.live_dom(View::Client);
+            session.server = self.live_dom(View::Server);
             let reply = mcp::protocol::handle(request.line(), &mut session);
             let planned = session.planned.take();
             if let Some(edit) = planned {
@@ -92,6 +103,7 @@ impl Shell {
                             .push_warning(&format!("MCP server could not run a tool: {err}"));
                     }
                 }
+                Some(Reply::Job { id, job }) => self.mcp_job(request, id, job, cx),
                 reply => request.answer(reply.map(Reply::wait)),
             }
         }
