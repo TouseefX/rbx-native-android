@@ -73,7 +73,7 @@ impl Client {
     /// private places too (checked live, 2026-09-25). `None` for a place id
     /// that does not exist.
     pub fn universe_of_place(&self, place_id: u64) -> Result<Option<u64>, CloudError> {
-        let url = format!("https://apis.roblox.com/universes/v1/places/{place_id}/universe");
+        let url = self.apis_url(&format!("/universes/v1/places/{place_id}/universe"));
         let response = self.get_raw(&url, false, true)?;
         if !(200..300).contains(&response.status) {
             return Err(error::error_for_status(

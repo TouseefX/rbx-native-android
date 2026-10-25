@@ -2,9 +2,10 @@
 //! server's, and the dotted paths they name instances by.
 
 mod datamodel;
+mod assets;
 mod edit;
-mod luau;
 mod input;
+mod luau;
 mod scripts;
 mod studio;
 mod tree;
@@ -20,6 +21,7 @@ use super::protocol::{Failure, INVALID_PARAMS};
 use super::Session;
 use datamodel::{any_datamodel_type, datamodel_dom, datamodel_type, edit_datamodel};
 
+pub(crate) use assets::{inserted, Insertion};
 pub(crate) use edit::{apply as apply_edit, ScriptEdit};
 pub(crate) use studio::{LIST_STUDIOS, STUDIOS_KEY, STUDIO_STATE};
 
@@ -134,11 +136,15 @@ pub(super) fn list() -> Value {
         tools.extend(luau::schemas());
         tools.push(super::broker::subagent_schema());
         tools.extend(input::schemas());
+        tools.extend(assets::list());
         for tool in tools.iter_mut() {
-            tool["inputSchema"]["properties"]["studio_id"] = string(
-                "The editor to act on, from list_roblox_studios. May be left out when only one \
-                 editor is open.",
-            );
+            let id = &mut tool["inputSchema"]["properties"]["studio_id"];
+            if id.is_null() {
+                *id = string(
+                    "The editor to act on, from list_roblox_studios. May be left out when only \
+                     one editor is open.",
+                );
+            }
         }
         tools.push(tool(
             LIST_STUDIOS,
@@ -195,7 +201,10 @@ fn run(name: &str, arguments: &Value, session: &mut Session) -> Result<Outcome, 
         luau::START_STOP_PLAY => luau::start_stop(arguments, session),
         luau::CONSOLE_OUTPUT => luau::console(session),
         luau::SCREEN_CAPTURE => luau::capture(arguments, session),
-        _ => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
+        _ => match assets::run(name, arguments, session) {
+            Some(outcome) => outcome,
+            None => return Err((INVALID_PARAMS, format!("unknown tool: {name}"))),
+        },
     })
 }
 

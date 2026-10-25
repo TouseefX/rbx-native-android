@@ -22,7 +22,9 @@
 //! planned there ([`Session::planned`]); the shell applies it through the
 //! same DOM write and undo history a script tab's own edits take. Only a
 //! grep, whose Luau pattern has no bound on how long it takes, runs off that
-//! thread, over a copy of the scripts ([`Session::deferred`]).
+//! thread, over a copy of the scripts ([`Session::deferred`]). An
+//! `insert_asset` downloads off that thread too ([`Session::inserting`]), and
+//! the shell then writes what came back into the place like any other insert.
 
 pub(crate) mod bridge;
 pub(crate) mod broker;
@@ -36,7 +38,7 @@ use rbx_dom::WeakDom;
 
 use crate::properties::Properties;
 
-pub(crate) use tools::{apply_edit, image_content, text_content, ScriptEdit};
+pub(crate) use tools::{apply_edit, image_content, inserted, text_content, Insertion, ScriptEdit};
 
 /// The command-line flag that turns `rbxstudio` into the [`bridge`].
 pub(crate) const BRIDGE_FLAG: &str = "--mcp";
@@ -62,6 +64,9 @@ pub(crate) struct Session<'a> {
     pub(crate) job: Option<Job>,
     /// The running playtest the input tools act on; `None` outside Play.
     pub(crate) play: Option<PlayInput>,
+    /// The download an `insert_asset` call started, which the shell runs off
+    /// the UI thread and then grafts into the place as one undo step.
+    pub(crate) inserting: Option<Inserting>,
 }
 
 /// A running playtest as the input tools reach it, from any thread.
@@ -125,6 +130,10 @@ pub(crate) type JobOutcome = Result<Vec<serde_json::Value>, String>;
 /// long it takes, and the place can change meanwhile.
 pub(crate) type Deferred = Box<dyn FnOnce() -> Result<serde_json::Value, String> + Send>;
 
+/// Fetches what an `insert_asset` call adds; nothing in the place changes
+/// until the shell grafts its [`Insertion`] on the UI thread.
+pub(crate) type Inserting = Box<dyn FnOnce() -> Result<Insertion, String> + Send>;
+
 impl<'a> Session<'a> {
     pub(crate) fn new(dom: &'a WeakDom, properties: &'a Properties, studio: &'a Studio) -> Self {
         Session {
@@ -137,6 +146,7 @@ impl<'a> Session<'a> {
             server: None,
             job: None,
             play: None,
+            inserting: None,
         }
     }
 }

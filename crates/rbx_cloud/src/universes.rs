@@ -45,7 +45,7 @@ struct UniverseRaw {
 
 impl Client {
     pub fn universe(&self, universe_id: u64) -> Result<Universe, CloudError> {
-        let url = format!("https://apis.roblox.com/cloud/v2/universes/{universe_id}");
+        let url = self.apis_url(&format!("/cloud/v2/universes/{universe_id}"));
         let response = self.get_raw(&url, true, true)?;
         if !(200..300).contains(&response.status) {
             return Err(error::error_for_status(
