@@ -13,12 +13,12 @@ Verified in `reference/engine/classes/AnalyticsService.yaml` and `production/ana
 
 - **Server only, published games only.** Events from LocalScripts or from Studio test sessions are not recorded. Log from server Scripts, after the action succeeded (not on the attempt).
 - `LogOnboardingFunnelStepEvent(player, step: int, stepName: string?, customFields: Dictionary?)`: one-time funnel, first session.
-- `LogFunnelStepEvent(player, funnelName: string, funnelSessionId: string?, step: int, stepName: string?, customFields?)`: recurring funnels (shop purchase flow, round flow). Pass `funnelSessionId` (for example `HttpService:GenerateGUID()`) so each attempt is a separate session. Steps 1 to 100; a repeated step in the same session is ignored; skipped steps count as completed.
+- `LogFunnelStepEvent(player, funnelName: string, funnelSessionId: string?, step: int, stepName: string?, customFields?)`: recurring funnels (shop purchase flow, round flow). Pass `funnelSessionId` (for example `HttpService:GenerateGUID()`) so each attempt is a separate session. Steps 1 to 100; a repeated step in the same session (or with a nil `funnelSessionId`) is ignored; skipped steps count as completed. A user's saved step expires after 180 days without events (`production/analytics/funnel-events.md`).
 - `LogEconomyEvent(player, flowType: Enum.AnalyticsEconomyFlowType, currencyType: string, amount: number, endingBalance: number, transactionType: string, itemSku: string?, customFields?)`. `flowType` is `Source` (earned) or `Sink` (spent). `amount` is always positive. `transactionType` takes the `.Name` of `Enum.AnalyticsEconomyTransactionType`: `IAP`, `Shop`, `Gameplay`, `ContextualPurchase`, `TimedReward`, `Onboarding`, or your own string.
-- `LogProgressionEvent(player, progressionPathName, status: Enum.AnalyticsProgressionType, level: int, levelName: string?, customFields?)` plus shortcuts `LogProgressionStartEvent`, `LogProgressionCompleteEvent`, `LogProgressionFailEvent(player, progressionPathName, level, levelName?, customFields?)`. The class reference says progression events do not show in Roblox charts yet; log them anyway if levels matter, they appear in event exports.
+- `LogProgressionEvent(player, progressionPathName, status: Enum.AnalyticsProgressionType, level: int, levelName: string?, customFields?)` plus shortcuts `LogProgressionStartEvent`, `LogProgressionCompleteEvent`, `LogProgressionFailEvent(player, progressionPathName, level, levelName?, customFields?)`. `progressionPathName` cannot be empty or contain commas or quotes. The class reference says progression events do not show in Roblox charts yet; log them anyway if levels matter, they appear in event exports.
 - `LogCustomEvent(player, eventName: string, value: number = 1, customFields?)`: counters and values (deaths per round, time to first pet).
 - **Custom fields**: up to 3 per event, keys `Enum.AnalyticsCustomFieldKeys.CustomField01.Name` to `CustomField03.Name`, string values. Use them for segments ("class", "device", "abVariant") instead of making new event or currency names (`production/analytics/custom-fields.md`).
-- `AnalyticsService:GetPlayerSegmentsAsync(player)` (server, yields) returns platform segments such as payer status and when the user first played. Useful to tailor offers to new vs returning players.
+- `AnalyticsService:GetPlayerSegmentsAsync(player)` (server, yields) returns coarse segments (`ActivePayerStatus`, `WhenUserFirstPlayed`, `UserNewReturningStatus`, `EngagementLevel` and more). Check `HasData` first: when false, every field is `Unknown`. Useful to tailor offers to new vs returning players, never to pressure a payer.
 - **Limits** (`production/analytics/event-types.md`): 10 funnels, 100 steps per funnel, 100 custom event names, 20 transaction types and 100 item SKUs before values group into "Other", 8,000 combined custom-field values. Currency types: the event-types table says 10, the class reference says 5; design for 5. Rate limit 120 + 20 x CCU requests per minute across the server, so batch frequent counters.
 - Dashboards take about 24 hours to populate; the "View Events" tool shows near real time events for checking instrumentation.
 
@@ -95,6 +95,13 @@ Roblox's own advice (`production/analytics/index.md`, `retention.md`, `engagemen
 | ARPPU high, conversion very low | only whales buy | spender segments | A low-price starter pack (`growth-monetization`) |
 | Soft currency balance keeps climbing | sinks too weak (inflation) | economy Source vs Sink | Add sinks (upgrades, rebirth, cosmetics), slow sources |
 | Sudden drop after an update | bug or a disliked change | error report and crashes by version, funnels before/after | Roll back the change, hotfix, update log explaining |
+
+## From numbers to a prioritised update list
+
+1. List every leak found (funnel step, metric below its band, economy imbalance) plus requests from feedback (`growth-retention`, "Generating update ideas").
+2. For each, write: metric it moves, expected size (small/medium/large), confidence (data, feedback or guess), effort in days.
+3. Score = impact x confidence / effort. Sort. Fix first-session and crash problems before new content, then retention, then monetization (order above).
+4. Take the top 1 to 3 into the next weekly or monthly update, and name the success metric and the date to read it. Re-read the same funnel after shipping (`production/game-design/analytics-essentials.md`, `content-updates.md`).
 
 ## Writing the report
 
