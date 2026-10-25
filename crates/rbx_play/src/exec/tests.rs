@@ -91,7 +91,10 @@ fn client_expression_returns_its_value() {
 #[test]
 fn client_statements_return_tables_as_json() {
     let source = "local t = {} for i = 1, 3 do t[i] = i * i end return t";
-    assert_eq!(run(&vm(), Side::Client, source), (true, r#"{"1":1,"2":4,"3":9}"#.into()));
+    assert_eq!(
+        run(&vm(), Side::Client, source),
+        (true, r#"{"1":1,"2":4,"3":9}"#.into())
+    );
 }
 
 #[test]
@@ -99,6 +102,15 @@ fn client_error_is_not_ok() {
     let (ok, text) = run(&vm(), Side::Client, "local a = 1\nerror('boom')");
     assert!(!ok);
     assert_eq!(text, "AssistantCommand:2: boom");
+}
+
+#[test]
+fn client_syntax_error_names_the_chunk_like_the_server() {
+    let client = command(Side::Client, "local = 1").unwrap_err();
+    let (ok, server) = run(&vm(), Side::Server, "local = 1");
+    assert!(!ok);
+    assert!(client.starts_with("AssistantCommand:1: "), "{client}");
+    assert!(server.ends_with(&client), "{server} / {client}");
 }
 
 #[test]
