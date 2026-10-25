@@ -15,6 +15,12 @@
   `docs/research/ugc-creators/README.md` covering what Studio gives people
   who make avatar items, what rbx-native already has, what's missing and
   what Roblox doesn't expose. Docs only. (@chteau)
+- **A splash screen at start-up.** A bare `rbxstudio` now opens a small
+  window where the two halves of the logo spin in from far away and land
+  on the README logo, in under a second, while the stored key loads.
+  Home or the setup wizard opens as soon as both are done. Reduce Motion
+  shows the finished logo straight away, and opening a place from the
+  command line skips it. (@chteau)
 
 ## 2026-10-21
 
