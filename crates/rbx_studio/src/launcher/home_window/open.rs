@@ -164,7 +164,9 @@ impl HomeWindow {
                     .update(cx, |_, window, _| window.remove_window());
             }
             Err(failed) => {
-                let (message, boot) = *failed;
+                let (message, mut boot) = *failed;
+                // Game Settings was for this open only.
+                boot.launch.configure = None;
                 *self.boot.borrow_mut() = Some(boot);
                 self.dialog = Some(Dialog::Error {
                     experience: None,

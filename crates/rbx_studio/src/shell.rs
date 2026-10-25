@@ -614,6 +614,7 @@ impl Shell {
             device_scaling,
             device_keyboard_layout,
             closed_documents,
+            recent_icons: _,
         } = settings;
         // Before anything renders: every size token is read through these,
         // so a scale or target floor applied after the first frame would
@@ -1214,6 +1215,9 @@ impl Shell {
         // mutated.
         shell.apply_debug_save(cx);
         shell.apply_debug_roblox(cx);
+        if let Some(page) = launch.configure {
+            shell.configure_game(page, cx);
+        }
 
         shell.offer_merge_sidecar(cx);
         shell.watch_theme(cx);
@@ -1908,6 +1912,8 @@ impl Shell {
             device_scaling: self.device_sim.scaling,
             device_keyboard_layout: self.device_sim.layout,
             closed_documents: self.documents.saved(),
+            // Home's choice, which the editor never changes: keep the file's.
+            recent_icons: Settings::load().recent_icons,
         };
         let _ = settings.save();
 

@@ -33,7 +33,7 @@ impl HomeWindow {
                     })
                     .into_any_element()
             } else {
-                self.recent_table(&rows, grid, true, cx).into_any_element()
+                self.recent_body(&rows, grid, true, cx)
             })
             .child(ui::text(11.5, 16.).text_color(tokens::text3()).child(
                 "RbxNative keeps your last 20 places. Files that were moved or deleted drop off the list.",
@@ -41,14 +41,29 @@ impl HomeWindow {
             .into_any_element()
     }
 
-    pub(super) fn recent_table(
+    /// The list or the icons, whichever the toggle picked.
+    pub(super) fn recent_body(
+        &self,
+        rows: &[RecentPlace],
+        grid: &Grid,
+        header: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        if self.recent_icons {
+            self.recent_tiles(rows, grid, cx).into_any_element()
+        } else {
+            self.recent_table(rows, grid, header, cx).into_any_element()
+        }
+    }
+
+    fn recent_table(
         &self,
         rows: &[RecentPlace],
         grid: &Grid,
         header: bool,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let fluid = grid.content - 2. - 28. - GAP * 3. - 200. - 140.;
+        let fluid = grid.content - 2. - 28. - GAP * 4. - 200. - 140. - MORE;
         let name_w = fluid * 1.3 / 2.9;
         let path_w = fluid * 1.6 / 2.9;
         let last = rows.len().saturating_sub(1);
@@ -74,7 +89,8 @@ impl HomeWindow {
                         .child(div().w(px(name_w)).child("NAME"))
                         .child(div().w(px(path_w)).child("LOCATION"))
                         .child(div().w(px(200.)).child("ROBLOX"))
-                        .child(div().w(px(140.)).text_right().child("OPENED")),
+                        .child(div().w(px(140.)).text_right().child("OPENED"))
+                        .child(div().w(px(MORE))),
                 )
             })
             .children(rows.iter().enumerate().map(|(index, place)| {
@@ -91,6 +107,7 @@ impl HomeWindow {
                         .into_any_element(),
                 };
                 let open = place.clone();
+                let menu = place.clone();
                 h_flex()
                     .id(SharedString::from(format!("recent-{index}")))
                     .h(px(40.))
@@ -132,6 +149,13 @@ impl HomeWindow {
                             .text_right()
                             .text_color(tokens::text2())
                             .child(place.opened.map(opened_label).unwrap_or_default()),
+                    )
+                    .child(self.more_button(("recent-more", index), place, cx))
+                    .on_mouse_down(
+                        MouseButton::Right,
+                        cx.listener(move |this, event: &MouseDownEvent, _, cx| {
+                            this.open_recent_menu(menu.clone(), event.position, cx)
+                        }),
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.open_recent(&open, cx)))
             }))
