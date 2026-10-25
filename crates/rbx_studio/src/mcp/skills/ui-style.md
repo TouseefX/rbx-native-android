@@ -152,6 +152,7 @@ fit()
 - Several `UIStroke`s on one object draw in `ZIndex` order: use two for an outline plus glow.
 - A `UIGradient` under a `UIStroke` makes a gradient stroke. A `UIGradient` under a GuiObject tints its fill (and text colour on text objects). `Rotation` 90 runs top to bottom. Max 20 keypoints.
 - `UICorner.CornerRadius` is a UDim. `UDim.new(0.25, 0)` scales with size (good for square buttons), `UDim.new(0, 12)` is fixed. Per-corner radii exist (`TopLeftRadius`, etc.).
+- Any label whose text has tags (`<font color>`, `<b>`, `<s>`, `<stroke>`) needs `RichText = true`, or players see the raw tags. Check every one.
 - The legacy `TextStrokeTransparency` renders the outline four times and looks thin and blurry. Use a `UIStroke` child on text instead. Rich text also takes `<stroke color="#1A1A1A" thickness="3">`.
 - There is no blur-behind-UI. `BlurEffect` in `Lighting` blurs the 3D world only; use it when a menu opens for the sleek "frosted" look.
 - `CanvasGroup` flattens a subtree so `GroupTransparency` fades it as one, and it always clips. Good for fades and for clipping rotated shine strips. Costs texture memory, so do not wrap the whole HUD in one.
