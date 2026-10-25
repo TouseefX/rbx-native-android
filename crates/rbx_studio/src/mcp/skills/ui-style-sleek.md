@@ -21,6 +21,9 @@ Sleek is the hardest style to do without falling into the anti-pattern, because 
 
 ## Palette
 
+These hex values are a starting point. Shift them toward the game's own world and characters (`ui-style` section 4) so two games in this style never share a palette.
+
+
 | Role | Value |
 | --- | --- |
 | Dim overlay | `#000000` at transparency 0.7 |

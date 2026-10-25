@@ -7,6 +7,17 @@ description: Drawing your own SVG icons that match the chosen Roblox UI style (o
 
 Text-only buttons and emoji icons are a tell of generic UI. Every HUD button, currency, shop item and tab needs an icon, all drawn the same way. When no fitting asset exists, draw it as SVG yourself, rasterize it, upload it. Pull `ui-style` first so you know which style you are drawing for.
 
+## What good icons look like
+
+Look-only references for the quality bar: the packs on gfxcomet.com/category/packs and the free icon pack at builtbybit.com/resources/free-icon-pack.54420. Study them, never copy a shape. What they get right:
+
+- **Consistent stroke**: every icon in a pack has the same outline weight and colour, so a coin, a gem and a gear sit together.
+- **Two-tone shading**: a base fill plus one darker shade of the same hue on the side away from the light, and one highlight. No noisy gradients.
+- **Readable silhouette**: you can tell what it is at 32 px as a solid shape. Big simple forms, a few bold inner lines, no hairline detail.
+- **Tier variants**: the same icon recoloured (bronze, silver, gold, rainbow) for rarity, instead of a new drawing per tier.
+
+Then give the set this game's identity (`ui-style` section 4): one shape trait shared by every icon (a soft squircle backing, a notched corner, a tilted angle) or the game's emblem worked into the currency icon. A set that could ship in any game is a stock pack.
+
 ## Rules for a consistent set
 
 1. **One grid**: draw every icon on the same canvas (`viewBox="0 0 128 128"` for cartoony/trendy, `0 0 24 24` for sleek line icons). Keep 6 to 8 percent padding so outlines do not touch the edge.
@@ -119,5 +130,5 @@ return {
 
 - Do not mix a cartoony coin with a sleek line bag in one UI.
 - Do not use emoji or Unicode symbols as icons.
-- Do not copy icons from paid packs or other games. Draw your own; you can study how pro packs shade (thick outline, top-left highlight, darker lower third, gold and rainbow tier variants of the same icon) without copying any shape.
+- Do not copy icons from paid packs, free packs or other games, and never download or upload someone else's asset. Draw your own.
 - Do not upload huge PNGs (over 1024 px) for small icons; it wastes memory.

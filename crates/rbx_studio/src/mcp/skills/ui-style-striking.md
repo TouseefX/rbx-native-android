@@ -19,6 +19,9 @@ For one screen that has to feel like an event: a seasonal shop, a battle pass, a
 
 ## Palette
 
+These hex values are a starting point. Shift them toward the game's own world and characters (`ui-style` section 4) so two games in this style never share a palette.
+
+
 | Role | Value |
 | --- | --- |
 | Background gradient | `#6A2BFF` to `#B13CFF` with `#8C4DFF` star pattern at 0.8 transparency |
