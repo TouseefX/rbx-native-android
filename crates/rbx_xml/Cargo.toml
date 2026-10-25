@@ -6,6 +6,9 @@ license.workspace = true
 
 [dependencies]
 rbx_dom = { path = "../rbx_dom" }
+# The bundled API dump: which XML type Studio saves each property as (a
+# legacy ContentId as `Content`/`url`, script `Source` as `ProtectedString`).
+rbx_reflection = { path = "../rbx_reflection", features = ["embedded-dump"] }
 thiserror = "2"
 # Standard streaming XML reader for the ecosystem; already resolved in
 # Cargo.lock (pulled in transitively via wayland-scanner) so this adds no new
