@@ -168,7 +168,7 @@ pub(super) fn slot_mode(key: Key, group: Group, value: u32) -> Writes {
     let mut writes = vec![(key, Variant::Enum(value))];
     if value == 0 {
         for slot in group.slots() {
-            writes.extend(slot.write(SlotValue::Off));
+            writes.extend(slot.write(SlotValue::Off, None));
         }
     }
     writes

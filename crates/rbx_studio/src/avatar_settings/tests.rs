@@ -43,18 +43,32 @@ fn a_bare_service_gets_its_rules_on_the_first_write() {
 }
 
 #[test]
-fn a_slot_round_trips_and_keeps_its_older_twin_in_step() {
+fn a_slot_round_trips_through_the_pair_studio_saves() {
     let hair = &ACCESSORY_SLOTS[0];
     for value in [
         SlotValue::Asset(63690008),
         SlotValue::Remove,
         SlotValue::Off,
     ] {
-        let dom = applied(test_place(), hair.write(value));
+        let dom = applied(test_place(), hair.write(value, None));
         let rules = Rules::find(&dom);
         assert_eq!(hair.read(&rules, &dom), value);
-        let legacy = rules.bool_of(&dom, (Rule::Accessory, "CustomHairAccessoryEnabled"));
-        assert_eq!(legacy, value != SlotValue::Off);
+        let enabled = rules.bool_of(&dom, (Rule::Accessory, "CustomHairAccessoryEnabled"));
+        assert_eq!(enabled, value != SlotValue::Off);
+        // A ticked, empty row is the pair with no id, never a sentinel.
+        let id = rules.int_of(&dom, (Rule::Accessory, "CustomHairAccessoryId"));
+        assert_eq!(
+            id,
+            if let SlotValue::Asset(id) = value {
+                id
+            } else {
+                0
+            }
+        );
+        assert_eq!(
+            rules.int_of(&dom, (Rule::Accessory, "HairAccessoryOverride")),
+            0
+        );
     }
 }
 
@@ -81,19 +95,44 @@ fn a_file_with_only_the_older_pair_still_reads() {
 }
 
 #[test]
-fn emptying_tops_removes_every_top_kind() {
-    let dom = applied(test_place(), CLOTHING_SLOTS[0].write(SlotValue::Remove));
+fn emptying_tops_ticks_every_top_kind() {
+    let dom = applied(
+        test_place(),
+        CLOTHING_SLOTS[0].write(SlotValue::Remove, None),
+    );
     let rules = Rules::find(&dom);
-    for name in [
-        "ShirtAccessoryOverride",
-        "TShirtAccessoryOverride",
-        "SweaterAccessoryOverride",
+    for (enabled, id) in [
+        ("CustomShirtAccessoryEnabled", "CustomShirtAccessoryId"),
+        ("CustomTShirtAccessoryEnabled", "CustomTShirtAccessoryId"),
+        ("CustomSweaterAccessoryEnabled", "CustomSweaterAccessoryId"),
     ] {
-        assert_eq!(rules.int_of(&dom, (Rule::Clothing, name)), -1, "{name}");
+        assert!(rules.bool_of(&dom, (Rule::Clothing, enabled)), "{enabled}");
+        assert_eq!(rules.int_of(&dom, (Rule::Clothing, id)), 0, "{id}");
     }
+    assert!(!rules.bool_of(&dom, (Rule::Clothing, "CustomPantsAccessoryEnabled")));
+    assert_eq!(CLOTHING_SLOTS[0].read(&rules, &dom), SlotValue::Remove);
+}
+
+#[test]
+fn a_tops_id_lands_on_its_own_kind_like_studio() {
+    // Studio filed a T-shirt typed into Tops under the T-shirt pair.
+    let tops = &CLOTHING_SLOTS[0];
+    let dom = applied(
+        test_place(),
+        tops.write(SlotValue::Asset(7178736794), Some(64)),
+    );
+    let rules = Rules::find(&dom);
+    let id = |name| rules.int_of(&dom, (Rule::Clothing, name));
+    assert_eq!(id("CustomTShirtAccessoryId"), 7178736794);
+    assert_eq!(id("CustomShirtAccessoryId"), 0);
+    assert!(rules.bool_of(&dom, (Rule::Clothing, "CustomSweaterAccessoryEnabled")));
+    assert_eq!(tops.read(&rules, &dom), SlotValue::Asset(7178736794));
+    // An unknown type falls back to the row's first kind.
+    let dom = applied(test_place(), tops.write(SlotValue::Asset(5), None));
+    let rules = Rules::find(&dom);
     assert_eq!(
-        rules.int_of(&dom, (Rule::Clothing, "PantsAccessoryOverride")),
-        0
+        rules.int_of(&dom, (Rule::Clothing, "CustomShirtAccessoryId")),
+        5
     );
 }
 
@@ -112,7 +151,7 @@ fn consistent_gameplay_is_detected_and_a_custom_part_breaks_it() {
     );
     assert_eq!(rules.vector_of(&dom, COLLIDER_SIZE), [2.0, 3.0, 1.0]);
 
-    let dom = applied(dom, BODY_SLOTS[3].write(SlotValue::Asset(86500008)));
+    let dom = applied(dom, BODY_SLOTS[3].write(SlotValue::Asset(86500008), None));
     assert_eq!(Preset::detect(&Rules::find(&dom), &dom), None);
 
     let dom = applied(dom, Preset::PlayerChoice.writes());
@@ -128,6 +167,9 @@ fn ranges_clamp_to_the_sliders_and_come_out_ordered() {
     assert_eq!(writes[0].1, range(0.9, 1.05));
     let writes = write_height(7.0, 1.0);
     assert_eq!(writes[0].1, range(HEIGHT_RANGE.0, 7.0));
+    // Studio's boxes go past the slider's 10 studs, up to 25.
+    let writes = write_height(3.5, 50.0);
+    assert_eq!(writes[0].1, range(3.5, 25.0));
 }
 
 #[test]
@@ -158,7 +200,7 @@ fn avatar_type_lands_on_both_spellings() {
 #[test]
 fn edits_survive_a_save_and_reload() {
     let mut writes = Preset::ConsistentGameplay.writes();
-    writes.extend(CLIP_SLOTS[5].write(SlotValue::Asset(507766388)));
+    writes.extend(CLIP_SLOTS[5].write(SlotValue::Asset(507766388), None));
     writes.extend(BUILD_RANGES[1].write(75.0, 95.0));
     writes.push((CLOTHING_MODE, Variant::Enum(1)));
     writes.push(((Rule::Clothing, "LimitBounds"), vector([1.0, 2.0, 3.0])));

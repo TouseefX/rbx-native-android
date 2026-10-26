@@ -83,7 +83,7 @@ impl Preset {
             .chain(&ACCESSORY_SLOTS)
             .chain(&CLIP_SLOTS)
         {
-            writes.extend(slot.write(SlotValue::Off));
+            writes.extend(slot.write(SlotValue::Off, None));
         }
         writes
     }

@@ -7,8 +7,11 @@
 //! Every control writes straight to the DOM through the same snapshot,
 //! reflect and record steps as a Properties edit, so each change is one
 //! undo step and Ctrl+S saves it. Studio stages its edits behind Save
-//! changes because saving there republishes the experience; here the
-//! place file is what gets saved, so there is nothing to stage.
+//! changes because saving there writes the experience's own copy of the
+//! settings; here the place file is what gets saved, so there is nothing
+//! to stage. Studio loads that experience copy over the place's rules, so
+//! a published place edited here still shows the experience's settings
+//! in Studio's dock.
 //!
 //! The Preview toggle (a lineup of sample avatars under the camera) is
 //! drawn but disabled: it needs avatar rigs this editor does not load.

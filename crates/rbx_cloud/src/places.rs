@@ -104,24 +104,6 @@ impl Client {
         }))
     }
 
-    /// Archives an experience. Open Cloud has no archive call for a
-    /// universe, only the assets API's `:archive` (beta, `asset:read` +
-    /// `asset:write`), so this archives its start place, which is an asset
-    /// like any other. Undone with `:restore`, or from the Creator Dashboard.
-    pub fn archive_experience(&self, universe_id: u64) -> Result<(), CloudError> {
-        let root = self.experience_settings(universe_id)?.root_place_id;
-        self.archive_asset(root)
-    }
-
-    fn archive_asset(&self, asset_id: u64) -> Result<(), CloudError> {
-        let url = self.apis_url(&format!("/assets/v1/assets/{asset_id}:archive"));
-        let response = self.post_json_raw(&url, true, &serde_json::json!({}))?;
-        if (200..300).contains(&response.status) {
-            return Ok(());
-        }
-        crate::create_asset::answer(&url, response).map(drop)
-    }
-
     /// Every place of an experience, start place included, oldest first:
     /// `GET develop.roblox.com/v1/universes/{id}/places`, page by page.
     /// Anonymous; it answered for a private test universe too (checked
@@ -290,55 +272,6 @@ mod tests {
                 (925308243, "Cheeteau".to_string())
             ]
         );
-    }
-
-    /// Answers one request with `status` and `body`, handing back what it was sent.
-    fn answer_once(status: u16, body: &'static str) -> (String, std::thread::JoinHandle<String>) {
-        use std::io::{Read, Write};
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let root = format!("http://{}", listener.local_addr().unwrap());
-        let served = std::thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap();
-            let mut buf = [0u8; 4096];
-            let read = stream.read(&mut buf).unwrap();
-            let reply = format!(
-                "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                body.len()
-            );
-            stream.write_all(reply.as_bytes()).unwrap();
-            String::from_utf8_lossy(&buf[..read]).into_owned()
-        });
-        (root, served)
-    }
-
-    fn keyed(root: &str) -> Client {
-        Client::new(Some(crate::ApiKey::new("test-key"))).with_apis_root(root)
-    }
-
-    #[test]
-    fn archiving_posts_to_the_assets_archive_route_with_the_key() {
-        let (root, served) = answer_once(200, r#"{"assetId":"7","state":"Archived"}"#);
-        keyed(&root).archive_asset(7).unwrap();
-        let request = served.join().unwrap();
-        assert!(
-            request.starts_with("POST /assets/v1/assets/7:archive "),
-            "{request}"
-        );
-        assert!(
-            request.to_lowercase().contains("x-api-key: test-key"),
-            "{request}"
-        );
-    }
-
-    #[test]
-    fn a_refused_archive_says_why() {
-        let (root, served) = answer_once(
-            403,
-            r#"{"code":"PERMISSION_DENIED","message":"Insufficient scope asset:write"}"#,
-        );
-        let err = keyed(&root).archive_asset(7).unwrap_err();
-        served.join().unwrap();
-        assert!(err.to_string().contains("asset:write"), "{err}");
     }
 
     #[test]
