@@ -940,8 +940,15 @@ impl Renderer {
             // particles as well as over opaque geometry, unlike a `ScreenGui`, a
             // `BillboardGui`/`SurfaceGui` *is* scene content and is tone mapped
             // with the rest of it.
-            self.gui
-                .draw_space(device, queue, &mut encoder, targets, eye, view_projection);
+            self.gui.draw_space(
+                device,
+                queue,
+                &mut encoder,
+                targets,
+                eye,
+                view_projection,
+                size.1,
+            );
         }
 
         // After every pass that draws scene content, so the silhouette is

@@ -7,7 +7,7 @@ use rbx_dom::Ref;
 use super::super::super::Shell;
 use super::super::draw::TOOL_KEYS;
 use super::super::order::Arrange;
-use crate::shortcuts::{pressed, Command};
+use crate::shortcuts::{pressed, released, Command};
 use crate::ui_canvas::{position_shift, shifted_in, udim2_text, View};
 
 /// Room left round the selection when the canvas zooms to it.
@@ -149,7 +149,7 @@ impl Shell {
     }
 
     pub(in crate::shell::ui_editor) fn canvas_key_up(&mut self, keystroke: &Keystroke) {
-        if keystroke.key == "space" {
+        if released(Command::UiPan, keystroke) {
             self.ui.panning = false;
         }
     }

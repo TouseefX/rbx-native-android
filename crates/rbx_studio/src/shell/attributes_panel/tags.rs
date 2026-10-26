@@ -176,13 +176,13 @@ impl Shell {
         };
         let tag = input.read(cx).value().trim().to_owned();
 
-        self.push_history();
+        let before = self.history_snapshot();
         let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
         let result = attrs::add_tag(&mut dom, reference, &tag);
         self.dom = dom;
         let changes = self.dom.take_changes();
         self.reflect_changes(&changes, cx);
-        self.record_history_change(changes);
+        self.commit_history_step(before, changes);
 
         match result {
             Ok(()) => {
@@ -202,13 +202,13 @@ impl Shell {
         let Some(reference) = self.selected() else {
             return;
         };
-        self.push_history();
+        let before = self.history_snapshot();
         let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
         let result = attrs::remove_tag(&mut dom, reference, tag);
         self.dom = dom;
         let changes = self.dom.take_changes();
         self.reflect_changes(&changes, cx);
-        self.record_history_change(changes);
+        self.commit_history_step(before, changes);
 
         match result {
             Ok(()) => self.attribute_edits.tag_error = None,

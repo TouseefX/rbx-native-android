@@ -11,6 +11,12 @@ use gpui::{
 
 use super::layout::LastLayout;
 
+/// Width the line-number column grows by while a gutter is set, with the
+/// numbers pushed right by as much: markers sit at the column's left edge,
+/// and without their own room a breakpoint covered the first digit of a
+/// two-digit line number. Fits a 12px marker plus a hairline of air.
+pub(super) const MARKER_ROOM: Pixels = gpui::px(12.);
+
 /// Draws the marker for a 0-based buffer line, or nothing.
 pub type GutterMarker = Rc<dyn Fn(usize, &mut Window, &mut App) -> Option<AnyElement>>;
 /// A mouse button pressed over a 0-based buffer line's gutter cell.

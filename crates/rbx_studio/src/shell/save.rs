@@ -41,6 +41,11 @@ impl Shell {
         if crate::shortcuts::pressed(crate::shortcuts::Command::OpenPlace, keystroke) {
             self.open_place_dialog(cx);
         }
+        if crate::shortcuts::pressed(crate::shortcuts::Command::FocusPropertiesFilter, keystroke) {
+            self.set_panel_open(super::layout::Panel::Properties, true, cx);
+            self.filter
+                .update(cx, |filter, cx| filter.focus(window, cx));
+        }
         if let Some(Action::Save) = save::action_for(&keystroke.key, keystroke.modifiers) {
             self.save(cx);
         }
