@@ -719,9 +719,9 @@ impl Shell {
         let entered = cx.subscribe_in(
             command_bar.input(),
             window,
-            |shell, _, event: &InputEvent, window, cx| {
+            |shell, _, event: &InputEvent, _, cx| {
                 if matches!(event, InputEvent::PressEnter { .. }) {
-                    shell.run_typed_command(window, cx);
+                    shell.run_typed_command(cx);
                 }
             },
         );
