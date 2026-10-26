@@ -207,7 +207,7 @@ impl HomeWindow {
             ("NO API KEY YET", "Open and publish your Roblox places")
         };
         h_flex()
-            .h(px(172.))
+            .min_h(px(172.))
             .flex_none()
             .rounded(px(10.))
             .border_1()
@@ -221,6 +221,7 @@ impl HomeWindow {
                     .justify_center()
                     .gap(px(8.))
                     .px(px(28.))
+                    .py(px(24.))
                     .child(
                         ui::text(10., 14.)
                             .font_weight(FontWeight::BOLD)
@@ -264,7 +265,7 @@ impl HomeWindow {
                     .border_l_1()
                     .border_color(tokens::border())
                     .overflow_hidden()
-                    .child(dot_grid(380., 172.))
+                    .child(dot_grid(380., 240.))
                     .child(
                         h_flex()
                             .absolute()
@@ -272,7 +273,7 @@ impl HomeWindow {
                             .items_center()
                             .justify_center()
                             .gap(px(18.))
-                            .child(div().size(px(56.)).rounded(px(12.)).bg(ui::accent()))
+                            .child(crate::shell::chrome::logo(40.).text_color(ui::accent()))
                             .child(
                                 h_flex().w(px(64.)).gap(px(5.)).children(
                                     (0..6).map(|_| div().w(px(6.)).h(px(2.)).bg(tokens::accent_line())),
