@@ -76,11 +76,7 @@ impl Runtime {
                 *target.borrow_mut() = Some(if ok { Ok(text) } else { Err(text) });
                 Ok(())
             })?;
-        let wrapper = self
-            .lua
-            .load(WRAPPER)
-            .set_name("=Command bar")
-            .into_function()?;
+        let wrapper = self.lua.load(WRAPPER).set_name("=run").into_function()?;
         let args = MultiValue::from_iter([
             Value::Function(chunk),
             Value::Function(serialize),

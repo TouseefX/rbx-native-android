@@ -244,7 +244,7 @@ impl HomeWindow {
         this.reload(cx);
         this.load_session(cx);
         this.apply_capture_state(window, cx);
-        this.apply_recent_capture(window);
+        this.apply_recent_capture(window, cx);
         this
     }
 

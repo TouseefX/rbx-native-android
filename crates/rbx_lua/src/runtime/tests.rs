@@ -88,7 +88,7 @@ fn output_before_an_error_survives_everywhere() {
         .expect_err("the script fails");
     assert_eq!(error.output.lines(), ["before", "careful"]);
     assert_eq!(error.output.kinds(), [LineKind::Print, LineKind::Warn]);
-    assert!(error.to_string().contains("Command bar:1: boom"), "{error}");
+    assert!(error.to_string().contains("CommandBar:1: boom"), "{error}");
 
     let mut stepped = runtime();
     stepped.start("print('one') task.wait() print('two') error('late')");

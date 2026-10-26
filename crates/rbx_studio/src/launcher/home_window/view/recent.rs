@@ -153,8 +153,8 @@ impl HomeWindow {
                     .child(self.more_button(("recent-more", index), place, cx))
                     .on_mouse_down(
                         MouseButton::Right,
-                        cx.listener(move |this, event: &MouseDownEvent, _, cx| {
-                            this.open_recent_menu(menu.clone(), event.position, cx)
+                        cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                            this.open_recent_menu(menu.clone(), event.position, window, cx)
                         }),
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.open_recent(&open, cx)))

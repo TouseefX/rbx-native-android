@@ -190,26 +190,31 @@ fn game_row(
         text = text.text_color(color);
     }
     let mut body = v_flex().flex_1().min_w_0().gap_0p5().child(text);
+    // The stack as Studio's Output prints it, line for line between `Stack
+    // Begin` and `Stack End` in the info colour; each frame opens its script.
+    let stack_line = || div().min_w_0().text_xs().text_color(tokens::output_info());
+    if !message.frames.is_empty() {
+        body = body.child(stack_line().child("Stack Begin"));
+    }
     for (frame_index, frame) in message.frames.iter().enumerate() {
         let line = format!(
-            "{}, line {}{}{}",
+            "Script '{}', Line {}{}{}",
             frame.location.path,
             frame.location.line,
             if frame.detail.is_empty() { "" } else { " " },
             frame.detail
         );
         body = body.child(
-            div()
+            stack_line()
                 .id(format!("output-entry-{index}-frame-{frame_index}"))
-                .min_w_0()
-                .pl_3()
-                .text_xs()
-                .text_color(tokens::text_muted())
                 .cursor_pointer()
-                .hover(|this| this.text_color(tag_color))
+                .hover(|this| this.underline())
                 .on_click(reveal(context, &frame.location, cx))
                 .child(line),
         );
+    }
+    if !message.frames.is_empty() {
+        body = body.child(stack_line().child("Stack End"));
     }
     row = row.child(body);
     if let Some(location) = message.location.as_ref().filter(|_| show.display.source) {

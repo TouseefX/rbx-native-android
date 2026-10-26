@@ -26,7 +26,8 @@ impl Runtime {
         let chunk = self
             .lua
             .load(source)
-            .set_name("=Command bar")
+            // Studio's name for the bar's chunk: `CommandBar:2: boom`.
+            .set_name("=CommandBar")
             .into_function();
         self.start_call(chunk, MultiValue::new());
     }
@@ -42,7 +43,7 @@ impl Runtime {
             let main = self
                 .lua
                 .load("local f = ...; f(select(2, ...))")
-                .set_name("=Command bar");
+                .set_name("=run");
             let thread = self.lua.create_thread(main.into_function()?)?;
             Ok((thread, chunk))
         });

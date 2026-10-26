@@ -1,4 +1,4 @@
-//! Up/Down in the Command Bar: the commands submitted so far, most recent
+//! Ctrl+Up/Down in the Command Bar: the commands submitted so far, most recent
 //! first, the way a shell's history walks.
 
 /// How many submitted commands are kept; older ones fall off the front.

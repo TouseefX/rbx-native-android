@@ -1,24 +1,31 @@
-//! Studio's Command Bar: one line at the bottom of the window that runs
+//! Studio's Command Bar: the field at the bottom of the window that runs
 //! whatever Luau it is given against the open place with `rbx_lua::Runtime`.
+//!
+//! It takes Studio's keys: Enter starts a new line (the field grows to
+//! [`MAX_ROWS`] lines, then scrolls), Ctrl+Enter runs, and Ctrl+Up/Down walk
+//! the history while plain Up/Down move between lines. The text stays after
+//! a run, so a command can be run again or tweaked.
 //!
 //! Running a script is [`Shell`]'s job (see `shell::command_run`), because it
 //! is the one holding the DOM, the Explorer and the viewport; this module only
 //! owns the input widget, the label above it that shows what the last run
-//! did, the Up/Down history of what was submitted, and the pure rules the
+//! did, the history of what was submitted, and the pure rules the
 //! shell's run loop applies (`stream`, `undo`).
 //!
-//! `RBX_STUDIO_RUN=<source>` runs one chunk exactly as pressing Enter would,
+//! `RBX_STUDIO_RUN=<source>` runs one chunk exactly as Ctrl+Enter would,
 //! once, right after the window opens, a debugging aid for a screenshot that
 //! proves the bar works without sending it synthetic input, e.g.
 //! `RBX_STUDIO_RUN='workspace.Baseplate.Transparency = 0.5' rbxstudio place.rbxl`.
 
+pub(crate) mod failure;
 mod feedback;
 mod recall;
 pub(crate) mod stream;
 mod undo;
 
-use gpui_kit::component::input::{Input, InputState};
-use gpui_kit::component::{h_flex, v_flex, Sizable};
+use gpui_kit::component::input::{Textarea, TextareaState};
+use gpui_kit::component::Size;
+use gpui_kit::component::{h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 
@@ -32,8 +39,47 @@ pub(crate) use undo::RunUndo;
 /// Read once at startup by `main`; documented in this module's doc comment.
 pub(crate) const RUN_VARIABLE: &str = "RBX_STUDIO_RUN";
 
+/// The most lines the field grows to before it scrolls, as many as Studio's.
+const MAX_ROWS: usize = 10;
+
+/// Studio's own placeholder, with this platform's run key.
+const PLACEHOLDER: &str = if cfg!(target_os = "macos") {
+    "Execute a command with ⌘↵ or use ⌘↑/↓ for history"
+} else {
+    "Execute a command with Ctrl+Enter or use Ctrl+Up/Down for history"
+};
+
+/// Ctrl+Up / Ctrl+Down (⌘ on macOS): `Some(true)` for the older command,
+/// `Some(false)` for the newer one.
+pub(crate) fn history_key(keystroke: &Keystroke) -> Option<bool> {
+    let modifiers = &keystroke.modifiers;
+    if !modifiers.secondary() || modifiers.shift || modifiers.alt {
+        return None;
+    }
+    match keystroke.key.as_str() {
+        "up" => Some(true),
+        "down" => Some(false),
+        _ => None,
+    }
+}
+
+/// The field's one-line height inside its 1px border.
+fn first_line_height() -> Pixels {
+    tokens::input_height() - px(2.)
+}
+
+/// A slot as tall as the field's first line, so what sits beside the text
+/// stays level with it however many lines the field grows to.
+fn first_line() -> Div {
+    div()
+        .flex_none()
+        .h(first_line_height())
+        .flex()
+        .items_center()
+}
+
 pub(crate) struct CommandBar {
-    input: Entity<InputState>,
+    input: Entity<TextareaState>,
     feedback: Feedback,
     recall: Recall,
 }
@@ -42,28 +88,30 @@ impl CommandBar {
     pub(crate) fn new(window: &mut Window, cx: &mut App) -> Self {
         CommandBar {
             input: cx.new(|cx| {
-                InputState::new(window, cx).placeholder("Command Bar — Luau, Enter to run")
+                TextareaState::new(window, cx)
+                    .auto_grow(1, MAX_ROWS)
+                    .placeholder(PLACEHOLDER)
             }),
             feedback: Feedback::default(),
             recall: Recall::default(),
         }
     }
 
-    pub(crate) fn input(&self) -> &Entity<InputState> {
+    pub(crate) fn input(&self) -> &Entity<TextareaState> {
         &self.input
     }
 
-    /// Remembers a submitted command for Up/Down.
+    /// Remembers a submitted command for Ctrl+Up/Down.
     pub(crate) fn remember(&mut self, source: &str) {
         self.recall.submit(source);
     }
 
-    /// Up: the older command to show in place of `current`, if any.
+    /// Ctrl+Up: the older command to show in place of `current`, if any.
     pub(crate) fn recall_older(&mut self, current: &str) -> Option<String> {
         self.recall.older(current).map(str::to_owned)
     }
 
-    /// Down: the newer command, or the line Up started from.
+    /// Ctrl+Down: the newer command, or the line Up started from.
     pub(crate) fn recall_newer(&mut self) -> Option<String> {
         self.recall.newer().map(str::to_owned)
     }
@@ -125,10 +173,10 @@ impl CommandBar {
             .child(
                 div()
                     .w_full()
-                    .h(tokens::input_height())
+                    .min_h(tokens::input_height())
                     .px(tokens::input_padding())
                     .flex()
-                    .items_center()
+                    .items_start()
                     .gap(px(6.))
                     .rounded(tokens::radius())
                     .bg(tokens::field_select())
@@ -136,30 +184,70 @@ impl CommandBar {
                     .border_color(tokens::border2())
                     .track_focus(&handle)
                     .focus(|this| this.border_color(tokens::accent_line()))
-                    .child(div().text_color(tokens::check_on()).child(">"))
+                    .child(first_line().text_color(tokens::check_on()).child(">"))
+                    // Monospace, as Studio's is: what goes in here is code,
+                    // often several lines of it that should line up. The kit
+                    // pads a multi-line editor by its Medium size whatever
+                    // style it's given, so the margins take that back and
+                    // centre the first line in the field's one-line height,
+                    // where the prompt and the chip sit.
                     .child(
-                        Input::new(&self.input)
+                        Textarea::new(&self.input)
                             .appearance(false)
-                            .with_size(tokens::field_size())
-                            .h(tokens::input_height())
+                            .font_family(tokens::font_mono())
+                            .text_size(tokens::text_md())
+                            .line_height(tokens::line_md())
+                            .ml(-Size::Medium.input_px())
+                            .my((first_line_height() - tokens::line_md()) / 2.
+                                - Size::Medium.input_py())
                             .flex_1()
                             .tab_index(tab_index),
                     )
                     // The language this bar always runs, named so the
                     // field doesn't have to be typed into to learn that.
                     .child(
-                        div()
-                            .flex_none()
-                            .px(px(6.))
-                            .py(px(2.))
-                            .rounded(tokens::radius())
-                            .bg(tokens::dock())
-                            .border_1()
-                            .border_color(tokens::border())
-                            .text_size(tokens::text_xs())
-                            .text_color(tokens::text_muted())
-                            .child("Luau"),
+                        first_line().child(
+                            div()
+                                .px(px(6.))
+                                .py(px(2.))
+                                .rounded(tokens::radius())
+                                .bg(tokens::dock())
+                                .border_1()
+                                .border_color(tokens::border())
+                                .text_size(tokens::text_xs())
+                                .text_color(tokens::text_muted())
+                                .child("Luau"),
+                        ),
                     ),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::history_key;
+    use gpui_kit::Keystroke;
+
+    fn key(spelling: &str) -> Option<bool> {
+        history_key(&Keystroke::parse(spelling).unwrap())
+    }
+
+    #[test]
+    fn secondary_up_and_down_walk_the_history() {
+        assert_eq!(key("secondary-up"), Some(true));
+        assert_eq!(key("secondary-down"), Some(false));
+    }
+
+    #[test]
+    fn plain_and_extended_arrows_are_left_to_the_field() {
+        for spelling in [
+            "up",
+            "down",
+            "shift-up",
+            "secondary-shift-up",
+            "secondary-alt-down",
+        ] {
+            assert_eq!(key(spelling), None, "{spelling}");
+        }
     }
 }
