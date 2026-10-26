@@ -50,17 +50,35 @@ impl HomeWindow {
             .bg(ui::panel())
             .shadow(tokens::elevation())
             .occlude()
-            .on_mouse_down_out(cx.listener(|this, _, _, cx| {
-                this.recent_menu = None;
-                cx.notify();
+            .track_focus(&menu.focus)
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+                if event.keystroke.key == "escape" {
+                    this.recent_menu = None;
+                    cx.stop_propagation();
+                    cx.notify();
+                }
             }))
             .children(rows);
+        // A press anywhere else only dismisses, as a desktop menu's does:
+        // the window under the menu is covered while it is up, so that press
+        // can't also open the row or press the button it lands on.
         Some(
             deferred(
-                anchored()
-                    .position(menu.at)
-                    .snap_to_window_with_margin(px(8.))
-                    .child(card),
+                div()
+                    .absolute()
+                    .inset_0()
+                    .occlude()
+                    .on_any_mouse_down(cx.listener(|this, _, _, cx| {
+                        this.recent_menu = None;
+                        cx.stop_propagation();
+                        cx.notify();
+                    }))
+                    .child(
+                        anchored()
+                            .position(menu.at)
+                            .snap_to_window_with_margin(px(8.))
+                            .child(card),
+                    ),
             )
             .with_priority(1)
             .into_any_element(),

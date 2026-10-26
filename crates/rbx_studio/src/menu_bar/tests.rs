@@ -253,3 +253,40 @@ fn the_primary_menu_rows_lay_out_at_least_44_tall(cx: &mut gpui_kit::TestAppCont
         "every primary row exists in some menu"
     );
 }
+
+/// New and Open… are keys `Shell` matches itself, not GPUI keymap entries,
+/// so their hint has to come from the shortcuts registry: both rows are drawn
+/// as hinted element rows, and the registry has a key for each.
+#[gpui_kit::test]
+fn file_new_and_open_show_their_registry_shortcut(cx: &mut gpui_kit::TestAppContext) {
+    use gpui_kit::ParentElement as _;
+    let file = menus(&[])
+        .into_iter()
+        .find(|menu| menu.name == "File")
+        .unwrap();
+    for name in ["New", "Open…"] {
+        let action = file
+            .items
+            .iter()
+            .find_map(|item| match item {
+                OwnedMenuItem::Action {
+                    name: n, action, ..
+                } if n == name => Some(action.boxed_clone()),
+                _ => None,
+            })
+            .unwrap();
+        let command = crate::shortcuts::command_for_action(action.as_ref()).unwrap();
+        assert!(
+            crate::shortcuts::hint(command).is_some(),
+            "{name} has no key"
+        );
+    }
+    let items = file.items.clone();
+    let found = crate::probe::bounds_of(
+        cx,
+        &["menu-row-New", "menu-row-Open…"],
+        900.,
+        move |window, cx| gpui_kit::div().child(super::popup::dropdown(&items, None, window, cx)),
+    );
+    assert_eq!(found.len(), 2);
+}

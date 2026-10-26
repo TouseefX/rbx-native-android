@@ -75,9 +75,9 @@ impl HomeWindow {
             })
             .tooltip(|window, cx| crate::shell::tooltip::text("More", window, cx))
             .child(ui::icon("ellipsis-vertical", 14.))
-            .on_click(cx.listener(move |this, event: &ClickEvent, _, cx| {
+            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                 cx.stop_propagation();
-                this.open_recent_menu(place.clone(), event.position(), cx);
+                this.open_recent_menu(place.clone(), event.position(), window, cx);
             }))
     }
 
@@ -166,8 +166,8 @@ impl HomeWindow {
             )
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(move |this, event: &MouseDownEvent, _, cx| {
-                    this.open_recent_menu(menu.clone(), event.position, cx)
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    this.open_recent_menu(menu.clone(), event.position, window, cx)
                 }),
             )
             .on_click(cx.listener(move |this, _, _, cx| this.open_recent(&open, cx)))

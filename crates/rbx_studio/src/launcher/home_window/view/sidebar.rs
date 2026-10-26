@@ -65,11 +65,9 @@ impl HomeWindow {
                     .px(px(10.))
                     .mb(px(10.))
                     .child(
-                        div()
-                            .size(px(22.))
+                        crate::shell::chrome::logo(16.)
                             .flex_none()
-                            .rounded(px(6.))
-                            .bg(ui::accent()),
+                            .text_color(ui::accent()),
                     )
                     .child(
                         ui::text(14., 20.)

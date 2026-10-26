@@ -13,6 +13,9 @@ use crate::settings::Settings;
 pub(crate) struct RecentMenu {
     pub(super) place: RecentPlace,
     pub(super) at: Point<Pixels>,
+    /// Focused while the menu is up, so Escape reaches it: Home has no
+    /// focused element of its own for a key to land on otherwise.
+    pub(super) focus: FocusHandle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,9 +117,12 @@ impl HomeWindow {
         &mut self,
         place: RecentPlace,
         at: Point<Pixels>,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.recent_menu = Some(RecentMenu { place, at });
+        let focus = cx.focus_handle();
+        focus.focus(window, cx);
+        self.recent_menu = Some(RecentMenu { place, at, focus });
         cx.notify();
         self.load_session(cx);
     }
@@ -238,7 +244,7 @@ impl HomeWindow {
         .detach();
     }
 
-    pub(super) fn apply_recent_capture(&mut self, window: &Window) {
+    pub(super) fn apply_recent_capture(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Ok(value) = std::env::var(RECENT_VARIABLE) else {
             return;
         };
@@ -250,10 +256,8 @@ impl HomeWindow {
         match then {
             "menu" => {
                 let size = window.viewport_size();
-                self.recent_menu = Some(RecentMenu {
-                    place,
-                    at: point(size.width * 0.45, size.height * 0.5),
-                });
+                let at = point(size.width * 0.45, size.height * 0.5);
+                self.open_recent_menu(place, at, window, cx);
             }
             "archive" | "restore" => {
                 self.dialog = Some(Dialog::Archive {

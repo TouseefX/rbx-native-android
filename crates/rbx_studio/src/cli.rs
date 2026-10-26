@@ -32,7 +32,7 @@ options:
         in the tree.
   --run <script.luau>
         Run this file against the place once the window is up, exactly as
-        pasting it into the Command Bar and pressing Enter would.
+        pasting it into the Command Bar and pressing Ctrl+Enter would.
   --quality <auto|1..21>
         Graphics quality, spelled the way rbxview spells it. Defaults to
         whatever the editor's own dropdown was last left at.

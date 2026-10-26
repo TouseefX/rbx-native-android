@@ -17,7 +17,10 @@
 
 pub(crate) mod accounts;
 
-use gpui_kit::AsyncApp;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+
+use gpui_kit::{AsyncApp, BackgroundExecutor, FutureExt as _};
 use rbx_cloud::ApiKey;
 
 // Every credential-store access in the editor goes through these three, so
@@ -58,10 +61,47 @@ pub(crate) async fn delete_credentials(url: &str, cx: &mut AsyncApp) -> anyhow::
 const URL: &str = "https://apis.roblox.com/rbx-native";
 const ACCOUNT: &str = "open-cloud-api-key";
 
+/// How long startup waits on the credential store. A Secret Service that
+/// never answers (a locked collection whose prompt cannot show, a bus with
+/// no keyring behind it) would otherwise keep the splash up forever.
+const RESTORE_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Set when [`restore_at_startup`] gave up on the store, so Home can say
+/// why no key was loaded instead of claiming there is none.
+static STALLED: AtomicBool = AtomicBool::new(false);
+
+/// [`restore`] with [`RESTORE_TIMEOUT`]: `None` when the store did not
+/// answer in time, and the launch goes on without a key.
+pub(crate) async fn restore_at_startup(cx: &mut AsyncApp) -> Option<bool> {
+    let executor = cx.background_executor().clone();
+    let restored = within(restore(cx), RESTORE_TIMEOUT, &executor).await;
+    if restored.is_none() {
+        eprintln!(
+            "rbxstudio: the OS credential store did not answer within {}s; starting without the saved key",
+            RESTORE_TIMEOUT.as_secs()
+        );
+        STALLED.store(true, Ordering::Relaxed);
+    }
+    restored
+}
+
+async fn within<T>(
+    future: impl std::future::Future<Output = T>,
+    timeout: Duration,
+    executor: &BackgroundExecutor,
+) -> Option<T> {
+    future.with_timeout(timeout, executor).await.ok()
+}
+
+/// Whether startup gave up waiting on the credential store.
+pub(crate) fn stalled() -> bool {
+    STALLED.load(Ordering::Relaxed)
+}
+
 /// Loads the stored key into `rbx_cloud` at startup, moving a key still in
 /// the old plaintext `api_key` file into the store first. Returns whether
 /// any key is available now, `false` sends a launch to the setup wizard.
-pub(crate) async fn restore(cx: &mut AsyncApp) -> bool {
+async fn restore(cx: &mut AsyncApp) -> bool {
     match read(cx).await {
         Ok(Some(key)) => {
             let known = accounts()
@@ -255,4 +295,25 @@ pub(crate) async fn read_session(
 
 pub(crate) async fn forget_session(cx: &mut AsyncApp) -> anyhow::Result<()> {
     delete_credentials(SESSION_URL, cx).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[gpui_kit::test]
+    async fn a_store_that_never_answers_is_given_up_on(cx: &mut gpui_kit::TestAppContext) {
+        let executor = cx.executor();
+        let hung = executor.spawn({
+            let executor = executor.clone();
+            async move { within(std::future::pending::<bool>(), RESTORE_TIMEOUT, &executor).await }
+        });
+        executor.run_until_parked();
+        executor.advance_clock(RESTORE_TIMEOUT);
+        assert_eq!(hung.await, None);
+        assert_eq!(
+            within(async { true }, RESTORE_TIMEOUT, &executor).await,
+            Some(true)
+        );
+    }
 }
