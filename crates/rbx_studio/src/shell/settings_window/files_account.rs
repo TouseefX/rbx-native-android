@@ -627,7 +627,7 @@ impl SettingsWindow {
                             )
                             .below(accounts),
                         Row::new("Roblox sign-in", sign_in_control).describe(
-                            "Used only for \u{201c}In Studio\u{201d} on your profile. Stored in your system keychain.",
+                            "Used for \u{201c}In Studio\u{201d} on your profile and for archiving from Home. Stored in your system keychain.",
                         ),
                         Row::new(
                             "Show \u{201c}In Studio\u{201d} on Roblox",
