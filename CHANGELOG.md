@@ -2,6 +2,20 @@
 
 ## 2026-10-26
 
+- **Home knows which of your games are archived**: Recent and My Games
+  ask Roblox (public, no sign-in needed) and tag archived ones ARCHIVED.
+  Recent's menu then offers Restore instead of Archive, like Studio's
+  Archive tab does, and a row updates as soon as either goes through.
+  Recent's search also finds a place by its linked game's name now, not
+  just the file name. (@chteau)
+
+- **Home's Archive says what went wrong once**: a refusal read "Roblox
+  refused it: Roblox refused it (401): …", and a dropped connection got
+  blamed on Roblox too. A 401, which is what Roblox answers when the stored
+  sign-in has expired, now says to sign in again. Checked on a fresh
+  throwaway experience: the endpoint and the CSRF retry hold up against
+  develop.roblox.com, and Recent's menu matches Studio's. (@chteau)
+
 - **The Command Bar keeps your command after it runs**, like Studio's does,
   so you can run it again or tweak it. Checked in real Studio: the text
   stays after a run, and a syntax error keeps it too. Up skips the line

@@ -229,7 +229,15 @@ impl HomeWindow {
                     .h(px(24.))
                     .items_center()
                     .justify_between()
-                    .child(ui::pill(visibility, Some(glyph), false))
+                    .child(
+                        h_flex()
+                            .gap(px(6.))
+                            .items_center()
+                            .child(ui::pill(visibility, Some(glyph), false))
+                            .when(self.is_archived(universe), |this| {
+                                this.child(super::recent::archived_tag())
+                            }),
+                    )
                     .child(h_flex().gap(px(2.)).child(
                         h_flex()
                             .id(SharedString::from(format!("game-all-{universe}")))

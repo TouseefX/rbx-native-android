@@ -34,7 +34,7 @@ mod universes;
 mod version_history;
 
 pub use api_key::{keyring_disabled, ApiKey};
-pub use archive::archive_experience;
+pub use archive::{archived_experiences, set_experience_archived};
 pub use asset_metadata::AssetMetadata;
 pub use assets::AssetContent;
 pub use avatar::{AssetType, Avatar, AvatarAsset, AvatarBodyColors, AvatarScales};
