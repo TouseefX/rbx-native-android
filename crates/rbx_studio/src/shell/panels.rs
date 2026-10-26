@@ -386,9 +386,14 @@ mod tests {
             vec![gpui_kit::Keystroke::parse("ctrl-alt-f").unwrap()],
         );
         shortcuts::install_unsaved(store.clone());
+        let key = if cfg!(target_os = "macos") {
+            "⌃⌥F"
+        } else {
+            "Ctrl+Alt+F"
+        };
         assert_eq!(
             super::filter_hint().as_ref(),
-            "Filter Properties (Ctrl+Alt+F)"
+            format!("Filter Properties ({key})")
         );
         store.set(Command::FocusPropertiesFilter, Vec::new());
         shortcuts::install_unsaved(store);
