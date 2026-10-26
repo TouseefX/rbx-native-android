@@ -2,6 +2,7 @@
 //! introspection, universe/place metadata, public game listings, asset
 //! delivery (anonymous first, Open Cloud key as fallback), model uploads, place publishing,
 //! place version history, experience and place settings, experience icons, and the scope check behind the API key setup wizard,
+//! Team Create's on/off switch and who is in a session (with the web sign-in),
 //! Open Cloud v2 data stores (standard, ordered, and memory store sorted maps
 //! and queues), a local mock Open Cloud server for them, and the scope list
 //! for them. See `Client` for the entry point.
@@ -28,10 +29,12 @@ mod publish;
 pub mod quick_login;
 mod retry;
 mod scopes;
+mod team_create;
 mod thumbnails;
 mod toolbox;
 mod universes;
 mod version_history;
+mod web;
 
 pub use api_key::{keyring_disabled, ApiKey};
 pub use archive::{archived_experiences, set_experience_archived};
@@ -58,6 +61,10 @@ pub use retry::rate_limit_waits;
 pub use scopes::{
     check as check_scopes, Grant, KeyReport, Permission, ScopeCheck, DASHBOARD_API_KEYS_URL,
     PERMISSIONS,
+};
+pub use team_create::{
+    set_team_create_enabled, team_create_enabled, team_create_enabled_many, team_create_members,
+    SessionMember,
 };
 pub use toolbox::{StoreAsset, StoreCategory, StoreCreator, StorePage, StoreSearch};
 pub use universes::{Owner, Universe, Visibility};
