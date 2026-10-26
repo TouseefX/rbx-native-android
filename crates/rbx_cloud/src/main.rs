@@ -2,19 +2,66 @@
 //! scopes, list experiences, download a place, save a place file as a new
 //! (unpublished) version, or fetch an asset by id.
 
-use std::env::Args;
 use std::process::ExitCode;
 
 use rbx_cloud::{ApiKey, Client, Grant, Owner, PublishMode, Visibility};
+
+/// A fully parsed command line. Built before the keyring is touched, so a
+/// typo or a missing argument never unlocks the user's credential store.
+#[derive(Debug, PartialEq)]
+enum Command {
+    Whoami,
+    Check,
+    List,
+    Download {
+        place_id: u64,
+        out: String,
+    },
+    Save {
+        universe_id: u64,
+        place_id: u64,
+        file: String,
+    },
+    Asset {
+        asset_id: u64,
+        out: String,
+    },
+}
+
+fn parse(mut args: impl Iterator<Item = String>, usage: &str) -> Result<Command, String> {
+    let command = args.next().ok_or_else(|| usage.to_string())?;
+    match command.as_str() {
+        "whoami" => Ok(Command::Whoami),
+        "check" => Ok(Command::Check),
+        "list" => Ok(Command::List),
+        "download" => Ok(Command::Download {
+            place_id: next_u64_arg(&mut args, "placeId")?,
+            out: args.next().ok_or("missing <out.rbxl> argument")?,
+        }),
+        "save" => Ok(Command::Save {
+            universe_id: next_u64_arg(&mut args, "universeId")?,
+            place_id: next_u64_arg(&mut args, "placeId")?,
+            file: args.next().ok_or("missing <file.rbxl> argument")?,
+        }),
+        "asset" => Ok(Command::Asset {
+            asset_id: next_u64_arg(&mut args, "assetId")?,
+            out: args.next().ok_or("missing <out> argument")?,
+        }),
+        other => Err(format!("unknown command '{other}'\n{usage}")),
+    }
+}
 
 fn main() -> ExitCode {
     let mut args = std::env::args();
     let program = args.next().unwrap_or_else(|| "rbxcloud".to_string());
     let usage = format!("usage: {program} <whoami|check|list|download|save|asset> [args...]");
 
-    let Some(command) = args.next() else {
-        eprintln!("{usage}");
-        return ExitCode::FAILURE;
+    let command = match parse(args, &usage) {
+        Ok(command) => command,
+        Err(err) => {
+            eprintln!("{err}");
+            return ExitCode::FAILURE;
+        }
     };
 
     if std::env::var_os("RBX_API_KEY").is_none() {
@@ -22,14 +69,17 @@ fn main() -> ExitCode {
     }
     let client = Client::new(ApiKey::from_env_or_config());
 
-    let result = match command.as_str() {
-        "whoami" => run_whoami(&client),
-        "check" => run_check(&client),
-        "list" => run_list(&client),
-        "download" => run_download(&client, &mut args),
-        "save" => run_save(&client, &mut args),
-        "asset" => run_asset(&client, &mut args),
-        other => Err(format!("unknown command '{other}'\n{usage}")),
+    let result = match command {
+        Command::Whoami => run_whoami(&client),
+        Command::Check => run_check(&client),
+        Command::List => run_list(&client),
+        Command::Download { place_id, out } => run_download(&client, place_id, &out),
+        Command::Save {
+            universe_id,
+            place_id,
+            file,
+        } => run_save(&client, universe_id, place_id, &file),
+        Command::Asset { asset_id, out } => run_asset(&client, asset_id, &out),
     };
 
     match result {
@@ -45,6 +95,9 @@ fn main() -> ExitCode {
 /// so the CLI works without `RBX_API_KEY` once the editor's wizard has run.
 #[cfg(target_os = "linux")]
 fn keyring_key() -> Option<ApiKey> {
+    if rbx_cloud::keyring_disabled() {
+        return None;
+    }
     futures_lite::future::block_on(async {
         let keyring = oo7::Keyring::new().await.ok()?;
         keyring.unlock().await.ok()?;
@@ -164,25 +217,19 @@ fn format_visibility(visibility: &Visibility) -> String {
     }
 }
 
-fn run_download(client: &Client, args: &mut Args) -> Result<(), String> {
-    let place_id = next_u64_arg(args, "placeId")?;
-    let out = args.next().ok_or("missing <out.rbxl> argument")?;
-
+fn run_download(client: &Client, place_id: u64, out: &str) -> Result<(), String> {
     let bytes = client
         .download_place(place_id)
         .map_err(|err| err.to_string())?;
-    std::fs::write(&out, &bytes).map_err(|err| format!("failed to write '{out}': {err}"))?;
+    std::fs::write(out, &bytes).map_err(|err| format!("failed to write '{out}': {err}"))?;
     println!("wrote {} bytes to {out}", bytes.len());
     Ok(())
 }
 
 /// `save <universeId> <placeId> <file>`: uploads `file` as a Saved version,
 /// it does not go live, and prints the version number or Roblox's refusal.
-fn run_save(client: &Client, args: &mut Args) -> Result<(), String> {
-    let universe_id = next_u64_arg(args, "universeId")?;
-    let place_id = next_u64_arg(args, "placeId")?;
-    let file = args.next().ok_or("missing <file.rbxl> argument")?;
-    let bytes = std::fs::read(&file).map_err(|err| format!("failed to read '{file}': {err}"))?;
+fn run_save(client: &Client, universe_id: u64, place_id: u64, file: &str) -> Result<(), String> {
+    let bytes = std::fs::read(file).map_err(|err| format!("failed to read '{file}': {err}"))?;
     let version = client
         .publish_place(universe_id, place_id, &bytes, PublishMode::Saved)
         .map_err(|err| err.to_string())?;
@@ -190,13 +237,9 @@ fn run_save(client: &Client, args: &mut Args) -> Result<(), String> {
     Ok(())
 }
 
-fn run_asset(client: &Client, args: &mut Args) -> Result<(), String> {
-    let asset_id = next_u64_arg(args, "assetId")?;
-    let out = args.next().ok_or("missing <out> argument")?;
-
+fn run_asset(client: &Client, asset_id: u64, out: &str) -> Result<(), String> {
     let content = client.asset(asset_id).map_err(|err| err.to_string())?;
-    std::fs::write(&out, &content.bytes)
-        .map_err(|err| format!("failed to write '{out}': {err}"))?;
+    std::fs::write(out, &content.bytes).map_err(|err| format!("failed to write '{out}': {err}"))?;
     match content.asset_type_id {
         Some(id) => println!("assetTypeId: {id}"),
         None => println!("assetTypeId: unknown"),
@@ -205,10 +248,45 @@ fn run_asset(client: &Client, args: &mut Args) -> Result<(), String> {
     Ok(())
 }
 
-fn next_u64_arg(args: &mut Args, name: &str) -> Result<u64, String> {
+fn next_u64_arg(args: &mut impl Iterator<Item = String>, name: &str) -> Result<u64, String> {
     let raw = args
         .next()
         .ok_or_else(|| format!("missing <{name}> argument"))?;
     raw.parse::<u64>()
         .map_err(|_| format!("'{raw}' is not a valid {name}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parsed(line: &[&str]) -> Result<Command, String> {
+        parse(line.iter().map(|s| s.to_string()), "usage")
+    }
+
+    #[test]
+    fn unknown_command_fails_before_any_key_is_needed() {
+        let err = parsed(&["bogus"]).unwrap_err();
+        assert!(err.starts_with("unknown command 'bogus'"));
+        assert_eq!(parsed(&[]).unwrap_err(), "usage");
+    }
+
+    #[test]
+    fn known_commands_check_their_arguments_up_front() {
+        assert_eq!(parsed(&["whoami"]), Ok(Command::Whoami));
+        assert_eq!(
+            parsed(&["download", "7", "o.rbxl"]),
+            Ok(Command::Download {
+                place_id: 7,
+                out: "o.rbxl".into()
+            })
+        );
+        assert!(parsed(&["download", "x", "o"])
+            .unwrap_err()
+            .contains("placeId"));
+        assert!(parsed(&["save", "1", "2"])
+            .unwrap_err()
+            .contains("file.rbxl"));
+        assert!(parsed(&["asset", "5"]).unwrap_err().contains("<out>"));
+    }
 }

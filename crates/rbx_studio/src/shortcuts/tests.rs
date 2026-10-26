@@ -254,21 +254,44 @@ fn display_uses_modifier_glyphs_on_macos() {
 
 #[test]
 fn bindable_rejects_bare_modifier_keys() {
-    assert!(!bindable(&key("shift", shift())));
-    assert!(!bindable(&key("shift", Modifiers::default())));
-    assert!(!bindable(&key("control", Modifiers::default())));
+    assert!(!bindable(Command::GraphPan, &key("shift", shift())));
+    assert!(!bindable(
+        Command::GraphPan,
+        &key("shift", Modifiers::default())
+    ));
+    assert!(!bindable(
+        Command::GraphPan,
+        &key("control", Modifiers::default())
+    ));
 }
 
 #[test]
 fn bindable_rejects_bare_escape_enter_and_tab() {
-    assert!(!bindable(&parsed("escape")));
-    assert!(!bindable(&parsed("enter")));
-    assert!(!bindable(&parsed("tab")));
+    assert!(!bindable(Command::GraphPan, &parsed("escape")));
+    assert!(!bindable(Command::GraphPan, &parsed("enter")));
+    assert!(!bindable(Command::GraphPan, &parsed("tab")));
 }
 
 #[test]
 fn bindable_accepts_ordinary_keys() {
-    assert!(bindable(&parsed("ctrl-s")));
-    assert!(bindable(&parsed("f5")));
-    assert!(bindable(&parsed("ctrl-tab")));
+    assert!(bindable(Command::GraphPan, &parsed("ctrl-s")));
+    assert!(bindable(Command::GraphPan, &parsed("f5")));
+    assert!(bindable(Command::GraphPan, &parsed("ctrl-tab")));
+}
+
+#[test]
+fn release_follows_the_current_binding_ignoring_modifiers() {
+    let mut store = Store::default();
+    assert!(store.released(Command::GraphPan, &parsed("space")));
+    assert!(store.released(Command::GraphPan, &key("space", shift())));
+    store.set(Command::GraphPan, vec![parsed("q")]);
+    assert!(store.released(Command::GraphPan, &parsed("q")));
+    assert!(!store.released(Command::GraphPan, &parsed("space")));
+}
+
+#[test]
+fn tab_is_recordable_only_for_a_command_that_defaults_to_it() {
+    assert!(bindable(Command::SummonHandles, &parsed("tab")));
+    assert!(!bindable(Command::GraphPan, &parsed("tab")));
+    assert!(!bindable(Command::SummonHandles, &parsed("enter")));
 }
