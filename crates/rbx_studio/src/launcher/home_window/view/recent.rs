@@ -10,13 +10,28 @@ use crate::launcher::home_window::{file_name, HomeWindow};
 use crate::launcher::ui::{self};
 use crate::tokens;
 
+/// Search finds a place by its file name or by the linked game's name;
+/// `query` is lowercase.
+fn recent_matches(place: &RecentPlace, query: &str) -> bool {
+    file_name(&place.path).to_lowercase().contains(query)
+        || place
+            .name
+            .as_ref()
+            .is_some_and(|name| name.to_lowercase().contains(query))
+}
+
+/// Marks a linked game that's archived on Roblox.
+pub(super) fn archived_tag() -> Div {
+    ui::tag("ARCHIVED", tokens::text2(), ui::wash())
+}
+
 impl HomeWindow {
     pub(super) fn recent_page(&mut self, grid: &Grid, cx: &mut Context<Self>) -> AnyElement {
         let query = self.search.read(cx).value().to_lowercase();
         let rows: Vec<RecentPlace> = self
             .recent
             .iter()
-            .filter(|place| query.is_empty() || recent_name(place).to_lowercase().contains(&query))
+            .filter(|place| recent_matches(place, &query))
             .cloned()
             .collect();
         v_flex()
@@ -142,7 +157,17 @@ impl HomeWindow {
                             .text_color(tokens::text3())
                             .child(display_dir(&place.path)),
                     )
-                    .child(h_flex().w(px(200.)).min_w_0().child(roblox))
+                    .child(
+                        h_flex()
+                            .w(px(200.))
+                            .min_w_0()
+                            .gap(px(6.))
+                            .items_center()
+                            .child(roblox)
+                            .when(self.place_archived(place), |this| {
+                                this.child(archived_tag())
+                            }),
+                    )
                     .child(
                         ui::text(11.5, 16.)
                             .w(px(140.))
@@ -159,5 +184,31 @@ impl HomeWindow {
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.open_recent(&open, cx)))
             }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::recent_matches;
+    use crate::home::RecentPlace;
+
+    #[test]
+    fn search_matches_the_file_or_the_linked_game() {
+        let place = RecentPlace {
+            path: "/places/10773132793-97197400015116.rbxl".into(),
+            universe_id: Some(10773132793),
+            place_id: Some(97197400015116),
+            name: Some("rbx-native archive test".into()),
+            opened: None,
+        };
+        assert!(recent_matches(&place, ""));
+        assert!(recent_matches(&place, "archive"));
+        assert!(recent_matches(&place, "10773132793"));
+        assert!(!recent_matches(&place, "baseplate"));
+        let local = RecentPlace {
+            name: None,
+            ..place
+        };
+        assert!(!recent_matches(&local, "archive"));
     }
 }

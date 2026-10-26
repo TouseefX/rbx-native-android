@@ -1,6 +1,6 @@
 //! Recent's per-place menu, the one Studio's start page has: Configure
-//! Experience, Configure Place, Open Place page, Archive, Remove from list;
-//! and the list/icons switch.
+//! Experience, Configure Place, Open Place page, Archive (Restore for an
+//! archived game), Remove from list; and the list/icons switch.
 
 use gpui_kit::*;
 
@@ -21,17 +21,26 @@ pub(super) enum RecentAction {
     ConfigurePlace,
     OpenPage,
     Archive,
+    Restore,
     Remove,
 }
 
 impl RecentAction {
-    pub(super) const ALL: [RecentAction; 5] = [
-        RecentAction::ConfigureExperience,
-        RecentAction::ConfigurePlace,
-        RecentAction::OpenPage,
-        RecentAction::Archive,
-        RecentAction::Remove,
-    ];
+    /// The menu, in order; like Studio's Archive tab, an archived game
+    /// gets Restore where the others have Archive.
+    pub(super) fn menu(archived: bool) -> [RecentAction; 5] {
+        [
+            RecentAction::ConfigureExperience,
+            RecentAction::ConfigurePlace,
+            RecentAction::OpenPage,
+            if archived {
+                RecentAction::Restore
+            } else {
+                RecentAction::Archive
+            },
+            RecentAction::Remove,
+        ]
+    }
 
     pub(super) fn label(self) -> &'static str {
         match self {
@@ -39,6 +48,7 @@ impl RecentAction {
             RecentAction::ConfigurePlace => "Configure Place",
             RecentAction::OpenPage => "Open Place page",
             RecentAction::Archive => "Archive",
+            RecentAction::Restore => "Restore",
             RecentAction::Remove => "Remove from list",
         }
     }
@@ -54,22 +64,25 @@ impl RecentAction {
             RecentAction::Archive if !signed_in => Some(
                 "Archiving needs a Roblox sign-in: in the editor, Settings \u{203a} Account \u{203a} Roblox sign-in",
             ),
+            RecentAction::Restore if !signed_in => Some(
+                "Restoring needs a Roblox sign-in: in the editor, Settings \u{203a} Account \u{203a} Roblox sign-in",
+            ),
             _ => None,
         }
     }
 }
 
-/// `RBX_STUDIO_LAUNCHER_ARCHIVE=ok|<reason>` answers Archive without
+/// `RBX_STUDIO_LAUNCHER_ARCHIVE=ok|<reason>` answers Archive or Restore without
 /// calling Roblox, for captures and for trying the flow on a real game
 /// without archiving it.
 const ARCHIVE_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_ARCHIVE";
 
-/// `RBX_STUDIO_LAUNCHER_RECENT=list|icons`, plus `@menu` or `@archive` for
-/// the first place's menu or Archive dialog: Recent's opening state for a
+/// `RBX_STUDIO_LAUNCHER_RECENT=list|icons`, plus `@menu`, `@archive` or
+/// `@restore` for the first place's menu or Archive/Restore dialog: Recent's opening state for a
 /// capture. Nothing is saved.
 const RECENT_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_RECENT";
 
-/// The Archive dialog's line for `err`, shown as is: a refusal already
+/// The Archive/Restore dialog's line for `err`, shown as is: a refusal already
 /// says Roblox refused it. A 401 means the stored sign-in expired or was
 /// signed out elsewhere, which Roblox's "User is not authenticated" doesn't
 /// say how to fix.
@@ -137,9 +150,10 @@ impl HomeWindow {
                     cx.open_url(&format!("https://www.roblox.com/games/{id}"));
                 }
             }
-            RecentAction::Archive => {
+            RecentAction::Archive | RecentAction::Restore => {
                 self.dialog = Some(Dialog::Archive {
                     place,
+                    restore: action == RecentAction::Restore,
                     busy: false,
                     error: None,
                 });
@@ -172,9 +186,16 @@ impl HomeWindow {
     }
 
     pub(super) fn confirm_archive(&mut self, cx: &mut Context<Self>) {
-        let Some(Dialog::Archive { place, busy, error }) = &mut self.dialog else {
+        let Some(Dialog::Archive {
+            place,
+            restore,
+            busy,
+            error,
+        }) = &mut self.dialog
+        else {
             return;
         };
+        let archived = !*restore;
         let Some(universe_id) = place.universe_id else {
             return;
         };
@@ -189,8 +210,10 @@ impl HomeWindow {
                     match (mock.as_deref(), session) {
                         (Some("ok"), _) => Ok(()),
                         (Some(reason), _) => Err(reason.to_string()),
-                        (None, Some(cookie)) => rbx_cloud::archive_experience(&cookie, universe_id)
-                            .map_err(|err| archive_failure(&err)),
+                        (None, Some(cookie)) => {
+                            rbx_cloud::set_experience_archived(&cookie, universe_id, archived)
+                                .map_err(|err| archive_failure(&err))
+                        }
                         (None, None) => Err("Not signed in to Roblox.".to_string()),
                     }
                 })
@@ -200,7 +223,10 @@ impl HomeWindow {
                     return;
                 };
                 match result {
-                    Ok(()) => this.dialog = None,
+                    Ok(()) => {
+                        this.dialog = None;
+                        this.set_archived(universe_id, archived);
+                    }
                     Err(reason) => {
                         *busy = false;
                         *error = Some(reason);
@@ -229,9 +255,10 @@ impl HomeWindow {
                     at: point(size.width * 0.45, size.height * 0.5),
                 });
             }
-            "archive" => {
+            "archive" | "restore" => {
                 self.dialog = Some(Dialog::Archive {
                     place,
+                    restore: then == "restore",
                     busy: false,
                     error: None,
                 })
@@ -260,20 +287,34 @@ mod tests {
     #[test]
     fn a_local_file_can_only_be_removed() {
         let local = place(false);
-        for action in RecentAction::ALL {
+        for action in RecentAction::menu(false) {
             let off = action.unavailable(&local, true).is_some();
             assert_eq!(off, action != RecentAction::Remove, "{action:?}");
         }
     }
 
     #[test]
-    fn a_linked_place_needs_a_sign_in_only_to_archive() {
+    fn a_linked_place_needs_a_sign_in_only_to_archive_or_restore() {
         let linked = place(true);
-        for action in RecentAction::ALL {
+        for action in RecentAction::menu(false)
+            .into_iter()
+            .chain(RecentAction::menu(true))
+        {
             assert_eq!(action.unavailable(&linked, true), None, "{action:?}");
             let off = action.unavailable(&linked, false).is_some();
-            assert_eq!(off, action == RecentAction::Archive, "{action:?}");
+            let needs = matches!(action, RecentAction::Archive | RecentAction::Restore);
+            assert_eq!(off, needs, "{action:?}");
         }
+    }
+
+    #[test]
+    fn an_archived_game_offers_restore_instead_of_archive() {
+        let archived = RecentAction::menu(true);
+        assert!(archived.contains(&RecentAction::Restore));
+        assert!(!archived.contains(&RecentAction::Archive));
+        let live = RecentAction::menu(false);
+        assert!(live.contains(&RecentAction::Archive));
+        assert!(!live.contains(&RecentAction::Restore));
     }
 
     #[test]
