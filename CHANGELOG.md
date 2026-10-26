@@ -15,6 +15,19 @@
   sign-in has expired, now says to sign in again. Checked on a fresh
   throwaway experience: the endpoint and the CSRF retry hold up against
   develop.roblox.com, and Recent's menu matches Studio's. (@chteau)
+- **Pre-1.0 render and format leftovers, checked in real Studio.** A water
+  block from Studio's `FillBlock` drew as a sheet: its half-full rim pulled
+  every side and the bottom in to the voxel centres. Water now fills its
+  voxel like a liquid, across and up from the floor, so a 12x6x12 block is
+  6 studs deep and full width like Studio's. Our own Fill also fills a
+  partly covered voxel by its least overlap, which is what `ReadVoxels`
+  gives back for Studio's. A place with no Camera, saved without flying,
+  opened at Studio's default (0, 20, 20); saving now writes the view you
+  see. The binary writer no longer writes a type-0xFF property for an XML
+  tag it doesn't know: Studio refuses the whole file when that name is a
+  real property, and drops the tag itself when it loads the XML. FACS face
+  curves in a saved CurveAnimation play in Studio on a dynamic head, same
+  values as ours. The rbx_xml serializer is split into modules. (@chteau)
 
 - **The Command Bar keeps your command after it runs**, like Studio's does,
   so you can run it again or tweak it. Checked in real Studio: the text

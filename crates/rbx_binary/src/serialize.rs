@@ -233,9 +233,32 @@ fn property_names(dom: &WeakDom, class: &plan::ClassPlan) -> BTreeSet<String> {
         .filter(|name| !RETIRED_PROPERTIES.contains(&name.as_str()))
         .cloned()
         .collect();
-    names.retain(|name| !is_legacy_brick_color(dom, class, name));
+    names.retain(|name| {
+        !is_legacy_brick_color(dom, class, name) && !has_no_wire_type(dom, class, name)
+    });
     names.insert(NAME_PROPERTY.to_owned());
     names
+}
+
+// The type id `rbx_xml` tags a property with when its XML element names a
+// type that has no binary counterpart (and an unresolved SharedString key).
+// No binary type 0xFF exists, so writing it makes a file Studio cannot read.
+// Studio itself drops an unknown XML element on load, so its next save has
+// no such property either; leaving the column out matches that.
+const NO_WIRE_TYPE: u8 = 0xFF;
+
+fn has_no_wire_type(dom: &WeakDom, class: &plan::ClassPlan, name: &str) -> bool {
+    class.referents.iter().any(|&referent| {
+        dom.get(referent).is_some_and(|i| {
+            matches!(
+                i.properties().get(name),
+                Some(Variant::Unknown {
+                    type_id: NO_WIRE_TYPE,
+                    ..
+                })
+            )
+        })
+    })
 }
 
 // An old model saved `BasePart.BrickColor` (and the GUI and `BodyColors`
@@ -581,6 +604,27 @@ mod tests {
             team.properties().get("TeamColor"),
             Some(&Variant::BrickColor(23)),
             "a BrickColor Studio does save is kept"
+        );
+    }
+
+    #[test]
+    fn an_xml_only_unknown_tag_is_left_out_instead_of_written_as_type_ff() {
+        let mut dom = WeakDom::new();
+        let part = dom.new_instance("Part", "Odd", None);
+        let raw = b"mystery".to_vec();
+        dom.set_property(part, "Future", Variant::Unknown { type_id: 0xFF, raw })
+            .unwrap();
+        dom.set_property(part, "Anchored", Variant::Bool(true))
+            .unwrap();
+
+        let bytes = serialize(&dom).unwrap();
+        assert!(!bytes.windows(6).any(|w| w == b"Future"));
+        let round_tripped = deserialize(&bytes).unwrap();
+        let part = round_tripped.get(Ref::new(part.value())).unwrap();
+        assert_eq!(part.properties().get("Future"), None);
+        assert_eq!(
+            part.properties().get("Anchored"),
+            Some(&Variant::Bool(true))
         );
     }
 
