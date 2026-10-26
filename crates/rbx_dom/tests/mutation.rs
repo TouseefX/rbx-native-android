@@ -203,3 +203,19 @@ fn set_class_unknown_referent_errors_and_logs_nothing() {
     assert_eq!(err, DomError::UnknownInstance(bogus));
     assert!(dom.take_changes().is_empty());
 }
+
+#[test]
+fn set_property_to_an_equal_value_logs_nothing() {
+    let (mut dom, _folder, part) = dom_with_folder_and_part();
+    dom.set_property(part, "Transparency", Variant::Float32(0.5))
+        .unwrap();
+    dom.take_changes();
+
+    dom.set_property(part, "Transparency", Variant::Float32(0.5))
+        .unwrap();
+    assert!(dom.take_changes().is_empty());
+
+    dom.set_property(part, "Transparency", Variant::Float32(0.6))
+        .unwrap();
+    assert_eq!(dom.take_changes().len(), 1);
+}

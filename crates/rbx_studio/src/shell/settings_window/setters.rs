@@ -171,7 +171,7 @@ impl Shell {
         let own = pack.palette.color("check_on");
         if own != builtin.palette.color("check_on") && !crate::theme::is_reserved(id) {
             self.appearance.accent = Some(crate::accent::hex(own));
-            let _ = self.appearance.save_colors();
+            self.warn_colors_unsaved();
         } else if let Some(i) = self.appearance.accent.as_deref().and_then(|text| {
             let current = crate::accent::hex(crate::accent::parse_hex(text)?);
             let from = crate::accent::presets(&self.theme.palette);
@@ -180,14 +180,22 @@ impl Shell {
         }) {
             let to = crate::accent::hex(crate::accent::presets(&pack.palette)[i].1);
             self.appearance.accent = (to != crate::accent::hex(own)).then_some(to);
-            let _ = self.appearance.save_colors();
+            self.warn_colors_unsaved();
         }
         self.appearance.theme = (id != crate::theme::DEFAULT_ID).then(|| id.to_owned());
         if let Err(err) = self.appearance.save_theme() {
-            self.output
-                .push_warning(&format!("could not remember the theme: {err}"));
+            self.output.push_warning(&format!(
+                "could not remember the theme (it applies now but won't survive a relaunch): {err}"
+            ));
         }
         self.reload_theme(cx);
+    }
+
+    fn warn_colors_unsaved(&mut self) {
+        if let Err(err) = self.appearance.save_colors() {
+            self.output
+                .push_warning(&format!("could not remember the accent colour: {err}"));
+        }
     }
 
     /// Installs the theme `link` names off the UI thread, then applies it.

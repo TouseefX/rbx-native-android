@@ -187,6 +187,7 @@ impl Space {
     /// Rebuilds every quad from `eye` and draws them over `targets`'s existing
     /// colour and depth attachments, `AlwaysOnTop` canvases last so they land
     /// over the depth-tested ones as well as over the scene.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn draw(
         &mut self,
         device: &wgpu::Device,
@@ -195,6 +196,7 @@ impl Space {
         targets: &Targets,
         eye: Vec3,
         view_projection: Mat4,
+        screen_height: u32,
     ) {
         if self.items.is_empty() {
             return;
@@ -207,7 +209,8 @@ impl Space {
             }),
         );
 
-        let (vertices, runs) = self.build(eye);
+        let (vertices, runs) =
+            self.build(eye, quad::PixelScale::new(view_projection, screen_height));
         self.upload(device, queue, &vertices);
         let Some(buffer) = &self.vertices else {
             return;
@@ -256,7 +259,11 @@ impl Space {
     /// much as a depth mode: a canvas that ignores the depth buffer still has
     /// to land over one that does not.
     #[allow(clippy::type_complexity)]
-    fn build(&self, eye: Vec3) -> (Vec<VertexRaw>, Vec<(usize, bool, Range<u32>)>) {
+    fn build(
+        &self,
+        eye: Vec3,
+        scale: quad::PixelScale,
+    ) -> (Vec<VertexRaw>, Vec<(usize, bool, Range<u32>)>) {
         let mut vertices = Vec::new();
         let mut runs = Vec::new();
         for always_on_top in [false, true] {
@@ -270,7 +277,7 @@ impl Space {
                 }
                 let start = vertices.len() as u32;
                 quad::vertices(
-                    quad::corners(&item.anchor, eye),
+                    quad::corners(&item.anchor, eye, scale),
                     item.brightness,
                     &mut vertices,
                 );

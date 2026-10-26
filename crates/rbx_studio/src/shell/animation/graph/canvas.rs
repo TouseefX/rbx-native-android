@@ -11,6 +11,7 @@ use rbx_animation::graph::{Graph, NodeKind};
 
 use super::{GraphGesture, Shell};
 use crate::anim_editor::graph_canvas::{self, HEADER, PIN_ROW};
+use crate::shortcuts::{pressed, Command};
 use crate::timeline::paint;
 use crate::tokens;
 use crate::ui_canvas::View;
@@ -269,10 +270,10 @@ impl Shell {
                 cx.notify();
             }))
             .on_key_down(cx.listener(|shell, e: &KeyDownEvent, _, cx| {
-                if matches!(e.keystroke.key.as_str(), "delete" | "backspace" | "x") {
+                if pressed(Command::AnimDeleteKeys, &e.keystroke) {
                     shell.anim_delete_graph_node(cx);
                     cx.stop_propagation();
-                } else if e.keystroke.key == "space" {
+                } else if pressed(Command::AnimPlay, &e.keystroke) {
                     shell.toggle_animation_playback(cx);
                     cx.stop_propagation();
                 }

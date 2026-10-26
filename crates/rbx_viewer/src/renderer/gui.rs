@@ -260,6 +260,7 @@ impl Gui {
 
     /// Draws every `BillboardGui`/`SurfaceGui` canvas into the scene, before
     /// the resolve and after the passes it has to blend over.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn draw_space(
         &mut self,
         device: &wgpu::Device,
@@ -268,9 +269,20 @@ impl Gui {
         targets: &Targets,
         eye: Vec3,
         view_projection: Mat4,
+        frame_height: u32,
     ) {
-        self.space
-            .draw(device, queue, encoder, targets, eye, view_projection);
+        // Billboard pixels are the same pixels a `ScreenGui` lays out in: a
+        // simulated device's screen when there is one, the frame otherwise.
+        let screen_height = self.screen_size.map_or(frame_height, |(_, h)| h);
+        self.space.draw(
+            device,
+            queue,
+            encoder,
+            targets,
+            eye,
+            view_projection,
+            screen_height,
+        );
     }
 
     /// Lays the screens out for `size` if that is new, baking every

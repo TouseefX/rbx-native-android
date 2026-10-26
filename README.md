@@ -187,6 +187,9 @@ those, skip this part.
    (or `~/.config/rbx-native/api_key` if `XDG_CONFIG_HOME` isn't set), or
    `%APPDATA%\rbx-native\api_key` on Windows. Whitespace is trimmed.
 
+Set `RBX_NO_KEYRING=1` to make `rbxstudio` and `rbxcloud` skip the OS
+keyring entirely (no reads, no writes), e.g. in tests.
+
 If there's no key, `rbx_cloud` just uses Roblox's anonymous API instead of
 failing. A lot of my own testing runs without one. If you use the file, keep
 it private (`chmod 600` on Linux/macOS, the loader warns you if other users

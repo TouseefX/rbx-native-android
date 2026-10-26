@@ -407,7 +407,7 @@ impl Shell {
         cx: &mut Context<Self>,
     ) {
         if first {
-            self.push_history();
+            self.drag_unfiled = Some(self.history_snapshot());
             // Studio carries a dragged model's pivot with it; the writes
             // below only move its parts. Read once, here, against the DOM
             // as the drag found it: every step's writes are measured from
@@ -442,7 +442,16 @@ impl Shell {
         // A posed limb dragged is a key, and the part goes back to rest.
         changes.extend(self.settle_pose_edits(&changes));
         self.reflect_changes(&changes, cx);
-        self.record_history_change([opened, &changes].concat());
+        // A step that wrote nothing (a drag still on its grid cell, equal
+        // values) files no entry, so it can't clear redo for a no-op.
+        if !changes.is_empty() || !opened.is_empty() {
+            if let Some(before) = self.drag_unfiled.take() {
+                self.push_history_snapshot(before);
+            }
+        }
+        if self.drag_unfiled.is_none() {
+            self.record_history_change([opened, &changes].concat());
+        }
 
         if let Err(err) = written {
             self.output.push_warning(&format!("viewport drag: {err}"));
