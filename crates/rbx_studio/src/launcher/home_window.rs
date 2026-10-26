@@ -19,6 +19,7 @@ use super::cache::GamesCache;
 use super::{fixtures, Boot};
 use crate::home::{self, RecentPlace};
 
+mod archived;
 mod games;
 mod open;
 mod recent_actions;
@@ -77,10 +78,11 @@ pub(super) enum Dialog {
         status: Option<u16>,
         reason: String,
     },
-    /// Recent's Archive, asking first; `busy` while the call runs, `error`
-    /// when Roblox refused it.
+    /// Recent's Archive, or Restore when `restore`, asking first; `busy`
+    /// while the call runs, `error` when Roblox refused it.
     Archive {
         place: RecentPlace,
+        restore: bool,
         busy: bool,
         error: Option<String>,
     },

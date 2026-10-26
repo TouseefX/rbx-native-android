@@ -25,6 +25,8 @@ impl HomeWindow {
             self.load_fixture(&which);
             return;
         }
+        let linked = self.recent.iter().filter_map(|p| p.universe_id).collect();
+        self.refresh_archived(linked, cx);
         let Some(key) = ApiKey::from_env_or_config() else {
             self.key = KeyState::Missing;
             self.games = Games::Loaded(Experiences::default());
@@ -136,7 +138,10 @@ impl HomeWindow {
                 ids
             });
             if let Ok(ids) = ids {
-                let _ = this.update(cx, |this, cx| this.refresh_icons(ids, cx));
+                let _ = this.update(cx, |this, cx| {
+                    this.refresh_archived(ids.clone(), cx);
+                    this.refresh_icons(ids, cx);
+                });
             }
             // A group picked before the refresh started gets fetched too.
             let _ = this.update(cx, |this, cx| {
@@ -222,9 +227,10 @@ impl HomeWindow {
                     this.group_loading = None;
                 }
                 if let Ok(games) = games {
-                    let ids = games.iter().map(|g| g.universe_id).collect();
+                    let ids: Vec<u64> = games.iter().map(|g| g.universe_id).collect();
                     this.cache.group_games.insert(group, games);
                     this.cache.save(user_id);
+                    this.refresh_archived(ids.clone(), cx);
                     this.refresh_icons(ids, cx);
                 }
                 cx.notify();
