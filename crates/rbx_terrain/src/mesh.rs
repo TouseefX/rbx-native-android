@@ -251,6 +251,10 @@ impl<'a> Net<'a> {
             if (a >= ISO) == (b >= ISO) {
                 continue;
             }
+            let (a, b) = match self.field {
+                Field::Solid => (a, b),
+                Field::Water => (water_extent(a, i, j), water_extent(b, j, i)),
+            };
             let t = (ISO - a) / (b - a);
             for (axis, s) in sum.iter_mut().enumerate() {
                 let pa = (i >> axis & 1) as f32;
@@ -328,6 +332,23 @@ impl<'a> Net<'a> {
         } else {
             builder.surface.indices.extend([a, c, b, a, d, c]);
         }
+    }
+}
+
+/// The fill a water corner stands for on the edge from corner `from` to
+/// `to`. Water lies in its voxel like a liquid: across all of it and up
+/// from its floor, so it reads as full toward the sides and below, and as
+/// its own fill only toward the voxel above. Read as a plain fill, the
+/// half-full rim Studio's `FillBlock` leaves around a block pulls every
+/// side and the bottom in to the voxel centres, and a 6-stud block draws as
+/// a sheet; this way it keeps its 6 studs and its full width, as in Studio.
+/// Only the crossing moves: which edges cross is still decided by the fill.
+fn water_extent(fill: f32, from: usize, to: usize) -> f32 {
+    let upward = from & 2 == 0 && to & 2 != 0;
+    if fill < ISO || upward {
+        fill
+    } else {
+        1.0
     }
 }
 

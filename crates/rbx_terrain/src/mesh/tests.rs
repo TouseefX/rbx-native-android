@@ -291,6 +291,34 @@ fn water_never_climbs_the_shore() {
 }
 
 #[test]
+fn a_studio_water_block_keeps_its_depth_and_width() {
+    // The voxels Studio saves for `FillBlock(CFrame.new(0, 3, 0),
+    // Vector3.new(12, 6, 12), Water)`: a half-full rim around a full core,
+    // under a half-full top layer.
+    let mut grid = VoxelGrid::new();
+    for x in -2..2 {
+        for z in -2..2 {
+            let core = (-1..1).contains(&x) && (-1..1).contains(&z);
+            let bottom = if core { 255 } else { 128 };
+            grid.set([x, 0, z], Cell::new(Material::Water, bottom, 0));
+            grid.set([x, 1, z], Cell::new(Material::Water, 128, 0));
+        }
+    }
+    let positions: Vec<[f32; 3]> = mesh_all(&grid)
+        .iter()
+        .flat_map(|m| m.water.positions.iter().copied())
+        .collect();
+    let low = |a: usize| positions.iter().map(|p| p[a]).fold(f32::MAX, f32::min);
+    let high = |a: usize| positions.iter().map(|p| p[a]).fold(f32::MIN, f32::max);
+    // Floor on the voxel boundary, top at the half-full layer's level.
+    assert!(low(1).abs() < 1e-3, "bottom at {}", low(1));
+    assert!((high(1) - 6.0).abs() < 0.1, "top at {}", high(1));
+    // Sides out to the rim voxels' outer faces.
+    assert!(low(0) < -7.9 && high(0) > 7.9, "{} to {}", low(0), high(0));
+    assert!(low(2) < -7.9 && high(2) > 7.9, "{} to {}", low(2), high(2));
+}
+
+#[test]
 fn empty_and_far_chunks_mesh_to_nothing() {
     let grid = VoxelGrid::new();
     assert!(mesh_chunk(&grid, ChunkKey { x: 0, y: 0, z: 0 }).is_empty());

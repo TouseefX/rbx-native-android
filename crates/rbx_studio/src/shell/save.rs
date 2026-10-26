@@ -180,6 +180,14 @@ impl Shell {
         // stashed place, which is what gets saved.)
         if !self.live_shown() {
             self.unpose_rig(cx);
+            // Studio opens a place at `Workspace.CurrentCamera`, and at
+            // (0, 20, 20) when there is none. The pose only reaches the DOM
+            // once the camera moves (and then throttled), so a place opened
+            // with no Camera and saved without flying had none. The view on
+            // screen is what a save keeps.
+            if let Some(pose) = self.viewport.read(cx).pose() {
+                crate::camera::write_pose(&mut self.dom, pose);
+            }
         }
         let result = save::save(self.edit_dom(), self.format, path);
         let saved = result.is_ok();
