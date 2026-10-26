@@ -44,7 +44,10 @@ impl StudBox {
         )
     }
 
-    /// How much of voxel `v` lies inside the box, 0 to 1.
+    /// How full the box makes voxel `v`, 0 to 1: its overlap along the axis
+    /// it overlaps least. Studio's `FillBlock` fills that way: a voxel half
+    /// covered along two axes reads back from `ReadVoxels` as 0.5, not 0.25,
+    /// so a block keeps square corners.
     pub fn overlap(&self, v: [i32; 3]) -> f32 {
         (0..3)
             .map(|a| {
@@ -52,7 +55,7 @@ impl StudBox {
                 let high = low + VOXEL_STUDS;
                 ((high.min(self.max[a]) - low.max(self.min[a])) / VOXEL_STUDS).clamp(0.0, 1.0)
             })
-            .product()
+            .fold(1.0, f32::min)
     }
 
     pub fn contains_center(&self, v: [i32; 3]) -> bool {
@@ -169,6 +172,18 @@ mod tests {
         assert!((grid.get([1, 1, 0]).fraction() - 0.5).abs() < 0.01);
         assert!(grid.get([2, 0, 0]).is_air());
         assert_eq!(region.snapped().max, [8.0, 8.0, 4.0]);
+    }
+
+    #[test]
+    fn a_corner_voxel_fills_like_studios_fill_block() {
+        // Studio's 12x6x12 water block at (0, 3, 0): its corner voxel at
+        // (-8..-4, 0..4, -8..-4) reads back as 0.5.
+        let mut grid = VoxelGrid::new();
+        let region = StudBox::from_center_size([0.0, 3.0, 0.0], [12.0, 6.0, 12.0]);
+        fill(&mut grid, &region, Material::Water);
+        assert!((grid.get([-2, 0, -2]).fraction() - 0.5).abs() < 0.01);
+        assert!((grid.get([-2, 1, -2]).fraction() - 0.5).abs() < 0.01);
+        assert_eq!(grid.get([-1, 0, -1]), Cell::full(Material::Water));
     }
 
     #[test]

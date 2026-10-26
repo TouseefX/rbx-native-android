@@ -728,6 +728,16 @@ impl Headless {
         }
     }
 
+    /// The camera this frame is drawn from as a free-flight pose, an
+    /// auto-orbit included: what is on screen, for a host that saves the view
+    /// or unprojects a click against it.
+    pub fn view_pose(&self) -> Pose {
+        match self.from {
+            Viewpoint::Free(pose) => pose,
+            Viewpoint::Orbit(yaw) => camera::Camera::orbit_pose(&self.bounds, yaw),
+        }
+    }
+
     /// Returns and clears every asset-fetch/decode warning collected by
     /// [`Headless::load`]/[`Headless::reload`] since the last call, an
     /// embedder with nowhere better to look than the return value polls this
