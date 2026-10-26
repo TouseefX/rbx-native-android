@@ -8,6 +8,10 @@
 //! are given. The rest stay variables: they are aids for scripted
 //! screenshots, not a surface worth committing to.
 //!
+//! `RBX_NO_KEYRING=1` (any non-empty value) stops every OS keyring read and
+//! write, here and in `rbxcloud`, so a test run with scratch XDG dirs cannot
+//! reach the user's real Open Cloud key.
+//!
 //! `RBX_STUDIO_SELECT=<target>[,<target>...]` pre-selects the first instance
 //! that target names, an Explorer path (`Workspace.Model.Part`) or a bare
 //! name, see `explorer::resolve`: at startup, then adds each

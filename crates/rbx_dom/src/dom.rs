@@ -77,10 +77,15 @@ impl WeakDom {
             .get_mut(&referent)
             .ok_or(DomError::UnknownInstance(referent))?;
         let old = instance.properties_mut().insert(name.to_string(), value);
-        self.log(Change::Property {
-            referent,
-            name: name.to_string(),
-        });
+        // Writing back what was already there changes nothing, so it must not
+        // read as an edit: editors push an undo step (clearing redo) for every
+        // logged change.
+        if old.as_ref() != instance.properties().get(name) {
+            self.log(Change::Property {
+                referent,
+                name: name.to_string(),
+            });
+        }
         Ok(old)
     }
 

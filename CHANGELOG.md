@@ -2,6 +2,29 @@
 
 ## 2026-10-26
 
+- **The Command Bar keeps your command after it runs**, like Studio's does,
+  so you can run it again or tweak it. Checked in real Studio: the text
+  stays after a run, and a syntax error keeps it too. Up skips the line
+  that's still in the box and goes straight to the one before. The rest of
+  the e2e sweep's scripting list (task/wait, attributes, `.Changed`,
+  require, GetService making missing services, output before an error,
+  late plugin listeners, `loadstring`/`getfenv`) was already fixed and
+  matches Studio. (@chteau)
+- **Pre-1.0 editor cleanup.** Leftovers from the e2e sweep. A BillboardGui
+  sized in pixels (`{0,200},{0,50}`) now stays 200x50 on screen at any
+  distance like in Studio, it used to shrink as you backed off. Ctrl+Shift+P
+  focuses the Properties filter like Studio (the placeholder was promising
+  it while the key inserted a part, Insert Part has no default key now).
+  Menus taller than the window scroll, so Meta Quest 3 in the Device menu is
+  reachable. Breakpoint dots get their own room left of the line numbers
+  instead of covering a digit, and Watch / Call Stack scroll with a
+  scrollbar. Pan, Summon Handles and the animation graph keys follow your
+  rebinds (key-up was hard-coded), and Tab can be recorded back for Summon
+  Handles. Editing a field to the value it already had doesn't eat your redo
+  anymore. Failed settings, theme, accent and beta.json writes show up in
+  Output instead of vanishing. `RBX_NO_KEYRING=1` keeps rbxstudio and
+  rbxcloud away from the OS keyring (for test runs), and rbxcloud checks its
+  arguments before touching the keyring. (@chteau)
 - **Studio-saved files read and save right.** A CurveAnimation with a
   quaternion `RotationCurve` opened as an error; now it reads as Euler
   curves sampled the way Studio plays it (slerp, cubic tangents measured

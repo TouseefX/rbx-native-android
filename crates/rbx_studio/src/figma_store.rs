@@ -1,6 +1,7 @@
 //! The Figma sign-in at rest: in the OS credential store next to the Open
 //! Cloud key (see `key_store`), as the tokens' JSON, never a plaintext file.
 
+use crate::key_store::{delete_credentials, read_credentials, write_credentials};
 use gpui_kit::AsyncApp;
 use rbx_figma::oauth::Tokens;
 
@@ -10,21 +11,20 @@ const ACCOUNT: &str = "figma-oauth";
 
 /// The stored sign-in, if there is one.
 pub(crate) async fn load(cx: &mut AsyncApp) -> anyhow::Result<Option<Tokens>> {
-    let stored = cx.update(|cx| cx.read_credentials(URL)).await?;
+    let stored = read_credentials(URL, cx).await?;
     Ok(stored.and_then(|(_, secret)| decode(&secret)))
 }
 
 /// Stores `tokens`, replacing any there.
 pub(crate) async fn save(tokens: &Tokens, cx: &mut AsyncApp) -> anyhow::Result<()> {
     let secret = encode(tokens);
-    cx.update(|cx| cx.write_credentials(URL, ACCOUNT, &secret))
-        .await?;
+    write_credentials(URL, ACCOUNT, secret, cx).await?;
     Ok(())
 }
 
 /// Signs out: the next import asks to connect again.
 pub(crate) async fn forget(cx: &mut AsyncApp) -> anyhow::Result<()> {
-    cx.update(|cx| cx.delete_credentials(URL)).await?;
+    delete_credentials(URL, cx).await?;
     Ok(())
 }
 

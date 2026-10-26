@@ -339,13 +339,13 @@ impl Shell {
             return;
         };
 
-        self.push_history();
+        let before = self.history_snapshot();
         let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
         let result = attrs::rename_attribute(&mut dom, reference, &old_name, &new_name);
         self.dom = dom;
         let changes = self.dom.take_changes();
         self.reflect_changes(&changes, cx);
-        self.record_history_change(changes);
+        self.commit_history_step(before, changes);
 
         match result {
             Ok(()) => {
@@ -361,13 +361,13 @@ impl Shell {
         let Some(reference) = self.selected() else {
             return;
         };
-        self.push_history();
+        let before = self.history_snapshot();
         let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
         let result = attrs::remove_attribute(&mut dom, reference, name);
         self.dom = dom;
         let changes = self.dom.take_changes();
         self.reflect_changes(&changes, cx);
-        self.record_history_change(changes);
+        self.commit_history_step(before, changes);
 
         match result {
             Ok(()) => self.attribute_edits.attribute_error = None,
@@ -394,13 +394,13 @@ impl Shell {
             return;
         };
 
-        self.push_history();
+        let before = self.history_snapshot();
         let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
         let result = attrs::add_attribute(&mut dom, reference, &name, value);
         self.dom = dom;
         let changes = self.dom.take_changes();
         self.reflect_changes(&changes, cx);
-        self.record_history_change(changes);
+        self.commit_history_step(before, changes);
 
         match result {
             Ok(()) => {

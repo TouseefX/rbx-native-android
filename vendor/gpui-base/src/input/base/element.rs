@@ -998,14 +998,22 @@ impl<M: InputModeKind> TextElement<M> {
                 None,
             );
 
-            // rbx-native addition: see `set_line_number_gutter`.
+            // rbx-native addition: see `set_line_number_gutter`, and
+            // `super::gutter::MARKER_ROOM` for the room a gutter adds.
+            let marker_room = match state.gutter {
+                Some(_) => super::gutter::MARKER_ROOM,
+                None => px(0.),
+            };
             match state.line_number_gutter {
                 Some((width, gap)) => {
-                    let width = width.max(empty_line_number.width + gap);
+                    let width = width.max(empty_line_number.width + gap + marker_room);
                     line_number_offset = width - gap - empty_line_number.width;
                     width
                 }
-                None => empty_line_number.width + LINE_NUMBER_RIGHT_MARGIN,
+                None => {
+                    line_number_offset = marker_room;
+                    empty_line_number.width + LINE_NUMBER_RIGHT_MARGIN + marker_room
+                }
             }
         } else if state.is_code_editor() {
             LINE_NUMBER_RIGHT_MARGIN
