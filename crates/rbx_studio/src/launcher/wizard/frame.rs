@@ -40,7 +40,9 @@ impl Wizard {
             .children(self.visible().into_iter().enumerate().map(|(index, step)| {
                 let (title, sub) = step.labels();
                 let current = step == self.step;
-                let done = index < current_index;
+                // A skipped sign-in is passed, not done: no check for it.
+                let done = index < current_index
+                    && (step != Step::SignIn || self.signed_in.is_some());
                 let marker = if done {
                     ui::status_dot("check", ui::green(), Some(ui::green_soft()), 22.)
                 } else {

@@ -149,7 +149,7 @@ impl Wizard {
                         .child(flow.read(cx).body(cx))
                 }))
                 .child(ui::text(11.5, 17.).text_color(tokens::text3()).child(
-                    "Skip it and the rest still works; Team Create, Play and In Studio presence wait until you sign in (Settings \u{203a} Account).",
+                    "Skip it and the rest still works; Team Create, Play, In Studio presence and Home\u{2019}s Archive wait until you sign in (Settings \u{203a} Account).",
                 ))
                 .into_any_element(),
         };
