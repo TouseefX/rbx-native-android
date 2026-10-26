@@ -88,7 +88,7 @@ impl HomeWindow {
                 .text_size(px(11.5))
                 .line_height(px(17.))
                 .text_color(tokens::text())
-                .child(format!("Roblox refused it: {error}"))
+                .child(error.to_string())
                 .into_any_element()
         });
         let confirm = if busy {
