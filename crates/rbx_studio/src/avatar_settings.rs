@@ -17,7 +17,9 @@ mod schema;
 
 pub(crate) use presets::*;
 pub(crate) use ranges::{write_height, BUILD_RANGES, HEIGHT_RANGE, WORLD_HEIGHT};
-pub(crate) use schema::{Slot, SlotValue, ACCESSORY_SLOTS, BODY_SLOTS, CLIP_SLOTS, CLOTHING_SLOTS};
+pub(crate) use schema::{
+    asset_type, Slot, SlotValue, ACCESSORY_SLOTS, BODY_SLOTS, CLIP_SLOTS, CLOTHING_SLOTS,
+};
 
 /// The service, as Studio names it in every place it saves.
 pub(crate) const SERVICE: &str = "AvatarSettings";

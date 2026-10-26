@@ -33,19 +33,29 @@ pub(super) fn default(name: &str) -> Variant {
     }
 }
 
-/// One asset row: its label, the property Studio saves it in now, the
-/// older `…Enabled`/`…Id` pair it still saves beside it, and the other
-/// properties a row covering several asset types clears with it.
+/// One asset row: its label and the asset kinds it covers. A row covering
+/// several kinds (Tops is shirts, T-shirts and sweaters) ticks them all,
+/// and its ID lands on the kind matching the asset's type.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Slot {
     pub(crate) label: &'static str,
     rule: Rule,
-    current: Option<&'static str>,
-    legacy: Option<(&'static str, &'static str)>,
-    also: &'static [&'static str],
+    kinds: &'static [Kind],
     /// Whether a ticked row may stay empty, which removes that category
     /// (clothing and accessories); a body part or a clip needs an ID.
     pub(crate) blank_removes: bool,
+}
+
+/// One asset kind: the `…Enabled`/`…Id` pair Studio saves it in (the
+/// API dump marks them deprecated, yet a place Studio saved keeps every
+/// value there), the `…Override` the schema adds for it, which Studio
+/// leaves at 0, and the catalog asset type an ID of this kind has.
+#[derive(Debug, Clone, Copy)]
+struct Kind {
+    enabled: &'static str,
+    id: &'static str,
+    current: Option<&'static str>,
+    asset_type: u32,
 }
 
 /// A slot's state: unticked, ticked and empty (remove), or an asset.
@@ -56,237 +66,202 @@ pub(crate) enum SlotValue {
     Asset(i64),
 }
 
-/// The value a ticked, empty row saves. Asset IDs are positive and 0 is
-/// "nothing", so a negative one is the only spare sentinel; Studio's
-/// encoding for it was not observable without publishing a place.
-const REMOVE: i64 = -1;
-
 impl Slot {
+    /// An `…Override` holding an ID wins, for a file written by a Studio
+    /// that has moved to them; otherwise the first ticked kind with an ID.
     pub(crate) fn read(&self, rules: &Rules, dom: &WeakDom) -> SlotValue {
-        let current = self
-            .current
-            .map_or(0, |name| rules.int_of(dom, (self.rule, name)));
-        match current {
-            0 => {}
-            REMOVE => return SlotValue::Remove,
-            id => return SlotValue::Asset(id),
+        let mut ticked = false;
+        for kind in self.kinds {
+            let current = kind
+                .current
+                .map_or(0, |name| rules.int_of(dom, (self.rule, name)));
+            if current > 0 {
+                return SlotValue::Asset(current);
+            }
+            if rules.bool_of(dom, (self.rule, kind.enabled)) {
+                ticked = true;
+                let id = rules.int_of(dom, (self.rule, kind.id));
+                if id > 0 {
+                    return SlotValue::Asset(id);
+                }
+            }
         }
-        let Some((enabled, id)) = self.legacy else {
-            return SlotValue::Off;
-        };
-        match (
-            rules.bool_of(dom, (self.rule, enabled)),
-            rules.int_of(dom, (self.rule, id)),
-        ) {
-            (false, _) => SlotValue::Off,
-            (true, 0) => SlotValue::Remove,
-            (true, id) => SlotValue::Asset(id),
+        if ticked {
+            SlotValue::Remove
+        } else {
+            SlotValue::Off
         }
     }
 
-    pub(crate) fn write(&self, value: SlotValue) -> Writes {
-        let (current, enabled, id) = match value {
-            SlotValue::Off => (0, false, 0),
-            SlotValue::Remove => (REMOVE, true, 0),
-            SlotValue::Asset(id) => (id, true, id),
-        };
+    /// Whether an ID's placement depends on its asset type.
+    pub(crate) fn typed(&self) -> bool {
+        self.kinds.len() > 1
+    }
+
+    /// What Studio saves for `value`: every kind ticked unless `Off`, the
+    /// ID on the kind of `asset_type` (the row's first when unknown), and
+    /// every `…Override` at 0.
+    pub(crate) fn write(&self, value: SlotValue, asset_type: Option<u32>) -> Writes {
+        let target = self
+            .kinds
+            .iter()
+            .position(|kind| Some(kind.asset_type) == asset_type)
+            .unwrap_or(0);
         let key = |name| (self.rule, name);
         let mut writes = Writes::new();
-        if let Some(name) = self.current {
-            writes.push((key(name), Variant::Int64(current)));
+        for (index, kind) in self.kinds.iter().enumerate() {
+            let id = match value {
+                SlotValue::Asset(id) if index == target => id,
+                _ => 0,
+            };
+            writes.push((key(kind.enabled), Variant::Bool(value != SlotValue::Off)));
+            writes.push((key(kind.id), Variant::Int64(id)));
+            if let Some(current) = kind.current {
+                writes.push((key(current), Variant::Int64(0)));
+            }
         }
-        if let Some((enabled_name, id_name)) = self.legacy {
-            writes.push((key(enabled_name), Variant::Bool(enabled)));
-            writes.push((key(id_name), Variant::Int64(id)));
-        }
-        let also = if value == SlotValue::Remove {
-            REMOVE
-        } else {
-            0
-        };
-        writes.extend(
-            self.also
-                .iter()
-                .map(|&name| (key(name), Variant::Int64(also))),
-        );
         writes
+    }
+}
+
+const fn kind(
+    enabled: &'static str,
+    id: &'static str,
+    current: Option<&'static str>,
+    asset_type: u32,
+) -> Kind {
+    Kind {
+        enabled,
+        id,
+        current,
+        asset_type,
     }
 }
 
 const fn slot(
     label: &'static str,
     rule: Rule,
-    current: Option<&'static str>,
-    legacy: Option<(&'static str, &'static str)>,
+    kinds: &'static [Kind],
     blank_removes: bool,
 ) -> Slot {
     Slot {
         label,
         rule,
-        current,
-        legacy,
-        also: &[],
+        kinds,
         blank_removes,
     }
 }
 
+/// A kind named `Custom<legacy>…` with an optional current property.
+macro_rules! kind {
+    ($legacy:literal, $suffix:literal, $current:expr, $asset_type:expr) => {
+        kind(
+            concat!("Custom", $legacy, $suffix, "Enabled"),
+            concat!("Custom", $legacy, $suffix, "Id"),
+            $current,
+            $asset_type,
+        )
+    };
+}
+
+macro_rules! body {
+    ($label:literal, $legacy:literal, $current:expr) => {
+        slot(
+            $label,
+            Rule::Body,
+            &[kind!($legacy, "", $current, 0)],
+            false,
+        )
+    };
+}
+
 /// Body › Custom Parts, in Studio's order. Face and Mood have no current
-/// property; Studio's file only has the older pair for them.
+/// property.
 pub(crate) const BODY_SLOTS: [Slot; 8] = [
-    slot(
-        "Face",
-        Rule::Body,
-        None,
-        Some(("CustomFaceEnabled", "CustomFaceId")),
-        false,
-    ),
-    slot(
-        "Head",
-        Rule::Body,
-        Some("HeadOverride"),
-        Some(("CustomHeadEnabled", "CustomHeadId")),
-        false,
-    ),
-    slot(
-        "Mood",
-        Rule::Body,
-        None,
-        Some(("CustomMoodEnabled", "CustomMoodId")),
-        false,
-    ),
-    slot(
-        "Torso",
-        Rule::Body,
-        Some("TorsoOverride"),
-        Some(("CustomTorsoEnabled", "CustomTorsoId")),
-        false,
-    ),
-    slot(
-        "Left Arm",
-        Rule::Body,
-        Some("LeftArmOverride"),
-        Some(("CustomLeftArmEnabled", "CustomLeftArmId")),
-        false,
-    ),
-    slot(
-        "Right Arm",
-        Rule::Body,
-        Some("RightArmOverride"),
-        Some(("CustomRightArmEnabled", "CustomRightArmId")),
-        false,
-    ),
-    slot(
-        "Left Leg",
-        Rule::Body,
-        Some("LeftLegOverride"),
-        Some(("CustomLeftLegEnabled", "CustomLeftLegId")),
-        false,
-    ),
-    slot(
-        "Right Leg",
-        Rule::Body,
-        Some("RightLegOverride"),
-        Some(("CustomRightLegEnabled", "CustomRightLegId")),
-        false,
-    ),
+    body!("Face", "Face", None),
+    body!("Head", "Head", Some("HeadOverride")),
+    body!("Mood", "Mood", None),
+    body!("Torso", "Torso", Some("TorsoOverride")),
+    body!("Left Arm", "LeftArm", Some("LeftArmOverride")),
+    body!("Right Arm", "RightArm", Some("RightArmOverride")),
+    body!("Left Leg", "LeftLeg", Some("LeftLegOverride")),
+    body!("Right Leg", "RightLeg", Some("RightLegOverride")),
 ];
+
+/// A clothing kind: its `Custom<name>Accessory…` pair, `<name>AccessoryOverride`
+/// and catalog asset type.
+macro_rules! cloth {
+    ($name:literal, $asset_type:expr) => {
+        kind!(
+            $name,
+            "Accessory",
+            Some(concat!($name, "AccessoryOverride")),
+            $asset_type
+        )
+    };
+}
 
 /// Clothing › Custom Clothing. Studio groups layered clothing the way the
 /// avatar editor does: Tops (shirts, T-shirts, sweaters), Outerwear
-/// (jackets), Bottoms (pants, shorts, dresses and skirts). An ID lands on
-/// the group's main type; emptying a ticked group removes every type in it.
+/// (jackets), Bottoms (pants, shorts, dresses and skirts). Asset types are
+/// Roblox's `Enum.AssetType` values.
 pub(crate) const CLOTHING_SLOTS: [Slot; 8] = [
-    Slot {
-        also: &["TShirtAccessoryOverride", "SweaterAccessoryOverride"],
-        ..slot(
-            "Tops",
-            Rule::Clothing,
-            Some("ShirtAccessoryOverride"),
-            Some(("CustomShirtAccessoryEnabled", "CustomShirtAccessoryId")),
-            true,
-        )
-    },
     slot(
-        "Outerwear",
+        "Tops",
         Rule::Clothing,
-        Some("JacketAccessoryOverride"),
-        Some(("CustomJacketAccessoryEnabled", "CustomJacketAccessoryId")),
+        &[
+            cloth!("Shirt", 65),
+            cloth!("TShirt", 64),
+            cloth!("Sweater", 68),
+        ],
         true,
     ),
-    Slot {
-        also: &["ShortsAccessoryOverride", "DressSkirtAccessoryOverride"],
-        ..slot(
-            "Bottoms",
-            Rule::Clothing,
-            Some("PantsAccessoryOverride"),
-            Some(("CustomPantsAccessoryEnabled", "CustomPantsAccessoryId")),
-            true,
-        )
-    },
+    slot("Outerwear", Rule::Clothing, &[cloth!("Jacket", 67)], true),
+    slot(
+        "Bottoms",
+        Rule::Clothing,
+        &[
+            cloth!("Pants", 66),
+            cloth!("Shorts", 69),
+            cloth!("DressSkirt", 72),
+        ],
+        true,
+    ),
     slot(
         "Left Shoes",
         Rule::Clothing,
-        Some("LeftShoesAccessoryOverride"),
-        Some((
-            "CustomLeftShoesAccessoryEnabled",
-            "CustomLeftShoesAccessoryId",
-        )),
+        &[cloth!("LeftShoes", 70)],
         true,
     ),
     slot(
         "Right Shoes",
         Rule::Clothing,
-        Some("RightShoesAccessoryOverride"),
-        Some((
-            "CustomRightShoesAccessoryEnabled",
-            "CustomRightShoesAccessoryId",
-        )),
+        &[cloth!("RightShoes", 71)],
         true,
     ),
     slot(
         "Classic Shirts",
         Rule::Clothing,
-        Some("ClassicShirtsAccessoryOverride"),
-        Some((
-            "CustomClassicShirtsAccessoryEnabled",
-            "CustomClassicShirtsAccessoryId",
-        )),
+        &[cloth!("ClassicShirts", 11)],
         true,
     ),
     slot(
         "Classic T-Shirts",
         Rule::Clothing,
-        Some("ClassicTShirtsAccessoryOverride"),
-        Some((
-            "CustomClassicTShirtsAccessoryEnabled",
-            "CustomClassicTShirtsAccessoryId",
-        )),
+        &[cloth!("ClassicTShirts", 2)],
         true,
     ),
     slot(
         "Classic Pants",
         Rule::Clothing,
-        Some("ClassicPantsAccessoryOverride"),
-        Some((
-            "CustomClassicPantsAccessoryEnabled",
-            "CustomClassicPantsAccessoryId",
-        )),
+        &[cloth!("ClassicPants", 12)],
         true,
     ),
 ];
 
 macro_rules! accessory {
     ($label:literal, $kind:literal) => {
-        slot(
-            $label,
-            Rule::Accessory,
-            Some(concat!($kind, "AccessoryOverride")),
-            Some((
-                concat!("Custom", $kind, "AccessoryEnabled"),
-                concat!("Custom", $kind, "AccessoryId"),
-            )),
-            true,
-        )
+        slot($label, Rule::Accessory, &[cloth!($kind, 0)], true)
     };
 }
 
@@ -307,11 +282,7 @@ macro_rules! clip {
         slot(
             $label,
             Rule::Animation,
-            $current,
-            Some((
-                concat!("Custom", $legacy, "AnimationEnabled"),
-                concat!("Custom", $legacy, "AnimationId"),
-            )),
+            &[kind!($legacy, "Animation", $current, 0)],
             false,
         )
     };
@@ -331,3 +302,12 @@ pub(crate) const CLIP_SLOTS: [Slot; 10] = [
     clip!("Swim Idle", Some("SwimIdleAnimationOverride"), "SwimIdle"),
     clip!("Climb", Some("ClimbAnimationOverride"), "Climb"),
 ];
+
+/// The catalog asset type of `id`, from Roblox's public economy API (no
+/// key needed), as Studio looks it up to place a Tops or Bottoms ID;
+/// `None` when offline or unknown.
+pub(crate) fn asset_type(id: i64) -> Option<u32> {
+    let url = format!("https://economy.roblox.com/v2/assets/{id}/details");
+    let details: serde_json::Value = ureq::get(&url).call().ok()?.body_mut().read_json().ok()?;
+    details.get("AssetTypeId")?.as_u64()?.try_into().ok()
+}

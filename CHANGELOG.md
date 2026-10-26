@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-26
+
+- **Avatar Settings saves the way Studio does.** Checked against a place
+  Studio saved: a ticked empty row is just ticked with id 0 (we wrote -1),
+  Tops and Bottoms tick every kind they cover and the id goes on the
+  asset's own kind (a T-shirt id lands on the T-shirt pair, looked up on
+  the catalog), ids live in the `Custom…Id` pairs with the `…Override`
+  props left at 0, and the height boxes take up to 25 like Studio's even
+  though the slider stops at 10. Heads up: Studio keeps these settings per
+  experience and loads them over the place's, so edits here don't show in
+  Studio's dock for a published place. (@chteau)
+
 ## 2026-10-25
 
 - **Images and scripts survive a `.rbxlx` save.** We wrote `Decal.Texture`,

@@ -70,12 +70,16 @@ impl BuildRange {
 /// Body › Custom Scale's height slider, in studs.
 pub(crate) const HEIGHT_RANGE: (f32, f32) = (2.0, 10.0);
 
+/// What Studio's height boxes accept, in studs: past the slider's end, a
+/// typed 50 comes back as 25.
+const HEIGHT_LIMIT: (f32, f32) = (2.0, 25.0);
+
 /// The absolute height range (min equals max for one height) and the
 /// older property Studio mirrors it into.
 pub(crate) const WORLD_HEIGHT: Key = (Rule::Body, "CustomWorldHeight");
 
 pub(crate) fn write_height(min: f32, max: f32) -> Writes {
-    let clamp = |v: f32| v.clamp(HEIGHT_RANGE.0, HEIGHT_RANGE.1);
+    let clamp = |v: f32| v.clamp(HEIGHT_LIMIT.0, HEIGHT_LIMIT.1);
     let (min, max) = (clamp(min.min(max)), clamp(min.max(max)));
     vec![
         (WORLD_HEIGHT, super::range(min, max)),
