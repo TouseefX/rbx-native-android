@@ -474,6 +474,9 @@ pub(crate) struct Shell {
     /// The model pivots a viewport drag carries with its parts, read once at
     /// the drag's first step, see `Shell::write_drag_after`.
     drag_followers: Vec<rbx_lua::pivot::Follower>,
+    /// A drag's pre-gesture snapshot while no step has written anything yet,
+    /// filed as the gesture's undo step by its first step that does.
+    drag_unfiled: Option<WeakDom>,
     /// The two snap increment fields' live text, see `shell::toolbar::snap`.
     snap_fields: SnapFields,
     /// The Align tool's current toggles (axes, Min/Center/Max, World/Local,
@@ -679,8 +682,13 @@ impl Shell {
         // the selection travels back out of it (there is no selection event).
         let clicked = cx.observe(&tree, |shell, tree, cx| shell.sync_selection(&tree, cx));
 
-        let filter = cx
-            .new(|cx| InputState::new(window, cx).placeholder("Filter Properties (Ctrl+Shift+P)"));
+        // Studio's own wording, with whatever key focuses it now.
+        let filter_hint = crate::shortcuts::hint(crate::shortcuts::Command::FocusPropertiesFilter)
+            .map_or_else(
+                || "Filter Properties".to_owned(),
+                |key| format!("Filter Properties ({key})"),
+            );
+        let filter = cx.new(|cx| InputState::new(window, cx).placeholder(filter_hint));
         let filtered = cx.subscribe(&filter, |_, _, event: &InputEvent, cx| {
             if matches!(event, InputEvent::Change) {
                 cx.notify();
@@ -719,9 +727,9 @@ impl Shell {
         let entered = cx.subscribe_in(
             command_bar.input(),
             window,
-            |shell, _, event: &InputEvent, window, cx| {
+            |shell, _, event: &InputEvent, _, cx| {
                 if matches!(event, InputEvent::PressEnter { .. }) {
-                    shell.run_typed_command(window, cx);
+                    shell.run_typed_command(cx);
                 }
             },
         );
@@ -924,6 +932,7 @@ impl Shell {
             folder_colors,
             transform,
             drag_followers: Vec::new(),
+            drag_unfiled: None,
             snap_fields,
             align: AlignOptions::default(),
             align_open: false,
@@ -1862,9 +1871,9 @@ impl Shell {
     /// preset to disk. Also saves the current dock layout. A settings file
     /// is tiny, so this runs synchronously on every change rather than
     /// debouncing; a write failure (e.g. no writable config directory) is
-    /// not fatal and is silently dropped, losing a preference write is
-    /// better than interrupting the editor over it.
-    fn save_settings(&self) {
+    /// not fatal: it lands in Output as a warning rather than interrupting
+    /// the editor.
+    fn save_settings(&mut self) {
         let settings = Settings {
             quality: self.quality_choice,
             show_all_services: self.show_all_services,
@@ -1918,7 +1927,10 @@ impl Shell {
             // Home's choice, which the editor never changes: keep the file's.
             recent_icons: Settings::load().recent_icons,
         };
-        let _ = settings.save();
+        if let Err(err) = settings.save() {
+            self.output
+                .push_warning(&format!("could not save settings: {err}"));
+        }
 
         // Save the current dock layout state
     }

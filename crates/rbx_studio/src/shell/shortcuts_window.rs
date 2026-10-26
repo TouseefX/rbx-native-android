@@ -187,7 +187,7 @@ impl ShortcutsWindow {
             cx.notify();
             return true;
         }
-        if !shortcuts::bindable(keystroke) {
+        if !shortcuts::bindable(recording.command, keystroke) {
             return false;
         }
         let key = Keystroke {

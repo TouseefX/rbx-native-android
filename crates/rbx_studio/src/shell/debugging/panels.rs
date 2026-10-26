@@ -16,6 +16,7 @@ use rbx_lua::Resume;
 
 use crate::tokens;
 
+use super::super::chrome::ScrollbarY as _;
 use super::super::layout::Panel;
 use super::super::{chrome, menu, Shell};
 use super::Watch;
@@ -113,11 +114,18 @@ impl Shell {
             .size_full()
             .child(tabs)
             .child(
+                // `min_h_0`: a flex child is at least as tall as its content
+                // unless told otherwise, so the list grew past the dock's
+                // bottom edge and its last rows were cut off, not scrolled.
                 div()
                     .id("watch-list")
                     .flex_1()
+                    .min_h_0()
                     .overflow_y_scroll()
-                    .child(v_flex().w_full().children(rows)),
+                    .track_scroll(&self.debug.watch_scroll)
+                    .pr(chrome::SCROLLBAR_GUTTER)
+                    .child(v_flex().w_full().children(rows))
+                    .scrollbar_y(&self.debug.watch_scroll),
             )
             .when(tab == WatchTab::MyWatches, |this| {
                 this.child(
@@ -183,7 +191,10 @@ impl Shell {
             .id("call-stack-list")
             .size_full()
             .overflow_y_scroll()
-            .child(v_flex().w_full().children(rows));
+            .track_scroll(&self.debug.stack_scroll)
+            .pr(chrome::SCROLLBAR_GUTTER)
+            .child(v_flex().w_full().children(rows))
+            .scrollbar_y(&self.debug.stack_scroll);
         (
             Some(overflow.into_any_element()),
             Some(body.into_any_element()),

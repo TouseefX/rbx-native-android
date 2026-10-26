@@ -39,9 +39,11 @@ impl SettingsWindow {
             })
             .collect();
         if self.page == Page::Beta {
-            resets.push(Rc::new(|_, cx| {
+            resets.push(Rc::new(|shell, cx| {
                 if let Err(error) = crate::beta::reset_all() {
-                    eprintln!("could not save beta.json: {error}");
+                    shell
+                        .output
+                        .push_warning(&format!("could not save beta.json: {error}"));
                 }
                 cx.notify();
             }));

@@ -65,6 +65,10 @@ pub(crate) enum Anchor {
         origin: Vec3,
         /// World width and height in studs, see [`studs`].
         size: [f32; 2],
+        /// Width and height added on top of `size` in screen pixels, see
+        /// [`pixels`]: constant on screen, so its stud size depends on the
+        /// eye's distance.
+        pixels: [f32; 2],
         /// `StudsOffset`, in the camera's own right/up/forward basis.
         view_offset: Vec3,
         /// `StudsOffsetWorldSpace`, along the global axes.
@@ -253,13 +257,14 @@ fn read(
 
     let (canvas, anchor) = match billboard {
         true => {
-            let size = studs(span(properties, "Size"));
+            let size = span(properties, "Size");
             let origin = origin(context, adornee)?;
             (
                 billboard_canvas(size),
                 Anchor::Billboard {
                     origin,
-                    size,
+                    size: studs(size),
+                    pixels: pixels(size),
                     view_offset: vector3(properties, "StudsOffset"),
                     world_offset: vector3(properties, "StudsOffsetWorldSpace"),
                     size_offset: vector2(properties, "SizeOffset"),
@@ -379,7 +384,7 @@ fn vector3(properties: &BTreeMap<String, Variant>, name: &str) -> Vec3 {
 mod geometry;
 
 pub(in crate::scene::gui) use geometry::{
-    billboard_canvas, face, face_corners, face_studs, studs, surface_canvas,
+    billboard_canvas, face, face_corners, face_studs, pixels, studs, surface_canvas,
 };
 
 #[cfg(test)]
