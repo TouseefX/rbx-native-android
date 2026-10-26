@@ -69,6 +69,19 @@ const ARCHIVE_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_ARCHIVE";
 /// capture. Nothing is saved.
 const RECENT_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_RECENT";
 
+/// The Archive dialog's line for `err`, shown as is: a refusal already
+/// says Roblox refused it. A 401 means the stored sign-in expired or was
+/// signed out elsewhere, which Roblox's "User is not authenticated" doesn't
+/// say how to fix.
+fn archive_failure(err: &rbx_cloud::CloudError) -> String {
+    match err {
+        rbx_cloud::CloudError::Refused { status: 401, .. } => format!(
+            "{err}. Your Roblox sign-in has expired: sign in again in the editor, Settings \u{203a} Account \u{203a} Roblox sign-in."
+        ),
+        _ => err.to_string(),
+    }
+}
+
 impl HomeWindow {
     pub(super) fn set_recent_icons(&mut self, on: bool, cx: &mut Context<Self>) {
         self.recent_icons = on;
@@ -177,7 +190,7 @@ impl HomeWindow {
                         (Some("ok"), _) => Ok(()),
                         (Some(reason), _) => Err(reason.to_string()),
                         (None, Some(cookie)) => rbx_cloud::archive_experience(&cookie, universe_id)
-                            .map_err(|err| err.to_string()),
+                            .map_err(|err| archive_failure(&err)),
                         (None, None) => Err("Not signed in to Roblox.".to_string()),
                     }
                 })
@@ -231,7 +244,8 @@ impl HomeWindow {
 #[cfg(test)]
 mod tests {
     // Not `super::*`: gpui's own `test` attribute would come along with it.
-    use super::{RecentAction, RecentPlace};
+    use super::{archive_failure, RecentAction, RecentPlace};
+    use rbx_cloud::CloudError;
 
     fn place(linked: bool) -> RecentPlace {
         RecentPlace {
@@ -260,5 +274,31 @@ mod tests {
             let off = action.unavailable(&linked, false).is_some();
             assert_eq!(off, action == RecentAction::Archive, "{action:?}");
         }
+    }
+
+    #[test]
+    fn a_refusal_names_roblox_once() {
+        let line = archive_failure(&CloudError::Refused {
+            status: 400,
+            message: "The universe is already archived.".into(),
+        });
+        assert_eq!(
+            line,
+            "Roblox refused it (400): The universe is already archived."
+        );
+    }
+
+    /// What develop.roblox.com answered a stale cookie with, live.
+    #[test]
+    fn an_expired_sign_in_says_to_sign_in_again() {
+        let line = archive_failure(&CloudError::Refused {
+            status: 401,
+            message: "User is not authenticated".into(),
+        });
+        assert!(
+            line.starts_with("Roblox refused it (401): User is not authenticated."),
+            "{line}"
+        );
+        assert!(line.contains("Roblox sign-in"), "{line}");
     }
 }
