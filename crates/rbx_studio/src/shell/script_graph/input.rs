@@ -18,7 +18,7 @@ use super::{canvas, Gesture, Tool};
 mod edits;
 use crate::script_editor::graph::catalog::Wanted;
 use crate::script_editor::graph::layout::{self, Rect, Side};
-use crate::shortcuts::{pressed, Command};
+use crate::shortcuts::{pressed, released, Command};
 
 use super::super::Shell;
 
@@ -94,7 +94,7 @@ impl Shell {
                 }
             }))
             .on_key_up(cx.listener(move |shell, event: &KeyUpEvent, _, cx| {
-                if event.keystroke.key == "space" {
+                if released(Command::GraphPan, &event.keystroke) {
                     if let Some(editor) = shell.graphs.get_mut(&reference) {
                         editor.space = false;
                         cx.notify();

@@ -55,6 +55,9 @@ pub(super) struct Debugging {
     watch_subscription: Option<Subscription>,
     clear_watch_input: bool,
     tab: panels::WatchTab,
+    /// The Watch and Call Stack lists, for their scrollbars.
+    watch_scroll: ScrollHandle,
+    stack_scroll: ScrollHandle,
     menu: Option<breakpoint_menu::Menu>,
     editing: Option<breakpoint_menu::Editing>,
 }

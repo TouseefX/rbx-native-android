@@ -48,7 +48,9 @@ editor state and the hooks marked the same way in `src/input/base/element.rs`:
 a per-line marker cell over the line-number column that reports mouse
 presses, and one line painted edge to edge. The script debugger draws its
 breakpoints and the paused line through it; upstream's gutter only has line
-numbers and fold chevrons.
+numbers and fold chevrons. While a gutter is set the line-number column
+grows by `gutter::MARKER_ROOM` and the numbers move right by as much, so a
+marker never sits on a digit.
 
 And two setters on the editor state in `src/input/base/state.rs`, marked the
 same way, for an editor set into a card of its own (the Script Templates

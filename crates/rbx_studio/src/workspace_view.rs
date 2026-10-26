@@ -873,7 +873,7 @@ impl WorkspaceView {
         // camera moving on its own.
         // `Tab` comes down as an action (see `summon::install`); only its
         // release arrives here.
-        if !pressed && keystroke.key == "tab" {
+        if !pressed && crate::shortcuts::released(crate::shortcuts::Command::SummonHandles, keystroke) {
             self.release_summon();
             return;
         }
