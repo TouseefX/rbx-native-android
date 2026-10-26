@@ -556,8 +556,8 @@ fn run(
             shown = frame.level;
         }
 
-        let view = viewer.pose();
-        let pose = due_pose(view, pose_sent, now >= pose_due);
+        let view = Some(viewer.view_pose());
+        let pose = due_pose(viewer.pose(), pose_sent, now >= pose_due);
         if let Some(pose) = pose {
             pose_sent = Some(pose);
             pose_due = now + POSE_SYNC_INTERVAL;
