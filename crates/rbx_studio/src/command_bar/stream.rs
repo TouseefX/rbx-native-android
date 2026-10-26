@@ -19,13 +19,19 @@ pub(crate) fn segments(kinds: &[LineKind]) -> Vec<(LineKind, Range<usize>)> {
     out
 }
 
-/// The row for `lines`, all of `kind`.
+/// The row for `lines`, all of `kind`; an error keeps only its message
+/// (its stack gets rows of its own, see `failure`).
 pub(crate) fn feedback_for(kind: LineKind, lines: &[String]) -> Feedback {
-    let text = lines.join("\n");
     match kind {
-        LineKind::Print => Feedback::Output(text),
-        LineKind::Warn => Feedback::Warning(text),
-        LineKind::Error => Feedback::Error(text),
+        LineKind::Print => Feedback::Output(lines.join("\n")),
+        LineKind::Warn => Feedback::Warning(lines.join("\n")),
+        LineKind::Error => Feedback::Error(
+            lines
+                .iter()
+                .map(|line| super::failure::message(line))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        ),
     }
 }
 

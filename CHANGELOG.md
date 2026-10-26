@@ -55,6 +55,20 @@
   though the slider stops at 10. Heads up: Studio keeps these settings per
   experience and loads them over the place's, so edits here don't show in
   Studio's dock for a published place. (@chteau)
+- **Command Bar and Output work like Studio's now.** Checked each one in
+  real Studio first. The bar is multi-line: Enter adds a line, it grows to
+  10 lines then scrolls, Ctrl+Enter runs, Ctrl+Up/Down walk the history and
+  the text stays after a run. A failed run prints Studio's block: the error,
+  `Stack Begin`, one `Script 'CommandBar', Line N` row per frame, `Stack
+  End`, then the error again (the bar's chunk is `CommandBar` now, like
+  Studio's), and a Play error's stack reads the same way. File shows Ctrl+N
+  / Ctrl+O next to New and Open, straight from the shortcuts registry. The
+  Properties filter placeholder follows a rebind right away instead of after
+  a relaunch. Home's Recent menu closes on Escape, and a click outside it
+  only closes it, the way Studio's start page does, so it can't open the
+  place underneath anymore. A keychain read that never answers no longer
+  keeps the splash up forever: startup gives up after 5 s and opens Home
+  with a note saying the key wasn't loaded. (@chteau)
 
 ## 2026-10-25
 

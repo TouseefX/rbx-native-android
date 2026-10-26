@@ -198,6 +198,14 @@ impl HomeWindow {
     }
 
     pub(super) fn no_key_banner(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        // A keychain that never answered at startup may still hold a key,
+        // so the banner says that rather than "no key yet".
+        let stalled = crate::key_store::stalled();
+        let (eyebrow, title) = if stalled {
+            ("KEYCHAIN DIDN'T ANSWER", "Your saved key wasn't loaded")
+        } else {
+            ("NO API KEY YET", "Open and publish your Roblox places")
+        };
         h_flex()
             .h(px(172.))
             .flex_none()
@@ -217,16 +225,18 @@ impl HomeWindow {
                         ui::text(10., 14.)
                             .font_weight(FontWeight::BOLD)
                             .text_color(ui::accent())
-                            .child("NO API KEY YET"),
+                            .child(eyebrow),
                     )
                     .child(
                         ui::text(18., 24.)
                             .font_weight(FontWeight::BOLD)
                             .text_color(tokens::text())
-                            .child("Open and publish your Roblox places"),
+                            .child(title),
                     )
                     .child(ui::text(12.5, 19.).max_w(px(490.)).text_color(tokens::text2()).child(
-                        if self.pick.is_some() {
+                        if stalled {
+                            "The system keychain didn't answer when RbxNative started, so it opened without your key. Unlock the keychain and restart, or set up a key again. Local .rbxl and .rbxlx files work without it."
+                        } else if self.pick.is_some() {
                             "Saving and publishing to Roblox need an Open Cloud API key. Add one from Home \u{203a} Manage key and your experiences are listed here."
                         } else {
                             "Add an Open Cloud API key once and My Games fills in with your experiences. Local .rbxl and .rbxlx files work without it."
