@@ -7,6 +7,7 @@
 //! for them. See `Client` for the entry point.
 
 mod api_key;
+mod archive;
 mod asset_metadata;
 mod assets;
 mod avatar;
@@ -33,6 +34,7 @@ mod universes;
 mod version_history;
 
 pub use api_key::{keyring_disabled, ApiKey};
+pub use archive::archive_experience;
 pub use asset_metadata::AssetMetadata;
 pub use assets::AssetContent;
 pub use avatar::{AssetType, Avatar, AvatarAsset, AvatarBodyColors, AvatarScales};

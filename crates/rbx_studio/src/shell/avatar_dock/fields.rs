@@ -86,22 +86,26 @@ impl Field {
         }
     }
 
+    /// What typing `text` into a custom row's box sets it to, `None` for
+    /// text that isn't an id.
+    fn slot_value(slot: &Slot, text: &str, rules: &Rules, dom: &WeakDom) -> Option<SlotValue> {
+        let text = text.trim();
+        Some(match text.parse::<i64>() {
+            Ok(id) if id > 0 => SlotValue::Asset(id),
+            _ if !text.is_empty() => return None,
+            // Emptied: a ticked row that may be blank removes the
+            // category; one that may not goes back to the player's own.
+            _ if slot.blank_removes && slot.read(rules, dom) != SlotValue::Off => SlotValue::Remove,
+            _ => SlotValue::Off,
+        })
+    }
+
     /// What typing `text` here writes, `None` for text that isn't a value.
     fn writes(self, text: &str, rules: &Rules, dom: &WeakDom) -> Option<Writes> {
         let text = text.trim();
         if let Field::Slot(group, row) = self {
             let slot = &group.slots()[row];
-            let value = match text.parse::<i64>() {
-                Ok(id) if id > 0 => SlotValue::Asset(id),
-                _ if !text.is_empty() => return None,
-                // Emptied: a ticked row that may be blank removes the
-                // category; one that may not goes back to the player's own.
-                _ if slot.blank_removes && slot.read(rules, dom) != SlotValue::Off => {
-                    SlotValue::Remove
-                }
-                _ => SlotValue::Off,
-            };
-            return Some(slot.write(value));
+            return Some(slot.write(Self::slot_value(slot, text, rules, dom)?, None));
         }
         let value = text.trim_end_matches('%').trim().parse::<f32>().ok()?;
         let (min, max) = rules.range_of(dom, WORLD_HEIGHT);
@@ -225,6 +229,26 @@ impl AvatarFields {
 impl Shell {
     fn commit_avatar_field(&mut self, field: Field, text: &str, cx: &mut Context<Self>) {
         let rules = Rules::find(&self.dom);
+        if let Field::Slot(group, row) = field {
+            let slot = &group.slots()[row];
+            if let Some(SlotValue::Asset(id)) = Field::slot_value(slot, text, &rules, &self.dom) {
+                if slot.typed() {
+                    // Like Studio, file the id under its own kind (a
+                    // T-shirt in Tops is not a shirt), which takes a look
+                    // at the catalog first.
+                    cx.spawn(async move |shell, cx| {
+                        let kind = cx
+                            .background_spawn(async move { rules::asset_type(id) })
+                            .await;
+                        let _ = shell.update(cx, |shell, cx| {
+                            shell.apply_avatar_writes(slot.write(SlotValue::Asset(id), kind), cx)
+                        });
+                    })
+                    .detach();
+                    return;
+                }
+            }
+        }
         match field.writes(text, &rules, &self.dom) {
             Some(writes) => self.apply_avatar_writes(writes, cx),
             // Not a value: the next draw's sync puts the stored one back.
@@ -258,6 +282,6 @@ impl Shell {
             }
             SlotValue::Remove | SlotValue::Asset(_) => SlotValue::Off,
         };
-        self.apply_avatar_writes(slot.write(value), cx);
+        self.apply_avatar_writes(slot.write(value, None), cx);
     }
 }

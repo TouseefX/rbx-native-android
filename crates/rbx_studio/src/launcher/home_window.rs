@@ -96,6 +96,8 @@ pub(crate) struct HomeWindow {
     /// Recent as icons rather than the list; saved in settings.
     pub(super) recent_icons: bool,
     pub(super) recent_menu: Option<RecentMenu>,
+    /// The editor's Roblox web sign-in, which Archive needs.
+    pub(super) session: Option<rbx_cloud::heartbeats::SessionCookie>,
     /// Auto-Recovery copies no editor owns, read as Home opens.
     pub(super) recovered: Vec<crate::recovery::Leftover>,
     pub(super) search: Entity<InputState>,
@@ -216,6 +218,7 @@ impl HomeWindow {
             recent: home::recent(),
             recent_icons,
             recent_menu: None,
+            session: None,
             recovered: crate::recovery::folder()
                 .map(|folder| crate::recovery::leftovers(&folder))
                 .unwrap_or_default(),
@@ -239,6 +242,7 @@ impl HomeWindow {
             _subscriptions: subscriptions,
         };
         this.reload(cx);
+        this.load_session(cx);
         this.apply_capture_state(window, cx);
         this.apply_recent_capture(window);
         this

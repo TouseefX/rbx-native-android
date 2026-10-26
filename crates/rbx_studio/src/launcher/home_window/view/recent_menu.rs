@@ -13,9 +13,9 @@ use crate::tokens;
 impl HomeWindow {
     pub(super) fn recent_menu_view(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let menu = self.recent_menu.as_ref()?;
-        let has_key = self.has_key();
+        let signed_in = self.session.is_some();
         let rows = RecentAction::ALL.map(|action| {
-            let why = action.unavailable(&menu.place, has_key);
+            let why = action.unavailable(&menu.place, signed_in);
             h_flex()
                 .id(SharedString::from(format!("recent-menu-{action:?}")))
                 .h(px(28.))
