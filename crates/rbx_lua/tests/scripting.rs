@@ -401,6 +401,6 @@ fn an_error_names_the_chunk_not_a_rust_source_line() {
         .expect_err("the script errors");
 
     let message = error.to_string();
-    assert!(message.contains("Command bar:2: boom"), "{message}");
+    assert!(message.contains("CommandBar:2: boom"), "{message}");
     assert!(!message.contains("runtime.rs"), "{message}");
 }

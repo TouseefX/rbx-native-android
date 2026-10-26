@@ -527,6 +527,13 @@ pub(crate) fn is_default(command: Command) -> bool {
     with_store(|store| store.is_default(command))
 }
 
+/// Swaps this thread's store without saving it, so a test never touches
+/// the user's config.
+#[cfg(test)]
+pub(crate) fn install_unsaved(store: Store) {
+    STORE.with(|cell| *cell.borrow_mut() = Some(store));
+}
+
 /// The first binding, displayed; `None` if unbound.
 pub(crate) fn hint(command: Command) -> Option<String> {
     bindings(command).first().map(display)

@@ -120,7 +120,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use gpui_kit::component::input::{InputEvent, InputState, MoveDown, MoveUp};
+use gpui_kit::component::input::{Enter, InputEvent, InputState};
 use gpui_kit::component::select::{SearchableVec, SelectEvent, SelectState};
 use gpui_kit::component::tree::TreeState;
 use gpui_kit::component::{v_flex, IndexPath};
@@ -561,7 +561,7 @@ pub(crate) struct Shell {
     /// is raised with it once rather than fought over every frame.
     window_was_active: bool,
     /// Kept only to stay subscribed: dropping these unregisters the listeners.
-    _subscriptions: [Subscription; 18],
+    _subscriptions: [Subscription; 17],
 }
 
 impl Shell {
@@ -682,13 +682,7 @@ impl Shell {
         // the selection travels back out of it (there is no selection event).
         let clicked = cx.observe(&tree, |shell, tree, cx| shell.sync_selection(&tree, cx));
 
-        // Studio's own wording, with whatever key focuses it now.
-        let filter_hint = crate::shortcuts::hint(crate::shortcuts::Command::FocusPropertiesFilter)
-            .map_or_else(
-                || "Filter Properties".to_owned(),
-                |key| format!("Filter Properties ({key})"),
-            );
-        let filter = cx.new(|cx| InputState::new(window, cx).placeholder(filter_hint));
+        let filter = cx.new(|cx| InputState::new(window, cx).placeholder(panels::filter_hint()));
         let filtered = cx.subscribe(&filter, |_, _, event: &InputEvent, cx| {
             if matches!(event, InputEvent::Change) {
                 cx.notify();
@@ -724,15 +718,6 @@ impl Shell {
         });
 
         let command_bar = CommandBar::new(window, cx);
-        let entered = cx.subscribe_in(
-            command_bar.input(),
-            window,
-            |shell, _, event: &InputEvent, _, cx| {
-                if matches!(event, InputEvent::PressEnter { .. }) {
-                    shell.run_typed_command(cx);
-                }
-            },
-        );
 
         let initial_outline = outlined(&dom, &database, &Vec::from_iter(selected));
         let mut transform = Transform::default();
@@ -979,7 +964,6 @@ impl Shell {
                 picked,
                 clicked,
                 filtered,
-                entered,
                 camera_synced,
                 viewport_actions,
                 asset_warnings,
@@ -2105,15 +2089,19 @@ impl Render for Shell {
             .child(self.workspace(window, cx))
             .children((!self.layout.command_bar_hidden()).then(|| {
                 div()
-                    // Captured so the input's own Up/Down (a no-op on one
-                    // line) never gets them: they walk the submitted commands.
-                    .capture_action(cx.listener(|shell, _: &MoveUp, window, cx| {
-                        shell.walk_command_history(true, window, cx);
-                        cx.stop_propagation();
+                    // Studio's keys (see `command_bar`), captured before the
+                    // field's own: its Ctrl+Enter would insert a line first.
+                    .capture_action(cx.listener(|shell, enter: &Enter, _, cx| {
+                        if enter.secondary {
+                            shell.run_typed_command(cx);
+                            cx.stop_propagation();
+                        }
                     }))
-                    .capture_action(cx.listener(|shell, _: &MoveDown, window, cx| {
-                        shell.walk_command_history(false, window, cx);
-                        cx.stop_propagation();
+                    .capture_key_down(cx.listener(|shell, event: &KeyDownEvent, window, cx| {
+                        if let Some(older) = crate::command_bar::history_key(&event.keystroke) {
+                            shell.walk_command_history(older, window, cx);
+                            cx.stop_propagation();
+                        }
                     }))
                     .child(self.command_bar.render(
                         self.tab_order.next(),

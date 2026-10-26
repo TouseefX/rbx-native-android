@@ -237,6 +237,13 @@ impl Shell {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        // The key can be rebound while the editor runs, from a window that
+        // only has the shell redraw, so the placeholder follows it here.
+        let hint = filter_hint();
+        if *self.filter.read(cx).presentation().placeholder() != hint {
+            self.filter
+                .update(cx, |input, cx| input.set_placeholder(hint, window, cx));
+        }
         let filter = self.filter.read(cx).value();
         let filtering = !filter.trim().is_empty();
         // One Tab stop for the whole panel; Up/Down move between its
@@ -355,5 +362,41 @@ impl Shell {
                     )
                     .scrollbar_y(&self.properties_scroll),
             )
+    }
+}
+
+/// The Properties filter's placeholder: Studio's own wording, with whatever
+/// key focuses the field now.
+pub(super) fn filter_hint() -> SharedString {
+    crate::shortcuts::hint(crate::shortcuts::Command::FocusPropertiesFilter).map_or_else(
+        || "Filter Properties".into(),
+        |key| format!("Filter Properties ({key})").into(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::shortcuts::{self, Command, Store};
+
+    #[test]
+    fn the_filter_hint_follows_a_rebind() {
+        let mut store = Store::default();
+        store.set(
+            Command::FocusPropertiesFilter,
+            vec![gpui_kit::Keystroke::parse("ctrl-alt-f").unwrap()],
+        );
+        shortcuts::install_unsaved(store.clone());
+        let key = if cfg!(target_os = "macos") {
+            "⌃⌥F"
+        } else {
+            "Ctrl+Alt+F"
+        };
+        assert_eq!(
+            super::filter_hint().as_ref(),
+            format!("Filter Properties ({key})")
+        );
+        store.set(Command::FocusPropertiesFilter, Vec::new());
+        shortcuts::install_unsaved(store);
+        assert_eq!(super::filter_hint().as_ref(), "Filter Properties");
     }
 }

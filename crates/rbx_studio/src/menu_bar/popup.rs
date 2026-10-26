@@ -21,6 +21,12 @@ use crate::tokens;
 /// element and keeps the action, the disabled state and keyboard
 /// navigation, so these rows are drawn as elements 44px tall (WCAG 2.5.5)
 /// with the shortcut hint rendered the way the toolkit's own rows do.
+///
+/// A row whose command lives in the shortcuts registry is drawn the same
+/// way at its ordinary height: the toolkit only finds a hint in GPUI's
+/// keymap, and most of those commands (New, Open, Undo, Copy…) are keys
+/// `Shell` matches itself, so the registry is the only place that knows
+/// them and the toolkit's own row would show none.
 pub(super) const PRIMARY_ROWS: [&str; 4] = [
     "Save to File",
     "Save to Roblox",
@@ -46,8 +52,15 @@ pub(super) fn dropdown(
                 checked,
                 disabled,
                 ..
-            } if PRIMARY_ROWS.contains(&name.as_ref()) => {
+            } if PRIMARY_ROWS.contains(&name.as_ref())
+                || crate::shortcuts::command_for_action(action.as_ref()).is_some() =>
+            {
                 let (label, shortcut_action) = (name.clone(), action.boxed_clone());
+                let row_height = if PRIMARY_ROWS.contains(&name.as_ref()) {
+                    tokens::primary_target()
+                } else {
+                    px(0.)
+                };
                 let context = action_context.clone();
                 menu.item(
                     PopupMenuItem::element(move |window, _| {
@@ -67,7 +80,7 @@ pub(super) fn dropdown(
                         h_flex()
                             .debug_selector(|| format!("menu-row-{label}"))
                             .w_full()
-                            .min_h(tokens::primary_target())
+                            .min_h(row_height)
                             .items_center()
                             .justify_between()
                             .gap_3()

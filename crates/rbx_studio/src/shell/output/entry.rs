@@ -101,8 +101,13 @@ impl OutputEntry {
         self.source.to_lowercase().contains(&query) || self.label().to_lowercase().contains(&query)
     }
 
+    /// The row's text. An error or a warning reads bare, as in Studio's
+    /// Output: the row's icon and colour already say which it is.
     pub(super) fn label(&self) -> SharedString {
-        self.feedback.label_within(LABEL_MAX_LEN)
+        match &self.feedback {
+            Feedback::Error(text) | Feedback::Warning(text) => truncate(text, LABEL_MAX_LEN),
+            feedback => feedback.label_within(LABEL_MAX_LEN),
+        }
     }
 
     pub(super) fn truncated_source(&self) -> SharedString {

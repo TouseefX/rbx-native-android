@@ -58,6 +58,11 @@ impl<E: ParentElement> ScrollbarY for E {}
 /// the frame shows anyway.
 const LOGO: &[u8] = include_bytes!("../../../../assets/icons/brand/rbxnative-logo.svg");
 
+/// The logo at `height`, keeping its 23.8 x 17 shape.
+pub(crate) fn logo(height: f32) -> Icon {
+    Icon::empty().data(LOGO).w(px(height * 1.4)).h(px(height))
+}
+
 /// Which editor the centre column is showing. Row A owns this, so that
 /// Explorer, Properties and Output stay mounted no matter which document is
 /// open (see `UX_GUIDELINES.md`'s independence rule).

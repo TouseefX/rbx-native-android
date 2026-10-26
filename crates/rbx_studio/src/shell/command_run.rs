@@ -11,7 +11,7 @@ use std::time::Duration;
 use gpui_kit::{Context, Task, Window};
 use rbx_lua::{RunState, Runtime};
 
-use crate::command_bar::{stream, Feedback, RunUndo};
+use crate::command_bar::{failure, stream, Feedback, RunUndo};
 
 use super::Shell;
 
@@ -36,8 +36,9 @@ pub(super) struct CommandRun {
 }
 
 impl Shell {
-    /// Enter in the Command Bar: runs the input's text and leaves it there,
-    /// as Studio's own bar does, so a command can be run again or tweaked.
+    /// Ctrl+Enter in the Command Bar: runs the input's text and leaves it
+    /// there, as Studio's own bar does, so a command can be run again or
+    /// tweaked.
     pub(super) fn run_typed_command(&mut self, cx: &mut Context<Self>) {
         let source = self.command_bar.input().read(cx).value().to_string();
         match source
@@ -49,8 +50,8 @@ impl Shell {
         }
     }
 
-    /// Up/Down in the Command Bar: swaps the input's text for the older or
-    /// newer submitted command.
+    /// Ctrl+Up/Down in the Command Bar: swaps the input's text for the older
+    /// or newer submitted command.
     pub(super) fn walk_command_history(
         &mut self,
         older: bool,
@@ -185,14 +186,22 @@ impl Shell {
 
         let source = self.command_run.source.clone();
         for (kind, range) in stream::segments(step.output.kinds()) {
-            let feedback = stream::feedback_for(kind, &step.output.lines()[range.clone()]);
+            let lines = &step.output.lines()[range.clone()];
+            let feedback = stream::feedback_for(kind, lines);
             match kind {
                 rbx_lua::LineKind::Print => self.output.push_run(
                     &source,
                     feedback.clone(),
                     step.output.printed()[range].to_vec(),
                 ),
-                _ => self.output.push(&source, feedback.clone()),
+                // A thread the run spawned failed: its error and stack, as
+                // Studio prints one, each on rows of their own.
+                rbx_lua::LineKind::Error => {
+                    for row in lines.iter().flat_map(|line| failure::rows(line, false)) {
+                        self.output.push(&source, row);
+                    }
+                }
+                rbx_lua::LineKind::Warn => self.output.push(&source, feedback.clone()),
             }
             self.command_bar.set_feedback(feedback);
             self.command_run.emitted = true;
@@ -222,11 +231,15 @@ impl Shell {
         wait
     }
 
-    fn show_run_error(&mut self, message: &str) {
-        let feedback = Feedback::Error(message.to_owned());
-        self.output.push(&self.command_run.source, feedback.clone());
+    /// The run itself failed: its error and stack, then the error again,
+    /// which is how Studio's bar reports a run of its own failing.
+    fn show_run_error(&mut self, error: &str) {
+        for row in failure::rows(error, true) {
+            self.output.push(&self.command_run.source, row);
+        }
         self.command_run.emitted = true;
-        self.command_bar.set_feedback(feedback);
+        self.command_bar
+            .set_feedback(Feedback::Error(failure::message(error)));
     }
 
     /// Shows this step's DOM changes in the Explorer and the viewport, also

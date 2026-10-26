@@ -23,7 +23,7 @@
 //! screenshot can show what a script just created without a click.
 //! `RBX_STUDIO_RUN=<source>` runs one Luau chunk against the place right
 //! after the window opens, exactly as typing it into the Command Bar and
-//! pressing Enter would, the same aid, for the Command Bar itself.
+//! pressing Ctrl+Enter would, the same aid, for the Command Bar itself.
 //! `RBX_STUDIO_TOOL=move[,local][,nosnap]` picks a transform tool (and its
 //! world/local orientation, and whether the move/scale snap starts switched
 //! on) at startup, the same aid for the transform toolbar and its viewport
@@ -293,7 +293,9 @@ fn main() {
         cx.spawn(async move |cx| {
             // The stored key has to be in `rbx_cloud` before `load`: the
             // place's asset downloads authenticate with it.
-            let has_key = key_store::restore(cx).await;
+            // A store that never answered may well hold a key, so that
+            // launch goes Home, which says so, rather than to the wizard.
+            let has_key = key_store::restore_at_startup(cx).await.unwrap_or(true);
             if let Some(splash) = splash {
                 splash.finished(cx).await;
             }
