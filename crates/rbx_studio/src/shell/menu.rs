@@ -33,6 +33,7 @@ use gpui_kit::*;
 
 use crate::tokens;
 
+use super::chrome::ScrollbarY as _;
 use super::roving::{clamp, Move};
 use super::Shell;
 
@@ -173,6 +174,7 @@ type Action = Rc<dyn Fn(&mut Shell, &mut Context<Shell>)>;
 pub(super) struct MenuNav {
     focus: FocusHandle,
     cursor: Option<usize>,
+    scroll: ScrollHandle,
 }
 
 impl MenuNav {
@@ -180,6 +182,7 @@ impl MenuNav {
         MenuNav {
             focus: cx.focus_handle(),
             cursor: None,
+            scroll: ScrollHandle::new(),
         }
     }
 }
@@ -346,6 +349,7 @@ fn popover(
     let len = items.len();
     let focus = shell.menu_nav.focus.clone();
     let cursor = clamp(shell.menu_nav.cursor.filter(|_| open), len);
+    let scroll = shell.menu_nav.scroll.clone();
 
     Popover::new(menu.element_id())
         .anchor(anchor)
@@ -363,6 +367,9 @@ fn popover(
                     back.focus(window, cx);
                 }
                 handle.update(cx, |shell, cx| {
+                    if open {
+                        shell.menu_nav.scroll.set_offset(Point::default());
+                    }
                     shell.open_menu = open.then_some(menu);
                     shell.menu_nav.cursor = (open && keyboard)
                         .then(|| Move::First.from(None, len))
@@ -372,8 +379,9 @@ fn popover(
             }
         })
         .trigger(trigger)
-        .content(move |_, _, _| {
+        .content(move |_, window, _| {
             let back = back.clone();
+            let max_height = window.viewport_size().height - WINDOW_MARGIN * 2.;
             let actions: Rc<[Option<Action>]> = items
                 .iter()
                 .map(|item| item.is_enabled().then(|| item.action.clone()).flatten())
@@ -389,6 +397,9 @@ fn popover(
                     cx.stop_propagation();
                     key_shell.update(cx, |shell, cx| {
                         shell.menu_nav.cursor = movement.from(shell.menu_nav.cursor, len);
+                        if let Some(index) = shell.menu_nav.cursor {
+                            shell.menu_nav.scroll.scroll_to_item(index);
+                        }
                         cx.notify();
                     });
                 })
@@ -413,20 +424,44 @@ fn popover(
                         cx.notify();
                     });
                 })
-                .child(container(handle.clone(), &items, cursor))
+                .child(container(
+                    handle.clone(),
+                    &items,
+                    cursor,
+                    &scroll,
+                    max_height,
+                ))
         })
 }
+
+/// The gap `gpui_base`'s popup keeps from each window edge when it clamps a
+/// surface into the window. A menu taller than the window less both gaps
+/// scrolls instead, or its last rows (the Device menu's headsets) end up
+/// below the window where no pointer reaches them.
+const WINDOW_MARGIN: Pixels = px(8.);
 
 /// The menu arrives rather than appearing: a short fade with a 4px settle,
 /// on the ease-out every other motion in the editor uses. GPUI has no
 /// element transform, so this is a translation only (see
 /// `UX_GUIDELINES.md`'s deviation list).
-fn container(shell: Entity<Shell>, items: &[Item], cursor: Option<usize>) -> impl IntoElement {
-    menu_surface(shell, items, cursor).with_animation(
-        "menu-open",
-        Animation::new(tokens::DURATION_MENU).with_easing(tokens::easing_soft),
-        |this, delta| this.opacity(delta).mt(px(-4. + 4. * delta)),
-    )
+fn container(
+    shell: Entity<Shell>,
+    items: &[Item],
+    cursor: Option<usize>,
+    scroll: &ScrollHandle,
+    max_height: Pixels,
+) -> impl IntoElement {
+    menu_surface(shell, items, cursor)
+        .id("menu-scroll")
+        .max_h(max_height)
+        .overflow_y_scroll()
+        .track_scroll(scroll)
+        .scrollbar_y(scroll)
+        .with_animation(
+            "menu-open",
+            Animation::new(tokens::DURATION_MENU).with_easing(tokens::easing_soft),
+            |this, delta| this.opacity(delta).mt(px(-4. + 4. * delta)),
+        )
 }
 
 fn menu_surface(shell: Entity<Shell>, items: &[Item], cursor: Option<usize>) -> Div {

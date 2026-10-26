@@ -32,7 +32,7 @@ mod toolbox;
 mod universes;
 mod version_history;
 
-pub use api_key::ApiKey;
+pub use api_key::{keyring_disabled, ApiKey};
 pub use asset_metadata::AssetMetadata;
 pub use assets::AssetContent;
 pub use avatar::{AssetType, Avatar, AvatarAsset, AvatarBodyColors, AvatarScales};

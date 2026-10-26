@@ -20,9 +20,17 @@ pub(in crate::scene::gui) fn face(properties: &BTreeMap<String, Variant>) -> Nor
     }
 }
 
-/// The canvas' pixel size for a billboard of `size` studs.
-pub(in crate::scene::gui) fn billboard_canvas(size: [f32; 2]) -> [f32; 2] {
-    size.map(|studs| (studs * PIXELS_PER_STUD).clamp(0.0, MAX_CANVAS).round())
+/// The canvas' pixel size for a billboard's `Size`: the stud half at
+/// [`PIXELS_PER_STUD`] plus the offset half, which is pixels already. An
+/// offset-only billboard then lays its contents out one canvas pixel per
+/// screen pixel, the size it is drawn at whatever the distance.
+pub(in crate::scene::gui) fn billboard_canvas(size: Span) -> [f32; 2] {
+    let (studs, pixels) = (studs(size), pixels(size));
+    [0, 1].map(|axis| {
+        (studs[axis] * PIXELS_PER_STUD + pixels[axis])
+            .clamp(0.0, MAX_CANVAS)
+            .round()
+    })
 }
 
 /// The pixel size of a `SurfaceGui`'s canvas: the face's stud size at
@@ -53,25 +61,20 @@ pub(in crate::scene::gui) fn surface_canvas(
     ]
 }
 
-/// World width and height of a `BillboardGui.Size`, in studs.
+/// The scale half of a `BillboardGui.Size`: its world width and height in
+/// studs, which shrink with distance like any other geometry.
 ///
-/// Simplification: Roblox gives the two halves of that `UDim2` different
-/// units, the scale half is the billboard's stud size in 3D, the offset half
-/// a constant screen-pixel size that does not shrink with distance. Only the
-/// first is reproduced; an offset-only `Size` is read as studs at
-/// [`PIXELS_PER_STUD`], so such a billboard keeps a fixed *world* size instead
-/// of a fixed *screen* one.
-///
-/// TODO: true scale-with-distance for the offset half.
+/// Roblox gives the two halves of that `UDim2` different units: this one is
+/// studs in 3D, the other ([`pixels`]) a screen size that does not shrink.
 pub(in crate::scene::gui) fn studs(size: Span) -> [f32; 2] {
-    let axis = |scale: f32, offset: f32| match scale > 0.0 {
-        true => scale,
-        false => (offset / PIXELS_PER_STUD).max(0.0),
-    };
-    [
-        axis(size.scale[0], size.offset[0]),
-        axis(size.scale[1], size.offset[1]),
-    ]
+    size.scale.map(|scale| scale.max(0.0))
+}
+
+/// The offset half of a `BillboardGui.Size`, in screen pixels. Only the
+/// renderer can turn it into studs: one pixel covers more of the world the
+/// further the billboard is from the eye.
+pub(in crate::scene::gui) fn pixels(size: Span) -> [f32; 2] {
+    size.offset.map(|offset| offset.max(0.0))
 }
 
 /// The four world corners of `face` on a part, in image order.

@@ -11,8 +11,9 @@ fn delete_and_backspace_both_delete_with_no_modifiers_required() {
 }
 
 #[test]
-fn ctrl_shift_p_and_f_insert_part_and_folder() {
-    assert_eq!(action("secondary-shift-p"), Some(Action::InsertPart));
+fn ctrl_shift_f_inserts_a_folder_and_ctrl_shift_p_inserts_nothing() {
+    // Ctrl+Shift+P is the Properties filter's, as in Studio.
+    assert_eq!(action("secondary-shift-p"), None);
     assert_eq!(action("secondary-shift-f"), Some(Action::InsertFolder));
 }
 

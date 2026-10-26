@@ -65,6 +65,24 @@ impl Shell {
         self.history.push(before);
     }
 
+    /// The snapshot [`Shell::push_history_snapshot`] takes, drained of the
+    /// stale change log like [`Shell::push_history`], for a mutation that may
+    /// write nothing (an equal value, a refused name).
+    pub(super) fn history_snapshot(&mut self) -> WeakDom {
+        self.dom.take_changes();
+        self.dom.clone()
+    }
+
+    /// Files `changes`, the log of the mutation `before` preceded, as one
+    /// undo step, unless it is empty: a step that reverts nothing would
+    /// still clear the redo stack to offer itself.
+    pub(super) fn commit_history_step(&mut self, before: WeakDom, changes: Vec<Change>) {
+        if !changes.is_empty() {
+            self.push_history_snapshot(before);
+            self.record_history_change(changes);
+        }
+    }
+
     /// Attaches `changes`: the `Change` log the mutation `push_history`
     /// (or, for a multi-step drag, the gesture's own most recent step) just
     /// preceded produced, to the entry currently on top of the undo stack.
@@ -523,5 +541,30 @@ mod tests {
             source::is(&next, script, synced),
             "redo puts the tab back in agreement with the DOM, so nothing re-seeds"
         );
+    }
+
+    // Enter on a Properties field nobody changed commits the value already
+    // there: the log stays empty, so `Shell::apply_edit` files no step, and
+    // the redo stack an earlier undo filled is still there.
+    #[test]
+    fn an_unchanged_property_commit_leaves_redo_alone() {
+        let database = rbx_reflection::ReflectionDatabase::embedded();
+        let mut dom = WeakDom::new();
+        let part = dom.new_instance("Part", "Part", None);
+        crate::properties::edit::commit_all(&mut dom, &database, &[part], "Transparency", "0.5")
+            .unwrap();
+        dom.take_changes();
+        let mut history = History::new(DEFAULT_CAP);
+        history.push(dom.clone());
+        history.undo(dom.clone()).expect("something to undo");
+
+        crate::properties::edit::commit_all(&mut dom, &database, &[part], "Transparency", "0.5")
+            .unwrap();
+        let changes = dom.take_changes();
+        assert!(changes.is_empty());
+        if !changes.is_empty() {
+            history.push(dom.clone());
+        }
+        assert!(history.redo(dom.clone()).is_some(), "redo survives");
     }
 }

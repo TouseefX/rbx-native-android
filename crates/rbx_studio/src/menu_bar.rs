@@ -158,7 +158,7 @@ pub(crate) fn refresh(bar: &Entity<MenuBar>, templates: &[Template], cx: &mut Ap
 
 /// The menu structure itself. File and Edit hold this editor's real
 /// commands (see this module's doc comment); Model holds the two quick
-/// inserts `shell::keys` already binds to Ctrl+Shift+P/F, plus the three
+/// inserts `shell::keys` handles (Insert Folder on Ctrl+Shift+F), plus the three
 /// script classes and the OOP `ModuleScript` variant, Roblox itself offers
 /// `Script`/`LocalScript`/`ModuleScript` as distinct inserts, so this matches
 /// that rather than collapsing them into one generic "Insert Script", and

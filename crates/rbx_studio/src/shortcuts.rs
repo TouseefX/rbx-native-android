@@ -86,9 +86,12 @@ commands! {
     CommandPalette, "command_palette", "Command Palette", View, ["secondary-alt-p"];
     QuickOpen, "quick_open", "Quick Open", View, ["secondary-p"];
     MenuBar, "menu_bar", "Focus the Menu Bar", View, ["f10"];
+    FocusPropertiesFilter, "focus_properties_filter", "Filter Properties", View, ["secondary-shift-p"];
     Delete, "delete", "Delete", Explorer, ["delete", "backspace"];
     Rename, "rename", "Rename", Explorer, ["f2"];
-    InsertPart, "insert_part", "Insert Part", Explorer, ["secondary-shift-p"];
+    // Unbound by default: Studio gives Ctrl+Shift+P to the Properties filter
+    // (`studio/properties.md`) and has no key for inserting a part.
+    InsertPart, "insert_part", "Insert Part", Explorer, [];
     InsertFolder, "insert_folder", "Insert Folder", Explorer, ["secondary-shift-f"];
     InsertObject, "insert_object", "Insert Object…", Explorer, ["secondary-i"];
     RowMenu, "row_menu", "Row Menu", Explorer, ["shift-f10", "menu"];
@@ -322,6 +325,15 @@ impl Store {
             .any(|key| same_key(key, keystroke))
     }
 
+    /// Whether `keystroke` is the release of one of `command`'s keys. Modifiers
+    /// are ignored: a held key's release often arrives with different ones.
+    pub(crate) fn released(&self, command: Command, keystroke: &Keystroke) -> bool {
+        let (released, _) = normalized(keystroke);
+        self.bindings(command)
+            .iter()
+            .any(|key| normalized(key).0 == released)
+    }
+
     /// Other commands `keystroke` already runs in a scope that clashes with
     /// `command`'s (see [`Scope`]).
     pub(crate) fn conflicts(&self, command: Command, keystroke: &Keystroke) -> Vec<Command> {
@@ -457,9 +469,11 @@ fn key_title(key: &str) -> String {
     }
 }
 
-/// Whether a key press may become a binding: not a bare modifier, not
-/// escape/enter/tab with no modifier.
-pub(crate) fn bindable(keystroke: &Keystroke) -> bool {
+/// Whether a key press may become a binding for `command`: not a bare
+/// modifier, not escape/enter/tab with no modifier. A command whose own
+/// default is a bare key is exempt for that key, so rebinding Summon Handles
+/// away from Tab does not make Tab unrecordable again.
+pub(crate) fn bindable(command: Command, keystroke: &Keystroke) -> bool {
     if matches!(
         keystroke.key.as_str(),
         "shift" | "control" | "ctrl" | "alt" | "platform" | "cmd" | "super" | "function" | "fn"
@@ -468,7 +482,8 @@ pub(crate) fn bindable(keystroke: &Keystroke) -> bool {
     }
     let m = &keystroke.modifiers;
     let bare = !(m.control || m.alt || m.shift || m.platform || m.function);
-    !(bare && matches!(keystroke.key.as_str(), "escape" | "enter" | "tab"))
+    let reserved = bare && matches!(keystroke.key.as_str(), "escape" | "enter" | "tab");
+    !reserved || default_keys(command).iter().any(|d| same_key(d, keystroke))
 }
 
 // The app's one copy, loaded from `<config>/shortcuts.json` on first use.
@@ -497,6 +512,11 @@ fn with_store<R>(f: impl FnOnce(&mut Store) -> R) -> R {
 /// Whether `keystroke` runs `command` right now. Called by every handler.
 pub(crate) fn pressed(command: Command, keystroke: &Keystroke) -> bool {
     with_store(|store| store.pressed(command, keystroke))
+}
+
+/// Whether `keystroke` is the key-up of `command`'s key, for hold commands.
+pub(crate) fn released(command: Command, keystroke: &Keystroke) -> bool {
+    with_store(|store| store.released(command, keystroke))
 }
 
 pub(crate) fn bindings(command: Command) -> Vec<Keystroke> {
