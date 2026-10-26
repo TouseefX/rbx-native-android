@@ -85,17 +85,31 @@ fn the_scale_half_of_a_billboards_size_is_its_stud_size() {
 }
 
 #[test]
-fn an_offset_only_billboard_size_falls_back_to_studs_at_the_reference_density() {
-    let size = studs(super::super::plan::Span {
+fn an_offset_only_billboard_size_has_no_stud_size_only_pixels() {
+    let size = super::super::plan::Span {
         scale: [0.0, 0.0],
         offset: [200.0, 50.0],
-    });
-    assert_eq!(size, [4.0, 1.0]);
+    };
+    assert_eq!(studs(size), [0.0, 0.0]);
+    assert_eq!(pixels(size), [200.0, 50.0]);
 }
 
 #[test]
 fn a_billboards_canvas_is_its_stud_size_at_the_reference_density() {
-    assert_eq!(billboard_canvas([4.0, 1.5]), [200.0, 75.0]);
+    let size = super::super::plan::Span {
+        scale: [4.0, 1.5],
+        offset: [0.0, 0.0],
+    };
+    assert_eq!(billboard_canvas(size), [200.0, 75.0]);
+}
+
+#[test]
+fn a_billboards_offset_adds_its_pixels_to_the_canvas() {
+    let size = super::super::plan::Span {
+        scale: [1.0, 0.0],
+        offset: [20.0, 50.0],
+    };
+    assert_eq!(billboard_canvas(size), [70.0, 50.0]);
 }
 
 /// The fountain sign boards of `marked.rbxl`: a 7.09 × 9.14 stud face.

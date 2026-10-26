@@ -672,9 +672,7 @@ impl Shell {
         // edit, but the write itself goes through the attribute blob rather
         // than `WeakDom::set_property` directly.
         if let Some(attribute) = properties::attributes::attribute_of_row(name) {
-            if push {
-                self.push_history();
-            }
+            let before = push.then(|| self.history_snapshot());
             let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
             let result = properties::attributes::set_attribute_value(
                 &mut dom,
@@ -686,7 +684,10 @@ impl Shell {
             self.dom = dom;
             let changes = self.dom.take_changes();
             self.reflect_changes(&changes, cx);
-            self.record_history_change(changes);
+            match before {
+                Some(before) => self.commit_history_step(before, changes),
+                None => self.record_history_change(changes),
+            }
             return result;
         }
 

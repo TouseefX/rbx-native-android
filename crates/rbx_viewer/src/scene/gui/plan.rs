@@ -54,7 +54,7 @@ pub(crate) use text::{span_face, Text};
 pub(super) use viewport::each_part as each_viewport_part;
 pub(crate) use viewport::{ViewCamera, Viewport};
 
-use super::space::{billboard_canvas, studs, surface_canvas};
+use super::space::{billboard_canvas, surface_canvas};
 use crate::scene::Catalog;
 
 const SCREEN_CLASS: &str = "ScreenGui";
@@ -173,7 +173,7 @@ fn gather(
         // back to the default canvas; the scene's own canvas wins wherever
         // it placed one (see `renderer::gui`).
         let canvas = match billboard {
-            true => billboard_canvas(studs(span(properties, "Size"))),
+            true => billboard_canvas(span(properties, "Size")),
             false => surface_canvas(properties, [0.0, 0.0]),
         };
         into.push(Screen {

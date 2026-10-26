@@ -20,6 +20,40 @@ pub(crate) mod accounts;
 use gpui_kit::AsyncApp;
 use rbx_cloud::ApiKey;
 
+// Every credential-store access in the editor goes through these three, so
+// `RBX_NO_KEYRING` (see `rbx_cloud::keyring_disabled`) makes the store look
+// empty and writes vanish, with nothing reaching the real keyring.
+
+pub(crate) async fn read_credentials(
+    url: &str,
+    cx: &mut AsyncApp,
+) -> anyhow::Result<Option<(String, Vec<u8>)>> {
+    if rbx_cloud::keyring_disabled() {
+        return Ok(None);
+    }
+    cx.update(|cx| cx.read_credentials(url)).await
+}
+
+pub(crate) async fn write_credentials(
+    url: &str,
+    account: &str,
+    secret: Vec<u8>,
+    cx: &mut AsyncApp,
+) -> anyhow::Result<()> {
+    if rbx_cloud::keyring_disabled() {
+        return Ok(());
+    }
+    cx.update(|cx| cx.write_credentials(url, account, &secret))
+        .await
+}
+
+pub(crate) async fn delete_credentials(url: &str, cx: &mut AsyncApp) -> anyhow::Result<()> {
+    if rbx_cloud::keyring_disabled() {
+        return Ok(());
+    }
+    cx.update(|cx| cx.delete_credentials(url)).await
+}
+
 /// The store's lookup key: one entry for this editor.
 const URL: &str = "https://apis.roblox.com/rbx-native";
 const ACCOUNT: &str = "open-cloud-api-key";
@@ -53,8 +87,7 @@ pub(crate) async fn restore(cx: &mut AsyncApp) -> bool {
 /// `rbx_cloud::check_scopes` has passed on it.
 pub(crate) async fn save(key: ApiKey, cx: &mut AsyncApp) -> anyhow::Result<()> {
     let secret = key.expose_secret().as_bytes().to_vec();
-    cx.update(|cx| cx.write_credentials(URL, ACCOUNT, &secret))
-        .await?;
+    write_credentials(URL, ACCOUNT, secret, cx).await?;
     record_active(key.expose_secret(), cx).await;
     ApiKey::install(Some(key));
     Ok(())
@@ -63,13 +96,10 @@ pub(crate) async fn save(key: ApiKey, cx: &mut AsyncApp) -> anyhow::Result<()> {
 /// Removes the stored key and the active account's slot; the next launch
 /// opens the wizard again.
 pub(crate) async fn forget(cx: &mut AsyncApp) -> anyhow::Result<()> {
-    cx.update(|cx| cx.delete_credentials(URL)).await?;
+    delete_credentials(URL, cx).await?;
     let mut index = accounts();
     if let Some(id) = index.active {
-        if let Err(err) = cx
-            .update(|cx| cx.delete_credentials(&accounts::slot_url(id)))
-            .await
-        {
+        if let Err(err) = delete_credentials(&accounts::slot_url(id), cx).await {
             eprintln!("rbxstudio: the account's keychain entry could not be deleted: {err}");
         }
         index.remove(id);
@@ -118,10 +148,7 @@ async fn record_active(secret: &str, cx: &mut AsyncApp) {
     if is_new {
         let bytes = secret.as_bytes().to_vec();
         let url = accounts::slot_url(id);
-        if let Err(err) = cx
-            .update(|cx| cx.write_credentials(&url, ACCOUNT, &bytes))
-            .await
-        {
+        if let Err(err) = write_credentials(&url, ACCOUNT, bytes, cx).await {
             eprintln!("rbxstudio: the account's key could not be stored: {err}");
             return;
         }
@@ -132,7 +159,7 @@ async fn record_active(secret: &str, cx: &mut AsyncApp) {
 /// Makes a stored account's key the one in use.
 pub(crate) async fn switch(id: u32, cx: &mut AsyncApp) -> anyhow::Result<()> {
     let url = accounts::slot_url(id);
-    let stored = cx.update(|cx| cx.read_credentials(&url)).await?;
+    let stored = read_credentials(&url, cx).await?;
     let secret = stored
         .and_then(|(_, secret)| String::from_utf8(secret).ok())
         .map(|secret| secret.trim().to_string())
@@ -152,7 +179,7 @@ pub(crate) async fn switch(id: u32, cx: &mut AsyncApp) -> anyhow::Result<()> {
 /// the main entry.
 pub(crate) async fn remove(id: u32, cx: &mut AsyncApp) -> anyhow::Result<()> {
     let url = accounts::slot_url(id);
-    cx.update(|cx| cx.delete_credentials(&url)).await?;
+    delete_credentials(&url, cx).await?;
     let mut index = accounts();
     let was_active = index.active == Some(id);
     index.remove(id);
@@ -164,7 +191,7 @@ pub(crate) async fn remove(id: u32, cx: &mut AsyncApp) -> anyhow::Result<()> {
 }
 
 async fn read(cx: &mut AsyncApp) -> anyhow::Result<Option<ApiKey>> {
-    let stored = cx.update(|cx| cx.read_credentials(URL)).await?;
+    let stored = read_credentials(URL, cx).await?;
     Ok(stored
         .and_then(|(_, secret)| String::from_utf8(secret).ok())
         .map(|secret| secret.trim().to_string())
@@ -213,14 +240,13 @@ pub(crate) async fn save_session(
     cx: &mut AsyncApp,
 ) -> anyhow::Result<()> {
     let secret = cookie.expose_secret().as_bytes().to_vec();
-    cx.update(|cx| cx.write_credentials(SESSION_URL, SESSION_ACCOUNT, &secret))
-        .await
+    write_credentials(SESSION_URL, SESSION_ACCOUNT, secret, cx).await
 }
 
 pub(crate) async fn read_session(
     cx: &mut AsyncApp,
 ) -> anyhow::Result<Option<rbx_cloud::heartbeats::SessionCookie>> {
-    let stored = cx.update(|cx| cx.read_credentials(SESSION_URL)).await?;
+    let stored = read_credentials(SESSION_URL, cx).await?;
     Ok(stored
         .and_then(|(_, secret)| String::from_utf8(secret).ok())
         .filter(|secret| !secret.trim().is_empty())
@@ -228,5 +254,5 @@ pub(crate) async fn read_session(
 }
 
 pub(crate) async fn forget_session(cx: &mut AsyncApp) -> anyhow::Result<()> {
-    cx.update(|cx| cx.delete_credentials(SESSION_URL)).await
+    delete_credentials(SESSION_URL, cx).await
 }

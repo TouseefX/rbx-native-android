@@ -67,10 +67,14 @@ impl SettingsWindow {
                     )
                 })
                 .child(toggle(("beta-toggle", i), on, move |_, _, cx| {
-                    if let Err(error) = beta::choose(id, !on) {
-                        eprintln!("could not save beta.json: {error}");
-                    }
-                    shell.update(cx, |_, cx| cx.notify());
+                    shell.update(cx, |shell, cx| {
+                        if let Err(error) = beta::choose(id, !on) {
+                            shell
+                                .output
+                                .push_warning(&format!("could not save beta.json: {error}"));
+                        }
+                        cx.notify();
+                    });
                 }))
         });
         card().children(rows)

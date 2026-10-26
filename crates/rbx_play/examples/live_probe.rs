@@ -154,6 +154,9 @@ fn main() {
 /// The key `rbxstudio` stored in the OS keyring (same lookup as `rbxcloud`).
 #[cfg(target_os = "linux")]
 fn keyring_key() -> Option<rbx_cloud::ApiKey> {
+    if rbx_cloud::keyring_disabled() {
+        return None;
+    }
     futures_lite::future::block_on(async {
         let keyring = oo7::Keyring::new().await.ok()?;
         keyring.unlock().await.ok()?;
