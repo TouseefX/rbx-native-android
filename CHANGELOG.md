@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-26
+
+- **The Command Bar keeps your command after it runs**, like Studio's does,
+  so you can run it again or tweak it. Checked in real Studio: the text
+  stays after a run, and a syntax error keeps it too. Up skips the line
+  that's still in the box and goes straight to the one before. The rest of
+  the e2e sweep's scripting list (task/wait, attributes, `.Changed`,
+  require, GetService making missing services, output before an error,
+  late plugin listeners, `loadstring`/`getfenv`) was already fixed and
+  matches Studio. (@chteau)
+
 ## 2026-10-25
 
 - **Images and scripts survive a `.rbxlx` save.** We wrote `Decal.Texture`,

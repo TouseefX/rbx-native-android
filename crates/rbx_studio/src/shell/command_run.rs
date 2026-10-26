@@ -36,24 +36,16 @@ pub(super) struct CommandRun {
 }
 
 impl Shell {
-    /// Enter in the Command Bar: runs the input's text, then clears it unless
-    /// it did not compile, so the user can fix it.
-    pub(super) fn run_typed_command(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Enter in the Command Bar: runs the input's text and leaves it there,
+    /// as Studio's own bar does, so a command can be run again or tweaked.
+    pub(super) fn run_typed_command(&mut self, cx: &mut Context<Self>) {
         let source = self.command_bar.input().read(cx).value().to_string();
-        let ran = match source
+        match source
             .trim_start()
             .strip_prefix(super::query_select::SELECT_COMMAND)
         {
-            Some(query) => {
-                self.run_select_command(&source, query, cx);
-                true
-            }
+            Some(query) => self.run_select_command(&source, query, cx),
             None => self.run_command(&source, cx),
-        };
-        if ran {
-            self.command_bar
-                .input()
-                .update(cx, |input, cx| input.set_value("", window, cx));
         }
     }
 
@@ -80,14 +72,12 @@ impl Shell {
 
     /// Starts `source` as a run of its own (any run still waiting keeps going)
     /// and resumes once at once; a run that yields is then resumed from a
-    /// timer. Returns whether `source` compiled.
-    pub(super) fn run_command(&mut self, source: &str, cx: &mut Context<Self>) -> bool {
-        let compiled = rbx_lua::compile_check(source, "=Command bar").is_ok();
+    /// timer.
+    pub(super) fn run_command(&mut self, source: &str, cx: &mut Context<Self>) {
         self.command_bar.remember(source);
         let _ = self.run_with(source, cx, |runtime, source| {
             runtime.start(source);
         });
-        compiled
     }
 
     /// `run_command` for MCP's execute_luau: the same undo step and Output
