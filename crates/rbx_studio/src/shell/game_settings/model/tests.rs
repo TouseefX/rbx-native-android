@@ -343,3 +343,29 @@ fn every_local_field_resolves_in_the_reflection_database() {
         }
     }
 }
+
+#[test]
+fn team_create_edit_waits_for_the_first_read() {
+    let mut tc = TeamCreateDraft::default();
+    tc.set(true);
+    assert_eq!((tc.value(), tc.pending()), (None, None));
+    tc.reset(false);
+    tc.set(true);
+    assert_eq!((tc.value(), tc.pending()), (Some(true), Some(true)));
+    tc.set(false);
+    assert_eq!((tc.value(), tc.pending()), (Some(false), None));
+}
+
+#[test]
+fn team_create_rebase_keeps_only_a_differing_edit() {
+    let mut tc = TeamCreateDraft::default();
+    tc.reset(false);
+    tc.set(true);
+    tc.rebase(true);
+    assert_eq!((tc.value(), tc.pending()), (Some(true), None));
+    tc.set(false);
+    tc.rebase(true);
+    assert_eq!(tc.pending(), Some(false));
+    tc.reset(true);
+    assert_eq!(tc.pending(), None);
+}
