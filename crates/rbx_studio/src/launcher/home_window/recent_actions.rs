@@ -3,7 +3,6 @@
 //! and the list/icons switch.
 
 use gpui_kit::*;
-use rbx_cloud::{ApiKey, Client};
 
 use super::{Dialog, HomeWindow};
 use crate::cli::Configure;
@@ -47,12 +46,14 @@ impl RecentAction {
     /// Why the entry is greyed out for `place`, or `None` when it works.
     /// Everything but Remove is about the Roblox place, which a file that
     /// was never linked doesn't have.
-    pub(super) fn unavailable(self, place: &RecentPlace, has_key: bool) -> Option<&'static str> {
+    pub(super) fn unavailable(self, place: &RecentPlace, signed_in: bool) -> Option<&'static str> {
         let linked = place.universe_id.is_some() && place.place_id.is_some();
         match self {
             RecentAction::Remove => None,
             _ if !linked => Some("Local only: this file isn't linked to a Roblox place"),
-            RecentAction::Archive if !has_key => Some("Archiving needs an API key"),
+            RecentAction::Archive if !signed_in => Some(
+                "Archiving needs a Roblox sign-in: in the editor, Settings \u{203a} Account \u{203a} Roblox sign-in",
+            ),
             _ => None,
         }
     }
@@ -91,6 +92,20 @@ impl HomeWindow {
     ) {
         self.recent_menu = Some(RecentMenu { place, at });
         cx.notify();
+        self.load_session(cx);
+    }
+
+    /// Reads the editor's Roblox web sign-in, what Archive needs, from the
+    /// keyring. Again on every menu, since it can sign in meanwhile.
+    pub(super) fn load_session(&mut self, cx: &mut Context<Self>) {
+        cx.spawn(async move |this, cx| {
+            let session = crate::key_store::read_session(cx).await.ok().flatten();
+            let _ = this.update(cx, |this, cx| {
+                this.session = session;
+                cx.notify();
+            });
+        })
+        .detach();
     }
 
     pub(super) fn run_recent_action(&mut self, action: RecentAction, cx: &mut Context<Self>) {
@@ -98,7 +113,7 @@ impl HomeWindow {
             return;
         };
         cx.notify();
-        if action.unavailable(&place, self.has_key()).is_some() {
+        if action.unavailable(&place, self.session.is_some()).is_some() {
             return;
         }
         match action {
@@ -151,24 +166,19 @@ impl HomeWindow {
             return;
         };
         let mock = std::env::var(ARCHIVE_VARIABLE).ok();
-        let key = ApiKey::from_env_or_config();
-        if mock.is_none() && key.is_none() {
-            *error = Some("No API key is stored.".to_string());
-            cx.notify();
-            return;
-        }
+        let session = self.session.clone();
         *busy = true;
         *error = None;
         cx.notify();
         cx.spawn(async move |this, cx| {
             let result = cx
                 .background_spawn(async move {
-                    match mock.as_deref() {
-                        Some("ok") => Ok(()),
-                        Some(reason) => Err(reason.to_string()),
-                        None => Client::new(key)
-                            .archive_experience(universe_id)
+                    match (mock.as_deref(), session) {
+                        (Some("ok"), _) => Ok(()),
+                        (Some(reason), _) => Err(reason.to_string()),
+                        (None, Some(cookie)) => rbx_cloud::archive_experience(&cookie, universe_id)
                             .map_err(|err| err.to_string()),
+                        (None, None) => Err("Not signed in to Roblox.".to_string()),
                     }
                 })
                 .await;
@@ -243,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    fn a_linked_place_needs_a_key_only_to_archive() {
+    fn a_linked_place_needs_a_sign_in_only_to_archive() {
         let linked = place(true);
         for action in RecentAction::ALL {
             assert_eq!(action.unavailable(&linked, true), None, "{action:?}");

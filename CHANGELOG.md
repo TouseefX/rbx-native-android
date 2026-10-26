@@ -2,6 +2,13 @@
 
 ## 2026-10-26
 
+- **Archive on Home's Recent menu archives the experience like Studio.**
+  It used to archive the start place as an asset through Open Cloud,
+  which isn't what Studio does. Now it sends Studio's own call with your
+  Roblox sign-in, so it needs you signed in (Settings > Account > Roblox
+  sign-in in the editor); without that it's greyed out and the tooltip
+  says where to sign in. It still asks first and shows Roblox's reason
+  if it says no. (@chteau)
 - **Avatar Settings saves the way Studio does.** Checked against a place
   Studio saved: a ticked empty row is just ticked with id 0 (we wrote -1),
   Tops and Bottoms tick every kind they cover and the id goes on the
