@@ -1,7 +1,7 @@
 //! Telling a dead credential from a working one.
 //!
 //! A Roblox sign-in (`.ROBLOSECURITY`) counts as expired when the
-//! authenticated-user endpoint answers 401; an API key counts as expired when
+//! authenticated-user endpoint refuses it (401 or 403); an API key counts as expired when
 //! introspection says it is expired or disabled, or when a keyed call is
 //! refused with a body that says the key itself is bad. Only the
 //! `Invalid API Key` wording was seen live; the `expired` wording is assumed
@@ -9,9 +9,8 @@
 //! expiry: the key still works, it just cannot do that.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 
-use crate::heartbeats::SessionCookie;
+use crate::heartbeats::{authenticated_user_id, PulseError, SessionCookie};
 use crate::{CloudError, KeyInfo};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -21,38 +20,22 @@ pub enum Health {
     Unknown,
 }
 
-pub const AUTHENTICATED_URL: &str = "https://users.roblox.com/v1/users/authenticated";
-
 static KEY_REFUSED: AtomicBool = AtomicBool::new(false);
 static SESSION_REFUSED: AtomicBool = AtomicBool::new(false);
 
-/// 2xx → Valid, 401 → Expired, anything else → Unknown.
-pub fn session_health(status: u16) -> Health {
-    match status {
-        200..=299 => Health::Valid,
-        401 => Health::Expired,
-        _ => Health::Unknown,
+/// The session's health from [`authenticated_user_id`]'s answer. Anything
+/// but a refusal is `Unknown`: being offline must not sign the user out.
+pub fn session_health(answer: &Result<u64, PulseError>) -> Health {
+    match answer {
+        Ok(_) => Health::Valid,
+        Err(PulseError::Unauthorized) => Health::Expired,
+        Err(_) => Health::Unknown,
     }
 }
 
-/// One request to [`AUTHENTICATED_URL`] with the cookie. A transport error is
-/// `Unknown`: being offline must not sign the user out.
+/// One `users/authenticated` request with the cookie.
 pub fn check_session(cookie: &SessionCookie) -> Health {
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .user_agent(concat!("rbx-native/", env!("CARGO_PKG_VERSION")))
-        .http_status_as_error(false)
-        .timeout_global(Some(Duration::from_secs(15)))
-        .build()
-        .into();
-    let header = format!(".ROBLOSECURITY={}", cookie.value());
-    match agent
-        .get(AUTHENTICATED_URL)
-        .header("Cookie", &header)
-        .call()
-    {
-        Ok(resp) => session_health(resp.status().as_u16()),
-        Err(_) => Health::Unknown,
-    }
+    session_health(&authenticated_user_id(cookie))
 }
 
 /// Launch check of the key from `Client::introspect()`.
@@ -122,10 +105,15 @@ mod tests {
 
     #[test]
     fn session_statuses() {
-        assert_eq!(session_health(200), Health::Valid);
-        assert_eq!(session_health(401), Health::Expired);
-        assert_eq!(session_health(403), Health::Unknown);
-        assert_eq!(session_health(500), Health::Unknown);
+        assert_eq!(session_health(&Ok(1)), Health::Valid);
+        assert_eq!(
+            session_health(&Err(PulseError::Unauthorized)),
+            Health::Expired
+        );
+        assert_eq!(
+            session_health(&Err(PulseError::Other("HTTP 500".into()))),
+            Health::Unknown
+        );
     }
 
     #[test]

@@ -3,8 +3,9 @@
 //! from the My Games list into a local place file the editor can open.
 //!
 //! The order is fixed: a launch that needs setup (no or expired key or
-//! sign-in, or `--setup`) → the setup wizard → Home; otherwise Home; a place picked or created on Home → the editor. A place
-//! path on the command line skips both, as it always has.
+//! sign-in, or `--setup`) → the setup wizard → Home; otherwise Home; a
+//! place picked or created on Home → the editor. A place path on the
+//! command line skips both, as it always has.
 
 use std::path::{Path, PathBuf};
 

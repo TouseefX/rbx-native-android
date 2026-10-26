@@ -297,6 +297,11 @@ fn main() {
             // A store that never answered may well hold a key, so that
             // launch goes Home, which says so, rather than to the wizard.
             let has_key = key_store::restore_at_startup(cx).await.unwrap_or(true);
+            // Checked while the logo plays, so Roblox's answer costs no
+            // extra wait in front of the first window.
+            let check = path.is_none().then(|| {
+                cx.spawn(async move |cx| launcher::startup::credentials(has_key, cx).await)
+            });
             if let Some(splash) = splash {
                 splash.finished(cx).await;
             }
@@ -305,11 +310,12 @@ fn main() {
                 launch,
                 user,
             };
-            let plan = if path.is_none() {
-                let (key, session) = launcher::startup::credentials(has_key, cx).await;
-                launcher::setup::plan(key, session, setup)
-            } else {
-                None
+            let plan = match check {
+                Some(check) => {
+                    let (key, session) = check.await;
+                    launcher::setup::plan(key, session, setup)
+                }
+                None => None,
             };
             cx.update(|cx| match home::route(path, plan) {
                 home::Route::Editor(path) => {

@@ -33,6 +33,11 @@ pub(crate) async fn credentials(has_key: bool, cx: &mut AsyncApp) -> (Cred, Cred
             from_env("RBX_STUDIO_LAUNCHER_SESSION"),
         );
     }
+    // Home already says a store that never answered may hold both; asking it
+    // again would only stall, and nothing it holds can be judged.
+    if crate::key_store::stalled() {
+        return (Cred::Present, Cred::Present);
+    }
     let cookie = crate::key_store::read_session(cx).await.ok().flatten();
     let (key_result, session_result) = cx
         .background_executor()

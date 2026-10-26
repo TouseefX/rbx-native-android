@@ -548,8 +548,8 @@ pub(crate) struct Shell {
     device_sim: device_sim::DeviceSim,
     /// The code sign-in window, while open, see `shell::roblox_login`.
     roblox_login: Option<WindowHandle<gpui_kit::component::Root>>,
-    /// An expired sign-in or key, and the notice offering setup again —
-    /// see `shell::credential_watch`.
+    /// An expired sign-in or key, and the notice offering setup again, see
+    /// `shell::credential_watch`.
     credential_watch: credential_watch::CredentialWatch,
     /// The page the next Settings window opens on; see `open_settings_on`.
     settings_open_on: Option<&'static str>,
