@@ -2,6 +2,14 @@
 
 ## 2026-10-26
 
+- **The Command Bar keeps your command after it runs**, like Studio's does,
+  so you can run it again or tweak it. Checked in real Studio: the text
+  stays after a run, and a syntax error keeps it too. Up skips the line
+  that's still in the box and goes straight to the one before. The rest of
+  the e2e sweep's scripting list (task/wait, attributes, `.Changed`,
+  require, GetService making missing services, output before an error,
+  late plugin listeners, `loadstring`/`getfenv`) was already fixed and
+  matches Studio. (@chteau)
 - **Pre-1.0 editor cleanup.** Leftovers from the e2e sweep. A BillboardGui
   sized in pixels (`{0,200},{0,50}`) now stays 200x50 on screen at any
   distance like in Studio, it used to shrink as you backed off. Ctrl+Shift+P

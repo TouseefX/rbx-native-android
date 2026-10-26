@@ -31,7 +31,9 @@ impl Recall {
     }
 
     /// Up: the next older command, given what the input holds now. `None`
-    /// when there is nothing to recall.
+    /// when there is nothing to recall. The input keeps a command after it
+    /// runs, so when it still holds the newest entry the walk starts one
+    /// further back rather than "recalling" the text already shown.
     pub(crate) fn older(&mut self, current: &str) -> Option<&str> {
         let index = match self.cursor {
             Some(0) => 0,
@@ -39,7 +41,11 @@ impl Recall {
             None => {
                 let newest = self.entries.len().checked_sub(1)?;
                 self.draft = current.to_owned();
-                newest
+                if self.entries[newest] == current {
+                    newest.saturating_sub(1)
+                } else {
+                    newest
+                }
             }
         };
         self.cursor = Some(index);
@@ -89,6 +95,14 @@ mod tests {
         assert_eq!(recall.newer(), Some("b"));
         assert_eq!(recall.newer(), Some("half typed"));
         assert_eq!(recall.newer(), None);
+    }
+
+    #[test]
+    fn up_skips_the_command_still_in_the_input() {
+        let mut recall = recall(&["a", "b"]);
+        assert_eq!(recall.older("b"), Some("a"));
+        assert_eq!(recall.newer(), Some("b"));
+        assert_eq!(recall.newer(), Some("b"));
     }
 
     #[test]
