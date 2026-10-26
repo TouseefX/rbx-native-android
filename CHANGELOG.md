@@ -2,6 +2,14 @@
 
 ## 2026-10-26
 
+- **Game Settings can turn Team Create on and off**: Permissions has a
+  Team Create switch now, saved with the rest on Save, plus who's in the
+  place's live session right now (read again every 15 s). Both go through
+  your Roblox sign-in, not the API key, since Open Cloud has neither, and
+  a refusal shows Roblox's own message. Signed out, the switch is greyed
+  out with a tooltip saying where to sign in, like Home's Archive. Archive
+  and Team Create share one web helper for the sign-in and the CSRF retry. (@chteau)
+
 - **Home knows which of your games are archived**: Recent and My Games
   ask Roblox (public, no sign-in needed) and tag archived ones ARCHIVED.
   Recent's menu then offers Restore instead of Archive, like Studio's
