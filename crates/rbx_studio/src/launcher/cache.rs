@@ -23,6 +23,9 @@ pub(super) struct GamesCache {
     /// means a new icon to download.
     #[serde(default)]
     pub(super) icon_urls: HashMap<u64, String>,
+    /// Universe id → whether it is archived, for Recent and My Games.
+    #[serde(default)]
+    pub(super) archived: HashMap<u64, bool>,
 }
 
 fn dir() -> Option<PathBuf> {
@@ -126,10 +129,12 @@ mod tests {
             },
             group_games: HashMap::from([(7, vec![game])]),
             icon_urls: HashMap::from([(1, "https://t7.rbxcdn.com/x".into())]),
+            archived: HashMap::from([(1, true)]),
         };
         let json = serde_json::to_vec(&cache).unwrap();
         let back: GamesCache = serde_json::from_slice(&json).unwrap();
         assert_eq!(back.listing, cache.listing);
+        assert_eq!(back.archived, cache.archived);
         assert_eq!(back.group_games, cache.group_games);
         assert_eq!(back.icon_urls, cache.icon_urls);
     }

@@ -21,8 +21,7 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use rbx_cloud::Visibility;
 
-use super::{file_name, HomeWindow, Page};
-use crate::home::RecentPlace;
+use super::{HomeWindow, Page};
 use crate::launcher::ui::{self};
 use crate::tokens;
 
@@ -350,10 +349,6 @@ fn disclaimer() -> impl IntoElement {
         .child(ui::text(10.5, 14.).text_color(tokens::text3()).child(
             "RbxNative is an unofficial community project. It isn\u{2019}t affiliated with or endorsed by Roblox Corporation.",
         ))
-}
-
-pub(super) fn recent_name(place: &RecentPlace) -> String {
-    file_name(&place.path)
 }
 
 /// `~/…` for anything under the home directory.
