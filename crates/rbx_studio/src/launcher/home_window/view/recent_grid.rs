@@ -141,10 +141,19 @@ impl HomeWindow {
                                     .child(file_name(&place.path)),
                             )
                             .child(
-                                ui::text(11., 15.)
-                                    .truncate()
-                                    .text_color(tokens::text3())
-                                    .child(roblox),
+                                h_flex()
+                                    .min_w_0()
+                                    .gap(px(6.))
+                                    .items_center()
+                                    .child(
+                                        ui::text(11., 15.)
+                                            .truncate()
+                                            .text_color(tokens::text3())
+                                            .child(roblox),
+                                    )
+                                    .when(self.place_archived(place), |this| {
+                                        this.child(super::recent::archived_tag())
+                                    }),
                             )
                             .child(
                                 ui::text(11., 15.)

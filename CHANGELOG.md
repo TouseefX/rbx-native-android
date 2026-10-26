@@ -2,6 +2,13 @@
 
 ## 2026-10-26
 
+- **Home knows which of your games are archived**: Recent and My Games
+  ask Roblox (public, no sign-in needed) and tag archived ones ARCHIVED.
+  Recent's menu then offers Restore instead of Archive, like Studio's
+  Archive tab does, and a row updates as soon as either goes through.
+  Recent's search also finds a place by its linked game's name now, not
+  just the file name. (@chteau)
+
 - **Home's Archive says what went wrong once**: a refusal read "Roblox
   refused it: Roblox refused it (401): …", and a dropped connection got
   blamed on Roblox too. A 401, which is what Roblox answers when the stored

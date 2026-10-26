@@ -1,4 +1,4 @@
-//! Recent's per-place menu and the Archive confirmation it leads to.
+//! Recent's per-place menu and the Archive/Restore confirmation it leads to.
 
 use gpui_kit::component::{h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder;
@@ -14,7 +14,7 @@ impl HomeWindow {
     pub(super) fn recent_menu_view(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let menu = self.recent_menu.as_ref()?;
         let signed_in = self.session.is_some();
-        let rows = RecentAction::ALL.map(|action| {
+        let rows = RecentAction::menu(self.place_archived(&menu.place)).map(|action| {
             let why = action.unavailable(&menu.place, signed_in);
             h_flex()
                 .id(SharedString::from(format!("recent-menu-{action:?}")))
@@ -70,6 +70,7 @@ impl HomeWindow {
     pub(super) fn archive_dialog(
         &self,
         place: &RecentPlace,
+        restore: bool,
         busy: bool,
         error: Option<&str>,
         cx: &mut Context<Self>,
@@ -91,18 +92,39 @@ impl HomeWindow {
                 .child(error.to_string())
                 .into_any_element()
         });
-        let confirm = if busy {
-            ui::disabled_button("archive-confirm", "Archiving\u{2026}").into_any_element()
+        let (verb, busy_label, weight, glyph, fg, fill, text) = if restore {
+            (
+                "Restore",
+                "Restoring\u{2026}",
+                Weight::Primary,
+                "archive-restore",
+                ui::accent(),
+                tokens::accent_soft(),
+                "It goes back to your experiences on Roblox, set up as it was before it was archived. Your local file stays as is.",
+            )
         } else {
-            ui::button("archive-confirm", "Archive", Weight::Danger, false)
+            (
+                "Archive",
+                "Archiving\u{2026}",
+                Weight::Danger,
+                "archive",
+                ui::red(),
+                ui::red_soft(),
+                "It comes off Roblox and nobody can join it. You can restore it from this menu or the Creator Dashboard, and your local file stays as is.",
+            )
+        };
+        let confirm = if busy {
+            ui::disabled_button("archive-confirm", busy_label).into_any_element()
+        } else {
+            ui::button("archive-confirm", verb, weight, false)
                 .on_click(cx.listener(|this, _, _, cx| this.confirm_archive(cx)))
                 .into_any_element()
         };
         ui::dialog(
             480.,
-            ui::dialog_glyph("archive", ui::red(), ui::red_soft()),
-            format!("Archive {name}?"),
-            "It comes off Roblox and nobody can join it. You can restore it from the Creator Dashboard, and your local file stays as is.",
+            ui::dialog_glyph(glyph, fg, fill),
+            format!("{verb} {name}?"),
+            text,
             body,
             vec![
                 ui::button("archive-cancel", "Cancel", Weight::Secondary, false)
