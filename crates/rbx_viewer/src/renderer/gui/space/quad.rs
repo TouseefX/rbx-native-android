@@ -23,9 +23,11 @@ pub(super) fn within(anchor: &GuiAnchor, eye: Vec3, max_distance: f32) -> bool {
     eye.distance(centre) <= max_distance
 }
 
-/// How many studs one screen pixel covers at a point, what turns the offset
-/// half of a billboard's `Size` into studs every frame so it keeps its pixel
-/// size at any distance.
+/// What a billboard needs of the camera each frame: how many studs one screen
+/// pixel covers at a point, which turns the offset half of its `Size` into
+/// studs so it keeps its pixel size at any distance, and the camera's own
+/// axes, which it lies parallel to (not turned toward the eye's position, or
+/// an off-centre billboard would skew and stretch).
 #[derive(Debug, Clone, Copy)]
 pub(super) struct PixelScale {
     view_projection: Mat4,
@@ -38,6 +40,18 @@ impl PixelScale {
         PixelScale {
             view_projection,
             height: height as f32,
+        }
+    }
+
+    /// Image right, image up and the direction back toward the camera, from
+    /// the view-projection's rows (x, y and w), or the ones facing `eye` from
+    /// `origin` when the projection has no depth axis (orthographic).
+    fn axes(&self, origin: Vec3, eye: Vec3) -> (Vec3, Vec3, Vec3) {
+        let forward = -self.view_projection.row(3).truncate().normalize_or_zero();
+        let right = self.view_projection.row(0).truncate().normalize_or_zero();
+        match forward == Vec3::ZERO || right == Vec3::ZERO {
+            true => basis(origin, eye),
+            false => (right, forward.cross(right), forward),
         }
     }
 
@@ -69,7 +83,7 @@ pub(super) fn corners(anchor: &GuiAnchor, eye: Vec3, scale: PixelScale) -> [Vec3
             world_offset,
             size_offset,
         } => {
-            let (right, up, forward) = basis(origin, eye);
+            let (right, up, forward) = scale.axes(origin, eye);
             let studs_per_pixel = scale.at(origin + world_offset);
             let size = [0, 1].map(|axis| size[axis] + pixels[axis] * studs_per_pixel);
             // `SizeOffset` shifts the quad by that fraction of its own size,
@@ -251,6 +265,26 @@ mod tests {
 
     /// A 100px-tall billboard on a 1000px screen under a 90° vertical field of
     /// view: a tenth of the screen's height, at any distance.
+    /// Looking straight down -Z, a billboard off to the side lies parallel to
+    /// the image plane instead of turning toward the eye's position.
+    #[test]
+    fn an_off_centre_billboard_lies_parallel_to_the_image_plane() {
+        let eye = Vec3::new(0.0, 0.0, 20.0);
+        let view = glam::camera::rh::view::look_at_mat4(eye, Vec3::ZERO, Vec3::Y);
+        let projection = glam::camera::rh::proj::directx::perspective(1.2, 2.0, 0.1, 1e4);
+        let anchor = GuiAnchor::Billboard {
+            origin: Vec3::new(-14.0, 0.0, 0.0),
+            size: [4.0, 2.0],
+            pixels: [0.0, 0.0],
+            view_offset: Vec3::ZERO,
+            world_offset: Vec3::ZERO,
+            size_offset: [0.0, 0.0],
+        };
+        let corners = corners(&anchor, eye, PixelScale::new(projection * view, 400));
+        assert!(corners.iter().all(|corner| corner.z.abs() < 1e-4));
+        assert!((corners[1] - corners[0] - Vec3::new(4.0, 0.0, 0.0)).length() < 1e-4);
+    }
+
     #[test]
     fn the_pixel_half_of_a_size_stays_the_same_size_on_screen() {
         let height = |distance: f32| {
