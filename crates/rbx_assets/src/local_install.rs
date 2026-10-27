@@ -48,15 +48,17 @@ pub(crate) struct LocalInstall {
 }
 
 impl LocalInstall {
-    /// Builds a [`LocalInstall`] against `%LOCALAPPDATA%\Roblox\Versions`.
-    /// `None` when the `LOCALAPPDATA` environment variable is unset. That is
-    /// what gates this, not the platform: it is unset everywhere but Windows,
-    /// but a shell that exports it (Wine, say) turns the fallback on.
+    /// Builds a [`LocalInstall`] against `%LOCALAPPDATA%\Roblox\Versions`,
+    /// or, where that variable is unset, against a Vinegar install of Studio
+    /// (see [`vinegar_versions_dir`]). `None` when neither is there. The
+    /// variable gates the first, not the platform: it is unset everywhere
+    /// but Windows, but a shell that exports it (Wine, say) turns it on.
     pub(crate) fn new() -> Option<Self> {
-        let local_app_data = std::env::var_os("LOCALAPPDATA")?;
-        Some(Self::with_versions_dir(versions_dir_under(Path::new(
-            &local_app_data,
-        ))))
+        let versions_dir = match std::env::var_os("LOCALAPPDATA") {
+            Some(local_app_data) => versions_dir_under(Path::new(&local_app_data)),
+            None => vinegar_versions_dir()?,
+        };
+        Some(Self::with_versions_dir(versions_dir))
     }
 
     /// Builds a [`LocalInstall`] against an arbitrary directory; tests use
@@ -122,6 +124,23 @@ fn list_versions(versions_dir: &Path) -> Vec<PathBuf> {
 /// version they have ever installed.
 fn versions_dir_under(local_app_data: &Path) -> PathBuf {
     local_app_data.join("Roblox").join("Versions")
+}
+
+/// Where Vinegar keeps the Studio versions it installed: each `version-*`
+/// folder there is laid out like a Windows one, `content` and all. Its data
+/// directory, the user's own `$XDG_DATA_HOME` or the Flatpak's, whichever
+/// exists first. `None` when Vinegar was never run.
+fn vinegar_versions_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let data = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| Some(home.as_ref()?.join(".local").join("share")));
+    let flatpak = home.map(|home| home.join(".var/app/org.vinegarhq.Vinegar/data"));
+    [data, flatpak]
+        .into_iter()
+        .flatten()
+        .map(|data| data.join("vinegar").join("versions"))
+        .find(|dir| dir.is_dir())
 }
 
 /// The directory names carry a random hash, not an ordering, so the

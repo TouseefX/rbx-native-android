@@ -11,6 +11,23 @@
   keypoint envelopes work too: each particle rolls once, so a bigger one
   is also more opaque, like in Studio. Every shape was checked against
   Studio screenshots, all within about 2% silhouette diff. (@chteau)
+- **Editor leftovers from the E2E sweep**: Studio's own BuilderSans faces
+  (ExtraBold included) now load from a Vinegar install on Linux, so the
+  "BuilderSans-ExtraBold.otf does not contain the requested file" warning
+  at startup is gone and GUI text uses the real face. Auto-rig shows why it
+  refused a file (a `.rbxm`, say) as a toast in the Animation Editor instead
+  of failing quietly. The `RBX_STUDIO_SAVE_AS` docs now say what it does, one
+  save at startup, and a test pins that `GetService("Players")` works on a
+  place without one. (@chteau)
+- **CLI and file-format hardening**: a hostile binary file can't make us
+  allocate gigabytes anymore, since chunk decompression stops at what the
+  header declares (and a 1 GiB ceiling), and a cut-off file now says which
+  chunk is short and how much is actually left. `rbxview --size` past what
+  the GPU can render is an error instead of a wgpu panic. `--help` / `-h`
+  prints usage and exits 0 in rbxdump, rbxlua, rbxcloud, rbxaudit and
+  rbxmerge. `rbxdump --roundtrip` fills gaps like the editor's save does, so
+  editor-saved files stop failing it, and `rbxlua --print-changes` only
+  lists what the script did, in the order it did it. (@chteau)
 
 ## 2026-10-26
 

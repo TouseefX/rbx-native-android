@@ -19,10 +19,10 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   against real files (16k+ instance places), including the shared-string
   (`SSTR`) table.
 - [x] XML `.rbxlx`/`.rbxmx`: read **and** write, exact round-trip.
-- [x] Reflection database (682 classes, `Service`/`NotCreatable`/
+- [x] Reflection database (938 classes, `Service`/`NotCreatable`/
   `NotBrowsable`/property-category tags) parsed straight from Roblox's own
   public API dump, kept current by a daily CI sync.
-- [x] Mesh format `.mesh` v1.00–v5.00.
+- [x] Mesh format `.mesh` v1.00–v7.00 (v6 and v7 are the chunked layout).
 - [x] Mutable in-memory DOM (`set_property`/`remove`/`new_instance`/
   `take_changes`), what live editing is built on.
 - [x] `rbxdump --roundtrip`: a continuous-verification tool that found and
@@ -156,7 +156,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   axis of the light-to-fragment direction, bloom/stars/
   `ColorCorrectionEffect`/`ColorGradingEffect`/`BlurEffect`/
   `SunRaysEffect`/`DepthOfFieldEffect`.
-- [x] 43 official Roblox materials (`rbx_materials`) with real texture
+- [x] 45 Roblox materials (`rbx_materials`, every `Enum.Material` value, `Air` and `Water` drawn as plain plastic) with real texture
   packs, `MaterialVariant`, `SurfaceAppearance` (with its emissive mask,
   `EmissiveStrength` and `EmissiveTint`: the mask's grey level times the
   tinted strength is added to the lighting before the albedo multiplies it,
@@ -282,7 +282,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     per element, a gradient inside a stroke not read), `UIPadding`.
   - Layout: `UIListLayout` with `HorizontalFlex`/`VerticalFlex`, `Wraps`
     and `ItemLineAlignment`, `UIFlexItem`, `UIGridLayout`, `UITableLayout`.
-    `UIPageLayout` is not read (one page at a time, animated).
+    `UIPageLayout` lays out the current page (no transition).
   - Sizing: `UIScale`, `UIAspectRatioConstraint` (both `AspectType`s, both
     `DominantAxis`), `UISizeConstraint`, `UITextSizeConstraint`,
     `AutomaticSize` (children extent, a layout's `AbsoluteContentSize`,
@@ -679,8 +679,7 @@ and, on a model, each part's own face middles and centre, as the
 ### Editor (`rbx_studio`, binary `rbxstudio`)
 - [x] Explorer: this project's own flat, from-scratch class icon kit
   (`assets/icons/default/dark`, 329 classes onto 142 of its 152 tiles,
-  Roblox's 147-tile layout plus five of its own, spec'd in
-  `assets/icons/README.md`) rasterized and painted per row
+  Roblox's 147-tile layout plus five of its own) rasterized and painted per row
   (`class_icons.rs`), with Lucide glyphs as the fallback for anything the
   kit doesn't cover, Roblox's own sprite sheet is no longer downloaded or
   drawn anywhere in the editor. Default service filter with a "show all"
@@ -1324,8 +1323,8 @@ both the plain fetch failure and the silent fall back to a default
     a list or grid child dragged to a new place in it; double-click to
     type into a text element; the Explorer's menu on right-click (Group in
     a Frame, and Ungroup, which lets a `Frame` go where its children
-    stand); Ctrl+[ / ] for paint order (Shift for all the way); Ctrl+0 to
-    fit and Ctrl+1 to zoom to the selection; Space to pan; Shift to hold a
+    stand); `[` / `]` for paint order (Shift for all the way); 0 to
+    fit and 1 to zoom to the selection; Space to pan; Shift to hold a
     move to one axis, draw a square; Alt to resize about the centre.
   - **The 3D view emulates the same screen.** The Viewport dock's Screen
     setting is the canvas's resolution: the scene letterboxes to the
@@ -1732,7 +1731,8 @@ both the plain fetch failure and the silent fall back to a default
   `appearance.json` names another one or its own files are saved. A
   widgets-only `themes/<name>.json` from before still loads. An installer
   that downloads a theme from a GitHub repository link, validates it and
-  swaps it in atomically is in place but not yet reachable from the UI.
+  swaps it in atomically is reachable from Settings › Appearance ›
+  Theme (Install from GitHub).
 - [x] **Light and High contrast, built in beside Default**
   (`assets/themes/{light,high-contrast}`, Studio Settings › Appearance ›
   Theme). Both are ordinary themes layered over Default, only the
@@ -1839,7 +1839,7 @@ both the plain fetch failure and the silent fall back to a default
   surfaces, state washes, borders, a seven-step text ramp, one radius, the
   frame's measured dimensions and its type scale, with the palette also
   expressed as a `ThemeSet`/`ThemeConfig` JSON
-  (`assets/themes/dark-soft.json`) so the toolkit's own widgets follow it
+  (`assets/themes/default/widgets.json`) so the toolkit's own widgets follow it
   without a rebuild, and a test that fails the moment the two disagree.
 
   The palette is not this bullet's original `#1a1a1a`-to-`#f0f0f0` ramp and
@@ -2609,7 +2609,7 @@ both the plain fetch failure and the silent fall back to a default
     compile-checked here and have never run on those systems.
   - **Customize Shortcuts** (`File › Customize Shortcuts…`, and the
     Settings nav's Keyboard shortcuts), a window of its own as in Studio.
-    It lists every rebindable command (89, from Save to the Animation
+    It lists every rebindable command (94, from Save to the Animation
     Editor's keys) by category, with search. Click `+` or a key chip and
     press the new key. Chips remove a key, and Reset or Reset all go back
     to the defaults. A clash is shown ("Also runs: Copy (Edit)") but
@@ -2626,8 +2626,8 @@ both the plain fetch failure and the silent fall back to a default
   `beta.json` and applied after a restart: `enabled` answers from the
   choices at launch. A banner counts the pending changes and offers
   "Restart now", which asks to save unsaved work first, then relaunches
-  the editor on the same place. Nothing ships behind a switch yet, so the
-  page shows its empty state; `RBX_STUDIO_BETA_SAMPLE=1` lists a sample
+  the editor on the same place. Live co-editing and the MCP server ship behind
+  switches; `RBX_STUDIO_BETA_SAMPLE=1` also lists a sample
   feature to try the page.
 - [x] **More New templates on Home.** Home's New row now offers
   Baseplate, Classic Baseplate and Flat Terrain, each with the parts,

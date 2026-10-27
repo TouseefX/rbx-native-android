@@ -19,6 +19,18 @@ pub enum BinaryError {
     #[error("chunk payload length overflows the address space")]
     ChunkTooLarge,
 
+    #[error(
+        "the file is cut off: chunk '{name}' declares {declared} bytes of data but only {available} are left in the file"
+    )]
+    ChunkTruncated {
+        name: String,
+        declared: usize,
+        available: usize,
+    },
+
+    #[error("chunk claims to decompress to {0} bytes, which is more than it can hold")]
+    DecompressedTooLarge(usize),
+
     #[error("failed to decompress LZ4 block: {0}")]
     Lz4Decompression(String),
 

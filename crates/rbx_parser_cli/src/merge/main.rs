@@ -5,7 +5,7 @@
 //! rbxmerge install                            # sets that up in the current repository
 //! ```
 //!
-//! Exit codes: `0` merged cleanly (or `install` succeeded), `1` merged with
+//! Exit codes: `0` merged cleanly (or `install` succeeded, or `--help`), `1` merged with
 //! conflicts (the file holds ours wherever they conflicted, and with a
 //! `<path>` a `<path>.merge.json` sidecar lists them), `2` an unreadable
 //! input, a failed write, bad usage or `install` outside a repository; in
@@ -22,6 +22,10 @@ const USAGE: &str = "usage: rbxmerge <base> <ours> <theirs> [<path>]\n       rbx
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let code = match args.as_slice() {
+        [flag] if flag == "--help" || flag == "-h" => {
+            println!("{USAGE}");
+            0
+        }
         [command] if command == "install" => report(install::run().map(|()| 0)),
         [base, ours, theirs] => report(merge(base, ours, theirs, None)),
         [base, ours, theirs, path] => report(merge(base, ours, theirs, Some(path))),
