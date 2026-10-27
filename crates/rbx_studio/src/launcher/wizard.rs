@@ -13,21 +13,31 @@ use crate::tokens;
 
 mod create;
 mod frame;
+mod parts;
+mod sign_in;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Step {
     Welcome,
+    SignIn,
     Create,
     Paste,
     Done,
 }
 
 impl Step {
-    pub(super) const ALL: [Step; 4] = [Step::Welcome, Step::Create, Step::Paste, Step::Done];
+    pub(super) const ALL: [Step; 5] = [
+        Step::Welcome,
+        Step::SignIn,
+        Step::Create,
+        Step::Paste,
+        Step::Done,
+    ];
 
     pub(super) fn labels(self) -> (&'static str, &'static str) {
         match self {
             Step::Welcome => ("Welcome", "Why RbxNative needs a key"),
+            Step::SignIn => ("Sign in to Roblox", "Team Create, Play, presence"),
             Step::Create => ("Create a key", "On the Creator Dashboard"),
             Step::Paste => ("Paste and check", "See what the key can do"),
             Step::Done => ("Done", "Open your games"),
@@ -35,7 +45,7 @@ impl Step {
     }
 }
 
-/// `RBX_STUDIO_LAUNCHER_STEP=welcome|create|create2|create3|paste|done`:
+/// `RBX_STUDIO_LAUNCHER_STEP=welcome|signin|create|create2|create3|paste|done`:
 /// the step (and carousel slide) the wizard opens on, for a capture.
 const STEP_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_STEP";
 
@@ -46,14 +56,27 @@ pub(super) struct Wizard {
     pub(super) check: Entity<KeyCheck>,
     pub(super) saving: bool,
     pub(super) save_error: Option<String>,
+    pub(super) plan: super::setup::SetupPlan,
+    pub(super) on_finish: Option<super::Finish>,
+    pub(super) login: Option<Entity<crate::login_flow::LoginFlow>>,
+    pub(super) login_subscriptions: Vec<Subscription>,
+    pub(super) signed_in: Option<u64>,
+    pub(super) session_error: Option<String>,
     _observe: Subscription,
 }
 
 impl Wizard {
-    pub(super) fn new(boot: Boot, _: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub(super) fn new(
+        boot: Boot,
+        plan: super::setup::SetupPlan,
+        on_finish: Option<super::Finish>,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let check = cx.new(KeyCheck::new);
         let observe = cx.observe(&check, |_, _, cx| cx.notify());
         let (step, slide) = match std::env::var(STEP_VARIABLE).as_deref() {
+            Ok("signin") => (Step::SignIn, 0),
             Ok("create") => (Step::Create, 0),
             Ok("create2") => (Step::Create, 1),
             Ok("create3") => (Step::Create, 2),
@@ -61,6 +84,14 @@ impl Wizard {
             Ok("done") => (Step::Done, 0),
             _ => (Step::Welcome, 0),
         };
+        let visible = Self::visible_for(&plan);
+        let step = if visible.contains(&step) {
+            step
+        } else {
+            visible.first().copied().unwrap_or(Step::Create)
+        };
+        let signed_in = (std::env::var(sign_in::SIGNIN_VARIABLE).as_deref() == Ok("done"))
+            .then_some(sign_in::FIXTURE_USER);
         if step >= Step::Paste && std::env::var(key_check::FIXTURE_VARIABLE).is_ok() {
             check.update(cx, |check, cx| {
                 check.set_fixture_secret();
@@ -74,13 +105,71 @@ impl Wizard {
             check,
             saving: false,
             save_error: None,
+            plan,
+            on_finish,
+            login: None,
+            login_subscriptions: Vec::new(),
+            signed_in,
+            session_error: None,
             _observe: observe,
         }
     }
 
-    /// Hands over to Home, with or without a key, and closes the wizard.
-    pub(super) fn go_home(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        super::open_home(self.boot.clone(), cx);
+    fn visible_for(plan: &super::setup::SetupPlan) -> Vec<Step> {
+        Step::ALL
+            .into_iter()
+            .filter(|step| match step {
+                Step::Welcome | Step::Create | Step::Paste | Step::Done => plan.key,
+                Step::SignIn => plan.sign_in,
+            })
+            .collect()
+    }
+
+    pub(super) fn visible(&self) -> Vec<Step> {
+        Self::visible_for(&self.plan)
+    }
+
+    pub(super) fn position(&self, step: Step) -> Option<usize> {
+        self.visible().iter().position(|&s| s == step)
+    }
+
+    pub(super) fn next_step(&self) -> Option<Step> {
+        let index = self.position(self.step)?;
+        self.visible().get(index + 1).copied()
+    }
+
+    pub(super) fn previous_step(&self) -> Option<Step> {
+        let index = self.position(self.step)?;
+        index
+            .checked_sub(1)
+            .and_then(|i| self.visible().get(i).copied())
+    }
+
+    /// Moves to the next visible step, or finishes after the last one.
+    pub(super) fn advance(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        match self.next_step() {
+            Some(step) => {
+                self.step = step;
+                cx.notify();
+            }
+            None => self.finish(window, cx),
+        }
+    }
+
+    pub(super) fn title(&self) -> &'static str {
+        if self.plan.key {
+            "Set up publishing"
+        } else {
+            "Sign in to Roblox"
+        }
+    }
+
+    /// Hands over to whoever opened the wizard (Home by default) and closes it.
+    pub(super) fn finish(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        match &self.on_finish {
+            Some(on_finish) => on_finish(cx),
+            None => super::open_home(self.boot.clone(), cx),
+        }
         window.remove_window();
     }
 
@@ -119,85 +208,6 @@ impl Wizard {
             });
         })
         .detach();
-    }
-
-    pub(super) fn heading(
-        title: &'static str,
-        text: &'static str,
-        action: Option<AnyElement>,
-    ) -> impl IntoElement {
-        h_flex()
-            .items_start()
-            .gap(px(16.))
-            .child(
-                v_flex()
-                    .flex_1()
-                    .min_w_0()
-                    .gap(px(4.))
-                    .child(
-                        ui::text(20., 28.)
-                            .font_weight(FontWeight::BOLD)
-                            .text_color(tokens::text())
-                            .child(title),
-                    )
-                    .child(ui::text(12.5, 19.).text_color(tokens::text2()).child(text)),
-            )
-            .children(action)
-    }
-
-    pub(super) fn big_glyph(
-        glyph: &'static str,
-        fg: Rgba,
-        fill: Rgba,
-        round: bool,
-    ) -> impl IntoElement {
-        h_flex()
-            .size(px(48.))
-            .flex_none()
-            .rounded(if round { px(24.) } else { px(12.) })
-            .bg(fill)
-            .text_color(fg)
-            .items_center()
-            .justify_center()
-            .child(ui::icon(glyph, 22.))
-    }
-
-    pub(super) fn feature_card(
-        glyph: &'static str,
-        title: SharedString,
-        text: SharedString,
-    ) -> impl IntoElement {
-        h_flex()
-            .items_start()
-            .gap(px(12.))
-            .py(px(14.))
-            .px(px(16.))
-            .rounded(px(8.))
-            .border_1()
-            .border_color(tokens::border())
-            .bg(ui::panel2())
-            .child(
-                h_flex()
-                    .size(px(32.))
-                    .flex_none()
-                    .rounded(px(7.))
-                    .bg(tokens::accent_soft())
-                    .text_color(ui::accent())
-                    .items_center()
-                    .justify_center()
-                    .child(ui::icon(glyph, 16.)),
-            )
-            .child(
-                v_flex()
-                    .gap(px(2.))
-                    .child(
-                        ui::text(12.5, 17.)
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_color(tokens::text())
-                            .child(title),
-                    )
-                    .child(ui::text(12., 18.).text_color(tokens::text2()).child(text)),
-            )
     }
 
     fn welcome(&self) -> AnyElement {
@@ -301,12 +311,20 @@ impl Wizard {
 
 impl Render for Wizard {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.step == Step::SignIn {
+            self.ensure_login(cx);
+        }
         let body = match self.step {
             Step::Welcome => self.welcome(),
+            Step::SignIn => self.sign_in(cx),
             Step::Create => self.create(cx),
             Step::Paste => self.paste(window, cx),
             Step::Done => self.done(cx),
         };
+        let first = self.visible().first() == Some(&self.step);
+        let reasons = if first { self.reasons_row() } else { None };
+        let body = v_flex().gap(px(18.)).children(reasons).child(body);
+        let on_finish = self.on_finish.clone();
         v_flex()
             .size_full()
             .bg(ui::panel())
@@ -314,9 +332,15 @@ impl Render for Wizard {
             .text_color(tokens::text())
             .text_size(px(13.))
             .child(crate::shell::chrome::window_topbar(
-                "Set up publishing".into(),
+                self.title().into(),
                 false,
-                |_, cx| cx.quit(),
+                move |window, cx| match &on_finish {
+                    Some(on_finish) => {
+                        on_finish(cx);
+                        window.remove_window();
+                    }
+                    None => cx.quit(),
+                },
             ))
             .child(
                 h_flex()
