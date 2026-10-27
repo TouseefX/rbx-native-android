@@ -96,12 +96,7 @@ impl Shell {
                     shell.stop_studio_presence();
                     shell.studio_presence.session = None;
                     shell.studio_presence.user_id = None;
-                    shell.output.push(
-                        "Roblox",
-                        Feedback::Warning(
-                            "Roblox signed you out; sign in again in Settings › Account.".into(),
-                        ),
-                    );
+                    rbx_cloud::expiry::report_session_refused();
                     cx.notify();
                     return true;
                 }
@@ -121,7 +116,7 @@ impl Shell {
         cx.notify();
     }
 
-    fn stop_studio_presence(&mut self) {
+    pub(super) fn stop_studio_presence(&mut self) {
         self.studio_presence.pulser = None;
         self.studio_presence.watch = None;
     }

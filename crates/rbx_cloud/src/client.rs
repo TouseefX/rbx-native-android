@@ -153,7 +153,7 @@ impl Client {
         // The key is never part of `what`, and the query string is dropped:
         // the retry line it may end up in goes to stderr.
         let what = url.split('?').next().unwrap_or(url);
-        retry::idempotent(what, || {
+        let result = retry::idempotent(what, || {
             let mut req = self.agent.get(url);
             if with_key {
                 req = req.header("x-api-key", self.require_api_key()?.as_str());
@@ -163,7 +163,8 @@ impl Client {
                 req = req.config().max_redirects(0).build();
             }
             run(req.call())
-        })
+        });
+        watch_key(with_key, result)
     }
 
     pub(crate) fn post_json_raw<T: serde::Serialize>(
@@ -176,7 +177,7 @@ impl Client {
         if with_key {
             req = req.header("x-api-key", self.require_api_key()?.as_str());
         }
-        run(req.send_json(body))
+        watch_key(with_key, run(req.send_json(body)))
     }
 
     /// A keyed PATCH with a JSON body. Not retried: Open Cloud's update calls
@@ -190,7 +191,7 @@ impl Client {
             .agent
             .patch(url)
             .header("x-api-key", self.require_api_key()?.as_str());
-        run(req.send_json(body))
+        watch_key(true, run(req.send_json(body)))
     }
 
     pub(crate) fn post_bytes_raw(
@@ -216,8 +217,22 @@ impl Client {
             .timeout_recv_response(Some(Duration::from_secs(300)))
             .timeout_recv_body(Some(Duration::from_secs(30)))
             .build();
-        run(req.send(bytes))
+        watch_key(true, run(req.send(bytes)))
     }
+}
+
+/// Raises the process-wide "key refused" flag when a keyed call's answer says
+/// the key itself is dead, so the editor can send the user to re-enter it.
+fn watch_key(
+    with_key: bool,
+    result: Result<RawResponse, CloudError>,
+) -> Result<RawResponse, CloudError> {
+    if let Ok(resp) = &result {
+        if with_key && crate::expiry::key_refused(resp.status, &resp.body) {
+            crate::expiry::report_key_refused();
+        }
+    }
+    result
 }
 
 fn run(

@@ -2,6 +2,16 @@
 
 ## 2026-10-26
 
+- **Sign in to Roblox right from the first-run setup**: the setup wizard
+  gets a skippable "Sign in to Roblox" step, the same code sign-in as
+  Settings › Account, so Team Create, Play and presence work without a
+  trip to Settings. Start-up checks the saved sign-in and key while the
+  splash plays; one Roblox refuses is dropped and setup opens on just the
+  steps to redo, saying why. If one dies mid-session the editor shows a
+  bar offering to set it up again instead of failing quietly, and a
+  refused `RBX_API_KEY` is only reported, since it'd win over a saved key
+  anyway. (@chteau)
+
 - **Home knows which of your games are archived**: Recent and My Games
   ask Roblox (public, no sign-in needed) and tag archived ones ARCHIVED.
   Recent's menu then offers Restore instead of Archive, like Studio's

@@ -2,31 +2,33 @@
 //! starts at, the Recent list, the New templates, and turning an experience
 //! from the My Games list into a local place file the editor can open.
 //!
-//! The order is fixed: no key yet → the setup wizard → Home; a key already
-//! stored → Home; a place picked or created on Home → the editor. A place
-//! path on the command line skips both, as it always has.
+//! The order is fixed: a launch that needs setup (no or expired key or
+//! sign-in, or `--setup`) → the setup wizard → Home; otherwise Home; a
+//! place picked or created on Home → the editor. A place path on the
+//! command line skips both, as it always has.
 
 use std::path::{Path, PathBuf};
 
 use rbx_cloud::{Client, CloudError, Experience};
 use serde::{Deserialize, Serialize};
 
+use crate::launcher::setup::SetupPlan;
 use crate::save::Format;
 use crate::settings::{default_config_dir, write_atomic, SettingsError};
 
 /// Which window a launch opens first.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Route {
-    Wizard,
+    Wizard(SetupPlan),
     Home,
     Editor(PathBuf),
 }
 
-pub(crate) fn route(path: Option<PathBuf>, has_key: bool) -> Route {
-    match path {
-        Some(path) => Route::Editor(path),
-        None if has_key => Route::Home,
-        None => Route::Wizard,
+pub(crate) fn route(path: Option<PathBuf>, setup: Option<SetupPlan>) -> Route {
+    match (path, setup) {
+        (Some(path), _) => Route::Editor(path),
+        (None, Some(plan)) => Route::Wizard(plan),
+        (None, None) => Route::Home,
     }
 }
 
@@ -332,10 +334,11 @@ mod tests {
 
     #[test]
     fn a_launch_routes_wizard_then_home_then_editor() {
-        assert_eq!(route(None, false), Route::Wizard);
-        assert_eq!(route(None, true), Route::Home);
+        let plan = SetupPlan::KEY_ONLY;
+        assert_eq!(route(None, Some(plan)), Route::Wizard(plan));
+        assert_eq!(route(None, None), Route::Home);
         let path = PathBuf::from("a.rbxl");
-        assert_eq!(route(Some(path.clone()), false), Route::Editor(path));
+        assert_eq!(route(Some(path.clone()), Some(plan)), Route::Editor(path));
     }
 
     #[test]
