@@ -1,4 +1,4 @@
-//! The Permissions tab's Team Create rows: the switch and who is in the
+//! Basic Info's Team Create rows: the switch and who is in the
 //! place's live session.
 
 use gpui_kit::component::{h_flex, v_flex};
