@@ -347,6 +347,8 @@ fn a_texture_that_failed_to_download_still_resolves_the_mesh_untextured() {
 
 #[path = "tests/appearance.rs"]
 mod appearance;
+#[path = "tests/head.rs"]
+mod head;
 
 #[test]
 fn a_force_field_mesh_part_is_capped_at_half_opaque_like_a_part() {

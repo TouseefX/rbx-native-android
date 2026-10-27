@@ -352,3 +352,75 @@ fn a_dom_without_any_shape_property_reports_no_unknown_part_types() {
 
     assert!(unknown_part_types(&dom).is_empty());
 }
+
+fn special_mesh_part(dom: &mut WeakDom, mesh_type: u32) -> Ref {
+    let part_ref = part(dom, "Part");
+    let mesh_ref = part(dom, "SpecialMesh");
+    dom.set_parent(mesh_ref, Some(part_ref));
+    set_enum(dom, mesh_ref, "MeshType", mesh_type);
+    part_ref
+}
+
+/// Measured in Studio: a 4x8x4 `SpecialMesh` cylinder is 4 studs long and 4
+/// round, not stretched to 8.
+#[test]
+fn a_special_mesh_cylinder_is_as_round_as_the_smaller_of_y_and_z() {
+    let mut dom = WeakDom::new();
+    let part_ref = special_mesh_part(&mut dom, 4);
+    let geometry = resolve(
+        &dom,
+        &database(),
+        dom.get(part_ref).unwrap(),
+        Vec3::new(6.0, 3.0, 2.0),
+    );
+    assert_eq!(geometry.kind, ShapeKind::CylinderX);
+    assert_eq!(geometry.size, Vec3::new(6.0, 2.0, 2.0));
+}
+
+/// Until `head.mesh` lands, a Head stands in as a Y cylinder at the head's
+/// own extent: X and Z both the smaller of the two, Y as given.
+#[test]
+fn a_special_mesh_head_takes_the_smaller_of_x_and_z_for_both() {
+    let mut dom = WeakDom::new();
+    let part_ref = special_mesh_part(&mut dom, HEAD_MESH);
+    let geometry = resolve(
+        &dom,
+        &database(),
+        dom.get(part_ref).unwrap(),
+        Vec3::new(8.0, 4.0, 6.0),
+    );
+    assert_eq!(geometry.kind, ShapeKind::CylinderY);
+    assert_eq!(geometry.size, Vec3::new(6.0, 4.0, 6.0));
+    assert_eq!(head_extent(Vec3::new(2.5, 1.25, 1.25)), Vec3::splat(1.25));
+}
+
+#[test]
+fn a_special_mesh_torso_is_a_plain_box() {
+    let mut dom = WeakDom::new();
+    let part_ref = special_mesh_part(&mut dom, 1);
+    let geometry = resolve(
+        &dom,
+        &database(),
+        dom.get(part_ref).unwrap(),
+        Vec3::new(6.0, 3.0, 2.0),
+    );
+    assert_eq!(geometry.kind, ShapeKind::Box);
+    assert_eq!(geometry.size, Vec3::new(6.0, 3.0, 2.0));
+}
+
+/// Prism, Pyramid, ParallelRamp and RightAngleRamp render nothing in Studio.
+#[test]
+fn only_the_deprecated_mesh_types_draw_nothing() {
+    let hidden: Vec<u32> = (0..=11)
+        .filter(|&mesh_type| {
+            let mut dom = WeakDom::new();
+            let part_ref = special_mesh_part(&mut dom, mesh_type);
+            draws_nothing(&dom, dom.get(part_ref).unwrap())
+        })
+        .collect();
+    assert_eq!(hidden, vec![7, 8, 9, 10]);
+
+    let mut dom = WeakDom::new();
+    let plain = part(&mut dom, "Part");
+    assert!(!draws_nothing(&dom, dom.get(plain).unwrap()));
+}

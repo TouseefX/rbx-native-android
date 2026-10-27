@@ -6,7 +6,7 @@ use glam::{Quat, Vec3};
 
 use super::emitter::Emitter;
 use super::rng::Rng;
-use super::sequence::{eval_color, eval_number};
+use super::sequence::{eval_color, eval_number_spread};
 
 /// A fixed step used only to pre-warm an emitter to its steady state before the
 /// first real frame (see [`Simulation::prewarm`]). Small enough that spawning
@@ -21,6 +21,8 @@ struct Particle {
     lifetime: f32,
     rotation: f32,
     rot_speed: f32,
+    /// Where in its keypoints' envelopes this particle sits, in `[-1, 1]`.
+    spread: f32,
 }
 
 /// One alive particle, resolved to whatever the renderer needs to draw it,
@@ -135,6 +137,7 @@ impl Simulation {
                 .rng
                 .range(emitter.rot_speed_degrees.0, emitter.rot_speed_degrees.1)
                 .to_radians(),
+            spread: self.rng.range(-1.0, 1.0),
         });
     }
 
@@ -145,6 +148,11 @@ impl Simulation {
 
     /// Snapshots every alive particle's current appearance, reading `Size`,
     /// `Transparency` and `Color` at its own age-over-lifetime fraction.
+    ///
+    /// One spread serves both envelopes, in opposite directions: measured in
+    /// Studio, a particle that comes out larger also comes out more opaque,
+    /// every time, so the engine draws one number per particle and applies it
+    /// to opacity rather than to `Transparency` itself.
     pub(crate) fn particles<'a>(
         &'a self,
         emitter: &'a Emitter,
@@ -153,10 +161,12 @@ impl Simulation {
             let t = particle.age / particle.lifetime;
             RenderParticle {
                 position: particle.position,
-                size: eval_number(&emitter.size, t).max(0.0),
+                size: eval_number_spread(&emitter.size, t, particle.spread).max(0.0),
                 rotation: particle.rotation,
                 color: eval_color(&emitter.color, t),
-                alpha: 1.0 - eval_number(&emitter.transparency, t).clamp(0.0, 1.0),
+                alpha: 1.0
+                    - eval_number_spread(&emitter.transparency, t, -particle.spread)
+                        .clamp(0.0, 1.0),
             }
         })
     }
@@ -363,5 +373,40 @@ mod tests {
         let snapshot: Vec<_> = sim.particles(&e).collect();
         assert_eq!(snapshot.len(), 1);
         assert!((snapshot[0].alpha - 0.5).abs() < 0.1);
+    }
+
+    fn enveloped(value: f32, envelope: f32) -> NumberSequence {
+        let mut seq = flat(value);
+        for keypoint in &mut seq.keypoints {
+            keypoint.envelope = envelope;
+        }
+        seq
+    }
+
+    #[test]
+    fn an_envelope_spreads_each_particle_once_and_ties_size_to_opacity() {
+        let mut e = emitter(50.0, (10.0, 10.0));
+        e.size = enveloped(1.0, 0.8);
+        e.transparency = enveloped(0.5, 0.5);
+        let mut sim = Simulation::new(7);
+        sim.step(&e, 1.0);
+        e.rate = 0.0;
+        let born: Vec<_> = sim.particles(&e).map(|p| (p.size, p.alpha)).collect();
+        assert_eq!(born.len(), 50);
+        assert!(born.iter().all(|&(size, _)| (0.2..=1.8).contains(&size)));
+        let (min, max) = born
+            .iter()
+            .fold((f32::MAX, f32::MIN), |(lo, hi), &(size, _)| {
+                (lo.min(size), hi.max(size))
+            });
+        assert!(max - min > 1.0, "sizes barely spread: {min}..{max}");
+
+        let mut by_size = born.clone();
+        by_size.sort_by(|a, b| a.0.total_cmp(&b.0));
+        assert!(by_size.windows(2).all(|pair| pair[0].1 <= pair[1].1));
+
+        sim.step(&e, 5.0);
+        let aged: Vec<_> = sim.particles(&e).map(|p| (p.size, p.alpha)).collect();
+        assert_eq!(aged, born);
     }
 }

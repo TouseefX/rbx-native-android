@@ -12,8 +12,8 @@ use super::{
 };
 use crate::pick::Meshes;
 use crate::scene::{
-    cframe_matrix, file_mesh_fit, resolve_shape, srgb_to_linear, union_fit, union_is_empty,
-    unit_mesh, Kind, FALLBACK_COLOR,
+    cframe_matrix, draws_nothing, file_mesh_fit, resolve_shape, srgb_to_linear, union_fit,
+    union_is_empty, unit_mesh, Kind, FALLBACK_COLOR,
 };
 
 /// `scene::FORCE_FIELD_ALPHA`: how solid a ForceField is drawn at most.
@@ -104,9 +104,10 @@ pub(super) fn export_part(
         return (!surfaces.is_empty()).then_some((surfaces, placement));
     }
 
-    // Studio draws a union with no geometry anywhere as nothing, and so
-    // does the viewport; a box would be invented.
-    if union_is_empty(dom, database, referent) {
+    // Studio draws a union with no geometry anywhere, and a part wearing a
+    // deprecated `SpecialMesh` type, as nothing, and so does the viewport; a
+    // box would be invented.
+    if union_is_empty(dom, database, referent) || draws_nothing(dom, instance) {
         return None;
     }
     let Some(Variant::Vector3(size)) = properties.get("size") else {
