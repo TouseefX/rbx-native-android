@@ -83,3 +83,12 @@ fn marketplace_errors() {
     );
     assert_eq!(out, "false not available in rbx-native");
 }
+
+#[test]
+fn players_exists_on_a_place_without_one() {
+    let out = eval(
+        r#"local players = game:GetService("Players")
+        return players.ClassName .. " " .. tostring(game:GetService("Players") == players)"#,
+    );
+    assert_eq!(out, "Players true");
+}

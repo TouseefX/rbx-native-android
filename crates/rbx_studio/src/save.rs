@@ -11,11 +11,11 @@
 //! returns before that rename ever happens, so a bad DOM never corrupts a
 //! file that was fine before the save was attempted.
 //!
-//! `RBX_STUDIO_SAVE_AS=<path>` redirects one save to a scratch path instead of
-//! the file the place was opened from, applied once at startup right after
-//! any `RBX_STUDIO_INSERT` mutation, a debugging aid for a headless
-//! save/reload round trip, since nothing else can send Ctrl+S to the editor
-//! on its own.
+//! `RBX_STUDIO_SAVE_AS=<path>` saves the place to a scratch path instead of
+//! the file it was opened from. It is one save, made once at startup after
+//! every other debug variable has been applied (it does not redirect a later
+//! Ctrl+S), a debugging aid for a headless save/reload round trip, since
+//! nothing else can send Ctrl+S to the editor on its own.
 
 use std::path::Path;
 
