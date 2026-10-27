@@ -5,7 +5,11 @@ use std::process::Command;
 fn check(exe: &str, name: &str) {
     for flag in ["--help", "-h"] {
         let output = Command::new(exe).arg(flag).output().expect("run binary");
-        assert!(output.status.success(), "{name} {flag}: {:?}", output.status);
+        assert!(
+            output.status.success(),
+            "{name} {flag}: {:?}",
+            output.status
+        );
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("usage:"), "{name} {flag}: {stdout}");
         assert!(output.stderr.is_empty(), "{name} {flag} wrote to stderr");

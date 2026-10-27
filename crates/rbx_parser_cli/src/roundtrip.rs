@@ -284,8 +284,7 @@ fn compare_trees(
             .iter()
             .filter(|(name, value)| {
                 expected_properties.contains_key(*name)
-                    || default(round_tripped.class(), name.as_str()).as_ref()
-                        != Some(*value)
+                    || default(round_tripped.class(), name.as_str()).as_ref() != Some(*value)
             })
             .map(|(name, value)| (name.clone(), value.clone()))
             .collect();

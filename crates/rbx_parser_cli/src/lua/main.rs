@@ -49,7 +49,10 @@ fn main() -> ExitCode {
 }
 
 fn run(args: &args::Args) -> Result<(), String> {
-    let dom = dom_io::read_dom(&args.place)?;
+    let mut dom = dom_io::read_dom(&args.place)?;
+    // Building the DOM from the file logs an Added per instance; only what the
+    // script does belongs in `--print-changes`.
+    dom.take_changes();
     let script = std::fs::read_to_string(&args.script)
         .map_err(|err| format!("failed to read '{}': {err}", args.script.display()))?;
 
