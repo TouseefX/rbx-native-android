@@ -1,4 +1,4 @@
-//! The Permissions tab's Team Create half: the experience's switch and who
+//! Basic Info's Team Create half: the experience's switch and who
 //! is in the place's live session. Both run as the editor's Roblox sign-in
 //! rather than the API key, so the switch keeps its own draft beside the
 //! cloud one and joins the same Save and Cancel.

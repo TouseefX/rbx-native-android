@@ -88,7 +88,7 @@ impl GameSettingsWindow {
         let tab = self.tab;
         let cloud_rows = self.cloud_rows(cx);
         let local_rows = self.local_rows(cx);
-        let team_create_rows = if tab == Tab::Permissions {
+        let team_create_rows = if tab == Tab::BasicInfo {
             self.team_create_rows(cx)
         } else {
             Vec::new()
