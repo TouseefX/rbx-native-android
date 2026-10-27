@@ -91,3 +91,60 @@ fn missing_path_argument_exits_with_usage_code() {
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stderr).contains("usage:"));
 }
+
+// The editor saves binary files through `serialize_with_defaults`, filling the
+// column a part lacks with the class default. A file written that way has to
+// come back through `--roundtrip` clean.
+#[test]
+fn editor_saved_file_round_trips_clean() {
+    use rbx_dom::{Variant, WeakDom};
+
+    let mut dom = WeakDom::new();
+    let workspace = dom.new_instance("Workspace", "Workspace", None);
+    dom.new_instance("Part", "Plain", Some(workspace));
+    let ghost = dom.new_instance("Part", "Ghost", Some(workspace));
+    dom.get_mut(ghost)
+        .unwrap()
+        .properties_mut()
+        .insert("CanCollide".into(), Variant::Bool(false));
+
+    let database = rbx_parser_cli::default_reflection_database();
+    let bytes = rbx_binary::serialize_with_defaults(&dom, |class, key| {
+        database.stored_default(class, key).cloned()
+    })
+    .expect("editor-style save");
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("editor.rbxl");
+    std::fs::write(&path, bytes).expect("write");
+
+    let output = run_roundtrip(&path);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(output.status.code(), Some(0), "stdout: {stdout}");
+    assert!(!stdout.contains("FAIL"), "stdout: {stdout}");
+}
+
+// An editor-saved .rbxlx leaves a column out of the parts that don't hold it. The
+// binary check has to fill that gap the way the editor's own save does (class
+// default), not with a zero, or `CanCollide` reads back `false` and it FAILs.
+#[test]
+fn sparse_editor_xml_round_trips_clean_through_the_binary_check() {
+    use rbx_dom::{Variant, WeakDom};
+
+    let mut dom = WeakDom::new();
+    let workspace = dom.new_instance("Workspace", "Workspace", None);
+    dom.new_instance("Part", "Plain", Some(workspace));
+    let ghost = dom.new_instance("Part", "Ghost", Some(workspace));
+    dom.get_mut(ghost)
+        .unwrap()
+        .properties_mut()
+        .insert("CanCollide".into(), Variant::Bool(false));
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("editor.rbxlx");
+    std::fs::write(&path, rbx_xml::serialize(&dom).expect("xml save")).expect("write");
+
+    let output = run_roundtrip(&path);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(output.status.code(), Some(0), "stdout: {stdout}");
+    assert!(!stdout.contains("FAIL"), "stdout: {stdout}");
+}
