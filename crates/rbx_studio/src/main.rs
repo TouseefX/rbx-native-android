@@ -67,8 +67,9 @@
 //! `Ctrl+Shift+G` would, the same aid, for the Explorer's Group/Ungroup
 //! (see `shell::group`).
 //! Ctrl+S writes the place back to the file it was opened from, in the
-//! format it was opened in; `RBX_STUDIO_SAVE_AS=<path>` redirects one such
-//! save to a scratch path instead (see `save`).
+//! format it was opened in; `RBX_STUDIO_SAVE_AS=<path>` makes the editor
+//! save the place to that scratch path once at startup, after every other
+//! debug variable has been applied (see `save`).
 //! `RBX_STUDIO_ARGON_CONNECT=1|<host>:<port>` clicks Connect on the Script
 //! Editor's Argon dock at startup, the same aid, for a real connection to
 //! a running `argon serve` (see `shell::argon_sync`); the address form
