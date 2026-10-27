@@ -46,7 +46,11 @@ pub fn report(results: &[CheckResult]) -> bool {
 
 fn check_binary(dom: &WeakDom) -> CheckResult {
     let label = "binary round-trip (rbx_binary)";
-    let bytes = match rbx_binary::serialize(dom) {
+    // The editor's own binary save: gaps filled with the class default.
+    let database = crate::default_reflection_database();
+    let bytes = match rbx_binary::serialize_with_defaults(dom, |class, key| {
+        database.stored_default(class, key).cloned()
+    }) {
         Ok(bytes) => bytes,
         Err(err) => return fail(label, format!("serialize failed: {err}")),
     };
@@ -54,7 +58,9 @@ fn check_binary(dom: &WeakDom) -> CheckResult {
         Ok(dom) => dom,
         Err(err) => return fail(label, format!("re-deserialize failed: {err}")),
     };
-    match compare_trees(dom, &after) {
+    match compare_trees(dom, &after, &|class, key| {
+        database.stored_default(class, key).cloned()
+    }) {
         Ok(()) => ok(label),
         Err(message) => fail(label, message),
     }
@@ -70,7 +76,7 @@ fn check_xml(dom: &WeakDom) -> CheckResult {
         Ok(dom) => dom,
         Err(err) => return fail(label, format!("re-deserialize failed: {err}")),
     };
-    match compare_trees(dom, &after) {
+    match compare_trees(dom, &after, &|_, _| None) {
         Ok(()) => ok(label),
         Err(message) => fail(label, message),
     }
@@ -211,7 +217,14 @@ fn fmt_value(value: Option<&Variant>) -> String {
     }
 }
 
-fn compare_trees(before: &WeakDom, after: &WeakDom) -> Result<(), String> {
+///
+/// `default(class, property)` is what the writer filled a gap with: a property
+/// the original lacked that comes back holding that default is no change.
+fn compare_trees(
+    before: &WeakDom,
+    after: &WeakDom,
+    default: &dyn Fn(&str, &str) -> Option<Variant>,
+) -> Result<(), String> {
     let (before_order, before_parents) = preorder_with_parents(before);
     let (after_order, after_parents) = preorder_with_parents(after);
 
@@ -266,8 +279,17 @@ fn compare_trees(before: &WeakDom, after: &WeakDom) -> Result<(), String> {
             .iter()
             .map(|(name, value)| (name.clone(), remap(value, &ref_map)))
             .collect();
+        let actual_properties: std::collections::BTreeMap<String, Variant> = round_tripped
+            .properties()
+            .iter()
+            .filter(|(name, value)| {
+                expected_properties.contains_key(*name)
+                    || default(round_tripped.class(), name.as_str()).as_ref() != Some(*value)
+            })
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect();
         if let Some((name, expected, actual)) =
-            first_property_mismatch(&expected_properties, round_tripped.properties())
+            first_property_mismatch(&expected_properties, &actual_properties)
         {
             return Err(format!(
                 "{path} ({} {:?}): property `{name}` changed: expected {}, actual {}",
