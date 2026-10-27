@@ -650,7 +650,13 @@ impl Shell {
     fn autorig_report(&mut self, result: Result<String, String>, cx: &mut Context<Self>) {
         let feedback = match result {
             Ok(message) => Feedback::Output(message),
-            Err(message) => Feedback::Error(message),
+            Err(message) => {
+                // The Output dock and Command Bar can both be out of sight
+                // in the Animation Editor, where a refused file (a .rbxm,
+                // say) would otherwise look like nothing happened.
+                self.anim.fail(message.clone());
+                Feedback::Error(message)
+            }
         };
         self.output.push_once(SOURCE, feedback.clone());
         self.command_bar.set_feedback(feedback);
