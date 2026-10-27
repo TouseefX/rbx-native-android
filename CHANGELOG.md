@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-27
+
+- **CLI and file-format hardening**: a hostile binary file can't make us
+  allocate gigabytes anymore, since chunk decompression stops at what the
+  header declares (and a 1 GiB ceiling), and a cut-off file now says which
+  chunk is short and how much is actually left. `rbxview --size` past what
+  the GPU can render is an error instead of a wgpu panic. `--help` / `-h`
+  prints usage and exits 0 in rbxdump, rbxlua, rbxcloud, rbxaudit and
+  rbxmerge. `rbxdump --roundtrip` fills gaps like the editor's save does, so
+  editor-saved files stop failing it, and `rbxlua --print-changes` only
+  lists what the script did, in the order it did it. (@chteau)
+
 ## 2026-10-26
 
 - **Sign in to Roblox right from the first-run setup**: the setup wizard
