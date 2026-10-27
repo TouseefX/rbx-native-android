@@ -10,6 +10,7 @@ use rbx_cloud::{ApiKey, Client, Grant, Owner, PublishMode, Visibility};
 /// typo or a missing argument never unlocks the user's credential store.
 #[derive(Debug, PartialEq)]
 enum Command {
+    Help,
     Whoami,
     Check,
     List,
@@ -31,6 +32,7 @@ enum Command {
 fn parse(mut args: impl Iterator<Item = String>, usage: &str) -> Result<Command, String> {
     let command = args.next().ok_or_else(|| usage.to_string())?;
     match command.as_str() {
+        "--help" | "-h" => Ok(Command::Help),
         "whoami" => Ok(Command::Whoami),
         "check" => Ok(Command::Check),
         "list" => Ok(Command::List),
@@ -57,6 +59,10 @@ fn main() -> ExitCode {
     let usage = format!("usage: {program} <whoami|check|list|download|save|asset> [args...]");
 
     let command = match parse(args, &usage) {
+        Ok(Command::Help) => {
+            println!("{usage}");
+            return ExitCode::SUCCESS;
+        }
         Ok(command) => command,
         Err(err) => {
             eprintln!("{err}");
@@ -70,6 +76,7 @@ fn main() -> ExitCode {
     let client = Client::new(ApiKey::from_env_or_config());
 
     let result = match command {
+        Command::Help => Ok(()),
         Command::Whoami => run_whoami(&client),
         Command::Check => run_check(&client),
         Command::List => run_list(&client),
@@ -262,6 +269,12 @@ mod tests {
 
     fn parsed(line: &[&str]) -> Result<Command, String> {
         parse(line.iter().map(|s| s.to_string()), "usage")
+    }
+
+    #[test]
+    fn help_flags_ask_for_the_usage_text() {
+        assert_eq!(parsed(&["--help"]), Ok(Command::Help));
+        assert_eq!(parsed(&["-h"]), Ok(Command::Help));
     }
 
     #[test]

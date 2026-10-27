@@ -21,6 +21,10 @@ const USAGE: &str = "usage: rbxaudit <place.rbxl|.rbxlx|.rbxm|.rbxmx>";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(args.as_slice(), [flag] if flag == "--help" || flag == "-h") {
+        println!("{USAGE}");
+        return ExitCode::SUCCESS;
+    }
     let [path] = args.as_slice() else {
         eprintln!("{USAGE}");
         return ExitCode::from(2);
