@@ -1,0 +1,92 @@
+name: CI
+
+# No branch filter on `push`: every branch is checked, not just main/PRs,
+# a broken branch should be visible before it becomes a PR, not after.
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Gate (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        # rbx_studio (GPUI Kit) needs these for window/input handling on X11.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-dev libx11-xcb-dev libssl-dev libfontconfig1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace
+
+  windows:
+    name: Build & test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      # rustfmt is OS-agnostic, so the Linux job's `cargo fmt --check` covers
+      # it. clippy is not: `dead_code` depends on which items a `cfg` leaves
+      # a caller for, and `useless_conversion` on type widths that differ by
+      # target (a C `unsigned long` is 32 bits here and 64 on Linux). Code
+      # behind a `target_os` gate can pass clippy on Linux and fail it here,
+      # rbx_studio's X11-only helpers did, so it runs on this target too.
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      # The other question this job exists to answer: does the workspace
+      # actually build and pass its tests on Windows.
+      - name: cargo build
+        run: cargo build --workspace --all-targets
+
+      - name: cargo test
+        run: cargo test --workspace
+
+  macos:
+    name: Build & test (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Same reasoning as the Windows job: clippy's verdict depends on the
+      # target, and nothing else builds the workspace on macOS. macOS is not
+      # a supported target yet, this keeps it from silently rotting until
+      # it is.
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo build
+        run: cargo build --workspace --all-targets
+
+      - name: cargo test
+        run: cargo test --workspace

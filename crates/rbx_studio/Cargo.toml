@@ -1,0 +1,168 @@
+[package]
+name = "rbx_studio"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "rbxstudio"
+path = "src/main.rs"
+
+[dependencies]
+# The vector/matrix types `rbx_viewer`'s picking and gizmo geometry are
+# expressed in (`Ray`, `Handles`, `Pose::position`): the viewport hit-tests the
+# cursor against them on this side of the thread boundary. Same version
+# `rbx_viewer` pins, so this adds no new dependency version to the tree.
+glam = "0.33"
+# `anyhow` and `lsp-types` are the types GPUI Kit's `DefinitionProvider` trait
+# is written in (Go to Declaration); both are already in the tree through it.
+anyhow = "1"
+gpui-kit = "0.6"
+# Already in the tree under gpui-kit, and patched to `vendor/gpui-base`; named
+# directly only for the script editor's gutter slot, which gpui-kit's own
+# re-exports do not list (see `vendor/README.md`).
+gpui-base = "0.6"
+lsp-types = "0.97"
+# GPUI's own version: a RenderImage is built from its `image::Frame`s, so a
+# second copy of the crate would not typecheck.
+image = "0.25.10"
+rbx_assets = { path = "../rbx_assets" }
+# Ctrl+S serializes with the same encoder `rbx_viewer::read_place` already
+# pulls in transitively; declared directly since `save` calls it by name.
+rbx_binary = { path = "../rbx_binary" }
+# The Home screen's experience list, the key wizard's scope check, and
+# opening a place straight from Roblox. Already in the tree through
+# `rbx_viewer`'s asset fetches.
+rbx_cloud = { path = "../rbx_cloud" }
+# Play/Test without Studio: probe, channel, tunnel, launcher, embedding.
+rbx_play = { path = "../rbx_play" }
+# The Security Audit dock runs the whole-place remote/script audit.
+rbx_audit = { path = "../rbx_audit" }
+# Loren, the optional built-in framework: `rbxstudio loren`, Home's Loren
+# project, the Loren dock.
+rbx_loren = { path = "../rbx_loren" }
+rbx_animation = { path = "../rbx_animation" }
+rbx_autorig = { path = "../rbx_autorig" }
+rbx_dom = { path = "../rbx_dom" }
+# Team presence: the relay protocol, the place secret and the WebSocket.
+rbx_presence = { path = "../rbx_presence" }
+# Import 3D Model…: the triangle budget check and the file that is uploaded.
+rbx_import = { path = "../rbx_import" }
+# The UI Editor's "Import from Figma…": sign-in, the API and the class
+# guesses. Its own dependencies are all already in the tree.
+rbx_figma = { path = "../rbx_figma" }
+# The command bar's own Luau VM: already built for `rbx_parser_cli`, so this
+# adds no new dependency version to the tree.
+rbx_lua = { path = "../rbx_lua" }
+# Freeze Rotation reads the mesh it bakes and the one Roblox imports back;
+# already in the tree through `rbx_viewer`.
+rbx_mesh = { path = "../rbx_mesh" }
+# Enum ordinals only mean something to a reader once named (`256 (Plastic)`);
+# the viewer already pulls the embedded dump in, so this costs no new build.
+rbx_reflection = { path = "../rbx_reflection", features = ["embedded-dump"] }
+# The voxel terrain codecs and edits behind the Terrain Editor and
+# `Terrain.MaterialColors`' per-material rows; already in the tree through
+# `rbx_viewer`.
+rbx_terrain = { path = "../rbx_terrain" }
+rbx_viewer = { path = "../rbx_viewer" }
+# Same reasoning as `rbx_binary` above: `save` sniffs and writes XML place
+# files with this crate's already-tested `is_xml`/`serialize`.
+rbx_xml = { path = "../rbx_xml" }
+rbx_wasm = { path = "../rbx_wasm" }
+# Lossless Luau parser the script graph is built from.
+full_moon = { version = "3", features = ["luau"] }
+# Dock layout and editor settings, persisted to disk as JSON.
+serde_json = "1"
+# Decodes the place files embedded in an `rbxmerge` sidecar.
+base64 = "0.22"
+# This project's own class icons (`class_icons::DefaultIcons`), embedded at
+# compile time from `assets/icons/default/dark`: same version gpui-kit-assets
+# already pins for its own Lucide catalog, so this adds no new dependency
+# version to the tree.
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+# Rasterizes those SVGs into the sprite the Explorer paints; GPUI itself
+# vendors this exact version to rasterize its own `svg()` icons, so this adds
+# no new dependency version to the tree.
+resvg = "0.46"
+# GPUI's own handle type: the X11 window id the pointer lock warps in comes out
+# of it, so a second copy of the crate would not typecheck.
+raw-window-handle = "0.6"
+# Already in the tree under GPUI's X11 backend; `xfixes` hides the cursor and
+# `randr` is where the display's refresh rate comes from.
+x11rb = { version = "0.13", features = ["randr", "xfixes"] }
+
+# Dock layout state serialization, uses same version serde_json brings in.
+serde = { version = "1", features = ["derive"] }
+# The Argon dock's HTTP client (`shell::argon_sync`/`argon_client`): blocking
+# by design, already the tree's one HTTP crate via `rbx_cloud`/`rbx_assets`,
+# so this adds no new dependency version to the tree. `json` (for the Wally
+# dock's plain-JSON search calls) is the same feature `rbx_cloud` already
+# turns on for its own `ureq`.
+ureq = { version = "3", features = ["json"] }
+# `luau-lsp` names files by `file://` URI; converting a path both ways,
+# Windows drive letters and percent-escapes included, is exactly this. Already
+# in the tree (under `ureq`), at this version.
+url = "2"
+# Argon's wire protocol is MsgPack, tagged dynamically (`{TypeName: payload}`)
+# rather than shaped for a fixed struct, `rmpv`'s `Value` tree is decoded by
+# tag the same way `rbx_xml::value` dispatches by tag name, not through serde.
+rmpv = "1"
+# The Wally dock's package fetch (`shell::wally_sync`/`wally_client`): a
+# package's content download is a zip of its raw source tree. Same version
+# `rbx_assets` already pins for its own archive reading, so this adds no new
+# dependency version to the tree.
+zip = { version = "8", default-features = false, features = ["deflate"] }
+# Wally's own dependency requirements are ordinary Cargo-style semver
+# (`^0.3`, `>=1.0`, ...), already in the tree transitively, so this adds no
+# new dependency version either; used the same way Wally's own resolver
+# uses it, `VersionReq::matches` against each candidate `Version`.
+semver = "1"
+# Recent's "Today, 1:05 AM": local time needs the zone database, which
+# chrono's `clock` already brings into the tree (with this exact version)
+# through the toolkit, so this adds no new dependency version.
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# The one new dependency this feature needs: a fetched package's `wally.toml`
+# is plain TOML, and nothing in this workspace parses that format yet.
+toml = "0.9"
+# Account fingerprints (`key_store::accounts`); already in the tree at this
+# version, as the build script's hash.
+sha2 = "0.10"
+# The MCP endpoint's token and studio id (`mcp::endpoint`). Already in the
+# tree at this version through rbx_presence and rbx_cloud.
+getrandom = "0.3"
+# The colour popover's eyedropper.
+rbx_eyedropper = { path = "../rbx_eyedropper" }
+
+# The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and
+# hide. Already in the tree (under `mio`, `rustix`, …) at this version.
+# Linux only: `malloc_trim`, so a parked place's freed scene goes back to
+# the system rather than staying in the render thread's arena. Already in
+# Cargo.lock through rbx_play.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+# `build.rs` fetches the bundled `luau-lsp` release and checks its hash. Both
+# are already in the tree at these versions (`ureq` as the HTTP client above,
+# `sha2` under the toolkit), so this adds no new dependency version.
+ureq = "3"
+sha2 = "0.10"
+# The bundled cloudflared (Play's tunnel) is stored deflated, and the macOS
+# release is a .tgz; both crates are already in Cargo.lock at these versions.
+zip = { version = "8", default-features = false, features = ["deflate"] }
+flate2 = "1"
+
+[dev-dependencies]
+rbx_autorig = { path = "../rbx_autorig", features = ["test-humanoid"] }
+# GPUI's headless test window/entity harness (`#[gpui_kit::test]`,
+# `TestAppContext`), for the dock registration regression test in
+# `shell/dock/tests.rs`. Test-only: `dev-dependencies` features never reach
+# the shipped binary.
+gpui-kit = { version = "0.6", features = ["test-support"] }

@@ -1,0 +1,1048 @@
+//! Rendering off the UI thread.
+//!
+//! One thread owns the viewer and does the whole GPU round trip, advance the
+//! camera, draw, read back, and hands finished frames over a channel. The UI
+//! thread does nothing but upload them, so neither the 5 MB readback nor the wait
+//! for the GPU behind it ever sits between a mouse move and the answer to it.
+//!
+//! The thread paces itself to one display refresh and draws only while the
+//! picture can change: a command arrived, the camera moved, an asset landed,
+//! or something on screen moves with the clock (particles, `Trail`, `Beam`, a
+//! `ForceField`: see `Headless::animating`). A still view over a still place
+//! draws nothing, reads nothing back and uploads nothing, which is most of
+//! what an editor sits doing; and it sleeps outright once the panel is not
+//! visible, which is what keeps a backgrounded view free.
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
+use std::sync::Arc;
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
+
+use rbx_dom::{Change, Ref, Snapshot, WeakDom};
+use rbx_viewer::pick::{Meshes, Selected};
+use rbx_viewer::{
+    Applied, Calibration, CameraFeel, CameraInput, Gizmo, Headless, JointSolver, Parked, Pose,
+    QualityLevel, Segment,
+};
+
+pub(crate) mod canvas;
+
+use super::input::Wheel;
+use super::quality::Quality;
+use super::scroll::Scroll;
+use super::stats::Stats;
+
+/// How long the thread sleeps between checks while the panel is not visible.
+/// Short enough that closing the window is not noticeably slower, long enough
+/// that a backgrounded view costs nothing.
+const IDLE_WAIT: Duration = Duration::from_millis(100);
+/// The longest step the camera may be advanced by, in frame budgets. A thread
+/// that just woke from a long idle would otherwise fly the camera across the map
+/// in the single frame that follows the key which woke it.
+const MAX_STEPS: u32 = 3;
+/// How often a moved pose is worth reporting up to the UI thread for DOM sync
+/// (see `WorkspaceView`'s `PoseSynced` event), frames themselves come at
+/// ~75/sec (see this module's doc comment), far more often than
+/// `Workspace.CurrentCamera.CFrame` needs to track a flying camera.
+const POSE_SYNC_INTERVAL: Duration = Duration::from_millis(200);
+
+/// Whole terrain chunks, `None` for one emptied.
+pub(crate) type TerrainChunks = Vec<(rbx_terrain::ChunkKey, Option<Box<[rbx_terrain::Cell]>>)>;
+
+/// What a capture answers with: width, height and RGBA8 rows.
+pub(crate) type Captured = Result<(u32, u32, Vec<u8>), String>;
+
+enum Command {
+    Input(CameraInput),
+    /// One synchronous frame for `screen_capture`, drawn even while the
+    /// panel is hidden, from `at` (eye, look-at) or the current view.
+    Capture {
+        at: Option<([f32; 3], [f32; 3])>,
+        reply: Sender<Captured>,
+    },
+    /// A wheel event at `at`, in the frame's pixels: scrolls the
+    /// `ScrollingFrame` under it if one can take `scroll` (reported back
+    /// through [`Ready::scrolls`]), else steps the camera by `camera`
+    /// notches, see `super::scroll`.
+    Wheel {
+        at: [f32; 2],
+        scroll: Wheel,
+        camera: f32,
+    },
+    Size((u32, u32)),
+    /// A new frame budget to pace the loop to, see `crate::pacing::FocusPacing`.
+    /// Sent whenever the window's focus state (or the unfocused rate setting)
+    /// changes, never on a plain tick.
+    Interval(Duration),
+    Quality(QualityLevel),
+    Orthographic(bool),
+    /// How the free camera responds, see `Headless::set_camera_feel`.
+    CameraFeel(CameraFeel),
+    /// Puts the camera at `eye` looking at `target`: see `Headless::open_at`.
+    LookAt {
+        eye: [f32; 3],
+        target: [f32; 3],
+        fov: f32,
+    },
+    /// The renderer's tuned constants, see `Headless::set_calibration`.
+    Calibration(Calibration),
+    /// Draws only these instances on a plain backdrop, or everything again
+    /// see `Headless::set_isolation`.
+    Isolation(Option<Vec<rbx_dom::Ref>>),
+    /// The editor layers' hidden roots, and the isolated layer's, see
+    /// `Headless::set_layer_filter`.
+    LayerFilter(Option<Vec<rbx_dom::Ref>>, Vec<rbx_dom::Ref>),
+    /// Whether a part in front of the selection hides its outline box, see
+    /// `Headless::set_selection_occluded`.
+    SelectionOccluded(bool),
+    /// The Performance view's heat tint, see `Headless::set_heat`. An
+    /// empty list clears it.
+    Heat(Vec<rbx_viewer::perf::HeatBin>),
+    Selection(Vec<Selected>),
+    /// The "about to click" cue, see `Headless::set_hover`. `None` clears
+    /// it, the way an empty `Selection` clears the selection outline.
+    Hover(Vec<Selected>),
+    /// Which transform tool's draggers to draw over the selection, if any,
+    /// see `Headless::set_gizmo`.
+    Gizmo(Option<Gizmo>),
+    /// The device screen the `ScreenGui` overlay is laid out as, see
+    /// `Headless::set_gui_screen`.
+    GuiScreen(Option<(u32, u32)>),
+    /// Whether the `ScreenGui` overlay is drawn, see
+    /// `Headless::set_screen_gui_shown`.
+    ScreenGuiShown(bool),
+    /// That device's safe-area insets, see `Headless::set_gui_safe_insets`.
+    GuiSafeInsets(rbx_viewer::SafeInsets),
+    /// Where a tool being configured would put the selection, the Align
+    /// popover's live preview. An empty list clears it.
+    Preview(Vec<glam::Mat4>),
+    /// One layer of the world-space line segments drawn over the scene,
+    /// see `Headless::set_lines`. An empty list clears that layer.
+    Lines(usize, Vec<Segment>),
+    /// One layer of flat world-space quads drawn under the lines, see
+    /// `Headless::set_fills`. An empty list clears that layer.
+    Fills(usize, Vec<rbx_viewer::Fill>),
+    /// A terrain edit in progress, as the chunks it changed, see
+    /// `Headless::preview_terrain`.
+    TerrainPreview(TerrainChunks),
+    /// An edit to the DOM, as the `Change` log it produced, patched into the
+    /// scene instance by instance, see `Headless::apply_changes`. What
+    /// travels with the log is a snapshot of the instances it names (see
+    /// `WeakDom::snapshot`), never the tree: the thread keeps a mirror of
+    /// the editor's DOM and brings it in step first, so one command costs
+    /// the edit, not the place. The few edits that still need a full
+    /// rebuild (see `rbx_viewer::Rebuild`) get one right there on the render
+    /// thread, and are reported on stderr so the reason is on record.
+    Changes(Vec<Snapshot>, Vec<Change>),
+    /// The plugins' adornments, replacing the last set: they live in the
+    /// plugin host, not the place, so the mirror holds them under its
+    /// `Workspace` (where the viewer draws adornments) only for drawing.
+    PluginAdornments(Vec<rbx_dom::Instance>),
+    Visible(bool),
+    /// The UI editor's canvas to draw, or `None` once it is off screen,
+    /// see [`canvas`].
+    Canvas(Option<canvas::Request>),
+    /// Lets go of the viewer (`true`) or rebuilds it from the mirror
+    /// (`false`); see [`Pump::park`].
+    Park(bool),
+    Stop,
+}
+
+/// A frame to upload, carrying the flight speed and the graphics quality level as
+/// of the moment it was drawn. `pixels` is empty on a message sent only to report
+/// one of those two changing. `pose` is `Some` only on the (throttled) tick that
+/// is due to report it, see [`POSE_SYNC_INTERVAL`] and [`due_pose`], so most
+/// messages carry `None` even while the camera is moving every frame.
+pub(super) struct Ready {
+    pub(super) pixels: Option<Vec<u8>>,
+    pub(super) size: (u32, u32),
+    pub(super) speed: f32,
+    pub(super) level: u8,
+    pub(super) pose: Option<Pose>,
+    /// The camera this frame was actually drawn from, on every message rather
+    /// than on the throttled tick `pose` uses. What the viewport unprojects a
+    /// click with: a pick resolved against a pose up to `POSE_SYNC_INTERVAL`
+    /// stale would select whatever was under the cursor a fifth of a second
+    /// ago, which is exactly the moment after flying the camera when a user is
+    /// most likely to click.
+    pub(super) view: Option<Pose>,
+    /// The file meshes the viewer's scene holds, on the first message and on
+    /// the one after every rebuild, see `Headless::pick_meshes`. `None` the
+    /// rest of the time: the geometry a click is tested against only changes
+    /// when the scene does, and a handle onto it is all the UI thread keeps.
+    pub(super) meshes: Option<Meshes>,
+    /// Asset-fetch/decode warnings drained off the viewer since the previous
+    /// tick, see `Headless::drain_warnings`. Empty on most ticks, same as
+    /// `pose`, but unlike `pose` this is never throttled: a warning is worth
+    /// showing the moment it exists, not on a sampled interval.
+    pub(super) warnings: Vec<String>,
+    /// Every wheel notch since the previous tick that landed on a scrolling
+    /// frame (see [`Command::Wheel`]), oldest first. Never throttled, like
+    /// `warnings`: the UI thread owns the DOM the scroll is written to.
+    pub(super) scrolls: Vec<Scroll>,
+    /// The UI editor's canvas, on the tick it was redrawn, see [`canvas`].
+    pub(super) canvas: Option<canvas::Drawn>,
+}
+
+pub(super) struct Pump {
+    commands: Sender<Command>,
+    ready: Receiver<Ready>,
+    stats: Arc<Stats>,
+    /// Whether the thread has nothing to draw, see [`Pump::resting`].
+    resting: Arc<AtomicBool>,
+    /// Joined on drop: the thread holds a GPU device of its own, and letting it
+    /// draw into a window that is being torn down is how a driver crash starts.
+    thread: Option<JoinHandle<()>>,
+}
+
+impl Pump {
+    /// `dom` is the tree `viewer` was built from, handed over once: the
+    /// thread keeps it as its mirror of the editor's DOM from here on, see
+    /// [`Command::Changes`].
+    pub(super) fn spawn(
+        viewer: Headless,
+        dom: WeakDom,
+        interval: Duration,
+        quality: QualityLevel,
+    ) -> Self {
+        let (commands, orders) = mpsc::channel();
+        let (frames, ready) = mpsc::channel();
+        let stats = Arc::new(Stats::default());
+        let counters = stats.clone();
+        let resting = Arc::new(AtomicBool::new(false));
+        let rests = resting.clone();
+
+        let thread = thread::Builder::new()
+            .name("rbxstudio-render".to_string())
+            .spawn(move || {
+                run(
+                    viewer,
+                    dom,
+                    &orders,
+                    &frames,
+                    &counters,
+                    &rests,
+                    Opened { interval, quality },
+                )
+            })
+            .ok();
+        if thread.is_none() {
+            eprintln!("rbxstudio: no render thread could be started");
+        }
+
+        Pump {
+            commands,
+            ready,
+            stats,
+            resting,
+            thread,
+        }
+    }
+
+    pub(super) fn input(&self, event: CameraInput) {
+        let _ = self.commands.send(Command::Input(event));
+    }
+
+    /// A wheel event at `at`: see [`Command::Wheel`].
+    pub(super) fn wheel(&self, at: [f32; 2], scroll: Wheel, camera: f32) {
+        let _ = self.commands.send(Command::Wheel { at, scroll, camera });
+    }
+
+    pub(super) fn resize(&self, size: (u32, u32)) {
+        let _ = self.commands.send(Command::Size(size));
+    }
+
+    /// Retargets the render thread's own pacing, the actual throttle: unlike
+    /// the UI thread's polling delay (`WorkspaceView::advance`'s return
+    /// value), this is what stops the GPU render and readback themselves from
+    /// running at the display's full rate while the window is unfocused.
+    pub(super) fn set_interval(&self, interval: Duration) {
+        let _ = self.commands.send(Command::Interval(interval));
+    }
+
+    /// Switches the graphics quality mode, `Automatic` included.
+    pub(super) fn quality(&self, mode: QualityLevel) {
+        let _ = self.commands.send(Command::Quality(mode));
+    }
+
+    pub(super) fn camera_feel(&self, feel: CameraFeel) {
+        let _ = self.commands.send(Command::CameraFeel(feel));
+    }
+
+    pub(super) fn look_at(&self, eye: [f32; 3], target: [f32; 3], fov: f32) {
+        let _ = self.commands.send(Command::LookAt { eye, target, fov });
+    }
+
+    pub(super) fn isolation(&self, roots: Option<Vec<rbx_dom::Ref>>) {
+        let _ = self.commands.send(Command::Isolation(roots));
+    }
+
+    pub(super) fn layer_filter(&self, only: Option<Vec<rbx_dom::Ref>>, hidden: Vec<rbx_dom::Ref>) {
+        let _ = self.commands.send(Command::LayerFilter(only, hidden));
+    }
+
+    pub(super) fn calibration(&self, calibration: Calibration) {
+        let _ = self.commands.send(Command::Calibration(calibration));
+    }
+
+    /// Swaps the main camera between perspective and orthographic projection.
+    pub(super) fn orthographic(&self, orthographic: bool) {
+        let _ = self.commands.send(Command::Orthographic(orthographic));
+    }
+
+    /// Switches whether the selection outline is depth-tested against the
+    /// scene or drawn through it.
+    pub(super) fn selection_occluded(&self, occluded: bool) {
+        let _ = self.commands.send(Command::SelectionOccluded(occluded));
+    }
+
+    /// Tints parts by cost, or nothing with an empty list.
+    pub(super) fn heat(&self, bins: Vec<rbx_viewer::perf::HeatBin>) {
+        let _ = self.commands.send(Command::Heat(bins));
+    }
+
+    /// Outlines what `selected` covers in the viewport.
+    pub(super) fn select(&self, selected: Vec<Selected>) {
+        let _ = self.commands.send(Command::Selection(selected));
+    }
+
+    /// Outlines the hovered part in the viewport, distinctly from the
+    /// selection, `None` clears it.
+    pub(super) fn hover(&self, selected: Vec<Selected>) {
+        let _ = self.commands.send(Command::Hover(selected));
+    }
+
+    /// Draws ghost boxes where the tool being configured would put the
+    /// selection, see `Headless::set_preview`.
+    pub(super) fn preview(&self, boxes: Vec<glam::Mat4>) {
+        let _ = self.commands.send(Command::Preview(boxes));
+    }
+
+    /// Draws one layer of line segments over the scene, see
+    /// `Headless::set_lines`.
+    pub(super) fn terrain_preview(&self, chunks: TerrainChunks) {
+        let _ = self.commands.send(Command::TerrainPreview(chunks));
+    }
+
+    pub(super) fn lines(&self, layer: usize, segments: Vec<Segment>) {
+        let _ = self.commands.send(Command::Lines(layer, segments));
+    }
+
+    /// Fills one layer of flat quads under the lines, see
+    /// `Headless::set_fills`.
+    pub(super) fn fills(&self, layer: usize, fills: Vec<rbx_viewer::Fill>) {
+        let _ = self.commands.send(Command::Fills(layer, fills));
+    }
+
+    /// Shows or hides the transform tool's draggers over the selection.
+    pub(super) fn gizmo(&self, gizmo: Option<Gizmo>) {
+        let _ = self.commands.send(Command::Gizmo(gizmo));
+    }
+
+    /// Lays the GUI overlay out as a `screen`-pixel device, or at the
+    /// frame's own size with `None`.
+    pub(super) fn gui_screen(&self, screen: Option<(u32, u32)>) {
+        let _ = self.commands.send(Command::GuiScreen(screen));
+    }
+
+    pub(super) fn screen_gui_shown(&self, shown: bool) {
+        let _ = self.commands.send(Command::ScreenGuiShown(shown));
+    }
+
+    pub(super) fn gui_safe_insets(&self, insets: rbx_viewer::SafeInsets) {
+        let _ = self.commands.send(Command::GuiSafeInsets(insets));
+    }
+
+    /// Patches the viewer's scene for one edit's `Change` log, see
+    /// [`Command::Changes`].
+    pub(super) fn apply_changes(&self, snapshots: Vec<Snapshot>, changes: Vec<Change>) {
+        let _ = self.commands.send(Command::Changes(snapshots, changes));
+    }
+
+    /// Replaces the plugins' adornments drawn over the scene.
+    pub(super) fn plugin_adornments(&self, adornments: Vec<rbx_dom::Instance>) {
+        let _ = self.commands.send(Command::PluginAdornments(adornments));
+    }
+
+    /// Tells the render thread whether the panel is actually on screen, the
+    /// dock only mounts the active tab of a group, so a hidden viewport never
+    /// calls back into `render` to report a size. Draws stop entirely while
+    /// it is not, rather than going on into a picture nobody can see.
+    pub(super) fn set_visible(&self, visible: bool) {
+        let _ = self.commands.send(Command::Visible(visible));
+    }
+
+    /// Asks for the UI editor's canvas, or stops drawing it, see
+    /// [`canvas`]. Sending the same request again costs nothing.
+    pub(super) fn canvas(&self, request: Option<canvas::Request>) {
+        let _ = self.commands.send(Command::Canvas(request));
+    }
+
+    /// Asks for one frame at the panel's last known size, see
+    /// [`Command::Capture`].
+    pub(super) fn capture(&self, at: Option<([f32; 3], [f32; 3])>) -> Receiver<Captured> {
+        let (reply, answer) = mpsc::channel();
+        if let Err(mpsc::SendError(Command::Capture { reply, .. })) =
+            self.commands.send(Command::Capture { at, reply })
+        {
+            let _ = reply.send(Err("the viewport is closed".to_string()));
+        }
+        answer
+    }
+
+    /// Drops the viewer (scene, GPU device, decoded assets) while the place
+    /// is not on screen, keeping the mirror, camera and view; unparking
+    /// rebuilds it from the mirror. Every command sent meanwhile waits and
+    /// is applied, in order, once it is back.
+    pub(super) fn park(&self, parked: bool) {
+        let _ = self.commands.send(Command::Park(parked));
+    }
+
+    /// The next message waiting, without ever blocking the UI thread.
+    pub(super) fn poll(&self) -> Option<Ready> {
+        self.ready.try_recv().ok()
+    }
+
+    /// Whether the thread is idle by choice, visible, but with nothing that
+    /// would change the picture, rather than stalled: no frame is coming
+    /// until something does, so no frame arriving says nothing about whether
+    /// the panel is still on screen (see `super::presence`).
+    pub(super) fn resting(&self) -> bool {
+        self.resting.load(Ordering::Relaxed)
+    }
+
+    pub(super) fn stats(&self) -> &Stats {
+        &self.stats
+    }
+}
+
+impl Drop for Pump {
+    fn drop(&mut self) {
+        let _ = self.commands.send(Command::Stop);
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+/// What the thread opens with: the frame budget it paces itself to, and the
+/// quality mode the command line asked for.
+struct Opened {
+    interval: Duration,
+    quality: QualityLevel,
+}
+
+fn run(
+    mut viewer: Headless,
+    mut mirror: WeakDom,
+    commands: &Receiver<Command>,
+    frames: &Sender<Ready>,
+    stats: &Stats,
+    resting: &AtomicBool,
+    opened: Opened,
+) {
+    let Opened { interval, quality } = opened;
+    let mut interval = interval;
+    // ponytail: `Quality`'s automatic-level target (`target_hz`) is fixed at
+    // this full-focus budget for the thread's whole life, even once
+    // `Command::Interval` later slows `interval` itself down while
+    // unfocused, Automatic then keeps sizing the level for the display's
+    // full rate rather than the looser unfocused one, which only leaves
+    // headroom on the table, never breaks anything. Upgrade path: fold the
+    // new budget into `quality` too wherever `Command::Interval` is applied,
+    // the way `Command::Quality` already reaches `quality.set`.
+    let mut quality = Quality::new(quality, interval, &mut viewer);
+    let mut size = (0, 0);
+    let mut visible = true;
+    let mut in_flight = false;
+    // Owed from the start: nothing has been drawn yet.
+    let mut owed = true;
+    let mut ticked = Instant::now();
+    let mut speed = viewer.speed();
+    let mut idle = false;
+    let mut due = Instant::now();
+    let mut shown = viewer.quality().resolved();
+    // `Instant::now()`, not `ticked`: due right away, so a place that opens
+    // already aimed at its own saved `Camera` reports that pose once even with
+    // zero input, see `due_pose`'s doc comment.
+    let mut pose_due = Instant::now();
+    let mut pose_sent = None;
+    // True to begin with: the scene the thread opened with is as new to the
+    // UI thread as any rebuilt one.
+    let mut rebuilt = true;
+    let mut scrolls = Vec::new();
+    let mut canvas = canvas::Canvas::default();
+    let mut joints = JointSolver::new();
+    let mut overlay: Option<rbx_viewer::OverlayColors> = None;
+    let mut plugin_adornments = Vec::new();
+    let mut park = false;
+    // Commands that arrived while parked, applied once the viewer is back.
+    let mut held = Vec::new();
+
+    loop {
+        let wait = (idle && held.is_empty()).then_some(if visible { interval } else { IDLE_WAIT });
+        if !drain(
+            commands,
+            Rendering {
+                viewer: &mut viewer,
+                mirror: &mut mirror,
+                joints: &mut joints,
+                quality: &mut quality,
+                size: &mut size,
+                visible: &mut visible,
+                rebuilt: &mut rebuilt,
+                scrolls: &mut scrolls,
+                interval: &mut interval,
+                canvas: &mut canvas,
+                owed: &mut owed,
+                plugin_adornments: &mut plugin_adornments,
+                park: &mut park,
+            },
+            wait,
+            std::mem::take(&mut held),
+        ) {
+            return;
+        }
+        if std::mem::take(&mut park) {
+            match parked(viewer.park(), &mirror, commands, resting) {
+                Some((resumed, waiting)) => {
+                    viewer = resumed;
+                    held = waiting;
+                    rebuilt = true;
+                    owed = true;
+                    overlay = None;
+                    continue;
+                }
+                None => return,
+            }
+        }
+
+        // Polled because a theme switch happens on the UI thread and sends
+        // no command; this is one `Arc` read per frame.
+        let colors = rbx_viewer::OverlayColors {
+            selection: crate::tokens::linear(crate::tokens::viewport_selection()),
+            hover: crate::tokens::linear(crate::tokens::viewport_hover()),
+            preview: crate::tokens::linear(crate::tokens::viewport_preview()),
+        };
+        if overlay != Some(colors) {
+            viewer.set_overlay_colors(colors);
+            overlay = Some(colors);
+            owed = true;
+        }
+
+        let now = Instant::now();
+        let changed = viewer.tick(step(now.duration_since(ticked), interval));
+        ticked = now;
+
+        // Not `||`: `animating` is only worth asking once nothing else asked.
+        let draw = visible && (std::mem::take(&mut owed) | changed || viewer.animating());
+        let frame = next_frame(&mut viewer, size, draw, &mut in_flight, stats);
+        // Nothing to draw, and the last frame queued already collected: wait
+        // for an event rather than for the clock, for no longer than a frame
+        // while visible, since the camera and the asset pool are only ever
+        // looked at from here.
+        idle = !draw && frame.is_none() && !in_flight;
+        resting.store(visible && idle, Ordering::Relaxed);
+        if idle {
+            stats.rested();
+        }
+
+        let current = viewer.speed();
+        let told = (current - speed).abs() > f32::EPSILON;
+        speed = current;
+        let cost = frame.as_ref().map(|frame| frame.cost);
+        if let Some(frame) = &frame {
+            shown = frame.level;
+        }
+
+        let view = Some(viewer.view_pose());
+        let pose = due_pose(viewer.pose(), pose_sent, now >= pose_due);
+        if let Some(pose) = pose {
+            pose_sent = Some(pose);
+            pose_due = now + POSE_SYNC_INTERVAL;
+        }
+
+        let warnings = viewer.drain_warnings();
+        // Either a command rebuilt the scene, or an asset landed on this tick
+        // and was swapped into it, both mean new geometry to pick against.
+        let meshes = (std::mem::take(&mut rebuilt) | viewer.pick_meshes_changed())
+            .then(|| viewer.pick_meshes());
+        // A swap-in is news to the canvas as much as to the scene.
+        if meshes.is_some() {
+            canvas.touch();
+        }
+        let drawn = canvas.draw(&mut viewer);
+        let scrolled = std::mem::take(&mut scrolls);
+
+        if (frame.is_some()
+            || told
+            || pose.is_some()
+            || !warnings.is_empty()
+            || meshes.is_some()
+            || !scrolled.is_empty()
+            || drawn.is_some())
+            && frames
+                .send(Ready {
+                    pixels: frame.map(|frame| frame.pixels),
+                    size,
+                    speed,
+                    level: shown,
+                    pose,
+                    view,
+                    meshes,
+                    warnings,
+                    scrolls: scrolled,
+                    canvas: drawn,
+                })
+                .is_err()
+        {
+            return;
+        }
+
+        // After the frame was handed over, never before: a level change rebuilds
+        // the renderer, and the upload it would otherwise wait behind is the
+        // whole reason this thread exists.
+        if let Some(cost) = cost {
+            quality.record(cost + stats.last_upload(), &mut viewer);
+        }
+
+        stats.report(interval, shown);
+        let now = Instant::now();
+        due = deadline(due, interval, now);
+        if idle {
+            // Nothing to be on time for: the next frame starts when the next
+            // event does.
+            due = now;
+        } else if let Some(rest) = due.checked_duration_since(now) {
+            thread::sleep(rest);
+        }
+    }
+}
+
+/// When the next frame is due: one budget after the last one was, never in the
+/// past.
+///
+/// Sleeping "what is left of the budget" instead would lose a frame every few:
+/// each sleep overshoots by a millisecond or two, and counted from `now` that
+/// overshoot is never made up, 75 Hz asked for, 60 delivered.
+fn deadline(previous: Instant, interval: Duration, now: Instant) -> Instant {
+    (previous + interval).max(now)
+}
+
+/// A frame off the GPU, with what it cost this thread and the quality level it
+/// was drawn at.
+struct Frame {
+    pixels: Vec<u8>,
+    /// Render plus readback. The upload is the UI thread's share and is added
+    /// where the manager is fed, not here.
+    cost: Duration,
+    level: u8,
+}
+
+/// Draws the frame the viewport is owed, or collects the one still in flight.
+///
+/// `draw` is false both while the panel is hidden and while nothing would
+/// change the picture; either way the frame queued last is collected once,
+/// so the one on screen is the latest.
+///
+/// Panels the dock is not currently showing never report a size, the active
+/// tab of a group is the only one mounted, so a hidden viewport's `render`
+/// simply never runs to say otherwise, but `visible` is driven by that same
+/// absence (see `WorkspaceView::advance`), which is what actually stops the
+/// draw: a size left over from before the tab was switched away is not enough
+/// on its own. Going invisible still has to collect the frame queued just
+/// before it happened, or the view would stand one frame short once it comes
+/// back; going visible again starts drawing every tick, at rest or not, which
+/// is what keeps animated content (particles, `Trail`, `Clouds`) moving
+/// without camera input.
+fn next_frame(
+    viewer: &mut Headless,
+    size: (u32, u32),
+    draw: bool,
+    in_flight: &mut bool,
+    stats: &Stats,
+) -> Option<Frame> {
+    if size.0 == 0 || size.1 == 0 || !draw {
+        let draining = std::mem::replace(in_flight, false);
+        return if draining {
+            drain_pending_frame(viewer, stats)
+        } else {
+            None
+        };
+    }
+    *in_flight = true;
+
+    // Read before the frame is queued, because that is the frame it applies to:
+    // what comes back below was queued at the previous call, so a level that
+    // just changed reaches the label one frame early.
+    let level = viewer.quality().resolved();
+    let rendered = viewer.render_frame(size.0, size.1);
+
+    match rendered {
+        Ok(Some(rendered)) => {
+            stats.drew(rendered.render, rendered.readback);
+            Some(Frame {
+                pixels: rendered.pixels,
+                cost: rendered.render + rendered.readback,
+                level,
+            })
+        }
+        Ok(None) => None,
+        Err(err) => {
+            eprintln!("rbxstudio: {err}");
+            None
+        }
+    }
+}
+
+/// Collects the one frame `render_frame` had already queued when the viewport
+/// stopped being visible or came to rest, without queuing another behind it.
+fn drain_pending_frame(viewer: &mut Headless, stats: &Stats) -> Option<Frame> {
+    let level = viewer.quality().resolved();
+    match viewer.take_frame() {
+        Ok(Some(rendered)) => {
+            stats.drew(rendered.render, rendered.readback);
+            Some(Frame {
+                pixels: rendered.pixels,
+                cost: rendered.render + rendered.readback,
+                level,
+            })
+        }
+        Ok(None) => None,
+        Err(err) => {
+            eprintln!("rbxstudio: {err}");
+            None
+        }
+    }
+}
+
+/// Everything a command may reach: the viewer, what it draws at, the size it
+/// draws at and whether the panel is currently visible.
+struct Rendering<'a> {
+    viewer: &'a mut Headless,
+    /// The editor's DOM as this thread last saw it, see [`Command::Changes`].
+    mirror: &'a mut WeakDom,
+    /// Poses the mirror's parts from their joints' `Transform`, which is all
+    /// the animation editor writes, see [`JointSolver`].
+    joints: &'a mut JointSolver,
+    quality: &'a mut Quality,
+    size: &'a mut (u32, u32),
+    visible: &'a mut bool,
+    /// Set by any command that rebuilt the scene, so the tick that follows
+    /// reports the geometry the UI thread now has to pick against, see
+    /// [`Ready::meshes`].
+    rebuilt: &'a mut bool,
+    /// The wheel notches that landed on a scrolling frame this tick, for
+    /// [`Ready::scrolls`].
+    scrolls: &'a mut Vec<Scroll>,
+    /// The budget the loop is currently pacing itself to, see
+    /// [`Command::Interval`]. Note: this is only the *pacing* budget;
+    /// `quality`'s automatic-level target stays fixed to the rate `Quality::new`
+    /// opened with, not to this, see this module's `run` for why that's fine.
+    interval: &'a mut Duration,
+    canvas: &'a mut canvas::Canvas,
+    /// Set by every command, so the tick that follows draws: nearly all of
+    /// them change the picture, and one frame for one that did not is cheap.
+    owed: &'a mut bool,
+    /// The plugin adornments the mirror holds, see
+    /// [`Command::PluginAdornments`].
+    plugin_adornments: &'a mut Vec<Ref>,
+    /// Set by [`Command::Park`]; `run` parks once the batch is through.
+    park: &'a mut bool,
+}
+
+/// Applies everything the UI thread has asked for, blocking for up to `idle`
+/// for the first order while there is nothing to draw. Returns `false` once
+/// the view is gone.
+fn drain(
+    commands: &Receiver<Command>,
+    mut rendering: Rendering<'_>,
+    idle: Option<Duration>,
+    held: Vec<Command>,
+) -> bool {
+    if let Some(wait) = idle {
+        match commands.recv_timeout(wait) {
+            Ok(command) => {
+                *rendering.owed = true;
+                if !apply(command, &mut rendering) {
+                    return false;
+                }
+            }
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => return false,
+        }
+    }
+
+    let mut queued = held;
+    loop {
+        match commands.try_recv() {
+            Ok(command) => queued.push(command),
+            Err(TryRecvError::Empty) => break,
+            Err(TryRecvError::Disconnected) => return false,
+        }
+    }
+    if !queued.is_empty() {
+        *rendering.owed = true;
+    }
+    for command in coalesce(queued) {
+        if !apply(command, &mut rendering) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Holds every command until the viewer is asked back, then rebuilds it
+/// from `mirror` and hands the held commands back to be applied in order.
+/// `None` once the view is gone or the rebuild fails.
+fn parked(
+    parked: Parked,
+    mirror: &WeakDom,
+    commands: &Receiver<Command>,
+    resting: &AtomicBool,
+) -> Option<(Headless, Vec<Command>)> {
+    resting.store(true, Ordering::Relaxed);
+    // glibc keeps what a thread frees in that thread's arena; a parked scene
+    // is hundreds of megabytes nobody will ask for until it is rebuilt.
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    // SAFETY: `malloc_trim` only releases free memory; it touches nothing
+    // still allocated.
+    unsafe {
+        libc::malloc_trim(0);
+    }
+    let mut held = Vec::new();
+    loop {
+        match commands.recv().ok()? {
+            Command::Park(false) => break,
+            Command::Park(true) => {}
+            Command::Stop => return None,
+            command => held.push(command),
+        }
+    }
+    match parked.resume(mirror) {
+        Ok(viewer) => Some((viewer, held)),
+        Err(err) => {
+            eprintln!("rbxstudio: the scene could not be rebuilt: {err}");
+            None
+        }
+    }
+}
+
+/// Folds every run of consecutive [`Command::Changes`] into one, keeping
+/// everything else where it was.
+///
+/// A drag sends one change batch per mouse-move event, and a mouse reports
+/// far more of those than the display draws frames, up to a thousand a
+/// second. Each batch is a hint about *which* instances to re-read from the
+/// mirror (see `Headless::apply_changes`), never a value, so applying the
+/// union once is the same picture as applying each in turn, while the
+/// per-batch cost that does not scale with the edit (the effect, GUI and
+/// light plans a moved part's children invalidate) is paid once a frame
+/// instead of once a move. Without this a place big enough for those plans
+/// to cost a few milliseconds fell behind the mouse and stayed there for
+/// the whole gesture. Snapshots keep their order, so the mirror ends up
+/// where the last batch left it.
+///
+/// Line segments are folded past as well: a drag's guides move with it and
+/// send a fresh list almost every step, between one change batch and the
+/// next, and a list replaces whatever that layer held before, so only the
+/// last one per layer is kept, and the batches either side of it still
+/// fold into one.
+fn coalesce(commands: Vec<Command>) -> Vec<Command> {
+    let mut folded: Vec<Command> = Vec::with_capacity(commands.len());
+    for command in commands {
+        match command {
+            Command::Changes(more, further) => {
+                let open = folded
+                    .iter_mut()
+                    .rev()
+                    .find(|queued| !matches!(queued, Command::Lines(..) | Command::Fills(..)));
+                if let Some(Command::Changes(snapshots, changes)) = open {
+                    snapshots.extend(more);
+                    changes.extend(further);
+                } else {
+                    folded.push(Command::Changes(more, further));
+                }
+            }
+            Command::Lines(layer, segments) => {
+                folded
+                    .retain(|queued| !matches!(queued, Command::Lines(held, _) if *held == layer));
+                folded.push(Command::Lines(layer, segments));
+            }
+            Command::Fills(layer, fills) => {
+                folded
+                    .retain(|queued| !matches!(queued, Command::Fills(held, _) if *held == layer));
+                folded.push(Command::Fills(layer, fills));
+            }
+            // Back to back, two previews are one: each carries whole chunks,
+            // and the later copy of a chunk is the one that stands.
+            Command::TerrainPreview(chunks) => match folded.last_mut() {
+                Some(Command::TerrainPreview(held)) => {
+                    held.retain(|(key, _)| !chunks.iter().any(|(new, _)| new == key));
+                    held.extend(chunks);
+                }
+                _ => folded.push(Command::TerrainPreview(chunks)),
+            },
+            command => folded.push(command),
+        }
+    }
+    folded
+}
+
+fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
+    match command {
+        Command::Input(event) => rendering.viewer.input(event),
+        Command::Wheel { at, scroll, camera } => {
+            match rendering.viewer.gui_scroll_target(at, scroll.axis) {
+                Some(target) => rendering.scrolls.push(Scroll::of(target, scroll)),
+                None => rendering
+                    .viewer
+                    .input(CameraInput::Wheel { notches: camera }),
+            }
+        }
+        Command::Size(new) => *rendering.size = new,
+        Command::Interval(new) => *rendering.interval = new,
+        Command::Quality(mode) => rendering.quality.set(mode, rendering.viewer),
+        Command::Orthographic(orthographic) => rendering.viewer.set_orthographic(orthographic),
+        Command::CameraFeel(feel) => rendering.viewer.set_camera_feel(feel),
+        // Studio's own default field of view.
+        Command::LookAt { eye, target, fov } => rendering.viewer.open_at(eye, target, fov),
+        Command::Isolation(roots) => rendering.viewer.set_isolation(roots),
+        Command::LayerFilter(only, hidden) => rendering.viewer.set_layer_filter(only, hidden),
+        Command::Calibration(calibration) => rendering.viewer.set_calibration(calibration),
+        Command::SelectionOccluded(occluded) => rendering.viewer.set_selection_occluded(occluded),
+        Command::Heat(bins) => rendering.viewer.set_heat(bins),
+        Command::Selection(selected) => rendering.viewer.set_selection(&selected),
+        Command::Hover(selected) => rendering.viewer.set_hover(selected),
+        Command::Preview(boxes) => rendering.viewer.set_preview(boxes),
+        Command::Lines(layer, segments) => rendering.viewer.set_lines(layer, segments),
+        Command::Fills(layer, fills) => rendering.viewer.set_fills(layer, fills),
+        Command::TerrainPreview(chunks) => rendering.viewer.preview_terrain(chunks),
+        Command::Gizmo(gizmo) => rendering.viewer.set_gizmo(gizmo),
+        Command::GuiScreen(screen) => rendering.viewer.set_gui_screen(screen),
+        Command::ScreenGuiShown(shown) => rendering.viewer.set_screen_gui_shown(shown),
+        Command::GuiSafeInsets(insets) => rendering.viewer.set_gui_safe_insets(insets),
+        Command::Changes(snapshots, changes) => {
+            rendering.canvas.touch();
+            rendering.mirror.mirror(snapshots);
+            // The editor's parts arrive at rest; a pose is put on here, as
+            // Roblox's Animator puts one on from `Motor6D.Transform`.
+            let mut changes = changes;
+            let posed = rendering.joints.solve(rendering.mirror, &changes);
+            changes.extend(posed);
+            match rendering.viewer.apply_changes(rendering.mirror, &changes) {
+                Ok(Applied::Patched) => {}
+                Ok(Applied::Rebuilt(why)) => {
+                    *rendering.rebuilt = true;
+                    eprintln!("rbxstudio: scene rebuilt: {why}");
+                }
+                Err(err) => eprintln!("rbxstudio: edit failed: {err}"),
+            }
+        }
+        Command::PluginAdornments(adornments) => {
+            let changes =
+                swap_plugin_adornments(rendering.mirror, rendering.plugin_adornments, adornments);
+            match rendering.viewer.apply_changes(rendering.mirror, &changes) {
+                Ok(Applied::Patched) => {}
+                Ok(Applied::Rebuilt(why)) => {
+                    *rendering.rebuilt = true;
+                    eprintln!("rbxstudio: scene rebuilt: {why}");
+                }
+                Err(err) => eprintln!("rbxstudio: plugin adornments failed: {err}"),
+            }
+        }
+        Command::Capture { at, reply } => {
+            let (width, height) = *rendering.size;
+            let outcome = if width == 0 || height == 0 {
+                Err("the viewport has no size yet".to_string())
+            } else {
+                rendering
+                    .viewer
+                    .capture(width, height, at)
+                    .map(|rendered| (width, height, rendered.pixels))
+            };
+            let _ = reply.send(outcome);
+        }
+        Command::Visible(new) => *rendering.visible = new,
+        Command::Canvas(request) => rendering.canvas.set(request),
+        // The last word wins: shown again in the same batch is not parked.
+        Command::Park(parked) => *rendering.park = parked,
+        Command::Stop => return false,
+    }
+
+    true
+}
+
+/// Takes the last plugin adornments out of `mirror` and puts `adornments`
+/// in under its `Workspace` (the viewer draws no root-level adornment),
+/// returning the change log for both. An adornment whose referent the place
+/// already uses is skipped rather than overwriting a real instance.
+fn swap_plugin_adornments(
+    mirror: &mut WeakDom,
+    held: &mut Vec<Ref>,
+    adornments: Vec<rbx_dom::Instance>,
+) -> Vec<Change> {
+    let mut changes = Vec::new();
+    for referent in held.drain(..) {
+        changes.extend(mirror.remove(referent).into_iter().map(Change::Removed));
+    }
+    let workspace = mirror.root_refs().iter().copied().find_map(|root| {
+        let instance = mirror.get(root)?;
+        if instance.class() == "Workspace" {
+            return Some(root);
+        }
+        instance
+            .children()
+            .iter()
+            .copied()
+            .find(|&child| mirror.get(child).is_some_and(|c| c.class() == "Workspace"))
+    });
+    for adornment in adornments {
+        let referent = adornment.referent();
+        if mirror.get(referent).is_some() {
+            continue;
+        }
+        mirror.insert(adornment);
+        if workspace.is_some() {
+            mirror.set_parent(referent, workspace);
+        }
+        held.push(referent);
+        changes.push(Change::Added(referent));
+    }
+    // The mirror's own log is never read; the list above is what the viewer
+    // patches from.
+    mirror.take_changes();
+    changes
+}
+
+/// How far to advance the camera for a frame that took `since` to come round.
+fn step(since: Duration, interval: Duration) -> Duration {
+    since.min(interval * MAX_STEPS)
+}
+
+/// Whether this tick's pose (`candidate`, `None` while the view is still
+/// auto-orbiting, see [`Headless::pose`]) is worth reporting up to the UI
+/// thread: gated on [`POSE_SYNC_INTERVAL`] (`ready`) and on actually differing
+/// from the last one sent, so a camera at rest, the common case, since a
+/// frame is drawn every tick regardless of movement, never re-reports the
+/// same value once `ready` comes back around.
+///
+/// A plain function of three values rather than a method on any of the loop's
+/// running state, so it can be unit-tested the way [`step`] and [`deadline`]
+/// are, with no `Headless` or GPU device involved.
+fn due_pose<T: Copy + PartialEq>(
+    candidate: Option<T>,
+    last_sent: Option<T>,
+    ready: bool,
+) -> Option<T> {
+    let pose = candidate?;
+    if !ready || last_sent == Some(pose) {
+        return None;
+    }
+    Some(pose)
+}
+
+#[cfg(test)]
+#[path = "pump/tests.rs"]
+mod tests;

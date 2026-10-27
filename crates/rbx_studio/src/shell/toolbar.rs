@@ -1,0 +1,239 @@
+//! The transform tools, as the ribbon's Tools group draws them (§2):
+//! Select/Move/Scale/Rotate/Transform as tight 32x32 icon buttons, the
+//! local-axis toggle beside them, then the chevron that opens the snap
+//! increments and the Align popover.
+//!
+//! `creator-docs`' own prose never names Transform as a distinct tool, it
+//! only uses "transform" as the umbrella term for Move+Scale+Rotate
+//! together, but Roblox's enum reference does:
+//! `reference/engine/enums/RibbonTool.yaml` and the API dump this project
+//! syncs daily (`assets/API-Dump.json`) both give `Enum.RibbonTool.Transform`
+//! the summary "provides combined move, scale, and rotate handles in a
+//! single gizmo", which is what `crate::transform::Tool::Transform` and
+//! `rbx_viewer::gizmo::Kind::Transform` implement.
+
+use gpui_kit::assets::IconName;
+use gpui_kit::component::popover::Popover;
+use gpui_kit::component::{h_flex, v_flex, Icon};
+use gpui_kit::prelude::FluentBuilder as _;
+use gpui_kit::*;
+
+use crate::tokens;
+use crate::transform::{Action, JointTool, SnapKind, Tool};
+
+use super::ribbon;
+use super::Shell;
+
+pub(crate) mod snap;
+
+/// `RBX_STUDIO_TOOL=rotate` / `scale,local` / `move,nosnap` picks a tool and
+/// its snapping at startup, a
+/// debugging aid for a screenshot of the draggers, since nothing else can
+/// click the toolbar or type its shortcut on the editor's behalf, exactly as `RBX_STUDIO_SELECT` and
+/// `RBX_STUDIO_EDIT` already stand in for a click and a keystroke elsewhere.
+pub(super) const TOOL_VARIABLE: &str = "RBX_STUDIO_TOOL";
+
+impl Shell {
+    /// Applies [`TOOL_VARIABLE`], if it is set to anything this understands.
+    pub(super) fn apply_debug_tool(&mut self, cx: &mut Context<Self>) {
+        let Ok(spec) = std::env::var(TOOL_VARIABLE) else {
+            return;
+        };
+
+        for word in spec.split(',').map(str::trim) {
+            match word.to_ascii_lowercase().as_str() {
+                "select" => self.transform_action(Action::Use(Tool::Select), cx),
+                "move" => self.transform_action(Action::Use(Tool::Move), cx),
+                "scale" => self.transform_action(Action::Use(Tool::Scale), cx),
+                "rotate" => self.transform_action(Action::Use(Tool::Rotate), cx),
+                "transform" => self.transform_action(Action::Use(Tool::Transform), cx),
+                "sun" => self.transform_action(Action::Use(Tool::Sun), cx),
+                "pivot" => self.transform_action(Action::Use(Tool::Pivot), cx),
+                "local" => self.transform_action(Action::ToggleLocal, cx),
+                "nosnap" => self.transform_action(Action::ToggleSnap(SnapKind::Translate), cx),
+                other => eprintln!("rbxstudio: {TOOL_VARIABLE}: no tool called {other:?}"),
+            }
+        }
+    }
+
+    /// Applies a toolbar action, whether it came from a control here or from a
+    /// shortcut typed over the 3D view.
+    ///
+    /// `FocusIncrement` is the one action that changes no state: it moves the
+    /// caret, which needs a `Window` this path does not have, so the shortcut
+    /// is handled where one is (see `Shell::focus_snap_increment`).
+    pub(crate) fn transform_action(&mut self, action: Action, cx: &mut Context<Self>) {
+        match action {
+            Action::Use(tool) if !self.transform.keyable(tool) => return,
+            Action::Use(tool) => {
+                self.transform.tool = tool;
+                match tool {
+                    Tool::Move => self.transform.joint = JointTool::Move,
+                    Tool::Rotate => self.transform.joint = JointTool::Rotate,
+                    _ => {}
+                }
+            }
+            Action::ToggleJoint if !self.transform.posing => return,
+            Action::ToggleJoint => {
+                self.transform.joint = match self.transform.joint {
+                    JointTool::Rotate => JointTool::Move,
+                    JointTool::Move => JointTool::Rotate,
+                };
+            }
+            Action::ToggleLocal => self.transform.local = !self.transform.local,
+            Action::ToggleSnap(kind) => {
+                let snap = self.snap_mut(kind);
+                snap.enabled = !snap.enabled;
+            }
+            Action::SetIncrement(kind, increment) => self.snap_mut(kind).increment = increment,
+            Action::FocusIncrement(_) => {}
+            Action::TogglePivotSnap => self.transform.pivot_snap = !self.transform.pivot_snap,
+        }
+
+        let transform = self.transform.for_view();
+        self.viewport
+            .update(cx, |viewport, _| viewport.set_transform(transform));
+        // Takes the brush or region off screen when another tool takes over.
+        self.redraw_terrain_overlay(cx);
+        if matches!(action, Action::SetIncrement(..) | Action::TogglePivotSnap) {
+            self.save_settings();
+        }
+        cx.notify();
+    }
+
+    /// Turns posing a bound rig on or off (see `Transform::posing`): from
+    /// every Animation frame, and on leaving the document.
+    pub(crate) fn set_posing(&mut self, posing: bool, cx: &mut Context<Self>) {
+        if self.transform.posing == posing {
+            return;
+        }
+        self.transform.posing = posing;
+        let transform = self.transform.for_view();
+        self.viewport
+            .update(cx, |viewport, _| viewport.set_transform(transform));
+        cx.notify();
+    }
+
+    fn snap_mut(&mut self, kind: SnapKind) -> &mut crate::transform::Snap {
+        match kind {
+            SnapKind::Translate => &mut self.transform.translate,
+            SnapKind::Rotate => &mut self.transform.rotate,
+        }
+    }
+
+    /// Studio shows an `L` beside the tools while local orientation is on.
+    /// This is that indicator and its toggle, as one more tile in the row.
+    pub(super) fn local_tile(&self, cx: &mut Context<Self>) -> impl IntoElement + 'static {
+        let local = self.transform.local;
+
+        ribbon::cluster_icon(&self.ribbon_nav, "tool-local", IconName::Axis3d, cx)
+            .when(local, |this| ribbon::selected(this, tokens::tool_local()))
+            .tooltip(|window, cx| super::tooltip::text("Local orientation", window, cx))
+            .on_click(cx.listener(|shell, _, _, cx| {
+                ribbon::RibbonCommand::Local.run(shell, cx);
+            }))
+    }
+
+    /// The snap increments, as the stack that sits beside the tools: each
+    /// row reads back what a drag will round to, and clicking either opens
+    /// the fields that set them.
+    ///
+    /// Read-out and control in one, which is the point, the increments are
+    /// checked far more often than they are changed, and a number you have
+    /// to open a popover to *see* is a number nobody trusts.
+    pub(super) fn snap_stack(&self, cx: &mut Context<Self>) -> impl IntoElement + 'static {
+        // Built inside the content closure, from this handle: the popover
+        // rebuilds its body every time it opens, and the fields have to be
+        // the live `InputState`s rather than a snapshot taken at render.
+        let handle = cx.entity();
+        let translate = self.transform.translate;
+        let rotate = self.transform.rotate;
+        let stack = self.ribbon_nav.claim(
+            v_flex()
+                .id("snap-stack")
+                .flex_none()
+                .w(tokens::stack_width())
+                .h_full()
+                .justify_center()
+                .gap(px(6.))
+                .cursor_pointer()
+                .focus_visible(|this| this.shadow(tokens::focus_ring(tokens::chrome()))),
+            cx,
+        );
+
+        Popover::new("snap-popover")
+            .appearance(false)
+            // The popover opens 6px under the ribbon's bottom edge. The trigger ends 12px above that edge (the ribbon's
+            // 11px bottom padding and its 1px border), and the toolkit
+            // already offsets a popover 4px below its trigger.
+            .mt(px(14.))
+            .trigger(
+                super::chrome::Trigger::with_open(move |open| {
+                    stack
+                        .child(snap_readout(
+                            IconName::Magnet,
+                            snap::studs(translate.increment),
+                            translate.enabled,
+                            open,
+                        ))
+                        .child(snap_readout(
+                            IconName::RotateCw,
+                            format!("{}°", rotate.increment),
+                            rotate.enabled,
+                            open,
+                        ))
+                })
+                .tooltip("Snap increments"),
+            )
+            .content(move |_, _, cx| handle.update(cx, |shell, cx| shell.snap_fields_popover(cx)))
+    }
+
+    /// Align keeps its own popover of toggles; its trigger is one more tile.
+    pub(super) fn align_control(&self, cx: &mut Context<Self>) -> impl IntoElement + 'static {
+        self.align_popover(
+            super::chrome::Trigger::new(ribbon::cluster_icon(
+                &self.ribbon_nav,
+                "tool-align",
+                IconName::AlignStartVertical,
+                cx,
+            ))
+            .tooltip("Align selection")
+            .accent(tokens::tool_align()),
+            cx,
+        )
+    }
+}
+
+/// One row of the snap stack. A disabled increment is still *shown*, it is
+/// what snapping would round to the moment it is switched back on, but it
+/// reads as inactive rather than as the value in force. While the popover
+/// is open both pills take the accent hairline and full-strength text, so
+/// the ribbon shows what the popover is editing.
+fn snap_readout(icon: IconName, value: String, enabled: bool, open: bool) -> impl IntoElement {
+    h_flex()
+        .w_full()
+        .flex_none()
+        .items_center()
+        .gap(px(6.))
+        .px(px(10.))
+        .py(px(4.))
+        .rounded(tokens::radius())
+        .bg(tokens::field_select())
+        .border_1()
+        .border_color(if open {
+            tokens::accent_line()
+        } else {
+            tokens::border()
+        })
+        .text_size(tokens::text_sm())
+        .line_height(tokens::line_md())
+        .text_color(if open {
+            tokens::text()
+        } else if enabled {
+            tokens::text_label()
+        } else {
+            tokens::text_disabled()
+        })
+        .child(Icon::new(icon).size(px(13.)))
+        .child(div().flex_1().truncate().child(SharedString::from(value)))
+}

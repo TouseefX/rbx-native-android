@@ -1,0 +1,355 @@
+//! The Properties-panel fast path for the effects a [`Scene`] keeps beside its
+//! parts, `ParticleEmitter`s, `Beam`s, `Trail`s and `Highlight`s, which the
+//! renderer draws from static definitions rather than from the instance
+//! buffers `Scene::resync_part` writes into, so an edit to one is a re-plan of
+//! its list, not a rewrite of one GPU slot.
+
+use rbx_dom::WeakDom;
+use rbx_reflection::ReflectionDatabase;
+
+use super::{adornment, beam, highlight, particles, trail, Scene};
+
+/// Which of the effect lists an edited instance's class lives in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum EffectKind {
+    Particles,
+    Beams,
+    Trails,
+    Highlights,
+    /// The `Handles`/`*Adornment`/`Selection*` family, see
+    /// `scene::adornment`.
+    Adornments,
+}
+
+impl EffectKind {
+    /// `None` for anything that is not one of the four, the caller's cue
+    /// that this fast path does not apply. The preconfigured `Fire`,
+    /// `Smoke` and `Sparkles` classes are emitters like any other here: they
+    /// are planned into the very same list (see `scene::particles::legacy`),
+    /// so an edit to one re-plans it the same way. An `Attachment` is deliberately
+    /// not here even though moving one moves a beam's or trail's endpoint:
+    /// an attachment can be the endpoint of any number of effects of either
+    /// kind at once, and a full reload is the only path that re-reads them all.
+    /// A `Highlight`'s *adornee* is the same case, editing the model a
+    /// highlight covers is a part edit, which `Scene::resync_part` handles,
+    /// not a re-plan of this list.
+    pub(crate) fn of(database: &ReflectionDatabase, class: &str) -> Option<Self> {
+        [
+            ("ParticleEmitter", Self::Particles),
+            ("Fire", Self::Particles),
+            ("Smoke", Self::Particles),
+            ("Sparkles", Self::Particles),
+            ("GuiBase3d", Self::Adornments),
+            ("Beam", Self::Beams),
+            ("Trail", Self::Trails),
+            ("Highlight", Self::Highlights),
+        ]
+        .into_iter()
+        .find(|(ancestor, _)| database.is_subclass_of(class, ancestor))
+        .map(|(_, kind)| kind)
+    }
+}
+
+impl Scene {
+    /// Re-reads every effect of `kind` from `dom`, exactly as
+    /// [`Scene::from_dom`] did, for an edit on an emitter/beam/trail, or on
+    /// the part or attachment one hangs off, which `Headless::apply_changes`
+    /// turns into a re-plan of that kind's list.
+    ///
+    /// The whole list rather than the one edited instance: each `plan` is a
+    /// filtered walk that drops a disabled emitter or an unplaceable beam
+    /// outright, so flipping `Enabled` is a change of list membership, and
+    /// `ParticleEmitter`'s whole-scene particle budget
+    /// (`particles::TOTAL_CAP`) is spent in DOM order across all of them.
+    /// The walk is CPU-only and touches no asset or GPU state, which is the
+    /// entire saving over a full reload; matching the result back to the
+    /// renderer's running state is `renderer::Renderer::patch_effect`'s job.
+    pub(crate) fn replan_effect(
+        &mut self,
+        dom: &WeakDom,
+        database: &ReflectionDatabase,
+        kind: EffectKind,
+    ) {
+        match kind {
+            EffectKind::Particles => {
+                let placements = self.emitter_placements();
+                self.emitters = particles::plan(dom, database, &placements);
+            }
+            EffectKind::Beams => self.beams = beam::plan(dom, database),
+            EffectKind::Trails => self.trails = trail::plan(dom, database),
+            EffectKind::Highlights => self.highlights = highlight::plan(dom, database),
+            EffectKind::Adornments => {
+                let placements = self.placements();
+                self.adornments = adornment::plan(dom, database, &placements);
+            }
+        }
+        self.sweep_effects(&|at| dom.parent(at));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rbx_dom::{CFrameData, Instance, Ref, Variant, Vector3Data, WeakDom};
+    use rbx_reflection::ReflectionDatabase;
+
+    use super::EffectKind;
+    use crate::scene::Scene;
+
+    const IDENTITY_ROTATION: [f32; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    const BASE: u32 = 1;
+    const EMITTER: u32 = 2;
+    const ATTACHMENT0: u32 = 4;
+    const ATTACHMENT1: u32 = 6;
+    const BEAM: u32 = 7;
+    const TRAIL: u32 = 8;
+
+    fn cframe_at(x: f32, y: f32, z: f32) -> Variant {
+        Variant::CFrame(CFrameData {
+            position: Vector3Data { x, y, z },
+            rotation: IDENTITY_ROTATION,
+        })
+    }
+
+    fn insert(
+        dom: &mut WeakDom,
+        id: u32,
+        class: &str,
+        parent: Option<Ref>,
+        properties: Vec<(&str, Variant)>,
+    ) -> Ref {
+        let referent = Ref::new(id);
+        let mut instance = Instance::new(referent, class, class);
+        for (name, value) in properties {
+            instance.properties_mut().insert(name.to_string(), value);
+        }
+        dom.insert(instance);
+        dom.set_parent(referent, parent);
+        referent
+    }
+
+    fn part(dom: &mut WeakDom, id: u32, workspace: Ref, x: f32) -> Ref {
+        insert(
+            dom,
+            id,
+            "Part",
+            Some(workspace),
+            vec![
+                (
+                    "size",
+                    Variant::Vector3(Vector3Data {
+                        x: 4.0,
+                        y: 1.0,
+                        z: 4.0,
+                    }),
+                ),
+                ("CFrame", cframe_at(x, 0.0, 0.0)),
+            ],
+        );
+        Ref::new(id)
+    }
+
+    /// A part carrying an emitter, and two more parts whose attachments a beam
+    /// and a trail both span.
+    fn effects_place() -> WeakDom {
+        let mut dom = WeakDom::new();
+        let workspace = insert(&mut dom, 100, "Workspace", None, vec![]);
+        let base = part(&mut dom, BASE, workspace, 0.0);
+        insert(
+            &mut dom,
+            EMITTER,
+            "ParticleEmitter",
+            Some(base),
+            vec![
+                ("Enabled", Variant::Bool(true)),
+                ("Rate", Variant::Float32(10.0)),
+            ],
+        );
+        let a = part(&mut dom, 3, workspace, -8.0);
+        insert(
+            &mut dom,
+            ATTACHMENT0,
+            "Attachment",
+            Some(a),
+            vec![("CFrame", cframe_at(0.0, 0.0, 0.0))],
+        );
+        let b = part(&mut dom, 5, workspace, 8.0);
+        insert(
+            &mut dom,
+            ATTACHMENT1,
+            "Attachment",
+            Some(b),
+            vec![("CFrame", cframe_at(0.0, 0.0, 0.0))],
+        );
+        let endpoints = || {
+            vec![
+                ("Attachment0", Variant::Ref(Ref::new(ATTACHMENT0))),
+                ("Attachment1", Variant::Ref(Ref::new(ATTACHMENT1))),
+            ]
+        };
+        insert(&mut dom, BEAM, "Beam", Some(a), endpoints());
+        insert(&mut dom, TRAIL, "Trail", Some(a), endpoints());
+        dom
+    }
+
+    #[test]
+    fn effect_kind_covers_exactly_the_effect_classes() {
+        let database = ReflectionDatabase::embedded();
+        assert_eq!(
+            EffectKind::of(&database, "ParticleEmitter"),
+            Some(EffectKind::Particles)
+        );
+        assert_eq!(EffectKind::of(&database, "Beam"), Some(EffectKind::Beams));
+        assert_eq!(EffectKind::of(&database, "Trail"), Some(EffectKind::Trails));
+        // The preconfigured emitters re-plan as particles, since that is the
+        // list they are planned into.
+        for preconfigured in ["Fire", "Smoke", "Sparkles"] {
+            assert_eq!(
+                EffectKind::of(&database, preconfigured),
+                Some(EffectKind::Particles),
+                "{preconfigured}"
+            );
+        }
+        // Every adornment descends from `GuiBase3d`, and an edit to one
+        // re-plans that list rather than the GUI trees it would otherwise
+        // be taken for.
+        for adornment in [
+            "SelectionBox",
+            "BoxHandleAdornment",
+            "Handles",
+            "ArcHandles",
+        ] {
+            assert_eq!(
+                EffectKind::of(&database, adornment),
+                Some(EffectKind::Adornments),
+                "{adornment}"
+            );
+        }
+        for other in [
+            "Part",
+            "Attachment",
+            "Explosion",
+            "Folder",
+            "ScreenGui",
+            "Frame",
+        ] {
+            assert_eq!(EffectKind::of(&database, other), None, "{other}");
+        }
+    }
+
+    // `Enabled` is a membership change for emitters (see `particles::plan`),
+    // so a re-plan has to be able to both drop one and bring it back.
+    #[test]
+    fn replanning_particles_drops_a_disabled_emitter_and_brings_it_back() {
+        let mut dom = effects_place();
+        let database = ReflectionDatabase::embedded();
+        let mut scene = Scene::from_dom(&dom, &database).unwrap();
+        assert_eq!(scene.particle_emitters().len(), 1);
+        assert_eq!(scene.particle_emitters()[0].referent, Ref::new(EMITTER));
+
+        dom.set_property(Ref::new(EMITTER), "Enabled", Variant::Bool(false))
+            .unwrap();
+        scene.replan_effect(&dom, &database, EffectKind::Particles);
+        assert!(scene.particle_emitters().is_empty());
+
+        dom.set_property(Ref::new(EMITTER), "Enabled", Variant::Bool(true))
+            .unwrap();
+        scene.replan_effect(&dom, &database, EffectKind::Particles);
+        assert_eq!(scene.particle_emitters().len(), 1);
+    }
+
+    // A `MeshPart` whose mesh landed has its box suppressed, but its emitter
+    // still spawns from that box. A pose re-plans particles on every frame,
+    // so planning off the drawn-box placements lost the emitter of every
+    // posed rig whose torso is a mesh.
+    #[test]
+    fn replanning_keeps_the_emitter_of_a_part_whose_mesh_replaced_its_box() {
+        let dom = effects_place();
+        let database = ReflectionDatabase::embedded();
+        let mut scene = Scene::from_dom(&dom, &database).unwrap();
+        for part in &mut scene.parts {
+            if part.referent() == Ref::new(BASE) {
+                part.suppressed = true;
+            }
+        }
+
+        scene.replan_effect(&dom, &database, EffectKind::Particles);
+
+        assert_eq!(scene.particle_emitters().len(), 1);
+        assert_eq!(scene.drawn_particle_emitters().len(), 1);
+    }
+
+    #[test]
+    fn replanning_one_kind_picks_up_its_edit_and_leaves_the_others_alone() {
+        let mut dom = effects_place();
+        let database = ReflectionDatabase::embedded();
+        let mut scene = Scene::from_dom(&dom, &database).unwrap();
+        assert_eq!(scene.beams()[0].width0, 1.0);
+
+        dom.set_property(Ref::new(BEAM), "Width0", Variant::Float32(3.0))
+            .unwrap();
+        dom.set_property(Ref::new(EMITTER), "Rate", Variant::Float32(99.0))
+            .unwrap();
+        scene.replan_effect(&dom, &database, EffectKind::Beams);
+
+        assert_eq!(scene.beams()[0].width0, 3.0);
+        assert_eq!(
+            scene.particle_emitters()[0].rate,
+            10.0,
+            "a beam re-plan must not re-read emitters"
+        );
+    }
+
+    fn drawn(scene: &Scene) -> [usize; 3] {
+        [
+            scene.drawn_particle_emitters().len(),
+            scene.drawn_beams().len(),
+            scene.drawn_trails().len(),
+        ]
+    }
+
+    // An isolated rig keeps its own effects: one parented under it, and a
+    // beam or trail stretched to one of its attachments even when the effect
+    // itself is parented elsewhere. Everything else's effects are hidden, and
+    // the full lists stay whole for asset collection.
+    #[test]
+    fn an_isolation_draws_only_the_effects_that_belong_to_its_roots() {
+        let database = ReflectionDatabase::embedded();
+        let dom = effects_place();
+        let mut scene = Scene::from_dom(&dom, &database).unwrap();
+        assert_eq!(drawn(&scene), [1, 1, 1]);
+
+        // The beam and trail hang off part 3 but end on part 5's attachment.
+        scene.isolate(Some(&[Ref::new(5)]), &[], true, |at| dom.parent(at));
+        assert_eq!(drawn(&scene), [0, 1, 1]);
+        assert_eq!(scene.particle_emitters().len(), 1, "the full list is kept");
+
+        scene.isolate(Some(&[Ref::new(BASE)]), &[], true, |at| dom.parent(at));
+        assert_eq!(drawn(&scene), [1, 0, 0]);
+        // A replan keeps the answer.
+        scene.replan_effect(&dom, &database, EffectKind::Particles);
+        scene.replan_effect(&dom, &database, EffectKind::Beams);
+        assert_eq!(drawn(&scene), [1, 0, 0]);
+
+        scene.isolate(None, &[], false, |at| dom.parent(at));
+        assert_eq!(drawn(&scene), [1, 1, 1]);
+    }
+
+    // A disabled trail is still listed (its history keeps drawing, see
+    // `scene::trail::Trail::enabled`), so the re-plan carries the flag rather
+    // than dropping the trail the way it drops a disabled emitter.
+    #[test]
+    fn replanning_trails_keeps_a_disabled_trail_but_flags_it() {
+        let mut dom = effects_place();
+        let database = ReflectionDatabase::embedded();
+        let mut scene = Scene::from_dom(&dom, &database).unwrap();
+        assert!(scene.trails()[0].enabled);
+
+        dom.set_property(Ref::new(TRAIL), "Enabled", Variant::Bool(false))
+            .unwrap();
+        scene.replan_effect(&dom, &database, EffectKind::Trails);
+
+        assert_eq!(scene.trails().len(), 1);
+        assert!(!scene.trails()[0].enabled);
+        assert_eq!(scene.trails()[0].referent, Ref::new(TRAIL));
+    }
+}

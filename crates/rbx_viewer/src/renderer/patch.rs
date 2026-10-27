@@ -1,0 +1,338 @@
+//! Bringing a built renderer in line with one changed instance at a time,
+//! what `Headless::apply_changes` drives, once per instance a change log
+//! names, instead of rebuilding every batch from the scene.
+
+use rbx_assets::AssetRef;
+use rbx_dom::Ref;
+
+use super::{highlight, lighting, shadow, Renderer, World};
+use crate::camera::Camera;
+use crate::lighting::{Lighting, LocalLight};
+use crate::load::Answered;
+use crate::scene::{Bounds, Drawn, EffectKind, Part, PartId, PartSync, Resolved, Scene};
+use crate::textures::FaceInstance;
+
+impl Renderer {
+    /// Brings every pass in line with what `Scene::resync_part` now holds
+    /// for `referent`: a box's opaque or blended instance and its shadow
+    /// caster are each rewritten in place, moved to another batch (a new
+    /// shape, a `Transparency` that crossed 0, a `CastShadow` toggle), added
+    /// or dropped, and the selection outline follows its placement; a mesh
+    /// instance the same through the file-mesh batches, with any box record
+    /// the referent used to have taken out; a union drawn as its recovered
+    /// pieces the same again, once per piece, each in the slot that piece
+    /// already had; and a referent gone from the scene is taken out of
+    /// everything. A shape the place never used before gets its unit mesh
+    /// built here (see `Meshes::ensure`).
+    ///
+    /// `false` when a mesh batch the instance now belongs in would need a
+    /// mesh or texture `resolved` never downloaded, the scene's own check
+    /// already refused that, so this is a defensive answer rather than a
+    /// case a caller has to reason about.
+    pub(crate) fn sync_part(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        resolved: &Resolved,
+        referent: Ref,
+        sync: &PartSync,
+    ) -> bool {
+        // Whatever the referent draws as now, the piece slots it has stopped
+        // filling are its own records to give up first.
+        for index in sync.dropped.clone() {
+            self.drop_box(PartId::piece(referent, index));
+        }
+        let whole = PartId::whole(referent);
+        match &sync.drawn {
+            Drawn::Box(part) => {
+                self.sync_box(device, part);
+                self.selection.place(referent, part.placement());
+                self.hover.place(device, referent, part.placement());
+                self.filemesh.remove(referent);
+                self.shadows.remove_mesh_caster(referent);
+                self.highlights.remove_mesh(referent);
+                self.cues.remove_mesh(referent);
+                true
+            }
+            Drawn::Pieces { placement, pieces } => {
+                // The union's own box is suppressed behind its pieces, so
+                // whatever record it had as a box of its own goes, it had
+                // one if this edit is what pointed it at a carved asset.
+                self.drop_box(whole);
+                for piece in pieces {
+                    self.sync_box(device, piece);
+                }
+                // The union is outlined as the one box its pieces fill,
+                // exactly the entry `Scene::placements` keeps for it, down to
+                // the tree that recovered nothing at all: a union drawing no
+                // piece is placed by neither a rebuild nor this.
+                match pieces.is_empty() {
+                    false => {
+                        self.selection.place(referent, *placement);
+                        self.hover.place(device, referent, *placement);
+                    }
+                    true => {
+                        self.selection.remove(referent);
+                        self.hover.remove(device, referent);
+                    }
+                }
+                self.filemesh.remove(referent);
+                self.shadows.remove_mesh_caster(referent);
+                self.highlights.remove_mesh(referent);
+                self.cues.remove_mesh(referent);
+                true
+            }
+            Drawn::Mesh { index, placement } => {
+                let instance = &resolved.instances[*index];
+                self.drop_box(whole);
+                // A mesh part keeps a placement in both outline maps, its own
+                // oriented bounding box, so it still outlines on hover and
+                // selection and still carries a gizmo, rather than losing all
+                // three the moment its mesh finishes downloading and it stops
+                // drawing as a box.
+                self.selection.place(referent, *placement);
+                self.hover.place(device, referent, *placement);
+                // Hidden by an isolation: placed like any mesh part, so it
+                // can still be outlined and dragged, but painted nowhere.
+                if !instance.is_drawn() {
+                    self.filemesh.remove(referent);
+                    self.shadows.remove_mesh_caster(referent);
+                    self.highlights.remove_mesh(referent);
+                    self.cues.remove_mesh(referent);
+                    return true;
+                }
+                self.filemesh.sync(device, queue, resolved, instance)
+                    && self.shadows.sync_mesh_caster(device, resolved, instance)
+                    && self.highlights.sync_mesh(device, resolved, instance)
+                    && self.cues.sync_mesh(device, resolved, instance)
+            }
+            Drawn::Gone => {
+                self.drop_box(whole);
+                self.selection.remove(referent);
+                self.hover.remove(device, referent);
+                self.filemesh.remove(referent);
+                self.shadows.remove_mesh_caster(referent);
+                self.highlights.remove_mesh(referent);
+                self.cues.remove_mesh(referent);
+                true
+            }
+        }
+    }
+
+    /// Re-uploads the vertices of `meshes`: skinned meshes `Scene::pose_skins`
+    /// just re-posed, in the main mesh pass and the shadow casters. Nothing
+    /// is re-batched and every other mesh is untouched. The highlight and
+    /// cue masks keep the rest pose (their silhouettes are re-derived on
+    /// their own next rebuild).
+    pub(crate) fn refresh_meshes(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        resolved: &Resolved,
+        meshes: &[AssetRef],
+    ) {
+        if meshes.is_empty() {
+            return;
+        }
+        self.shadows.posed();
+        if let (true, Some(skinner)) = (resolved.skins_on_gpu, self.skinner.as_mut()) {
+            for key in meshes {
+                match resolved.rigs.values().find(|rig| rig.key == *key) {
+                    Some(rig) => skinner.update(device, queue, key, rig.source(), rig.applied()),
+                    None => skinner.remove(key),
+                }
+            }
+            return;
+        }
+        if let Some(skinner) = self.skinner.as_mut() {
+            for key in meshes {
+                skinner.remove(key);
+            }
+        }
+        self.filemesh.refresh(queue, resolved, meshes);
+        self.shadows.refresh_meshes(queue, resolved, meshes);
+        self.highlights.refresh_meshes(queue, resolved, meshes);
+        self.cues.refresh_meshes(queue, resolved, meshes);
+    }
+
+    /// Whether skinned meshes are posed on the GPU here, see
+    /// `renderer::skinning`. The scene is told so through
+    /// `Scene::set_skins_on_gpu`, and keeps their rest mesh when it is.
+    pub(crate) fn skins_on_gpu(&self) -> bool {
+        self.skinner.is_some()
+    }
+
+    /// Writes every skinned mesh's current pose into each buffer drawing it
+    /// that does not hold it yet, ahead of the frame.
+    pub(super) fn skin(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+        let Some(skinner) = self.skinner.as_mut() else {
+            return;
+        };
+        let targets = self
+            .filemesh
+            .skinning_targets()
+            .chain(self.shadows.skinning_targets())
+            .chain(self.highlights.skinning_targets())
+            .chain(self.cues.skinning_targets());
+        skinner.run(device, queue, targets);
+    }
+
+    /// One box, an instance's own or one piece of it, rewritten, moved,
+    /// added or dropped across the three passes that draw boxes.
+    fn sync_box(&mut self, device: &wgpu::Device, part: &Part) {
+        self.meshes.ensure(device, part.kind);
+        self.shaped.sync(device, part);
+        self.translucent.sync(device, part);
+        self.shadows.sync_caster(device, part);
+        self.highlights.sync_part(device, part);
+        self.cues.sync_part(device, part);
+    }
+
+    /// The same three passes told to forget one box.
+    fn drop_box(&mut self, id: PartId) {
+        self.shaped.remove(id);
+        self.translucent.remove(id);
+        self.shadows.remove_caster(id);
+        self.highlights.remove_part(id);
+        self.cues.remove_part(id);
+    }
+
+    /// Rewrites, moves or adds one `Decal`/`Texture`'s projection, see
+    /// `textured::Textured::sync`. `false` when `reference` is an image this
+    /// renderer never uploaded, which only a reload fetches.
+    pub(crate) fn sync_face(
+        &mut self,
+        device: &wgpu::Device,
+        reference: &AssetRef,
+        face: &FaceInstance,
+    ) -> bool {
+        self.textured.sync(device, reference, face)
+    }
+
+    /// Drops one `Decal`/`Texture`'s projection, its part stopped drawing
+    /// as a box, or the instance itself is gone. A no-op for a referent no
+    /// batch holds.
+    pub(crate) fn remove_face(&mut self, referent: Ref) {
+        self.textured.remove(referent);
+    }
+
+    /// Uploads every instance record the edits since the last frame left
+    /// owed to a batch buffer, one write per buffer touched, see
+    /// `slots::Slots::flush`. [`Renderer::draw`] runs it before any pass
+    /// reads a buffer; nothing else needs to.
+    pub(super) fn flush_writes(&mut self, queue: &wgpu::Queue) {
+        self.shaped.flush(queue);
+        self.shadows.flush(queue);
+        self.filemesh.flush(queue);
+        self.textured.flush(queue);
+        // Every edit that moves a part, a drag, a typed `CFrame`, an undo,
+        // reaches the highlight and cue masks through `sync_part` too.
+        self.highlights.flush(queue);
+        self.cues.flush(queue);
+    }
+
+    /// Applies a `Lighting`/`Atmosphere`/`Clouds`/`PostEffect` edit. The
+    /// constant terms (`sun_direction`, `fog`, `clouds`, `Effects`, …) are
+    /// folded into the per-frame uniform anyway (see [`Renderer::draw`]),
+    /// so swapping the copy in is the whole of it.
+    pub(crate) fn set_lighting(&mut self, lighting: Lighting) {
+        self.lighting = lighting;
+        self.post.set_effects(lighting.effects);
+    }
+
+    /// Replaces the place's local lights with `lights`: rewritten into the
+    /// buffer they already have where the level's cap leaves the count the
+    /// same, or into a freshly sized one where a light came or went, which
+    /// every camera bind group then has to be told about (the buffer is
+    /// bound, not copied). A single write is the whole cost of moving the
+    /// part a light hangs off; a new buffer is the cost of adding one.
+    pub(crate) fn set_lights(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        lights: &[LocalLight],
+    ) {
+        let allowed = lights.len().min(self.quality.local_lights_max);
+        if allowed == self.lights {
+            lighting::local_lights_write(queue, &self.lights_buffer, &lights[..allowed]);
+        } else {
+            self.lights_buffer = lighting::local_lights_buffer(device, &lights[..allowed]);
+            self.light_shadows_buffer = shadow::local::buffer(device, allowed);
+            self.lights = allowed;
+            self.rebind_frames(device);
+        }
+        self.all_lights = lights.to_vec();
+    }
+
+    /// Hands the renderer `scene`'s freshly re-planned effects of `kind` (see
+    /// `crate::scene::Scene::replan_effect`), keeping every texture already
+    /// uploaded and every running simulation or recorder that still applies
+    /// see each pass's own `replace` for exactly what survives.
+    ///
+    /// Always serves the edit: a definition naming a texture this renderer has
+    /// no upload for draws that effect's own fallback until the loader lands
+    /// one, which is what each `replace` documents.
+    pub(crate) fn patch_effect(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        kind: EffectKind,
+        scene: &Scene,
+        images: &Answered,
+    ) {
+        match kind {
+            EffectKind::Particles => self.particles.replace(&scene.drawn_particle_emitters()),
+            EffectKind::Beams => self.beams.replace(&scene.drawn_beams()),
+            EffectKind::Trails => self.trails.replace(&scene.drawn_trails()),
+            // The only one that needs the GPU: a highlight is drawn from the
+            // geometry it covers, so a re-plan is new instance buffers rather
+            // than a new list of definitions.
+            // Like a highlight, an adornment is geometry rather than a
+            // definition: a re-plan is a new vertex buffer.
+            EffectKind::Adornments => {
+                self.adornments
+                    .replace(device, queue, self.target, scene.adornments(), images)
+            }
+            EffectKind::Highlights => self.highlights.replace(
+                device,
+                queue,
+                &self.frame_layout,
+                highlight::Source {
+                    highlights: scene.highlights(),
+                    parts: scene.parts(),
+                    resolved: scene.resolved_file_meshes(),
+                },
+            ),
+        }
+    }
+
+    /// Rebuilds the GUI passes around `world`'s re-planned trees (see
+    /// `Scene::replan_gui`), the canvases are baked again, the atlas keeps
+    /// every image it already holds and takes on any `ImageLabel` image the
+    /// edit first named, as far as `world.images` already has an answer for
+    /// it, see `renderer::gui::atlas`.
+    pub(crate) fn refresh_gui(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        world: World<'_>,
+    ) {
+        let quality = self.quality;
+        self.gui.rebuild(
+            device,
+            queue,
+            (world.scene.gui_screens(), &world.scene.drawn_gui_spaces()),
+            &self.materials.bind_group,
+            world.images,
+            world.fonts,
+            &quality,
+        );
+    }
+
+    /// Re-frames on a scene whose extent moved, exactly as a rebuild does:
+    /// the orbit camera and the sun shadow's fit both work against it.
+    pub(crate) fn set_bounds(&mut self, bounds: Bounds) {
+        self.bounds = bounds;
+        self.camera = Camera::framing(&bounds).with_orthographic(self.camera.is_orthographic());
+    }
+}

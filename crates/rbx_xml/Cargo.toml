@@ -1,0 +1,26 @@
+[package]
+name = "rbx_xml"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rbx_dom = { path = "../rbx_dom" }
+# The bundled API dump: which XML type Studio saves each property as (a
+# legacy ContentId as `Content`/`url`, script `Source` as `ProtectedString`).
+rbx_reflection = { path = "../rbx_reflection", features = ["embedded-dump"] }
+thiserror = "2"
+# Standard streaming XML reader for the ecosystem; already resolved in
+# Cargo.lock (pulled in transitively via wayland-scanner) so this adds no new
+# dependency version to the lock, just a new direct edge to it.
+quick-xml = "0.41"
+# Decodes BinaryString/SharedString payloads (RFC 2045 Base64), as the xml.md
+# spec requires; already resolved in Cargo.lock.
+base64 = "0.22"
+# SharedStrings table keys, MD5 like Studio's own; already in Cargo.lock
+# through rbx_binary.
+md-5 = "0.10"
+
+[dev-dependencies]
+# Cross-checks decoded Variant shapes against the binary parser's own fixtures.
+rbx_binary = { path = "../rbx_binary" }

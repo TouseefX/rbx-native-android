@@ -1,0 +1,1156 @@
+//! The left mouse button over the 3D view: clicking to select (plain,
+//! `Shift`/`Ctrl`/`Cmd` to add to or remove from the selection), and dragging
+//! the whole selection by a transform tool's handles or by any selected
+//! part's own body.
+//!
+//! All of it happens here on the UI thread, against `rbx_viewer`'s own
+//! geometry ([`rbx_viewer::pick`], [`rbx_viewer::gizmo`]) and the camera the
+//! render thread reports with each frame, the renderer builds the handles the
+//! user sees from exactly the same functions, so what is grabbable is what is
+//! drawn. Nothing here touches the DOM: `Shell` owns that, and hears about a
+//! click or a drag through [`super::ViewportAction`].
+//!
+//! The camera's own gestures are untouched: look and orbit are the *right*
+//! button (see `WorkspaceView::begin_look`), so a left-button drag never
+//! competes with them.
+
+use std::time::Instant;
+
+use glam::{Mat3, Mat4, Vec2, Vec3};
+use gpui_kit::{Modifiers, Pixels, Point};
+use rbx_viewer::gizmo::{self, Axis, End, Faces, Gizmo, Handles};
+use rbx_viewer::pick::{self, Ray};
+use rbx_viewer::snap;
+
+use super::terrain::TerrainPhase;
+
+use crate::dragger::surface::SurfaceFrame;
+use crate::dragger::sweep::{self, SoftSnap};
+use crate::dragger::{free, tilt};
+use crate::settle::{Settle, Settled};
+use crate::transform::{Slope, Target, Targets, Tool};
+
+use super::{readout, ViewportAction, WorkspaceView};
+
+mod scale;
+
+/// `BasePart.Size`'s documented range: "the individual dimensions (length,
+/// height, width) can be as low as `0.001` and as high as `2048`"
+/// (`creator-docs`, `reference/engine/classes/BasePart.yaml`). A drag that ran
+/// past either end would write a value the engine rejects.
+/// How many grab bands out from a handle a posing press still counts as
+/// aimed at it (see `Handles::near`): two, so a ring's 7-pixel band at the
+/// smallest arm becomes a 14-pixel no-deselect zone.
+const NEAR_MISS: f32 = 2.0;
+const MIN_SIZE: f32 = 0.001;
+const MAX_SIZE: f32 = 2048.0;
+
+/// Whether a click's modifiers mean "add to (or drop from) the selection"
+/// rather than "replace it", `Shift`, `Ctrl`, or `Cmd` (`platform`), per
+/// `creator-docs` (`studio/ui-overview.md#object-selection`), which lists all
+/// three as equivalent.
+fn extends_selection(modifiers: Modifiers) -> bool {
+    modifiers.shift || modifiers.control || modifiers.platform
+}
+
+/// A left-button drag in progress.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum Drag {
+    /// One of the Move tool's arrows is held: the axis line it slides along,
+    /// and how far along that line the cursor stood when it was grabbed.
+    Axis {
+        origin: Vec3,
+        axis: Vec3,
+        grabbed: f32,
+    },
+    /// Any selected part's own body is held, Studio's "cursor dragging". The
+    /// gizmo's anchor comes to rest on whatever the cursor is over (see
+    /// [`crate::settle`]); with nothing under the cursor it travels instead
+    /// in the plane that faced the camera through the grab point, keeping the
+    /// anchor where it was relative to the cursor regardless of which
+    /// selected part was actually grabbed, the offset is always measured
+    /// from the anchor, so the whole group tracks the cursor together.
+    ///
+    /// The plane is fixed in the world at the moment of the grab rather than
+    /// recomputed from the live camera: a plane that turned with the view
+    /// would slide the part every time the camera did, which is not what
+    /// holding it still means.
+    ///
+    /// `point` is Studio's dragged point, already snapped at the grab (see
+    /// `dragger::free::grab`); the grid and soft snaps a step lands on are
+    /// the face's under the cursor, which only `Shell` can find.
+    Plane {
+        point: Vec3,
+        normal: Vec3,
+        offset: Vec3,
+    },
+    /// One of the Scale tool's balls is held: the part's own axis the grabbed
+    /// face sits on (pointing *out* through that face), where the cursor stood
+    /// along it, and the placement the drag started from.
+    Size {
+        origin: Vec3,
+        axis: Vec3,
+        grabbed: f32,
+        size: Vec3,
+        /// Which component of `size` this axis is, `Size` is expressed in the
+        /// part's own frame, so the axis alone does not say.
+        component: usize,
+        /// Whether the part is a `Ball` *and* `Alt` was held at the grab: the
+        /// other two components grow by the same amount as `component` does,
+        /// keeping it round, instead of only the one axis actually pulled.
+        /// Decided once here rather than re-read live each step, the shape
+        /// cannot change mid-gesture, and freezing the choice at the grab
+        /// matches how `component` itself is already fixed for the gesture's
+        /// whole duration.
+        sphere: bool,
+        /// The same freeze as `sphere`, for a `Cylinder`: `Alt` locks its
+        /// round Y/Z pair together when either is the one grabbed. Grabbing
+        /// its length axis (X, `component == 0`) is unaffected either way,
+        /// nothing else is meant to grow together with the length.
+        cylinder: bool,
+        /// The same freeze for a wedge or corner wedge with `Alt` held: the
+        /// axes its slope spans scale by the factor `component` did, so the
+        /// slope keeps its angle. `Slope::None` without `Alt`.
+        slope: Slope,
+        /// Whether `Ctrl` holds the part's middle still, both faces moving
+        /// (see [`scale::from_pivot`]); re-read on every move.
+        centred: bool,
+    },
+    /// One of the Scale tool's balls is held on a model's or a group's box
+    /// (see `gizmo::scale_box`): the box's centre, the box's axis pointing
+    /// out through the grabbed face, where the cursor stood along it, how
+    /// long the box was along that axis, and the two points the whole
+    /// selection may scale about, the centre of the opposite face, so that
+    /// face holds still the way a lone part's does, or with `centred`
+    /// (`Ctrl`, re-read on every move) the selection's pivot.
+    Box {
+        origin: Vec3,
+        axis: Vec3,
+        grabbed: f32,
+        extent: f32,
+        far: Vec3,
+        pivot: Vec3,
+        centred: bool,
+    },
+    /// One of the Rotate tool's rings is held: the ring's own frame, frozen at
+    /// the grab (see [`gizmo::ring_crossing`]), the orientation the anchor
+    /// part started at, the angle last measured and how far the drag has
+    /// turned in total.
+    Ring {
+        origin: Vec3,
+        frame: (Vec3, Vec3, Vec3),
+        orientation: Mat3,
+        last: f32,
+        turned: f32,
+    },
+    /// The Sun tool is aiming the sun or the moon. Nothing of the gizmo's is
+    /// held: each step goes to `Shell` as the cursor's ray (see
+    /// `super::sun`), and the selection is never touched.
+    Sun,
+    /// The Terrain Editor's gesture: `Shell` gets every step as a ray (see
+    /// `ViewportAction::Terrain`).
+    Terrain,
+    /// One of the auto-rigger's joint markers is held (see `super::joints`):
+    /// which, where it was grabbed, the camera's forward axis (the plane it
+    /// slides in faces it) and where it was last carried to.
+    Joint {
+        index: usize,
+        origin: Vec3,
+        normal: Vec3,
+        to: Vec3,
+    },
+}
+
+/// What one step of a drag does to the part.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum Change {
+    Position(Vec3),
+    /// A new `Size`, and the centre that keeps the face *opposite* the grabbed
+    /// one standing still.
+    Size {
+        size: Vec3,
+        position: Vec3,
+    },
+    Orientation(Mat3),
+    /// A group's box pulled to `factor` times its size at the grab, about
+    /// `pivot` (see [`Drag::Box`]).
+    Scaled {
+        pivot: Vec3,
+        factor: f32,
+    },
+}
+
+/// What a drag is allowed to land on for this one mouse move: the grid its
+/// travel rounds to (`0.0` for no grid), studs for Move and Scale, which
+/// share the toolbar's one increment, radians for Rotate's own, and the
+/// soft snaps a handle drag found at its press (empty with Snap to Parts off
+/// or `Shift` held).
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Landing<'a> {
+    pub(super) grid: f32,
+    pub(super) angle: f32,
+    pub(super) snaps: &'a [SoftSnap],
+}
+
+impl WorkspaceView {
+    /// The world-space ray under a window-space cursor position, or `None`
+    /// before the panel has a size or the render thread has reported a camera.
+    pub(super) fn cursor_ray(&self, position: Point<Pixels>, scale: f32) -> Option<Ray> {
+        let pose = self.view?;
+        let viewport = self.viewport.get();
+        if viewport.size.0 == 0 || viewport.size.1 == 0 {
+            return None;
+        }
+
+        // GPUI reports logical pixels against the window; the panel's own rect
+        // is kept in physical ones (see `frame::Viewport`), which is also what
+        // the frame under the cursor was rendered at.
+        let pixel = Vec2::new(
+            f32::from(position.x) * scale - viewport.origin.0 as f32,
+            f32::from(position.y) * scale - viewport.origin.1 as f32,
+        );
+        let extent = Vec2::new(viewport.size.0 as f32, viewport.size.1 as f32);
+        let projection = pose.view_projection(self.orthographic, extent.x / extent.y);
+        Some(pick::ray_through(projection, pick::ndc_of(pixel, extent)))
+    }
+
+    /// Cursor motion with nothing held: resolves what is under it and asks
+    /// `Shell` to outline it, distinctly from the selection outline,
+    /// Studio's "about to click" cue. `None` when the panel has no size yet
+    /// or the render thread has not reported a camera (see `cursor_ray`),
+    /// which clears the hover outline exactly as a ray that hits nothing
+    /// does.
+    pub(super) fn hover_moved(
+        &mut self,
+        position: Point<Pixels>,
+        modifiers: Modifiers,
+        scale: f32,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        let ray = self.cursor_ray(position, scale);
+        // The Terrain Editor's brush follows the cursor instead of a part
+        // outline.
+        if self.transform.tool == Tool::Terrain {
+            if let Some(ray) = ray {
+                self.terrain_hover(ray, position, modifiers, cx);
+            }
+            return;
+        }
+        self.note_hover(ray, modifiers);
+        let over = ray.and_then(|ray| self.hovered_axis(ray));
+        self.light_handle(over);
+        // A handle under the cursor is what a press there grabs, so the
+        // part behind it gets no hover box claiming the click.
+        cx.emit(ViewportAction::Hover {
+            ray: ray.filter(|_| over.is_none()),
+            alt: modifiers.alt,
+        });
+    }
+
+    /// The axis whose arrow or ring `ray` rests on, tried in the order
+    /// [`WorkspaceView::grab_handle`] tries them, what a press here grabs.
+    pub(super) fn hovered_axis(&self, ray: Ray) -> Option<Axis> {
+        let handles = self.handles()?;
+        match self.transform.tool {
+            Tool::Move => handles.grab(ray),
+            Tool::Rotate => handles.grab_ring(ray),
+            Tool::Transform | Tool::Pivot => handles.grab(ray).or_else(|| handles.grab_ring(ray)),
+            Tool::Select | Tool::Scale | Tool::Sun | Tool::Terrain => None,
+        }
+    }
+
+    /// Re-sends the gizmo with `axis` lit, when that changes what is drawn.
+    fn light_handle(&mut self, axis: Option<Axis>) {
+        let Some(shown) = self.summon.shown.filter(|shown| shown.hover != axis) else {
+            return;
+        };
+        self.summon.shown = Some(Gizmo {
+            hover: axis,
+            ..shown
+        });
+        self.refresh_gizmo();
+    }
+
+    /// Where the Move and Rotate arms stand this frame, anchored on the same
+    /// part `rbx_viewer::renderer::selection::Selection::anchor` draws them
+    /// on, the first selected part with a placement, whether or not it is
+    /// alone, and built the same way `rbx_viewer::renderer` builds the ones
+    /// on screen. Scale's own handles are [`WorkspaceView::faces`].
+    pub(super) fn handles(&self) -> Option<Handles> {
+        let anchor = self.targets.anchor()?;
+        let pose = self.view?;
+        // Move drags the whole selection by one offset and Rotate turns it
+        // about one point, so both sit at the middle of it, which for one
+        // part is that part's own centre. The renderer picks the same origin
+        // the same way (see `renderer::Renderer::handles`), both from
+        // `gizmo::centre_of`, so what can be grabbed is what is drawn. The
+        // *basis* always comes from the anchor, a selection has no
+        // aggregate rotation to take. Summoned with `Tab`, they stand
+        // wherever the cursor put them instead (see `super::summon`).
+        // A lone part's or model's pivot stands in for the centre, so a
+        // turn goes round it (see `Targets::pivot`), and Edit Pivot's
+        // handles take the pivot's own axes, which is what turning them
+        // turns.
+        let pivot = self.targets.pivot();
+        let origin = self
+            .summoned()
+            .or(pivot.map(|pivot| pivot.w_axis.truncate()))
+            .or_else(|| self.targets.centre())?;
+        if self.transform.tool == Tool::Pivot {
+            pivot?;
+        }
+        let axes = gizmo::handle_axes(
+            self.transform.tool == Tool::Pivot,
+            self.transform.local,
+            pivot,
+            anchor.rotation(),
+        );
+        Some(Handles::new(
+            origin,
+            gizmo::basis(axes),
+            // The render target's height, which the renderer floors the
+            // same arm by.
+            gizmo::handle_length(origin, pose, self.orthographic, self.sized.1 as f32),
+        ))
+    }
+
+    /// Where the Scale tool's balls stand this frame: on the faces of a lone
+    /// part's own box, or of a model's box framed by its pivot (see
+    /// `gizmo::scale_box`). Built from the same placement and the same camera
+    /// the renderer builds the drawn ones from (see
+    /// `rbx_viewer::renderer::Renderer::handles`), so what can be grabbed is
+    /// what is on screen.
+    pub(super) fn faces(&self) -> Option<Faces> {
+        Some(
+            Faces::new(
+                self.targets.scale_box(self.transform.local)?,
+                self.view?,
+                self.orthographic,
+            )
+            .summoned(self.summoned()),
+        )
+    }
+
+    /// The left button going down: grab a handle, grab the selected part, or
+    /// failing both, ask `Shell` to resolve a pick against the DOM.
+    pub(super) fn press(
+        &mut self,
+        position: Point<Pixels>,
+        modifiers: Modifiers,
+        scale: f32,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        // A drag whose release never arrived is over now.
+        if self.drop_drag().is_some() {
+            self.show_gizmo(self.transform.gizmo());
+        }
+        self.pending_grab = None;
+        // Any press in the view takes Studio's measurement box down.
+        self.close_measure();
+        let Some(ray) = self.cursor_ray(position, scale) else {
+            return;
+        };
+        // An armed `Ref` row takes the press whatever the tool: no handle,
+        // body grab or brush may start under a click that is choosing an
+        // instance, and a pick is one instance, so no extend either.
+        if self.ref_picking {
+            cx.emit(ViewportAction::Pick {
+                ray,
+                cycling: modifiers.alt,
+                extend: false,
+                held: false,
+            });
+            return;
+        }
+        // An auto-rig joint marker takes the press before any tool does.
+        if let Some(drag) = self.grab_joint(position, scale) {
+            if let Drag::Joint { index, origin, .. } = drag {
+                self.begin(drag, cx);
+                cx.emit(ViewportAction::Joint {
+                    index,
+                    to: origin,
+                    phase: super::JointPhase::Press,
+                });
+            }
+            return;
+        }
+        // The Sun tool aims at the scene rather than selecting out of it.
+        if self.transform.tool == Tool::Sun {
+            self.begin(Drag::Sun, cx);
+            self.sun_step(position, scale, true, cx);
+            return;
+        }
+        // The Terrain Editor brushes or reshapes its region instead.
+        if self.transform.tool == Tool::Terrain && modifiers.alt {
+            let (x, y) = (f32::from(position.x), f32::from(position.y));
+            self.terrain_input(ray, TerrainPhase::Picker { x, y }, modifiers, cx);
+            return;
+        }
+        if self.transform.tool == Tool::Terrain {
+            self.begin(Drag::Terrain, cx);
+            self.terrain_input(ray, TerrainPhase::Press, modifiers, cx);
+            return;
+        }
+
+        let cycling = modifiers.alt;
+        let extend = extends_selection(modifiers);
+        self.measure_from_part();
+        if self.transform.tool == Tool::Pivot {
+            if let Some(drag) = self.grab_pivot(ray) {
+                self.begin(drag, cx);
+                return;
+            }
+        } else if self.transform.drags() {
+            // A handle is the gizmo's own, drawn over everything: grabbing
+            // one needs no second opinion.
+            let centred = scale::from_pivot(modifiers);
+            if let Some(drag) = self.grab_handle(ray, modifiers.alt, centred) {
+                let drag = self.measure_from_handle(drag, ray);
+                self.begin(drag, cx);
+                self.hold_handle(ray);
+                // Studio's handle drag shows its guides from the press on,
+                // the label reading 0, not from the first step that moves.
+                self.grab_guides(drag, ray);
+                self.step_guides(drag, self.measured(ray), modifiers.shift, scale);
+                return;
+            }
+            // A selected part's body is only a *candidate*: the view knows
+            // the selection's boxes but not what else stands in front of
+            // them, so the click goes to `Shell` as a pick that may turn
+            // into this drag (see [`WorkspaceView::confirm_grab`]), and
+            // never with `Alt` or an extend modifier, which ask to change
+            // the selection, not to move it.
+            // Posing a rig, a press that misses a handle by a hair was
+            // aimed at it, not at the scene: it must not drop the joint.
+            if self.transform.posing
+                && !cycling
+                && !extend
+                && self
+                    .handles()
+                    .is_some_and(|handles| handles.near(ray, NEAR_MISS))
+            {
+                return;
+            }
+            if !cycling && !extend {
+                // The free-drag ball is a body grab too, so it yields to
+                // the same modifiers, and to any handle: an arrow pointing
+                // nearly at the camera is drawn right over it.
+                if let Some(drag) = self.grab_origin(ray) {
+                    self.begin(drag, cx);
+                    return;
+                }
+                self.pending_grab = self.grab_body(ray, None).map(|_| ray);
+            }
+        }
+
+        cx.emit(ViewportAction::Pick {
+            ray,
+            // Studio's selection cycling: `Alt`/`⌥`-click steps to the next
+            // object behind the current one instead of selecting a model.
+            cycling,
+            extend,
+            held: self.pending_grab.is_some(),
+        });
+    }
+
+    /// Starts `drag` this gesture: the part under a body grab, or the gizmo
+    /// itself under an axis/face/ring grab, would otherwise still be wearing
+    /// a hover box for the whole gesture, nothing moves the cursor off it,
+    /// since `render`'s `on_mouse_move` routes every move into `drag_to`
+    /// instead of `hover_pending` once `dragging()` is true.
+    pub(super) fn begin(&mut self, drag: Drag, cx: &mut gpui_kit::Context<Self>) {
+        self.drag = Some(drag);
+        self.held = self.targets.clone();
+        self.dragged = false;
+        self.drag_readout = None;
+        self.hover_pending = None;
+        self.clear_guides();
+        // A body drag's guides; Edit Pivot's ball moves a point, not a part.
+        if matches!(drag, Drag::Plane { .. }) && self.transform.tool != Tool::Pivot {
+            self.pend_guides();
+        }
+        cx.emit(ViewportAction::Hover {
+            ray: None,
+            alt: false,
+        });
+    }
+
+    /// `Shell`'s answer to a pick sent with `held`: what the cursor is over
+    /// is already selected, so the body grab the press held back goes ahead
+    /// as this gesture's drag. A no-op once the button is up again
+    /// ([`WorkspaceView::end_drag`] clears the candidate), or when the press
+    /// held nothing.
+    ///
+    /// `surface` is the frame under the press and where the press met it,
+    /// resolved against the real geometry there and then, never an older
+    /// hover's, which a camera flown with the keys has left behind.
+    pub(crate) fn confirm_grab(
+        &mut self,
+        surface: Option<(SurfaceFrame, Vec3)>,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        if let Some(drag) = self
+            .pending_grab
+            .take()
+            .and_then(|ray| self.grab_body(ray, surface))
+        {
+            self.begin(drag, cx);
+        }
+    }
+
+    /// `Shell`'s other answer: something nearer than the selection was under
+    /// the cursor and took the click as a pick instead, so nothing is held.
+    pub(crate) fn refuse_grab(&mut self) {
+        self.pending_grab = None;
+    }
+
+    /// Draws only the Move arrow or Scale ball `ray` grabbed, for as long as
+    /// the drag holds it: Studio hides the other five mid-drag (see
+    /// `rbx_viewer::gizmo::Gizmo::held`), and [`WorkspaceView::end_drag`]
+    /// brings them back.
+    fn hold_handle(&mut self, ray: Ray) {
+        let end = match self.transform.tool {
+            Tool::Move => self.handles().and_then(|handles| handles.grab_arm(ray)),
+            Tool::Scale => self.faces().and_then(|faces| faces.grab(ray)),
+            // Transform's three kinds share one `End`, which cannot say
+            // *which* of them was grabbed, an arm and a ball can carry the
+            // same axis and sign. Isolating one would risk hiding a ball
+            // that was never touched just because it happens to share an
+            // arm's tag, so Transform never isolates at all: every handle of
+            // every kind stays drawn through the whole drag, the same choice
+            // already made for Rotate below.
+            Tool::Select
+            | Tool::Rotate
+            | Tool::Transform
+            | Tool::Sun
+            | Tool::Pivot
+            | Tool::Terrain => None,
+        };
+        if let Some(end) = end {
+            let held = self.transform.gizmo().map(|gizmo| Gizmo {
+                held: Some(End::of(end)),
+                ..gizmo
+            });
+            self.show_gizmo(held);
+        }
+    }
+
+    /// What this ray grabs on the gizmo itself, if anything: a Move arrow, a
+    /// Scale face, a Rotate ring, never a part's body, which is
+    /// [`WorkspaceView::grab_body`]'s own question.
+    fn grab_handle(&self, ray: Ray, lock_shape: bool, centred: bool) -> Option<Drag> {
+        let handles = self.handles()?;
+        let anchor = self.targets.anchor()?;
+        match self.transform.tool {
+            // Edit Pivot's handles are `grab_pivot`'s.
+            Tool::Select | Tool::Sun | Tool::Pivot | Tool::Terrain => None,
+            Tool::Move => self.grab_axis(&handles, ray),
+            Tool::Scale => self.grab_scale(ray, lock_shape, centred),
+            Tool::Rotate => self.grab_ring(&handles, anchor, ray),
+            // Innermost first: Move's arms sit closest to the part, Scale's
+            // balls stand on its own surface a little further out, and
+            // Rotate's rings reach the furthest, the same distance as an
+            // arm's own tip (`gizmo::RING_RADIUS` is `1.0`, an arm length).
+            // A user aiming at one specific handle is aiming at the nearest
+            // thing that reads as one, so that is the order tried here.
+            Tool::Transform => self.grab_axis(&handles, ray).or_else(|| {
+                self.grab_ring(&handles, anchor, ray)
+                    .or_else(|| self.grab_scale(ray, lock_shape, centred))
+            }),
+        }
+    }
+
+    /// What grabbing Rotate's ring opens: the ring's own frame, frozen at the
+    /// grab, and the anchor's orientation to turn from. Shared by Rotate's
+    /// own arm above and Transform's, which tries the same ring after its
+    /// arrows come up empty.
+    fn grab_ring(&self, handles: &Handles, anchor: Target, ray: Ray) -> Option<Drag> {
+        let axis = handles.grab_ring(ray)?;
+        let frame = handles.ring_frame(axis);
+        let (angle, ..) = gizmo::ring_crossing(handles.origin(), frame, ray)?;
+        Some(Drag::Ring {
+            origin: handles.origin(),
+            frame,
+            orientation: anchor.orientation(),
+            last: angle,
+            turned: 0.0,
+        })
+    }
+
+    /// The body grab this ray would open on the current selection, Move's
+    /// cursor dragging, which starts a group drag of the whole selection by
+    /// any selected part's own body (see [`WorkspaceView::drag_to`]). Only
+    /// Move: `creator-docs` documents cursor dragging under Move alone.
+    ///
+    /// Tested against the selection's own boxes only, which is all the view
+    /// holds: whether something *unselected* stands nearer along the ray is
+    /// `Shell`'s call, made against the real geometry when the pick this
+    /// accompanies is resolved (see `Shell::pick_in_viewport`).
+    ///
+    /// `surface` is the frame under the press and where the press met it,
+    /// once `Shell` has found it; before then the box's own face stands in.
+    fn grab_body(&self, ray: Ray, surface: Option<(SurfaceFrame, Vec3)>) -> Option<Drag> {
+        // Transform includes Move's own handles, so its cursor dragging
+        // comes along too, `creator-docs` only documents the gesture under
+        // Move, but Transform draws Move's very arrows over the same part.
+        if !matches!(self.transform.tool, Tool::Move | Tool::Transform) {
+            return None;
+        }
+        let anchor = self.targets.anchor()?;
+        let (distance, clicked) = self
+            .targets
+            .iter()
+            .filter_map(|target| Some((pick::ray_hits_box(ray, target.model)?, target)))
+            .min_by(|(a, _), (b, _)| a.total_cmp(b))?;
+        // Studio snaps the point it holds on the grid of the frame under the
+        // click whenever the toolbar's snapping is on, `Shift` or not, and
+        // holds the part by where the click met its real surface.
+        let snap = self.transform.translate;
+        let (point, hovered) = match surface {
+            Some((frame, hit)) => (hit, Some(frame)),
+            None => (ray.at(distance), None),
+        };
+        let point = free::grab(
+            clicked.model,
+            point,
+            if snap.enabled { snap.increment } else { 0.0 },
+            clicked.sphere,
+            hovered,
+        );
+        Some(Drag::Plane {
+            point,
+            // Square to the view at the moment of the grab, which is the one
+            // orientation every cursor position on screen has an answer in.
+            normal: -ray.direction,
+            offset: anchor.position() - point,
+        })
+    }
+
+    fn grab_axis(&self, handles: &Handles, ray: Ray) -> Option<Drag> {
+        let axis = handles.direction(handles.grab(ray)?);
+        // Which arm was grabbed comes from the handles, where the user is
+        // actually pointing; where the drag is measured *from* is the anchor's
+        // own position, because `Change::Position` is the anchor's new place
+        // and every other selected part follows it by the same offset (see
+        // `transform::Targets::translate`). The two stand apart once more than
+        // one part is selected or the handles are summoned, which
+        // `WorkspaceView::measure_from_handle` makes up for.
+        let origin = self.targets.anchor()?.position();
+        Some(Drag::Axis {
+            origin,
+            axis,
+            grabbed: gizmo::along_axis(origin, axis, ray)?,
+        })
+    }
+
+    /// What this move is allowed to land on: the grid in force, with `Shift`
+    /// suspending the toolbar's checkbox for as long as it is held, and a
+    /// handle drag's soft snaps.
+    fn landing(&self, shift: bool) -> Landing<'_> {
+        Landing {
+            grid: self.transform.translate.grid(shift),
+            angle: self.transform.rotate.grid(shift).to_radians(),
+            snaps: self.soft_snaps(shift),
+        }
+    }
+
+    /// The cursor moving with a drag held: works out what this step does to
+    /// the gizmo's anchor, carries every other selected part by the same
+    /// offset when it is a Move (see `transform::Targets::translate`), and
+    /// tells `Shell`, which is what writes the whole group into the DOM.
+    pub(super) fn drag_to(
+        &mut self,
+        position: Point<Pixels>,
+        modifiers: Modifiers,
+        scale: f32,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        if matches!(self.drag, Some(Drag::Joint { .. })) {
+            self.joint_step(position, scale, cx);
+            return;
+        }
+        // Aims at the scene, not at the selection there may not even be.
+        if self.drag == Some(Drag::Sun) {
+            self.sun_step(position, scale, false, cx);
+            return;
+        }
+        if self.drag == Some(Drag::Terrain) {
+            if let Some(ray) = self.cursor_ray(position, scale) {
+                self.terrain_input(ray, TerrainPhase::Drag, modifiers, cx);
+            }
+            return;
+        }
+        let (Some(drag), Some(ray)) = (self.drag, self.cursor_ray(position, scale)) else {
+            return;
+        };
+        let ray = self.measured(ray);
+        if self.transform.tool == Tool::Pivot {
+            self.pivot_step(drag, ray, modifiers, cx);
+            return;
+        }
+        let drag = self.rescale(drag, ray, scale::from_pivot(modifiers));
+        let Some(anchor) = self.targets.anchor() else {
+            return;
+        };
+        self.guides.dragged_at = Some((position, modifiers));
+        let turning = self.turn_progress();
+        // `position` is reused below as a match binding name for the part's
+        // own new world-space placement (`Change::Position`), which shadows
+        // this screen-space one for the length of that arm, kept under its
+        // own name so the readout can still place itself against it there.
+        let cursor = position;
+        // Read per move rather than latched at the grab: Studio's Shift is
+        // held and released mid-drag, and the part follows it either way.
+        let Some((drag, change)) = advance(drag, ray, self.landing(modifiers.shift)) else {
+            return;
+        };
+        // Kept even when nothing below changes: a rotate drag measures each
+        // step against the previous one, so a sample that moved the part
+        // nowhere still has to be the one the next step is measured from.
+        self.drag = Some(drag);
+
+        let referent = anchor.referent;
+        // `first` is asked for only once a step is known to change the part
+        // (see [`stepped`]): the answer opens the gesture's undo entry, and a
+        // sample that leaves the part where it stands must not spend it.
+        match change {
+            Change::Position(position) => {
+                let Some((_, first)) = stepped(anchor, change, &mut self.dragged) else {
+                    self.step_guides(drag, ray, modifiers.shift, scale);
+                    return;
+                };
+                // Applied to every selected part below, not just the anchor:
+                // this is what keeps the group's relative layout intact while
+                // only the anchor's own gizmo drag is ever actually measured
+                // against the ray. Kept here as well as written into the DOM:
+                // the handles have to follow the cursor within this same
+                // gesture, and the DOM's answer only comes back through
+                // `set_targets` once `Shell` has applied it.
+                let moves = self.targets.translate(position - anchor.position());
+                self.follow_summon();
+                let settle = match drag {
+                    Drag::Plane { offset, .. } => {
+                        // A free drag has no Studio label; this editor's own
+                        // readout stands in for one, measured from where
+                        // the anchor stood at the grab, and measured again
+                        // once `Shell` has landed the step (see `settle_at`).
+                        self.drag_readout = self
+                            .held
+                            .anchor()
+                            .filter(|_| self.guides.settings.show_measurement)
+                            .map(|start| {
+                                (
+                                    readout::position(cursor, self.viewport.get().origin, scale),
+                                    readout::moved((position - start.position()).length()),
+                                )
+                            });
+                        let (pose, grid) = (self.view, self.landing(modifiers.shift).grid);
+                        pose.map(|pose| {
+                            Box::new(Settle {
+                                cursor: ray,
+                                grabbed: -offset,
+                                grid,
+                                snap_to_parts: self.guides.settings.snap_to_parts
+                                    && !modifiers.shift,
+                                pose,
+                                orthographic: self.orthographic,
+                                last: self.landed_on(),
+                                align: self.aligns(modifiers.alt),
+                                tilt: self.guides.tilt,
+                                turning,
+                            })
+                        })
+                    }
+                    _ => {
+                        self.step_guides(drag, ray, modifiers.shift, scale);
+                        None
+                    }
+                };
+                cx.emit(ViewportAction::Moved {
+                    moves,
+                    first,
+                    settle,
+                });
+            }
+            // Scale and Rotate have no group meaning yet, see
+            // `transform::Targets::set_anchor`: so only the anchor itself
+            // moves, exactly as it did before there was more than one part to
+            // select.
+            // A lone part's Size is its own, so a Scale of one resizes that
+            // one axis exactly as before; a group has no one Size and scales
+            // as a whole (see `transform::Targets::scale_about`), which is
+            // what the box its handles stand on already promised.
+            Change::Size { size, position } => {
+                let Some((moved, first)) = stepped(anchor, change, &mut self.dragged) else {
+                    self.step_guides(drag, ray, modifiers.shift, scale);
+                    return;
+                };
+                self.targets.set_anchor(moved);
+                self.follow_summon();
+                self.step_guides(drag, ray, modifiers.shift, scale);
+                cx.emit(ViewportAction::Resized {
+                    parts: vec![(referent, size, position)],
+                    pivot: self.targets.pivot(),
+                    first,
+                });
+            }
+            Change::Scaled { pivot, factor } => {
+                let factor = self.held.factor_within(factor, MIN_SIZE, MAX_SIZE);
+                let change = Change::Scaled { pivot, factor };
+                let Some((_, first)) = stepped(anchor, change, &mut self.dragged) else {
+                    self.step_guides(drag, ray, modifiers.shift, scale);
+                    return;
+                };
+                let held = self.held.clone();
+                let parts = self.targets.scale_about(&held, pivot, factor);
+                self.follow_summon();
+                self.step_guides(drag, ray, modifiers.shift, scale);
+                cx.emit(ViewportAction::Resized {
+                    parts,
+                    pivot: self.targets.pivot(),
+                    first,
+                });
+            }
+            // Rotate turns every selected part about the selection's centre
+            // (`creator-docs`, `parts/models.md`: a model "transforms based
+            // on the center of its bounding box"), which for one part is its
+            // own centre and leaves it exactly where it stands.
+            Change::Orientation(orientation) => {
+                let Some((_, first)) = stepped(anchor, change, &mut self.dragged) else {
+                    return;
+                };
+                let Drag::Ring {
+                    origin,
+                    orientation: was,
+                    ..
+                } = drag
+                else {
+                    unreachable!("only a ring turns");
+                };
+                // The turn since the grab, as the anchor's orientation then
+                // and now give it: absolute, so the group cannot drift.
+                let rotation = orientation * was.transpose();
+                let held = self.held.clone();
+                let parts = self.targets.rotate_about(&held, origin, rotation);
+                self.follow_summon();
+                cx.emit(ViewportAction::Rotated { parts, first });
+            }
+        }
+    }
+
+    /// Where `Shell` rested the selection for this step, on a surface the
+    /// view itself cannot see: every part carried from where it stood at the
+    /// grab, in place of the flat guess `drag_to` already applied. Unlike
+    /// [`WorkspaceView::set_targets`] this is taken mid-gesture: it is the
+    /// drag's own answer, finished with the DOM, not a round trip that could
+    /// land a frame late. `None` over nothing: the guess stands. The guides
+    /// are drawn for where it landed, and the readout is measured again from
+    /// where the anchor actually is now.
+    pub(crate) fn settle_at(&mut self, settled: Option<&Settled>) {
+        if self.drag.is_none() {
+            return;
+        }
+        if let Some(settled) = settled {
+            self.targets = self.held.carried(settled.carry);
+            self.follow_summon();
+        }
+        self.landed(settled);
+        if let (Some((_, text)), Some(now), Some(start)) = (
+            &mut self.drag_readout,
+            self.targets.anchor(),
+            self.held.anchor(),
+        ) {
+            *text = readout::moved((now.position() - start.position()).length());
+        }
+    }
+
+    /// Whether a drag is under way, which is what keeps a moving cursor from
+    /// also being reported to the camera.
+    pub(super) fn dragging(&self) -> bool {
+        self.drag.is_some()
+    }
+
+    /// Applies the latest recorded cursor position to the drag in progress
+    /// see `render`'s `on_mouse_move` handler for why the two are apart.
+    pub(super) fn step_drag(
+        &mut self,
+        window: &gpui_kit::Window,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        if let Some((position, modifiers)) = self.drag_pending.take() {
+            let scale = window.scale_factor();
+            self.drag_to(position, modifiers, scale, cx);
+            // The readout and guide labels move with the step even when it
+            // writes nothing (a Size step short of the next increment), and
+            // then no frame is coming to show them.
+            cx.notify();
+        }
+        // A turn easing in moves the selection with the mouse still.
+        if self.guides.turning.is_some() {
+            self.drag_pending = self.guides.dragged_at;
+        }
+    }
+
+    /// The button coming up: the last cursor position the frame gate has
+    /// not applied yet is applied first, so the part lands exactly where it
+    /// was let go rather than a frame short of it.
+    pub(super) fn end_drag(
+        &mut self,
+        window: &mut gpui_kit::Window,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        // A turn still easing in lands whole: the step that ends the drag is
+        // what is kept, and it must not be half a quarter turn.
+        if self.guides.turning.take().is_some() {
+            self.drag_pending = self.drag_pending.or(self.guides.dragged_at);
+        }
+        self.step_drag(window, cx);
+        if self.drag == Some(Drag::Terrain) {
+            self.terrain_release(cx);
+        }
+        if let Some(Drag::Joint { index, to, .. }) = self.drag {
+            cx.emit(ViewportAction::Joint {
+                index,
+                to,
+                phase: super::JointPhase::Release,
+            });
+        }
+        if let Some(drag) = self.drop_drag() {
+            self.snapped = None;
+            // Every handle back on, wherever the handles now stand.
+            self.show_gizmo(self.transform.gizmo());
+            let arrow = self.guides.arrow;
+            self.clear_guides();
+            self.rehover();
+            // A Move arrow's label stays behind, editable.
+            if let (Drag::Axis { axis, .. }, Some(arrow)) = (drag, arrow) {
+                self.open_measure(arrow, axis * arrow.1, window, cx);
+            }
+        }
+        self.drag_stepped_at = None;
+        // A grab `Shell` has not answered yet is answered by the release:
+        // nothing is held any more.
+        self.pending_grab = None;
+    }
+
+    /// `t`/`r` typed with a part held by its body, reporting whether it was
+    /// one of the two, the caller stops there only then, so a `t` typed
+    /// with nothing in hand stays an ordinary key.
+    pub(super) fn turn_key(
+        &mut self,
+        key: &str,
+        modifiers: Modifiers,
+        cx: &mut gpui_kit::Context<Self>,
+    ) -> bool {
+        // Ctrl+T and Ctrl+R are creator-docs' *other* quarter turns, the
+        // ones that act on the selection with no drag at all. `Alt` is the
+        // drag's own Hold Orientation, which Studio turns under as well.
+        if modifiers.control || modifiers.platform || modifiers.shift {
+            return false;
+        }
+        let keystroke = gpui_kit::Keystroke {
+            key: key.into(),
+            modifiers,
+            key_char: None,
+        };
+        if crate::shortcuts::pressed(crate::shortcuts::Command::TurnTilt, &keystroke) {
+            self.turn(true, modifiers, cx)
+        } else if crate::shortcuts::pressed(crate::shortcuts::Command::TurnRotate, &keystroke) {
+            self.turn(false, modifiers, cx)
+        } else {
+            false
+        }
+    }
+
+    /// `T` or `R` with the selection held by its body (`FreeformDragger:
+    /// rotate`): a quarter turn added to the drag's tilt, and the drag
+    /// stepped again where the cursor stands, so it turns about the point
+    /// it is held by and comes to rest on the face again.
+    ///
+    /// `creator-docs` (`parts/index.md#transform-parts`): "`T` tilts the
+    /// part 90° towards the camera, while `R` rotates the part 90° around
+    /// the normal of the hovered surface." Studio turns about whichever of
+    /// the selection's own axes, as it lies on the face, points most nearly
+    /// along the face's normal (`R`) or the camera's right (`T`); over
+    /// nothing landed on yet there is no face to turn against, and the key
+    /// does nothing.
+    fn turn(&mut self, tip: bool, modifiers: Modifiers, cx: &mut gpui_kit::Context<Self>) -> bool {
+        let Some(Drag::Plane { .. }) = self.drag else {
+            return false;
+        };
+        let (Some(frame), Some(anchor), Some(pose)) =
+            (self.landed_on(), self.held.anchor(), self.view)
+        else {
+            return true;
+        };
+        let axis = if tip {
+            let (_, right, _) = pose.basis();
+            right
+        } else {
+            frame.y
+        };
+        let align = self.aligns(modifiers.alt);
+        let from = self.guides.tilt;
+        self.guides.tilt = tilt::turned(&frame, anchor.orientation(), from, align, axis);
+        self.guides.turning = Some((from, Instant::now()));
+        self.modifiers_changed(modifiers);
+        cx.notify();
+        true
+    }
+
+    /// The turn easing in (Studio tweens a quarter turn over
+    /// `Studio.DraggerTiltRotateDuration`): the tilt it turns from and how
+    /// far it has come, or `None` once it has finished.
+    fn turn_progress(&mut self) -> Option<(Mat3, f32)> {
+        let (from, started) = self.guides.turning?;
+        let progress = started.elapsed().as_secs_f32() / tilt::TURN_SECONDS;
+        if progress >= 1.0 {
+            self.guides.turning = None;
+            return None;
+        }
+        Some((from, tilt::eased(progress)))
+    }
+
+    /// Whether a free drag turns the selection onto the face it lands on:
+    /// Align Dragged Objects on, and `Alt`, Hold Orientation, up.
+    fn aligns(&self, alt: bool) -> bool {
+        self.guides.settings.align_dragged_objects && !alt
+    }
+
+    /// Where every part a drag carries stood at its grab, which a free drag
+    /// carries them from.
+    pub(crate) fn held(&self) -> &Targets {
+        &self.held
+    }
+
+    /// The boxes a free drag can soft-snap onto: every drawn part in the
+    /// workspace but the selected one, pushed down from `Shell`, which is the
+    /// only side with a DOM to read them out of.
+    pub(crate) fn set_neighbours(&mut self, neighbours: Vec<Mat4>) {
+        self.neighbours = neighbours;
+    }
+}
+
+/// What this cursor ray does to the part, and the drag state the next step is
+/// measured from. `None` when the gesture has no answer at this angle, an
+/// axis sighted end-on, or a drag plane the ray has turned parallel to (or
+/// ended up behind).
+///
+/// Pure, and the whole of what a drag computes: [`Drag`] is a grab's worth of
+/// geometry, and this turns it plus a ray into the part's new placement.
+///
+/// `landing`'s grids bear on every handle, the stud increment on a Move or
+/// Scale travel (`creator-docs`, `parts/index.md#transform-parts`: increments
+/// "are based on studs for moving/scaling"), the degree increment on a
+/// Rotate, and its soft snaps on Move's and Scale's. What is rounded is the
+/// *travel* since the handle was grabbed, the studs slid or grown, the angle
+/// swept, not the part's world position, size or heading, which is how
+/// Studio's handles snap (`snapToGridSize` of the drag's distance) and what
+/// keeps a part that already stood off-grid from jumping the moment it is
+/// picked up.
+///
+/// A body grab (`Plane`) snaps nothing here: its grid and alignments are the
+/// face's under the cursor, which `Shell` lands it on (see
+/// `crate::settle`). What this answers for it is only the fallback over
+/// empty space, the cursor on the camera-facing plane the grab was made in.
+pub(super) fn advance(drag: Drag, ray: Ray, landing: Landing) -> Option<(Drag, Change)> {
+    match drag {
+        Drag::Axis {
+            origin,
+            axis,
+            grabbed,
+        } => {
+            let travel = snapped(gizmo::along_axis(origin, axis, ray)? - grabbed, landing);
+            Some((drag, Change::Position(origin + axis * travel)))
+        }
+        Drag::Plane {
+            point,
+            normal,
+            offset,
+        } => {
+            let hit = pick::ray_hits_plane(ray, point, normal)?;
+            Some((drag, Change::Position(hit + offset)))
+        }
+        Drag::Size { .. } | Drag::Box { .. } => scale::advance(drag, ray, landing),
+        Drag::Ring {
+            origin,
+            frame,
+            orientation,
+            last,
+            turned,
+        } => {
+            let (angle, ..) = gizmo::ring_crossing(origin, frame, ray)?;
+            let turned = turned + gizmo::angle_step(last, angle);
+            let (turn, ..) = frame;
+            // The running total is kept exact and only the angle *applied* is
+            // rounded: rounding each step before adding it up would let a
+            // slow drag creep past the increments without ever crossing one.
+            let applied = snap::round_to(turned, landing.angle);
+            Some((
+                Drag::Ring {
+                    origin,
+                    frame,
+                    orientation,
+                    last: angle,
+                    turned,
+                },
+                Change::Orientation(Mat3::from_axis_angle(turn, applied) * orientation),
+            ))
+        }
+        // Moves no part: `Shell` answers each of its steps instead.
+        Drag::Sun | Drag::Terrain | Drag::Joint { .. } => None,
+    }
+}
+
+/// One step of a gesture: the target as `change` leaves it and whether this is
+/// the gesture's first step to change anything, the one that opens its undo
+/// entry, or `None` for a sample that leaves the part exactly where it is.
+///
+/// `dragged` is marked only on a real change, never on a sample. The first
+/// samples of a snapped Move round their travel to nothing until the cursor
+/// has crossed half an increment, and a gesture that spent its "first" on
+/// one of those would write every later step without ever pushing history:
+/// the whole drag would then sit outside undo.
+pub(super) fn stepped(
+    target: Target,
+    change: Change,
+    dragged: &mut bool,
+) -> Option<(Target, bool)> {
+    let moved = applied(target, change)?;
+    Some((moved, !std::mem::replace(dragged, true)))
+}
+
+/// The target as this change leaves it, or `None` when it leaves it exactly as
+/// it was, which is what keeps a cursor that has not actually moved the part
+/// from opening an undo step.
+pub(super) fn applied(target: Target, change: Change) -> Option<Target> {
+    match change {
+        Change::Position(position) => {
+            (position != target.position()).then(|| target.moved_to(position))
+        }
+        Change::Size { size, position } => (size != target.size() || position != target.position())
+            .then(|| target.resized_to(size, position)),
+        Change::Orientation(orientation) => {
+            (orientation != target.orientation()).then(|| target.rotated_to(orientation))
+        }
+        Change::Scaled { pivot, factor } => (factor != 1.0).then(|| {
+            target.resized_to(
+                target.size() * factor,
+                pivot + (target.position() - pivot) * factor,
+            )
+        }),
+    }
+}
+
+/// A handle drag's travel as it lands: on the soft snap Studio's
+/// `SoftSnapper` takes, if it takes one, else rounded onto the grid.
+fn snapped(travel: f32, landing: Landing) -> f32 {
+    sweep::choose(landing.snaps, travel, landing.grid).map_or_else(
+        || snap::round_to(travel, landing.grid),
+        |index| landing.snaps[index].distance,
+    )
+}
+
+#[cfg(test)]
+#[path = "gizmo/tests.rs"]
+mod tests;

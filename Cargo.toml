@@ -1,0 +1,59 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+
+# Test builds keep line tables (backtraces still name file and line) but drop
+# full debug info: it roughly doubles what the linker has to write for every
+# test binary, which is most of the time a `./scripts/check.sh` spends after
+# an edit. A debugger session wants `cargo build`'s dev profile, which keeps
+# the full info.
+[profile.test]
+debug = "line-tables-only"
+
+# GPUI Kit's own recommendation: the toolkit and its text/layout stack are far
+# too slow unoptimised, even for a debug build of the editor.
+[profile.dev.package]
+gpui-pre = { opt-level = 3 }
+gpui-component = { opt-level = 3 }
+gpui-kit = { opt-level = 3 }
+gpui-kit-assets = { opt-level = 3 }
+gpui-pre-macros = { opt-level = 3 }
+gpui-pre-platform = { opt-level = 3 }
+rustybuzz = { opt-level = 3 }
+# Same reason on the editor's own side: an unoptimised offscreen frame (draw,
+# read back, swap to BGRA) costs over 100 ms, which no amount of debug symbols
+# is worth in a view that redraws continuously.
+rbx_studio = { opt-level = 3 }
+rbx_viewer = { opt-level = 3 }
+# The terrain mesher and codecs run on every brush step: unoptimised, one
+# chunk's re-mesh alone takes tens of milliseconds.
+rbx_terrain = { opt-level = 3 }
+taffy = { opt-level = 3 }
+ttf-parser = { opt-level = 3 }
+# The GUI's own text stack, for the same reason again: the UI editor's canvas
+# shapes every label it lays out, and lays out after every step of a drag.
+cosmic-text = { opt-level = 3 }
+harfrust = { opt-level = 3 }
+swash = { opt-level = 3 }
+skrifa = { opt-level = 3 }
+read-fonts = { opt-level = 3 }
+font-types = { opt-level = 3 }
+fontdb = { opt-level = 3 }
+zeno = { opt-level = 3 }
+unicode-linebreak = { opt-level = 3 }
+
+# GPUI Kit's editor keeps its selection list private, and Ctrl+D (add the
+# next match of the selection as another selection) needs to add one from
+# outside. `vendor/gpui-base` is gpui-base 0.6.1 unchanged but for
+# `EditorState::add_selection` and a few other marked additions (see
+# `vendor/README.md`); drop this once upstream exposes an equivalent.
+[patch.crates-io]
+gpui-base = { path = "vendor/gpui-base" }
+# Hover states ease in and out instead of snapping: `vendor/gpui-pre` is
+# gpui-pre 0.3.4 unchanged but for the marked hover-transition addition (see
+# `vendor/README.md`).
+gpui-pre = { path = "vendor/gpui-pre" }

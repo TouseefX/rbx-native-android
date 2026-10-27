@@ -1,0 +1,151 @@
+//! What the label above the input shows: the outcome of the last run, and
+//! nothing before that, Studio's own bar keeps no scrollback either.
+
+use gpui_kit::SharedString;
+
+/// Past this many characters the label is cut with an ellipsis: long enough to
+/// read a one-line result, short enough that a `print` loop or a long stack
+/// trace cannot stretch the bar itself.
+const MAX_LEN: usize = 200;
+
+/// The command bar's own state.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub(crate) enum Feedback {
+    #[default]
+    Idle,
+    Output(String),
+    Error(String),
+    /// A warning pushed by something other than a Command Bar run, see
+    /// `shell::output::OutputLog::push_warning`. Never produced by
+    /// [`Feedback::from_run`]: nothing about a script's own result is a
+    /// warning today, only what the Output dock's other callers push.
+    Warning(String),
+    /// An info line from the running game (`LogService`'s `MessageInfo`,
+    /// what `TestService:Message` prints), see `shell::play::session`.
+    Info(String),
+}
+
+impl Feedback {
+    /// Turns one run's outcome into feedback; the live Command Bar builds its
+    /// feedback per step (see `stream`), so only tests assemble one this way.
+    /// A successful run with nothing
+    /// printed is kept distinct from [`Feedback::Idle`], it did run, it just
+    /// had nothing to say, which is why the label still changes.
+    #[cfg(test)]
+    pub(crate) fn from_run(result: Result<Vec<String>, String>) -> Self {
+        match result {
+            Ok(lines) => Feedback::Output(lines.join("\n")),
+            Err(message) => Feedback::Error(message),
+        }
+    }
+
+    pub(crate) fn is_error(&self) -> bool {
+        matches!(self, Feedback::Error(_))
+    }
+
+    /// Whether the label above the input is worth painting. Every outcome is
+    /// also a permanent row in the Output dock, so with that dock open the
+    /// same text on screen twice is noise; with it collapsed the label is the
+    /// only place the result is visible, so it stays.
+    pub(crate) fn shown_inline(&self, output_collapsed: bool) -> bool {
+        output_collapsed && !matches!(self, Feedback::Idle)
+    }
+
+    /// The text to paint: blank before the first run, `(no output)` for a
+    /// silent success, otherwise the captured text truncated to one line.
+    pub(crate) fn label(&self) -> SharedString {
+        self.label_within(MAX_LEN)
+    }
+
+    /// [`Feedback::label`] cut at `max_len` characters instead of the bar's
+    /// own [`MAX_LEN`], the Output dock wraps its rows, so it has room for
+    /// more.
+    pub(crate) fn label_within(&self, max_len: usize) -> SharedString {
+        match self {
+            Feedback::Idle => SharedString::default(),
+            Feedback::Output(text) if text.is_empty() => SharedString::from("(no output)"),
+            Feedback::Output(text) | Feedback::Info(text) => truncate(text, max_len),
+            Feedback::Error(text) => truncate(&format!("Error: {text}"), max_len),
+            Feedback::Warning(text) => truncate(&format!("Warning: {text}"), max_len),
+        }
+    }
+}
+
+/// Collapses embedded newlines (a script can `print` several lines) into one
+/// row, then cuts it to `max_len` characters.
+fn truncate(text: &str, max_len: usize) -> SharedString {
+    let flat = text.replace('\n', "  ");
+    match flat.char_indices().nth(max_len) {
+        Some((cut, _)) => SharedString::from(format!("{}…", &flat[..cut])),
+        None => SharedString::from(flat),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_label_shows_only_while_the_output_dock_is_collapsed() {
+        for feedback in [
+            Feedback::from_run(Ok(vec!["x".into()])),
+            Feedback::from_run(Err("boom".into())),
+            Feedback::Warning("w".into()),
+        ] {
+            assert!(feedback.shown_inline(true));
+            assert!(!feedback.shown_inline(false));
+        }
+    }
+
+    #[test]
+    fn nothing_to_say_is_never_shown() {
+        assert!(!Feedback::Idle.shown_inline(true));
+        assert!(!Feedback::Idle.shown_inline(false));
+    }
+
+    #[test]
+    fn idle_shows_nothing() {
+        assert_eq!(Feedback::Idle.label(), SharedString::default());
+    }
+
+    #[test]
+    fn a_silent_success_says_so_rather_than_showing_a_blank_label() {
+        let feedback = Feedback::from_run(Ok(Vec::new()));
+        assert!(!feedback.is_error());
+        assert_eq!(feedback.label(), SharedString::from("(no output)"));
+    }
+
+    #[test]
+    fn printed_lines_are_joined_and_shown_as_output() {
+        let feedback = Feedback::from_run(Ok(vec!["a".to_string(), "b".to_string()]));
+        assert!(!feedback.is_error());
+        assert_eq!(feedback.label(), SharedString::from("a  b"));
+    }
+
+    #[test]
+    fn an_error_is_flagged_and_prefixed() {
+        let feedback = Feedback::from_run(Err("boom".to_string()));
+        assert!(feedback.is_error());
+        assert_eq!(feedback.label(), SharedString::from("Error: boom"));
+    }
+
+    #[test]
+    fn a_long_result_is_truncated_with_an_ellipsis() {
+        let feedback = Feedback::from_run(Ok(vec!["x".repeat(MAX_LEN + 50)]));
+        let label = feedback.label();
+        assert_eq!(label.chars().count(), MAX_LEN + 1);
+        assert!(label.ends_with('…'));
+    }
+
+    #[test]
+    fn a_warning_is_not_flagged_as_an_error() {
+        let feedback = Feedback::Warning("texture fell back to default".to_string());
+        assert!(!feedback.is_error());
+    }
+
+    #[test]
+    fn a_warning_is_labeled_and_prefixed() {
+        let feedback = Feedback::Warning("boom".to_string());
+        assert_eq!(feedback.label(), SharedString::from("Warning: boom"));
+    }
+}

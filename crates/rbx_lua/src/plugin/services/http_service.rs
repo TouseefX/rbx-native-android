@@ -1,0 +1,376 @@
+//! `HttpService`: JSON, GUIDs and the permission-gated, yielding requests.
+
+use mlua::{Function, Lua, MultiValue, Result, Table, Value};
+
+use super::state;
+use crate::engine::json;
+use crate::engine::scheduler::{self, AwaitId};
+use crate::plugin::api::{Answer, Permission, PromptKind, Request, UiId};
+use crate::plugin::env::env;
+use crate::plugin::http::{host_of, Finished, HttpRequest};
+use crate::plugin::native;
+
+const PERMISSION_KEY: &str = "__rbxnative_http";
+
+/// What a pending request's script wants back.
+#[derive(Clone, Copy)]
+pub(super) enum Mode {
+    /// `RequestAsync`: the response table.
+    Response,
+    /// `GetAsync`/`PostAsync`: the body, an error unless 2xx.
+    Body,
+    /// `Players:GetNameFromUserIdAsync`: `name` from users.roblox.com.
+    UserName,
+    /// `Players:GetUserIdFromNameAsync`: the first `data[].id`.
+    UserId,
+    /// `MarketplaceService:GetProductInfo`: the JSON body as a table.
+    Json,
+}
+
+/// `MarketplaceService:GetProductInfo(assetId)` through the public asset
+/// details API (the fields Roblox's own call returns: `Name`,
+/// `Description`, `Creator`, `Updated`, …); ownership checks need a
+/// signed-in session and answer `false`.
+pub(crate) fn marketplace_member(lua: &Lua, key: &str) -> Result<Option<Value>> {
+    Ok(Some(match key {
+        "GetProductInfo" | "GetProductInfoAsync" => yielding(lua, |lua, (_, id): (Value, i64)| {
+            let request = HttpRequest {
+                url: format!("https://economy.roblox.com/v2/assets/{id}/details"),
+                method: "GET".into(),
+                headers: Vec::new(),
+                body: None,
+            };
+            send_now(lua, request, Mode::Json)
+        })?,
+        "PlayerOwnsAsset" | "UserOwnsGamePassAsync" | "PlayerOwnsBundle" => {
+            func(lua, |_, _: MultiValue| Ok(false))?
+        }
+        _ => return Ok(None),
+    }))
+}
+
+/// `Players` lookups through Roblox's public users API, which Studio
+/// makes on the plugin's behalf: no permission prompt, a yield until the
+/// answer, an error when the user does not exist.
+pub(crate) fn players_member(lua: &Lua, key: &str) -> Result<Option<Value>> {
+    Ok(Some(match key {
+        "GetNameFromUserIdAsync" => yielding(lua, |lua, (_, id): (Value, i64)| {
+            let request = HttpRequest {
+                url: format!("https://users.roblox.com/v1/users/{id}"),
+                method: "GET".into(),
+                headers: Vec::new(),
+                body: None,
+            };
+            send_now(lua, request, Mode::UserName)
+        })?,
+        "GetUserIdFromNameAsync" => yielding(lua, |lua, (_, name): (Value, String)| {
+            let body = serde_json::json!({ "usernames": [name], "excludeBannedUsers": false });
+            let request = HttpRequest {
+                url: "https://users.roblox.com/v1/usernames/users".into(),
+                method: "POST".into(),
+                headers: vec![("Content-Type".into(), "application/json".into())],
+                body: Some(body.to_string()),
+            };
+            send_now(lua, request, Mode::UserId)
+        })?,
+        // A `FriendPages` over the public friends list: one page holding
+        // every friend, `IsFinished` set.
+        "GetFriendsAsync" => {
+            let raw = yielding(lua, |lua, (_, id): (Value, i64)| {
+                let request = HttpRequest {
+                    url: format!("https://friends.roblox.com/v1/users/{id}/friends"),
+                    method: "GET".into(),
+                    headers: Vec::new(),
+                    body: None,
+                };
+                send_now(lua, request, Mode::Json)
+            })?;
+            lua.load(
+                r#"
+                local raw = ...
+                return function(self, id)
+                    local page = {}
+                    for _, friend in ipairs(raw(self, id).data or {}) do
+                        table.insert(page, {
+                            Id = friend.id,
+                            Username = friend.name,
+                            DisplayName = friend.displayName,
+                            IsOnline = friend.isOnline or false,
+                        })
+                    end
+                    return {
+                        IsFinished = true,
+                        GetCurrentPage = function() return page end,
+                        AdvanceToNextPageAsync = function() end,
+                    }
+                end
+                "#,
+            )
+            .set_name("=Players")
+            .call::<Value>(raw)?
+        }
+        // A `rbxthumb://` URL, which is what Roblox hands back and what
+        // the editor's image loader resolves.
+        "GetUserThumbnailAsync" => func(
+            lua,
+            |lua, (_, id, kind, size): (Value, i64, Value, Value)| {
+                let name = |v: &Value| -> Result<String> {
+                    match v {
+                        Value::UserData(u) => mlua::ObjectLike::get::<String>(u, "Name"),
+                        _ => Ok(String::new()),
+                    }
+                };
+                let kind = match name(&kind)?.as_str() {
+                    "AvatarBust" => "AvatarBust",
+                    "AvatarThumbnail" => "Avatar",
+                    _ => "AvatarHeadShot",
+                };
+                let size = name(&size)?;
+                let digits: String = size
+                    .chars()
+                    .skip_while(|c| !c.is_ascii_digit())
+                    .take_while(char::is_ascii_digit)
+                    .collect();
+                let edge = if digits.is_empty() {
+                    "420".to_string()
+                } else {
+                    digits
+                };
+                let url = format!("rbxthumb://type={kind}&id={id}&w={edge}&h={edge}");
+                Ok((lua.create_string(url)?, true))
+            },
+        )?,
+        _ => return Ok(None),
+    }))
+}
+
+fn send_now(lua: &Lua, request: HttpRequest, mode: Mode) -> Result<AwaitId> {
+    let env = env(lua);
+    let id = scheduler::new_await(lua);
+    state(lua).borrow_mut().modes.insert(id, mode);
+    env.shared.borrow_mut().http.start(env.plugin, id, request);
+    Ok(id)
+}
+
+fn denied(host: &str) -> String {
+    format!("Http requests to {host} are not allowed")
+}
+
+pub(super) fn index(lua: &Lua, key: &str) -> Result<Value> {
+    if let Some(member) = json::member(lua, key)? {
+        return Ok(member);
+    }
+    Ok(match key {
+        "HttpEnabled" => Value::Boolean(true),
+        "RequestAsync" => yielding(lua, |lua, (_, options): (Value, Table)| {
+            let url: String = options.get("Url")?;
+            let method: Option<String> = options.get("Method")?;
+            let body: Option<String> = options.get("Body")?;
+            let mut headers = Vec::new();
+            if let Some(table) = options.get::<Option<Table>>("Headers")? {
+                for pair in table.pairs::<String, String>() {
+                    headers.push(pair?);
+                }
+            }
+            let request = HttpRequest {
+                url,
+                method: method.unwrap_or_else(|| "GET".into()).to_ascii_uppercase(),
+                headers,
+                body,
+            };
+            begin(lua, request, Mode::Response)
+        })?,
+        "GetAsync" => yielding(lua, |lua, (_, url): (Value, String)| {
+            let request = HttpRequest {
+                url,
+                method: "GET".into(),
+                headers: Vec::new(),
+                body: None,
+            };
+            begin(lua, request, Mode::Body)
+        })?,
+        "PostAsync" => yielding(
+            lua,
+            |lua, (_, url, body, content_type): (Value, String, String, Option<String>)| {
+                let headers = vec![(
+                    "Content-Type".to_string(),
+                    content_type.unwrap_or_else(|| "application/json".into()),
+                )];
+                let request = HttpRequest {
+                    url,
+                    method: "POST".into(),
+                    headers,
+                    body: Some(body),
+                };
+                begin(lua, request, Mode::Body)
+            },
+        )?,
+        _ => {
+            return Err(mlua::Error::runtime(format!(
+                "{key} is not a valid member of HttpService"
+            )))
+        }
+    })
+}
+
+fn func<A, R>(lua: &Lua, f: impl Fn(&Lua, A) -> Result<R> + 'static) -> Result<Value>
+where
+    A: mlua::FromLuaMulti,
+    R: mlua::IntoLuaMulti,
+{
+    Ok(Value::Function(lua.create_function(f)?))
+}
+
+fn yielding<A: mlua::FromLuaMulti>(
+    lua: &Lua,
+    start: impl Fn(&Lua, A) -> Result<AwaitId> + 'static,
+) -> Result<Value> {
+    let start: Function = lua.create_function(start)?;
+    Ok(Value::Function(scheduler::yielding(lua, start)?))
+}
+
+/// Checks the plugin may talk to the request's host, then sends it, or
+/// parks it behind a permission prompt.
+fn begin(lua: &Lua, request: HttpRequest, mode: Mode) -> Result<AwaitId> {
+    let host = host_of(&request.url).ok_or_else(|| {
+        mlua::Error::runtime(format!("HttpService: invalid URL \"{}\"", request.url))
+    })?;
+    let env = env(lua);
+    let id = scheduler::new_await(lua);
+    state(lua).borrow_mut().modes.insert(id, mode);
+
+    let decision = if env.manifest.is_some() {
+        Some(native::allowed(lua, &Permission::Http(host.clone())))
+    } else {
+        env.shared
+            .borrow()
+            .settings
+            .get(&env.name)
+            .and_then(|s| s.get(PERMISSION_KEY))
+            .and_then(|m| m.get(&host))
+            .and_then(|v| v.as_bool())
+    };
+    match decision {
+        Some(true) => env.shared.borrow_mut().http.start(env.plugin, id, request),
+        Some(false) => {
+            state(lua).borrow_mut().modes.remove(&id);
+            return Err(mlua::Error::runtime(denied(&host)));
+        }
+        None => {
+            let state = state(lua);
+            let mut state = state.borrow_mut();
+            let waiting = state.prompts.iter_mut().find(|(_, (h, _))| *h == host);
+            match waiting {
+                Some((_, (_, list))) => list.push((id, request)),
+                None => {
+                    let mut shared = env.shared.borrow_mut();
+                    let prompt = shared.next_id();
+                    shared.requests.push(Request::Prompt {
+                        id: prompt,
+                        plugin: env.plugin,
+                        kind: PromptKind::HttpPermission { host: host.clone() },
+                    });
+                    state.prompts.insert(prompt, (host, vec![(id, request)]));
+                }
+            }
+        }
+    }
+    Ok(id)
+}
+
+pub(super) fn permission_answered(lua: &Lua, prompt: UiId, answer: &Answer) -> Result<()> {
+    let Answer::Allow(allow) = answer else {
+        return Ok(());
+    };
+    let Some((host, waiting)) = state(lua).borrow_mut().prompts.remove(&prompt) else {
+        return Ok(());
+    };
+    let env = env(lua);
+    {
+        let mut shared = env.shared.borrow_mut();
+        let hosts = shared
+            .settings
+            .entry(env.name.clone())
+            .or_default()
+            .entry(PERMISSION_KEY.to_string())
+            .or_insert_with(|| serde_json::Value::Object(Default::default()));
+        if let Some(map) = hosts.as_object_mut() {
+            map.insert(host.clone(), serde_json::Value::Bool(*allow));
+        }
+        shared.save_settings(&env.name);
+    }
+    for (id, request) in waiting {
+        if *allow {
+            env.shared.borrow_mut().http.start(env.plugin, id, request);
+        } else {
+            state(lua).borrow_mut().modes.remove(&id);
+            scheduler::resolve(lua, id, Err(denied(&host)))?;
+        }
+    }
+    Ok(())
+}
+
+pub(super) fn finished(lua: &Lua, finished: Vec<Finished>) -> Result<()> {
+    let plugin = env(lua).plugin;
+    for (owner, id, result) in finished {
+        if owner != plugin {
+            continue;
+        }
+        let mode = state(lua)
+            .borrow_mut()
+            .modes
+            .remove(&id)
+            .unwrap_or(Mode::Response);
+        let outcome = match (result, mode) {
+            (Err(message), _) => Err(format!("HttpService: {message}")),
+            (Ok(response), Mode::Response) => {
+                let table = lua.create_table()?;
+                table.set("Success", response.success)?;
+                table.set("StatusCode", response.status_code)?;
+                table.set("StatusMessage", response.status_message)?;
+                let headers = lua.create_table()?;
+                for (name, value) in response.headers {
+                    headers.set(name, value)?;
+                }
+                table.set("Headers", headers)?;
+                table.set("Body", response.body)?;
+                Ok(MultiValue::from_vec(vec![Value::Table(table)]))
+            }
+            (Ok(response), Mode::Body) if response.success => {
+                Ok(MultiValue::from_vec(vec![Value::String(
+                    lua.create_string(&response.body)?,
+                )]))
+            }
+            (Ok(response), Mode::Body) => Err(format!(
+                "HTTP {} ({})",
+                response.status_code, response.status_message
+            )),
+            (Ok(response), Mode::Json) if response.success => {
+                let json: serde_json::Value =
+                    serde_json::from_str(&response.body).unwrap_or_default();
+                Ok(MultiValue::from_vec(vec![json::from_json(lua, &json)?]))
+            }
+            (Ok(response), Mode::Json) => Err(format!(
+                "HTTP {} ({})",
+                response.status_code, response.status_message
+            )),
+            (Ok(response), Mode::UserName | Mode::UserId) => {
+                let json: serde_json::Value =
+                    serde_json::from_str(&response.body).unwrap_or_default();
+                let found = match mode {
+                    Mode::UserName => json["name"]
+                        .as_str()
+                        .map(|name| lua.create_string(name).map(Value::String))
+                        .transpose()?,
+                    _ => json["data"][0]["id"].as_i64().map(Value::Integer),
+                };
+                match found {
+                    Some(value) => Ok(MultiValue::from_vec(vec![value])),
+                    None => Err("Players: no such user".to_string()),
+                }
+            }
+        };
+        scheduler::resolve(lua, id, outcome)?;
+    }
+    Ok(())
+}

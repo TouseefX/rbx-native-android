@@ -1,0 +1,148 @@
+//! Generic property bridge: one `__index`/`__newindex` pair for all 2459
+//! reflected properties, validated against the reflection database.
+
+mod from_lua;
+mod pseudo;
+mod to_lua;
+
+use mlua::{Lua, Result, Value};
+use rbx_dom::{Ref, Variant};
+
+use crate::ctx::Ctx;
+
+pub(crate) fn missing_instance() -> mlua::Error {
+    mlua::Error::runtime("instance has been destroyed")
+}
+
+/// Reads a property, returning `Ok(None)` when the class has no such member, so
+/// the caller can fall back to a child lookup before erroring out.
+pub(crate) fn get(lua: &Lua, ctx: &Ctx, referent: Ref, name: &str) -> Result<Option<Value>> {
+    if let Some(value) = pseudo::get(lua, ctx, referent, name)? {
+        return Ok(Some(value));
+    }
+
+    let (value_type, stored) = {
+        let dom = ctx.dom();
+        let instance = dom.get(referent).ok_or_else(missing_instance)?;
+        let Some(descriptor) = ctx.database().resolve_property(instance.class(), name) else {
+            return Ok(None);
+        };
+        // Whichever name the file stored it under, or the class default:
+        // `part.Transparency` on a part a hand-written file left it off of
+        // reads `0`, as it would in Roblox.
+        // An unset asset id (`Instance.new("Decal").Texture`) has no
+        // recorded default of its own: Roblox reads its `Content` twin's
+        // default, or "".
+        let stored = ctx
+            .database()
+            .stored_or_default(instance, name)
+            .map(|(_, value)| value.clone())
+            .or_else(|| ctx.database().content_id_default(instance.class(), name));
+        (descriptor.value_type.clone(), stored)
+    };
+
+    // Neither stored nor recorded: a value only a running engine computes
+    // (`AbsoluteSize` before anything laid the object out). Roblox never
+    // hands such a property back as nil, so it reads as its type's zero.
+    let Some(stored) = stored.or_else(|| zero_of(&value_type)) else {
+        return Ok(Some(Value::Nil));
+    };
+    to_lua::variant_to_lua(lua, ctx, name, &value_type, &stored).map(Some)
+}
+
+/// The zero value of a property type, where it has an obvious one.
+fn zero_of(value_type: &str) -> Option<Variant> {
+    use rbx_dom::{CFrameData, Vector2Data, Vector3Data};
+    let origin = Vector3Data {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    Some(match value_type {
+        "Vector2" => Variant::Vector2(Vector2Data { x: 0.0, y: 0.0 }),
+        "Vector3" => Variant::Vector3(origin),
+        "CFrame" => Variant::CFrame(CFrameData {
+            position: origin,
+            rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        }),
+        "float" => Variant::Float32(0.0),
+        "double" => Variant::Float64(0.0),
+        "int" => Variant::Int32(0),
+        "int64" => Variant::Int64(0),
+        "bool" => Variant::Bool(false),
+        "string" => Variant::String(String::new()),
+        _ => return None,
+    })
+}
+
+/// Writes a property, returning `Ok(false)` when the class has no such member.
+pub(crate) fn set(ctx: &Ctx, referent: Ref, name: &str, value: &Value) -> Result<bool> {
+    ctx.check_write(referent)?;
+    if pseudo::set(ctx, referent, name, value)? {
+        return Ok(true);
+    }
+
+    let (value_type, key, existing) = {
+        let dom = ctx.dom();
+        let instance = dom.get(referent).ok_or_else(missing_instance)?;
+        let Some(descriptor) = ctx.database().resolve_property(instance.class(), name) else {
+            return Ok(false);
+        };
+        // Under the name the file stored it as, or else the one Roblox saves
+        // it under, `size`, `Color3uint8`, which is what the renderer and
+        // the save path read. The default, when there is one, says which
+        // representation that name holds.
+        let database = ctx.database();
+        let (key, existing) = match database.stored_or_default(instance, name) {
+            Some((key, value)) => (key.to_owned(), Some(value.clone())),
+            None => (
+                database.stored_names(instance.class(), name)[0].to_owned(),
+                None,
+            ),
+        };
+        (descriptor.value_type.clone(), key, existing)
+    };
+
+    // `Variant` has no null reference: clearing an object property (`Adornee
+    // = nil`, `PrimaryPart = nil`) erases the entry, which reads back as nil.
+    if value.is_nil() && ctx.database().class(&value_type).is_some() {
+        if existing.is_some() {
+            ctx.dom_mut()
+                .remove_property(referent, &key)
+                .map_err(|error| mlua::Error::runtime(error.to_string()))?;
+        }
+        return Ok(true);
+    }
+    let variant = from_lua::lua_to_variant(ctx, name, &value_type, value)?;
+    let variant = keep_representation(existing.as_ref(), variant);
+    ctx.dom_mut()
+        .set_property(referent, &key, variant)
+        .map_err(|error| mlua::Error::runtime(error.to_string()))?;
+    Ok(true)
+}
+
+/// Narrows a freshly built `Variant` to the representation the file already used
+/// for that property, so an edited place re-serializes byte-compatibly instead of
+/// switching a `Color3uint8` column to `Color3` or a float's width.
+fn keep_representation(existing: Option<&Variant>, value: Variant) -> Variant {
+    match (existing, &value) {
+        (Some(Variant::Color3uint8 { .. }), Variant::Color3(color)) => {
+            let channel = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
+            Variant::Color3uint8 {
+                r: channel(color.r),
+                g: channel(color.g),
+                b: channel(color.b),
+            }
+        }
+        (Some(Variant::Float64(_)), Variant::Float32(v)) => Variant::Float64(*v as f64),
+        (Some(Variant::Float32(_)), Variant::Float64(v)) => Variant::Float32(*v as f32),
+        (Some(Variant::Int64(_)), Variant::Int32(v)) => Variant::Int64(i64::from(*v)),
+        (Some(Variant::Int32(_)), Variant::Int64(v)) => Variant::Int32(*v as i32),
+        // A ContentId the file held as a `Content` URI (see
+        // `rbx_xml::value::content`) stays one.
+        (Some(Variant::Content(_)), Variant::String(uri)) => {
+            Variant::Content(rbx_dom::Content::Uri(uri.clone()))
+        }
+        _ => value,
+    }
+}

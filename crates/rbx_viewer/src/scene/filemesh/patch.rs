@@ -1,0 +1,113 @@
+//! The file-mesh half of `Scene::resync_part`: re-reading one
+//! `MeshPart`/`SpecialMesh` entry off the DOM and rebuilding its
+//! [`ResolvedInstance`] against meshes and images that already downloaded,
+//! without going anywhere near the network.
+
+use rbx_assets::AssetRef;
+use rbx_dom::{Ref, WeakDom};
+use rbx_reflection::ReflectionDatabase;
+
+use super::{from_mesh_part, from_special_mesh_child, Entry, Resolved, ResolvedInstance};
+use crate::scene::material::Catalog;
+
+/// The single-instance counterpart of [`super::plan`]: the entry `referent`
+/// would get from a fresh plan, or `None` when it is not file-mesh-backed at
+/// all (a plain `Part`, or a `MeshPart` whose `MeshId` was just emptied).
+pub(crate) fn replan(
+    dom: &WeakDom,
+    database: &ReflectionDatabase,
+    referent: Ref,
+    materials: &mut Catalog,
+) -> Option<Entry> {
+    from_mesh_part(dom, database, referent, materials)
+        .or_else(|| from_special_mesh_child(dom, database, referent, materials))
+}
+
+impl Entry {
+    /// The part this entry draws.
+    pub(crate) fn referent(&self) -> Ref {
+        self.referent
+    }
+
+    /// The mesh this entry draws through, what has to have downloaded.
+    pub(crate) fn asset(&self) -> &AssetRef {
+        &self.mesh
+    }
+
+    /// Whether a fresh [`super::resolve`] would drop this entry as fully
+    /// transparent, told apart from [`Entry::patched`]'s other `None`s, since
+    /// an invisible instance is removed in place while the rest need a reload.
+    pub(crate) fn is_invisible(&self) -> bool {
+        self.alpha <= 0.0
+    }
+
+    /// The instance [`super::resolve`] would build for this entry against
+    /// `resolved`'s already-downloaded assets, `None` wherever a fresh
+    /// resolution would drop it (its mesh never downloaded, or it is now
+    /// fully transparent) or would need something only a full reload
+    /// downloads: a `SurfaceAppearance` map set the scene has not uploaded.
+    pub(crate) fn patched(&self, resolved: &Resolved) -> Option<ResolvedInstance> {
+        let mesh = resolved.meshes.get(&self.mesh)?;
+        if self.alpha <= 0.0 {
+            return None;
+        }
+        let mut texture = self
+            .texture
+            .clone()
+            .filter(|reference| resolved.images.contains_key(reference));
+        let (mut mesh_key, mut color) = (self.mesh.clone(), self.color);
+        let mut worn = false;
+        let wrapped = super::wrap::key(self.referent);
+        let wraps = self.wrap.is_some() && resolved.meshes.contains_key(&wrapped);
+        if wraps {
+            mesh_key = wrapped;
+        }
+        // The same precedence as `resolve`: a rig only ever exists for an
+        // instance drawn as its own mesh or as its wrapped garment, and only
+        // for the mesh it was built from.
+        if let Some(rig) = resolved.rigs.get(&self.referent) {
+            if rig.asset == self.mesh
+                && rig.wraps() == wraps
+                && resolved.meshes.contains_key(&rig.key)
+            {
+                mesh_key = rig.key.clone();
+            }
+        }
+        // A dressed section reuses what its limb was dressed with, or asks for
+        // the whole limb to be dressed again when an edit has outdated it.
+        if let Some((key, image)) = super::clothing::keys(self, &resolved.images) {
+            if !resolved.meshes.contains_key(&key) || !resolved.images.contains_key(&image) {
+                return None;
+            }
+            (mesh_key, texture, color) = (key, Some(image), [1.0; 3]);
+            worn = true;
+        }
+        let appearance = match &self.appearance {
+            Some(_) if worn => None,
+            Some(planned) => {
+                let wanted = planned.resolved(&resolved.images);
+                Some(
+                    resolved
+                        .appearances
+                        .iter()
+                        .position(|known| *known == wanted)?,
+                )
+            }
+            None => None,
+        };
+
+        Some(ResolvedInstance {
+            referent: self.referent,
+            mesh: mesh_key,
+            material: self.material,
+            texture,
+            appearance,
+            model: self.fit.transform(mesh),
+            color,
+            alpha: self.alpha,
+            reflectance: self.reflectance,
+            casts_shadow: self.casts_shadow,
+            isolated_out: false,
+        })
+    }
+}

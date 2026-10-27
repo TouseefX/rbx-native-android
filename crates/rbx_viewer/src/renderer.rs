@@ -1,0 +1,1055 @@
+//! Draws a scene's parts, the decals projected onto them, its sky and its
+//! celestial bodies into any render target, window or texture alike.
+
+mod adornment;
+mod beam;
+mod cue;
+mod cull;
+mod editor;
+mod envmap;
+mod filemesh;
+pub(crate) use filemesh::mesh_tangents;
+mod geometry;
+mod gizmo;
+mod gui;
+mod highlight;
+mod hover;
+mod instance;
+mod isolation;
+mod lighting;
+mod lines;
+mod material;
+mod mesh;
+mod outline;
+mod particles;
+mod pass;
+mod patch;
+mod pipeline;
+mod post;
+mod preview;
+mod rebuild;
+mod scene_depth;
+mod selection;
+mod shadow;
+mod shaped;
+mod skinning;
+mod skybox;
+mod slots;
+mod stars;
+mod sun;
+mod switch;
+mod terrain;
+mod texture;
+mod textured;
+mod trail;
+mod translucent;
+
+use glam::Mat3;
+
+use crate::camera::{Camera, Frustum, Viewpoint};
+use crate::fonts::Library;
+use crate::gizmo::{
+    basis, handle_axes, handle_length, Faces, Gizmo, Handles, Hotspots, Kind, Shape,
+};
+use crate::lighting::{Lighting, LocalLight};
+use crate::load::Answered;
+use crate::pick::Selected;
+use crate::quality::QualityProfile;
+use crate::scene::{Bounds, Scene, ScrollTarget};
+use crate::textures::Decor;
+use adornment::Adornments;
+use beam::Beams;
+use cue::Cues;
+use cull::MainCull;
+use envmap::EnvMap;
+use geometry::Meshes;
+use gizmo::Draggers;
+use gui::Gui;
+use hover::Hover;
+use lighting::LightingRaw;
+use lines::Lines;
+use material::Materials;
+use particles::Particles;
+use pipeline::{Frame, Shared, Target};
+use post::Post;
+use preview::Preview;
+use selection::Selection;
+use shadow::{Fit, Lamp, Shadows};
+use shaped::Shaped;
+use stars::Stars;
+use texture::PER_FRAME;
+use trail::Trails;
+use translucent::Translucent;
+
+pub use cue::OverlayColors;
+pub use gui::GuiBox;
+use isolation::Surroundings;
+pub use isolation::ISOLATION_BACKDROP;
+pub use lines::{Fill, Segment};
+
+/// Only ever seen where a scene has no `Sky`, or where one of its six panels
+/// would not resolve.
+const CLEAR_COLOR: wgpu::Color = wgpu::Color::BLACK;
+
+/// Everything a frame is drawn from. They always travel together, both
+/// render paths read the same DOM once and hand the lot straight on, so they
+/// move as one argument rather than five.
+#[derive(Clone, Copy)]
+pub(crate) struct World<'a> {
+    pub(crate) scene: &'a Scene,
+    pub(crate) decor: &'a Decor,
+    pub(crate) lighting: &'a Lighting,
+    /// The place's `PointLight`s, `SpotLight`s and `SurfaceLight`s. Empty with
+    /// `--no-lights`. Uploaded once here; an edit that moves, adds or removes
+    /// one rewrites them through `Renderer::set_lights`.
+    pub(crate) lights: &'a [LocalLight],
+    /// Every image the passes below fetch for themselves, the `Beam`,
+    /// `Trail` and `ParticleEmitter` textures and the GUI atlas, as far as
+    /// the loader has an answer for them. Handed in rather than resolved here
+    /// because resolving one is a download and a decode, and this is the
+    /// thread that draws: see `load::Answered`, whose "no answer yet" is what
+    /// keeps a pass from writing an effect off before its texture lands.
+    pub(crate) images: &'a Answered,
+    /// Every font face the GUI trees' text needs, as far as the loader has
+    /// it, see `load::Loaded::resolve_fonts`. Same reasoning as `images`.
+    pub(crate) fonts: &'a Library,
+}
+
+/// Coordinates rendering to any target (window surface or offscreen texture).
+///
+/// Maintains the GPU state: the unit meshes, per-part transforms and colors, the
+/// projected decals, the sky, the lighting uniform and the depth buffer. The same
+/// Renderer is shared between windowed and offscreen paths.
+pub(crate) struct Renderer {
+    opaque: wgpu::RenderPipeline,
+    blended: wgpu::RenderPipeline,
+    /// See [`pipeline::inside_pipeline`].
+    inside: wgpu::RenderPipeline,
+    frame: Frame,
+    /// The `ForceField` shimmer's phase, see [`pipeline::shimmer_phase`]. Left
+    /// at 0 by a host with no clock, so a `--screenshot` is the same every run.
+    shimmer: f32,
+    /// Bind group 0's layout and bind group 1's, kept for the life of the
+    /// renderer: a change of quality level rebuilds those groups (see
+    /// [`Renderer::set_quality`]) around re-viewed textures.
+    frame_layout: wgpu::BindGroupLayout,
+    material_layout: wgpu::BindGroupLayout,
+    lighting: Lighting,
+    lighting_buffer: wgpu::Buffer,
+    /// Every local light the place has, and the buffer holding the prefix of them
+    /// the level allows. Kept so a level with a different cap can rewrite the
+    /// buffer without the place being read again.
+    all_lights: Vec<LocalLight>,
+    lights_buffer: wgpu::Buffer,
+    /// How many entries of the local light buffer the shader has to read.
+    lights: usize,
+    /// One record per entry of `lights_buffer`, rewritten every frame with
+    /// whichever of them `shadow::local::select` chose (see
+    /// [`Renderer::draw`]). Always as long as `lights_buffer`, which is what
+    /// keeps the two arrays in step in `lights.wgsl`.
+    light_shadows_buffer: wgpu::Buffer,
+    /// The sky, prefiltered: the cube the environment terms sample, its mip depth
+    /// and the irradiance the diffuse term rebuilds from.
+    env: EnvMap,
+    meshes: Meshes,
+    materials: Materials,
+    shaped: Shaped,
+    translucent: Translucent,
+    filemesh: filemesh::FileMeshes,
+    /// `Workspace.Terrain`'s chunk meshes; empty in a place without terrain.
+    terrain: terrain::TerrainGpu,
+    textured: textured::Textured,
+    sky: Option<skybox::Skybox>,
+    stars: Option<Stars>,
+    bodies: Option<sun::Bodies>,
+    shadows: Shadows,
+    /// `Beam` ribbons, drawn after opaque geometry and before particles, see
+    /// [`Renderer::draw`].
+    beams: Beams,
+    /// `Trail` ribbons, drawn right after beams, see [`Renderer::draw`].
+    trails: Trails,
+    /// Billboarded `ParticleEmitter`s, drawn after everything above, see
+    /// [`Renderer::draw`].
+    particles: Particles,
+    /// The place's 3D adornments, `SelectionBox`, the handle shapes,
+    /// `Handles`/`ArcHandles`: drawn inside the scene pass over its
+    /// geometry. Costs nothing in a place with none.
+    adornments: Adornments,
+    /// Every `Highlight` the place holds, drawn over the scene as a silhouette
+    /// outline and an interior fill, see `renderer::highlight`. Costs nothing
+    /// in a place with none.
+    highlights: highlight::Highlights,
+    /// The Explorer's selection outline, the box a container gets. A part
+    /// keeps its own silhouette instead; that is `cues` below.
+    selection: Selection,
+    /// The selection and hover cues of whatever has a shape of its own,
+    /// drawn as silhouettes through the same pass a `Highlight` uses, see
+    /// `renderer::cue`.
+    cues: Cues,
+    /// The compute pass that poses skinned meshes into every buffer above
+    /// that draws one, see `renderer::skinning`. `None` where the device
+    /// has no compute shaders (WebGL2): the scene deforms them on the CPU.
+    skinner: Option<skinning::Skinner>,
+    /// The "about to click" cue drawn around whatever `BasePart` the cursor is
+    /// over, distinctly from `selection` above, see `renderer::hover`. Reads
+    /// the same shared bind group, for the same reason.
+    hover: Hover,
+    /// Where the tool being configured would put things, the Align
+    /// tool's live preview. Empty unless an editor asks for one.
+    preview: Preview,
+    /// The editor's own world-space line segments, Studio's light guides.
+    /// Empty unless an editor asks for some.
+    lines: Lines,
+    /// The transform tool's axis draggers, drawn over the selection outline.
+    draggers: Draggers,
+    /// Which transform tool the editor has active, if any, `None` while the
+    /// Select tool is, which is also every `rbxview` frame (the standalone
+    /// viewer edits nothing).
+    gizmo: Option<Gizmo>,
+    /// The place's GUI containers: the `ScreenGui` overlay, drawn last of all
+    /// straight onto the display target so no post effect touches it, and the
+    /// `BillboardGui`/`SurfaceGui` canvases, drawn inside the scene.
+    gui: Gui,
+    /// Whether the `ScreenGui` overlay is drawn (Studio's View > UI). The
+    /// canvases inside the scene are scene content and stay.
+    screen_gui_shown: bool,
+    camera: Camera,
+    /// The scene's extent, which is what the shadow map's depth range and its
+    /// recentring are fitted against every frame.
+    bounds: Bounds,
+    /// The HDR target every pass above draws into, its depth buffer, and what
+    /// turns the two back into an image the caller can present.
+    post: Post,
+    /// The graphics quality level the next frame is drawn at.
+    /// [`Renderer::set_quality`] moves it without rebuilding the scene.
+    quality: QualityProfile,
+    /// The user's renderer calibration; see [`Renderer::set_calibration`].
+    calibration: crate::lighting::Calibration,
+    /// What every surface pipeline above was built for: the HDR format, and the
+    /// profile's `msaa_samples` as far as the adapter allows (see `post`).
+    target: Target,
+    /// Whether anything in the scene is `Glass`, and so whether the frame
+    /// pays for the copy a refracting surface reads, see
+    /// `post::Targets::capture_refraction`.
+    refracting: bool,
+    /// Whether the frame is drawn as an isolated view (see
+    /// [`Renderer::set_isolated`]): no environment, neutral light, a flat
+    /// backdrop. Which *parts* are drawn is the scene's to say, not this.
+    isolated: bool,
+    /// What the sun's shadow map is fitted to instead of `bounds` while
+    /// isolated: the drawn rig and the stage floor around it, see
+    /// `Scene::stage_bounds`.
+    stage: Option<Bounds>,
+}
+
+impl Renderer {
+    /// Builds GPU state from the scene, its decor and its lighting: the unit
+    /// meshes both passes instance, an instance buffer per shape, one decal batch
+    /// per image and shape, the sky panels and the environment probe built from
+    /// them.
+    ///
+    /// Once, per device: another scene on the same device goes through
+    /// [`Renderer::rebuild`], which redoes only the scene-derived half of
+    /// this and mirrors it step for step.
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        format: wgpu::TextureFormat,
+        world: World<'_>,
+        quality: &QualityProfile,
+    ) -> Self {
+        let World {
+            scene,
+            decor,
+            lighting,
+            lights,
+            images,
+            fonts,
+        } = world;
+        // Every scene pass draws into the HDR target rather than into the
+        // caller's: only the resolve at the end of `draw` knows `format`.
+        let post = Post::new(device, format, lighting.effects, quality);
+        // Every surface pipeline below is built for this sample count, so a level
+        // that changes it is the one switch that has to rebuild them.
+        let target = Target {
+            format: post::HDR_FORMAT,
+            samples: post.samples(),
+        };
+        let layout = pipeline::frame_layout(device);
+        let lighting_buffer = pipeline::lighting_buffer(device);
+        // Capped here rather than at draw time: a light the level does not allow
+        // is never uploaded at all, so it costs neither memory nor a loop step.
+        let allowed = lights.len().min(quality.local_lights_max);
+        let lights_buffer = lighting::local_lights_buffer(device, &lights[..allowed]);
+        // No light is selected before the first frame, so every entry starts
+        // unshadowed; `Renderer::draw` rewrites the whole buffer every frame
+        // after this one anyway.
+        let light_shadows_buffer = shadow::local::buffer(device, allowed);
+        // The probe is the sky, prefiltered: every pass binds it at group 0, so
+        // it exists (as one grey texel at worst) even without a `Sky`.
+        let env = EnvMap::new(device, queue, decor.sky.as_deref(), quality);
+        // Decals are projected on the parts' own meshes, so every shape they use
+        // is already among the scene's own, no extra kind can appear here.
+        let meshes = Meshes::new(device, shaped::kinds(scene.parts()));
+        let material_layout = material::layout(device);
+        let (opaque, blended) =
+            pipeline::shape_pipelines(device, target, &layout, &material_layout, true);
+        let inside = pipeline::inside_pipeline(device, target, &layout, &material_layout);
+
+        let shadows = Shadows::new(device, scene, quality);
+        let shared = Shared {
+            lighting: &lighting_buffer,
+            lights: &lights_buffer,
+            env: &env,
+            shadow_map: shadows.view(),
+            shadow_sampler: shadows.sampler(),
+            local_shadow_map: shadows.local_view(),
+            light_shadows: &light_shadows_buffer,
+            point_shadow_map: shadows.point_view(),
+            point_faces: shadows.point_faces(),
+            // The frame has none yet: the first `draw` allocates one if the
+            // scene turns out to hold glass, and rebinds every group here.
+            refraction: post.refraction(),
+        };
+        let frame = Frame::new(device, &layout, shared);
+        let sky = decor.sky.as_ref().map(|panels| {
+            skybox::Skybox::new(device, queue, target, &layout, shared, panels, quality)
+        });
+        let bodies = sun::Bodies::new(
+            device,
+            queue,
+            target,
+            &layout,
+            shared,
+            &decor.bodies,
+            quality,
+        );
+        let stars = Stars::new(device, target, &layout, shared, &decor.stars);
+        // Read once here rather than kept as a whole `Scene`: an edit keeps
+        // the copy in step one placement at a time (see
+        // `Renderer::sync_part`), and `Renderer::new` has no other reason
+        // to hold on to the scene itself. `hover` keeps its own copy rather
+        // than sharing `selection`'s: the two outlines' GPU state stays
+        // independent, at the cost of one extra clone paid once here.
+        let placements = scene.all_placements();
+        let selection = Selection::new(device, target, &layout, placements.clone());
+        let hover = Hover::new(device, target, &layout, placements);
+        let draggers = Draggers::new(device, target, &layout);
+        // Before the GUI pass, which shades a `ViewportFrame`'s parts with
+        // the very same arrays.
+        let materials = Materials::new(device, queue, &material_layout, scene.materials(), quality);
+
+        Renderer {
+            opaque,
+            blended,
+            inside,
+            frame,
+            shimmer: 0.0,
+            lighting: *lighting,
+            all_lights: lights.to_vec(),
+            lights: allowed,
+            env,
+            meshes,
+            shaped: Shaped::new(device, scene.parts()),
+            translucent: Translucent::new(device, scene.parts()),
+            filemesh: filemesh::FileMeshes::new(
+                device,
+                queue,
+                target,
+                &layout,
+                &material_layout,
+                scene.resolved_file_meshes(),
+                quality,
+            ),
+            terrain: terrain::TerrainGpu::new(
+                device,
+                queue,
+                (target, &layout, &material_layout),
+                (scene.terrain(), scene.materials(), quality),
+            ),
+            textured: textured::Textured::new(
+                device,
+                queue,
+                target,
+                &layout,
+                &decor.groups,
+                quality,
+            ),
+            sky,
+            stars,
+            bodies,
+            shadows,
+            beams: Beams::new(device, queue, target, &scene.drawn_beams(), images, quality),
+            trails: Trails::new(
+                device,
+                queue,
+                target,
+                &scene.drawn_trails(),
+                images,
+                quality,
+            ),
+            particles: Particles::new(
+                device,
+                queue,
+                target,
+                &scene.drawn_particle_emitters(),
+                images,
+                quality,
+            ),
+            adornments: Adornments::new(device, queue, target, scene.adornments(), images, quality),
+            highlights: highlight::Highlights::new(
+                device,
+                queue,
+                &layout,
+                target,
+                highlight::Source {
+                    highlights: scene.highlights(),
+                    parts: scene.parts(),
+                    resolved: scene.resolved_file_meshes(),
+                },
+            ),
+            selection,
+            cues: Cues::new(
+                device,
+                queue,
+                &layout,
+                target,
+                highlight::Source {
+                    highlights: &[],
+                    parts: scene.parts(),
+                    resolved: scene.resolved_file_meshes(),
+                },
+            ),
+            skinner: skinning::supported(device).then(|| skinning::Skinner::new(device)),
+            hover,
+            preview: Preview::new(device, target, &layout),
+            lines: Lines::default(),
+            draggers,
+            gizmo: None,
+            screen_gui_shown: true,
+            gui: Gui::new(
+                device,
+                queue,
+                format,
+                target,
+                (scene.gui_screens(), &scene.drawn_gui_spaces()),
+                (&material_layout, &materials.bind_group),
+                images,
+                fonts,
+                quality,
+            ),
+            materials,
+            lighting_buffer,
+            lights_buffer,
+            light_shadows_buffer,
+            frame_layout: layout,
+            material_layout,
+            camera: Camera::framing(scene.bounds()),
+            bounds: *scene.bounds(),
+            post,
+            quality: *quality,
+            calibration: Default::default(),
+            target,
+            refracting: scene.has_glass(),
+            isolated: false,
+            stage: None,
+        }
+    }
+
+    /// Draws every following frame as an isolated view, or as the place
+    /// again: skips the sky, the stars, the sun and moon, terrain and its
+    /// water and grass, the place's adornments, the `ScreenGui` overlay and
+    /// every effect that does not belong to the isolated roots (the scene
+    /// hands over only the rig's own); fits the sun shadow to the stage
+    /// (see [`Renderer::set_stage`]); lights the scene with [`Lighting::neutral`] and a
+    /// flat grey sky instead of the place's own `Lighting`, local lights and
+    /// probe; and clears to [`ISOLATION_BACKDROP`], see
+    /// `renderer::isolation`.
+    ///
+    /// A switch on the draw alone. Every one of those passes is still kept
+    /// in step with the place by edits while it is skipped, a `Lighting`
+    /// write, a terrain brush, a re-planned emitter all land as usual, so
+    /// switching back draws exactly what a renderer that was never isolated
+    /// would. Hiding the parts outside the isolated roots is the scene's
+    /// job (see `scene::isolation`), which a rebuild then reads.
+    pub(crate) fn set_isolated(&mut self, isolated: bool) {
+        self.isolated = isolated;
+    }
+
+    /// The box an isolated frame fits its sun shadow to, see
+    /// `Scene::stage_bounds`. Ignored while not isolated.
+    pub(crate) fn set_stage(&mut self, stage: Option<Bounds>) {
+        self.stage = stage;
+    }
+
+    /// Which of the place's surroundings this frame draws, see
+    /// [`Surroundings`].
+    fn surroundings(&self) -> Surroundings {
+        Surroundings::of(self.isolated)
+    }
+
+    /// The constants the lighting uniform carries in place of shader literals.
+    /// Read on the next frame, which writes that uniform anyway.
+    pub(crate) fn set_calibration(&mut self, calibration: crate::lighting::Calibration) {
+        self.calibration = calibration;
+    }
+
+    /// Only the offscreen path uses this: the window orbits at the default height.
+    pub(crate) fn pitch(&mut self, degrees: f32) {
+        self.camera = self.camera.pitched(degrees);
+    }
+
+    /// Only the offscreen path uses this: the window orbits at the default distance.
+    pub(crate) fn zoom(&mut self, factor: f32) {
+        self.camera = self.camera.zoomed(factor);
+    }
+
+    /// Swaps the main camera between perspective and orthographic projection,
+    /// see `Camera::with_orthographic`.
+    pub(crate) fn set_orthographic(&mut self, orthographic: bool) {
+        self.camera = self.camera.with_orthographic(orthographic);
+    }
+
+    /// The `ScrollingFrame` of the screen overlay the wheel over `point` (in
+    /// pixels of the last frame drawn) would scroll along `axis`, see
+    /// `scene::gui::scroll_target`.
+    pub(crate) fn gui_scroll_target(&self, point: [f32; 2], axis: usize) -> Option<ScrollTarget> {
+        self.screen_gui_shown
+            .then(|| self.gui.scroll_target(point, axis))
+            .flatten()
+    }
+
+    /// Draws one `ScreenGui` alone over `backdrop` into `target`, with no
+    /// scene pass at all, an editor's 2D canvas (see `Gui::draw_canvas`).
+    /// See `Gui::set_screen`.
+    pub(crate) fn set_gui_screen(&mut self, screen: Option<(u32, u32)>) {
+        self.gui.set_screen(screen);
+    }
+
+    pub(crate) fn set_screen_gui_shown(&mut self, shown: bool) {
+        self.screen_gui_shown = shown;
+    }
+
+    /// See `Gui::set_safe_insets`.
+    pub(crate) fn set_gui_safe_insets(&mut self, insets: crate::SafeInsets) {
+        self.gui.set_safe_insets(insets);
+    }
+
+    pub(crate) fn draw_gui_canvas(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        target: &wgpu::Texture,
+        canvas: ((u32, u32), rbx_dom::Ref),
+        backdrop: wgpu::Color,
+    ) {
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("rbxview gui canvas"),
+        });
+        self.gui.draw_canvas(
+            device,
+            queue,
+            &mut encoder,
+            target,
+            canvas,
+            backdrop,
+            &self.materials.bind_group,
+        );
+        queue.submit(std::iter::once(encoder.finish()));
+    }
+
+    /// One `ViewportFrame` on its own, see `Gui::viewport_frame`.
+    pub(crate) fn viewport_frame(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        frame: rbx_dom::Ref,
+        size: (u32, u32),
+    ) -> Option<(Option<wgpu::Texture>, gui::FrameLook)> {
+        self.gui
+            .viewport_frame(device, queue, &self.materials.bind_group, frame, size)
+    }
+
+    /// The pixel size a canvas of `screen` is drawn at, see
+    /// `Gui::canvas_size`.
+    pub(crate) fn gui_canvas_size(
+        &self,
+        screen: rbx_dom::Ref,
+        requested: (u32, u32),
+    ) -> (u32, u32) {
+        self.gui.canvas_size(screen, requested)
+    }
+
+    /// Every element the GUI was last laid out with, in paint order.
+    pub(crate) fn gui_boxes(&self) -> &[GuiBox] {
+        self.gui.boxes()
+    }
+
+    /// Where this frame's draggers sit, or `None` when no transform tool is
+    /// active, nothing with a placement is selected, or the camera is still
+    /// on its automatic orbit, which only happens in a file with no saved
+    /// camera of its own, before the first input, where there is nothing to
+    /// drag with yet either.
+    /// `height` is the render target's, in pixels (see
+    /// [`handle_length`]).
+    fn handles(&self, from: Viewpoint, height: f32) -> Option<Shape> {
+        let gizmo = self.gizmo?;
+        let Viewpoint::Free(pose) = from else {
+            return None;
+        };
+        let model = self.selection.anchor()?;
+        let orthographic = self.camera.is_orthographic();
+        // Scale's balls are bound to the surface of the box the selection
+        // scales on, a lone part's own, a model's framed by its pivot (see
+        // `gizmo::scale_box`), so
+        // there is no origin or arm to pick for them at all.
+        if gizmo.kind == Kind::Scale {
+            let scaled = self
+                .selection
+                .scale_box(gizmo.pivot, gizmo.local)
+                .unwrap_or(model);
+            return Some(Shape::Scale(
+                Faces::new(scaled, pose, orthographic).summoned(gizmo.summon),
+            ));
+        }
+
+        let (anchor, rotation) = (model.w_axis.truncate(), Mat3::from_mat4(model));
+        // Move drags every selected part by one offset and Rotate turns them
+        // all about one point, so both gizmos belong at the middle of the
+        // whole selection rather than hanging off whichever part happens to
+        // be first (for one part the two are the same place). The *basis*
+        // still comes from the anchor: a selection has no aggregate rotation
+        // to take.
+        // Summoned with `Tab`, Move's and Rotate's handles stand at the
+        // cursor instead, Rotate's then turning about that point.
+        // A lone part's or model's own pivot stands in for the centre (see
+        // `Gizmo::pivot`).
+        let pivot = gizmo.pivot.map(|pivot| pivot.w_axis.truncate());
+        let origin = gizmo
+            .summon
+            .or(pivot)
+            .unwrap_or_else(|| self.selection.centre().unwrap_or(anchor));
+        // Edit Pivot's handles are the pivot's own frame, whatever the
+        // world/local toggle says: turning them is what turns the pivot.
+        // Local space takes the pivot's frame too (see `handle_axes`).
+        let editing = gizmo.kind == Kind::Pivot;
+        if editing && gizmo.pivot.is_none() {
+            return None;
+        }
+        let axes = handle_axes(editing, gizmo.local, gizmo.pivot, rotation);
+        let arm = handle_length(origin, pose, orthographic, height);
+        let handles = Handles::new(origin, basis(axes), arm);
+        Some(match gizmo.kind {
+            Kind::Rotate => Shape::Rotate(handles),
+            Kind::Pivot => {
+                // Squared to the pivot, so the hotspots turn with it.
+                let axes = Mat3::from_mat4(gizmo.pivot?);
+                let scaled = self.selection.box_along(axes).unwrap_or(model);
+                let parts = self
+                    .selection
+                    .models()
+                    .map(|part| Faces::new(part, pose, orthographic));
+                let hotspots = Hotspots::new(Faces::new(scaled, pose, orthographic), parts);
+                Shape::Pivot(handles, gizmo.hotspots.then_some((hotspots, gizmo.snapped)))
+            }
+            Kind::Transform => {
+                let scaled = self
+                    .selection
+                    .scale_box(gizmo.pivot, gizmo.local)
+                    .unwrap_or(model);
+                let faces = Faces::new(scaled, pose, orthographic).summoned(gizmo.summon);
+                Shape::Transform(handles, faces)
+            }
+            // `Kind::Scale` never reaches here, it returned above.
+            _ => Shape::Move(handles),
+        })
+    }
+
+    /// Uploads every texture still queued from the last load or reload, all
+    /// at once, instead of a bounded amount per [`Renderer::draw`] call.
+    ///
+    /// For a caller with no next frame to spread the rest across, the
+    /// single-shot `rbxview --screenshot` path, rather than one that
+    /// forever draws whatever loaded so far, the way a live window or an
+    /// embedder's continuously redrawn viewport does.
+    pub(crate) fn finish_loading(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+        self.textured
+            .upload_pending(device, queue, &self.quality, usize::MAX);
+    }
+
+    /// Whether the next [`Renderer::draw`] would differ from the last one
+    /// with the camera and the scene both left alone: something on screen
+    /// moves with the clock (a `ForceField`'s shimmer, a `Beam`, a `Trail`,
+    /// a particle), or textures are still being uploaded a few per frame. A
+    /// host that only draws on change keeps drawing while this holds.
+    pub(crate) fn animating(&self) -> bool {
+        // A skipped pass is not on screen to move, however live it is.
+        let drawn = self.surroundings();
+        self.translucent.has_force_field()
+            || (drawn.terrain && self.terrain.has_water() && self.quality.water_waves)
+            || (drawn.terrain && self.terrain.grass.is_drawn())
+            || (drawn.effects && (self.beams.is_live() || self.trails.is_live()))
+            || (drawn.effects && self.particles.is_live())
+            || self.textured.has_pending()
+    }
+
+    /// The terrain half of an edit: re-meshes `keys`, rewrites every
+    /// material's tint and the water look, and re-decides whether the frame
+    /// copies the scene for refraction (water, like glass, bends it).
+    pub(crate) fn sync_terrain(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        (terrain, catalog): (
+            Option<&crate::scene::terrain::Terrain>,
+            &crate::scene::Catalog,
+        ),
+        keys: &std::collections::BTreeSet<rbx_terrain::ChunkKey>,
+    ) {
+        match terrain {
+            Some(terrain) => {
+                if !keys.is_empty() {
+                    self.terrain.remesh(device, terrain, keys);
+                    self.shadows.terrain_changed();
+                }
+                self.terrain.write_instances(queue, terrain, catalog);
+            }
+            None => self.terrain.replace(device, queue, None, catalog),
+        }
+    }
+
+    /// Moves the `ForceField` shimmer to where it is `elapsed` into the
+    /// host's clock.
+    pub(crate) fn set_elapsed(&mut self, elapsed: std::time::Duration) {
+        self.shimmer = pipeline::shimmer_phase(elapsed);
+    }
+
+    pub(crate) fn draw(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        target: &wgpu::Texture,
+        size: (u32, u32),
+        from: Viewpoint,
+    ) {
+        // A minimized window reports a zero-sized surface, which no texture can match.
+        if size.0 == 0 || size.1 == 0 {
+            return;
+        }
+
+        // Before any pass, the sun map's included: an edit since the last
+        // frame left its instance records owed to the batch buffers (see
+        // `Renderer::flush_writes`).
+        self.flush_writes(queue);
+        self.skin(device, queue);
+
+        // Bounded so a place with many `Decal`/`Texture` images spreads their
+        // GPU upload across the frames after load instead of stalling this
+        // one uploading all of them, see `textured::Textured::upload_pending`.
+        self.textured
+            .upload_pending(device, queue, &self.quality, PER_FRAME);
+        // Once here rather than once per moved part: a drag of a whole model
+        // reports every one of its parts through `sync_instance` before the
+        // frame they all belong to (see `selection::Outline::take_vertices`).
+        self.selection.flush(device);
+
+        let aspect = size.0 as f32 / size.1 as f32;
+        let eye = self.camera.eye_position(from);
+        let view_projection = self.camera.view_projection(from, aspect);
+        let viewport = glam::Vec2::new(size.0 as f32, size.1 as f32);
+        self.frame.write(
+            queue,
+            &view_projection,
+            viewport,
+            self.shimmer,
+            pipeline::intersection_depth(
+                self.quality.force_field_intersections,
+                self.camera.orthographic_range(from),
+            ),
+        );
+        // The main pass's own visibility test: tight to the camera's frustum
+        // and this level's render distance. The shadow pass below never uses
+        // this, see `Fit::visible`, so a caster it culls can still land a
+        // shadow inside the frame.
+        let held = self.gizmo.and_then(|gizmo| gizmo.held);
+        let hover = self.gizmo.and_then(|gizmo| gizmo.hover);
+        self.draggers
+            .update(queue, self.handles(from, size.1 as f32), held, hover, eye);
+        let frustum = Frustum::new(&self.camera, from, aspect);
+        let cull = MainCull::new(&frustum, eye, self.quality.render_distance);
+        let drawn = self.surroundings();
+        let (lighting, probe, lit_quality) =
+            isolation::lit(self.isolated, &self.lighting, self.env.probe, self.quality);
+        // An isolated view is lit by its key alone: none of the place's
+        // lights is counted, selected for a map or looped over.
+        let lights = if drawn.local_lights { self.lights } else { 0 };
+        let (lamp, fit) = self.sun_shadow(&lighting, from, aspect);
+        // Specular, reflections and fog all need the eye, so the lighting
+        // uniform changes every frame even though the place's `Lighting` does not.
+        queue.write_buffer(
+            &self.lighting_buffer,
+            0,
+            bytemuck::bytes_of(&LightingRaw::new(
+                &lighting,
+                eye,
+                &probe,
+                (lamp, &fit),
+                lights,
+                &lit_quality,
+                &self.calibration,
+            )),
+        );
+
+        // Recomputed every frame: nothing here moves, but the camera does, and
+        // it is the lights nearest *it* that earn a map (see
+        // `shadow::local::select`). Written whether or not any light was
+        // selected, so a level whose cap just dropped clears out last frame's.
+        let selected =
+            shadow::local::select(&self.all_lights[..lights], eye, self.shadows.local_cap());
+        // A `PointLight` has no axis to point one map down, so it takes six
+        // see `renderer::shadow::point`.
+        let points =
+            shadow::point::select(&self.all_lights[..lights], eye, self.shadows.point_cap());
+        queue.write_buffer(
+            &self.light_shadows_buffer,
+            0,
+            bytemuck::cast_slice(&shadow::local::pack(self.lights, &selected, &points)),
+        );
+
+        let rotation_only = self.camera.view_rotation_projection(from, aspect);
+        if let Some(sky) = &self.sky {
+            sky.camera.write(queue, &rotation_only, viewport, 0.0, 0.0);
+        }
+        if let Some(stars) = &self.stars {
+            stars
+                .camera
+                .write(queue, &rotation_only, viewport, 0.0, 0.0);
+        }
+        if let Some(bodies) = &self.bodies {
+            bodies
+                .camera
+                .write(queue, &rotation_only, viewport, 0.0, 0.0);
+        }
+        // The same matrix the sun disc itself is drawn with, so the god-rays
+        // in the resolve can never point anywhere the disc is not.
+        let sun_screen = sun::sun_screen_position(lighting.sun_direction, &rotation_only);
+
+        // Both re-sort and re-upload their instances; neither may run inside the
+        // render pass that reads those buffers.
+        self.translucent.prepare(queue, eye, &cull);
+        self.filemesh.prepare(queue, eye);
+        if drawn.terrain {
+            self.terrain
+                .grass
+                .prepare(device, queue, eye, |center, radius| {
+                    cull.visible(center, radius)
+                });
+        }
+        // A `SelectionSphere`'s outline faces the eye, so its vertices are
+        // the camera's to decide, and a buffer written here cannot be
+        // written inside the pass that reads it.
+        self.adornments.prepare(device, eye);
+
+        // Every frame rather than when the switch flips: a `Lighting` edit
+        // writes the place's effects into the chain while isolated too.
+        self.post.set_effects(lighting.effects);
+        let orthographic = self.camera.orthographic_range(from);
+        if self
+            .post
+            .prepare(device, queue, size, sun_screen, orthographic)
+            .is_none()
+        {
+            return;
+        }
+        // After `prepare`, which is what allocates (or resizes) the targets
+        // the copy lives beside; a bind group holding the old view has to be
+        // rebuilt before anything samples it.
+        let refracting = self.refracting || (drawn.terrain && self.terrain.has_water());
+        if self.post.want_refraction(device, refracting) {
+            self.rebind_frames(device);
+        }
+        let Some(targets) = self.post.targets() else {
+            return;
+        };
+
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("rbxview frame"),
+        });
+        // Terrain is not drawn in an isolated view, so it casts nothing
+        // onto the rig either.
+        let terrain = drawn.terrain.then_some(&self.terrain);
+        // Before the colour pass, never inside it: the same texture cannot be a
+        // depth attachment and a bound resource in one pass.
+        if lamp != Lamp::None {
+            self.shadows
+                .render(queue, &mut encoder, (&self.meshes, terrain), &fit);
+        }
+        if !selected.is_empty() {
+            self.shadows
+                .render_local(queue, &mut encoder, (&self.meshes, terrain), &selected);
+        }
+        // Redrawn only when the cubes would hold something different, six
+        // faces a light is the one shadow pass worth not repeating for a
+        // still camera over a still scene.
+        self.shadows
+            .render_points(queue, &mut encoder, (&self.meshes, terrain), &points);
+        self.scene_pass(&mut encoder, targets, &cull);
+        // Between the two halves, never inside either: the copy's source is
+        // a colour attachment of both. A no-op in a place with no glass,
+        // which has no copy to take.
+        targets.capture_refraction(&mut encoder);
+        self.translucent_pass(&mut encoder, targets, eye);
+        self.overlay_pass(&mut encoder, targets);
+        // Everything from here to the highlights is the place's ribbons,
+        // particles and in-world canvases, none of which an isolated view
+        // draws (see `Renderer::set_isolated`).
+        if drawn.effects {
+            // Before particles: sorting the two passes against each other is out
+            // of scope for v1 (see `renderer::beam`'s docs), so beams simply go
+            // first, both depth-tested against the opaque pass above.
+            // What a `LightInfluence`-1 beam is tinted by: a normal-less ribbon
+            // has no face to catch the sun, so the flat, average-orientation
+            // illumination, the ambient hemisphere plus half of each directional
+            // lamp, stands in for "the light in the scene", dimming a beam at
+            // night and leaving it near full brightness in daylight. Roblox
+            // publishes no beam-lighting formula, so this is a documented
+            // approximation rather than a match.
+            let l = self.lighting;
+            let env_light =
+                l.ambient + 0.5 * (l.sun_color + l.fill_color) * self.calibration.lamp_scale();
+            self.beams.draw(
+                queue,
+                device,
+                &mut encoder,
+                targets,
+                eye,
+                view_projection,
+                env_light,
+            );
+            // Right after beams, same reasoning: sorting the two ribbon passes
+            // against each other is out of scope for v1, see `renderer::trail`'s
+            // docs.
+            self.trails
+                .draw(queue, device, &mut encoder, targets, eye, view_projection);
+            // After opaque geometry, depth-tested against it and re-sorted every
+            // frame, see `renderer::particles`.
+            self.particles
+                .draw(queue, device, &mut encoder, targets, eye, view_projection);
+
+            // Last of the scene passes, so a canvas blends over the ribbons and
+            // particles as well as over opaque geometry, unlike a `ScreenGui`, a
+            // `BillboardGui`/`SurfaceGui` *is* scene content and is tone mapped
+            // with the rest of it.
+            self.gui.draw_space(
+                device,
+                queue,
+                &mut encoder,
+                targets,
+                eye,
+                view_projection,
+                size.1,
+            );
+        }
+
+        // After every pass that draws scene content, so the silhouette is
+        // never cut into by a ribbon or a canvas drawn later, and before the
+        // resolve so it tone maps with the frame, see `renderer::highlight`.
+        self.highlights.draw(
+            device,
+            &mut encoder,
+            targets,
+            &self.frame.bind_group,
+            &self.meshes,
+            size,
+        );
+        // After the place's own highlights: the editor's cue for what is
+        // selected has to read on top of whatever the file asks for.
+        self.cues.draw(
+            device,
+            &mut encoder,
+            targets,
+            &self.frame.bind_group,
+            &self.meshes,
+            size,
+        );
+
+        // The scene is HDR and unclamped until here: the bloom, the grade and
+        // the tone map all live in the resolve.
+        let view = target.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(self.post.format),
+            ..Default::default()
+        });
+        self.post.resolve(&mut encoder, &view);
+        // Onto the finished frame, so a one-pixel guide keeps its colour
+        // (see `renderer::lines`), and under the `ScreenGui` like the rest
+        // of the 3D view.
+        self.lines.draw(
+            device,
+            &mut encoder,
+            target,
+            targets,
+            &self.frame.bind_group,
+            self.draggers.triangles(),
+        );
+        // After the resolve, not before it: a `ScreenGui` is an overlay, so
+        // bloom, depth of field and the tone map must leave it alone. It takes
+        // the texture rather than a view because it composites through a
+        // non-sRGB one of its own (see `renderer::gui::pipeline::encoded`).
+        // Not over an isolated view, which shows the rig and nothing else.
+        if drawn.screen_gui && self.screen_gui_shown {
+            self.gui.draw(
+                device,
+                queue,
+                &mut encoder,
+                target,
+                size,
+                &self.materials.bind_group,
+            );
+        }
+
+        queue.submit(std::iter::once(encoder.finish()));
+    }
+
+    /// Which lamp casts this frame, and where its map looks.
+    ///
+    /// Roblox keeps the sun's direction pointing at the sun all night long and
+    /// puts the moon opposite it (see [`crate::lighting`]), so the lamp that is
+    /// actually above the horizon is the sun by day and the fill term after
+    /// dusk, and it is that one, not always the sun, whose shadows are drawn.
+    ///
+    /// `lighting` is the frame's own, the place's, or an isolated view's
+    /// neutral key (see `isolation::lit`).
+    /// The extent the sun's shadow map is fitted to: the stage while
+    /// isolated (see [`Renderer::set_stage`]), the whole scene otherwise.
+    fn shadow_bounds(&self) -> &Bounds {
+        match (&self.stage, self.isolated) {
+            (Some(stage), true) => stage,
+            _ => &self.bounds,
+        }
+    }
+
+    fn sun_shadow(&self, lighting: &Lighting, from: Viewpoint, aspect: f32) -> (Lamp, Fit) {
+        if !lighting.global_shadows || !self.quality.shadows {
+            return (Lamp::None, Fit::unfitted());
+        }
+
+        let (light, lamp) = if lighting.sun_direction.y >= 0.0 {
+            (lighting.sun_direction, Lamp::Sun)
+        } else {
+            (-lighting.sun_direction, Lamp::Fill)
+        };
+        let frustum = self
+            .camera
+            .frustum_corners(from, aspect, self.quality.shadow_distance);
+
+        (
+            lamp,
+            shadow::fit(
+                light,
+                &frustum,
+                self.shadow_bounds(),
+                self.quality.shadow_map_size,
+            ),
+        )
+    }
+}

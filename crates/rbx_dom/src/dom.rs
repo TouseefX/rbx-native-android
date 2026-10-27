@@ -1,0 +1,443 @@
+//! Weak reference-based instance tree.
+
+mod mirror;
+
+use std::collections::HashMap;
+
+use crate::change::Change;
+use crate::error::DomError;
+use crate::instance::Instance;
+use crate::reference::Ref;
+use crate::variant::Variant;
+
+pub use mirror::Snapshot;
+
+/// A tree of instances using weak references (u32 IDs).
+///
+/// Instances can be at the root level or parented to another instance. The DOM
+/// maintains both forward (children) and reverse (parent) edges.
+#[derive(Debug, Clone, Default)]
+pub struct WeakDom {
+    instances: HashMap<Ref, Instance>,
+    root_refs: Vec<Ref>,
+    // Reverse lookup of the tree edges: Instance itself only stores children,
+    // so this is what lets set_parent detach a child from its current parent
+    // (or from root_refs) before reattaching it.
+    parents: HashMap<Ref, Ref>,
+    // High-water mark for `new_instance`'s allocator. Bumped by `insert` too, so a
+    // Ref freshly allocated here never collides with one loaded from a file: every
+    // referent that ever entered the DOM, however it got in, raises this floor.
+    next_ref: u32,
+    changes: Vec<Change>,
+    // Counts every logged change, drained or not: a reader polling for "did
+    // anything change since I last looked" compares one number instead of
+    // racing the other consumers of `changes` for the log itself.
+    mutations: u64,
+}
+
+impl WeakDom {
+    pub fn new() -> Self {
+        WeakDom::default()
+    }
+
+    pub fn insert(&mut self, instance: Instance) {
+        let referent = instance.referent();
+        self.next_ref = self.next_ref.max(referent.value().saturating_add(1));
+        self.instances.insert(referent, instance);
+        self.root_refs.push(referent);
+        self.log(Change::Added(referent));
+    }
+
+    /// Allocates a brand new instance, unique against every referent this DOM has
+    /// ever held (including ones loaded from a file), and inserts it. If `parent`
+    /// is `Some`, the instance is parented there instead of staying at the root.
+    pub fn new_instance(&mut self, class: &str, name: &str, parent: Option<Ref>) -> Ref {
+        let referent = Ref::new(self.next_ref);
+        self.next_ref = self.next_ref.saturating_add(1);
+        self.insert(Instance::new(referent, class, name));
+        if let Some(parent_ref) = parent {
+            self.set_parent(referent, Some(parent_ref));
+        }
+        referent
+    }
+
+    /// Overwrites a single property, returning whatever value it held before (if any).
+    ///
+    /// `value` is stored as-is: this crate has no `ReflectionDatabase`, so it cannot
+    /// check that `value`'s variant matches what `name` is supposed to hold on this
+    /// class. Callers that have reflection data should validate before calling this.
+    pub fn set_property(
+        &mut self,
+        referent: Ref,
+        name: &str,
+        value: Variant,
+    ) -> Result<Option<Variant>, DomError> {
+        let instance = self
+            .instances
+            .get_mut(&referent)
+            .ok_or(DomError::UnknownInstance(referent))?;
+        let old = instance.properties_mut().insert(name.to_string(), value);
+        // Writing back what was already there changes nothing, so it must not
+        // read as an edit: editors push an undo step (clearing redo) for every
+        // logged change.
+        if old.as_ref() != instance.properties().get(name) {
+            self.log(Change::Property {
+                referent,
+                name: name.to_string(),
+            });
+        }
+        Ok(old)
+    }
+
+    /// Deletes a single property, returning the value it held (if any). An absent
+    /// key is how this DOM stores a null `Ref`, `Variant` has no null reference,
+    /// and both file formats read their null referent back as a missing property,
+    /// so this is what clearing one means. Logged as a `Change::Property` like a
+    /// write, since every consumer reads the value back from the DOM anyway.
+    pub fn remove_property(
+        &mut self,
+        referent: Ref,
+        name: &str,
+    ) -> Result<Option<Variant>, DomError> {
+        let instance = self
+            .instances
+            .get_mut(&referent)
+            .ok_or(DomError::UnknownInstance(referent))?;
+        let old = instance.properties_mut().remove(name);
+        if old.is_some() {
+            self.log(Change::Property {
+                referent,
+                name: name.to_string(),
+            });
+        }
+        Ok(old)
+    }
+
+    /// Renames an instance, returning its previous name. Tracked the same way
+    /// `set_property` is: see `Change::Property`'s doc comment for why a rename is
+    /// reported under that variant instead of a dedicated one.
+    pub fn set_name(&mut self, referent: Ref, name: &str) -> Result<String, DomError> {
+        let instance = self
+            .instances
+            .get_mut(&referent)
+            .ok_or(DomError::UnknownInstance(referent))?;
+        let old = instance.name().to_string();
+        instance.set_name(name);
+        self.log(Change::Property {
+            referent,
+            name: "Name".to_string(),
+        });
+        Ok(old)
+    }
+
+    /// Changes an instance's class in place, returning the class it had. The
+    /// referent stays, so everything that names the instance by it, a
+    /// `Weld.Part0`, a `Model.PrimaryPart`, a selection, still does; making a
+    /// new instance of the new class would leave each of those pointing at
+    /// nothing. Properties are left exactly as they were: which of them the new
+    /// class can still hold is a reflection question this crate cannot answer.
+    pub fn set_class(&mut self, referent: Ref, class: &str) -> Result<String, DomError> {
+        let instance = self
+            .instances
+            .get_mut(&referent)
+            .ok_or(DomError::UnknownInstance(referent))?;
+        let old = instance.class().to_string();
+        instance.set_class(class);
+        self.log(Change::Class(referent));
+        Ok(old)
+    }
+
+    /// Removes an instance and its whole subtree, detaching it from its parent (or
+    /// from the root list) first. Returns every removed referent, root included; the
+    /// order within that list is unspecified beyond that guarantee.
+    pub fn remove(&mut self, referent: Ref) -> Vec<Ref> {
+        if !self.instances.contains_key(&referent) {
+            return Vec::new();
+        }
+        self.detach(referent);
+
+        let mut removed = Vec::new();
+        let mut stack = vec![referent];
+        while let Some(current) = stack.pop() {
+            if let Some(instance) = self.instances.remove(&current) {
+                stack.extend_from_slice(instance.children());
+                self.parents.remove(&current);
+                removed.push(current);
+                self.log(Change::Removed(current));
+            }
+        }
+        removed
+    }
+
+    /// Moves the subtrees under `roots` into `into`, each becoming a root
+    /// there, with every referent unchanged; nothing is logged on either
+    /// side. A root whose subtree has any referent `into` already holds (or
+    /// that is not in `self`) is left where it is and returned. Raises
+    /// `into`'s allocator above every referent moved, so neither DOM can
+    /// hand one of them out again.
+    pub fn move_subtrees(&mut self, roots: &[Ref], into: &mut WeakDom) -> Vec<Ref> {
+        let mut left = Vec::new();
+        for &root in roots {
+            let mut subtree = Vec::new();
+            let mut stack = vec![root];
+            while let Some(current) = stack.pop() {
+                if let Some(instance) = self.instances.get(&current) {
+                    stack.extend_from_slice(instance.children());
+                    subtree.push(current);
+                }
+            }
+            if subtree.is_empty() || subtree.iter().any(|r| into.instances.contains_key(r)) {
+                left.push(root);
+                continue;
+            }
+            self.detach(root);
+            for referent in subtree {
+                if let Some(instance) = self.instances.remove(&referent) {
+                    into.next_ref = into.next_ref.max(referent.value().saturating_add(1));
+                    into.instances.insert(referent, instance);
+                }
+                if let Some(parent) = self.parents.remove(&referent) {
+                    into.parents.insert(referent, parent);
+                }
+            }
+            into.root_refs.push(root);
+        }
+        left
+    }
+
+    /// The referent [`WeakDom::new_instance`] would allocate next.
+    pub fn next_ref(&self) -> u32 {
+        self.next_ref
+    }
+
+    /// Makes sure no referent below `floor` is ever allocated again, for
+    /// an editor that swaps in an older copy of its DOM (undo) while
+    /// instances allocated after that copy live on elsewhere.
+    pub fn raise_next_ref(&mut self, floor: u32) {
+        self.next_ref = self.next_ref.max(floor);
+    }
+
+    fn log(&mut self, change: Change) {
+        self.mutations += 1;
+        self.changes.push(change);
+    }
+
+    /// How many changes this DOM has logged in its life (a clone carries the
+    /// count along). Grows on every logged mutation; edits made through
+    /// [`WeakDom::get_mut`] do not count, as they do not log.
+    pub fn mutations(&self) -> u64 {
+        self.mutations
+    }
+
+    /// The changes recorded since the log was last drained, without draining
+    /// it: for a reader that must react to edits while another consumer (the
+    /// editor's undo history) still owns the log.
+    pub fn changes(&self) -> &[Change] {
+        &self.changes
+    }
+
+    /// Drains and returns every change recorded since the last call, in the order
+    /// the mutations happened.
+    pub fn take_changes(&mut self) -> Vec<Change> {
+        std::mem::take(&mut self.changes)
+    }
+
+    pub fn get(&self, referent: Ref) -> Option<&Instance> {
+        self.instances.get(&referent)
+    }
+
+    // Raw escape hatch: edits made through the returned `&mut Instance` (e.g. via
+    // `properties_mut`/`set_name`) bypass the change log, since `Instance` has no
+    // link back to it. Prefer `set_property`/`set_name` for tracked live edits.
+    pub fn get_mut(&mut self, referent: Ref) -> Option<&mut Instance> {
+        self.instances.get_mut(&referent)
+    }
+
+    pub fn root_refs(&self) -> &[Ref] {
+        &self.root_refs
+    }
+
+    /// The instance `referent` currently hangs under, or `None` when it is a
+    /// root (or absent entirely).
+    ///
+    /// Reads the reverse edge `set_parent` already maintains, so walking up a
+    /// chain costs its depth rather than a search of the whole tree, which is
+    /// what makes an "is this instance an ancestor of that one" check cheap
+    /// enough for a caller to run per frame (the Explorer's drag-and-drop
+    /// refuses a drop into the dragged instance's own subtree that way).
+    pub fn parent(&self, referent: Ref) -> Option<Ref> {
+        self.parents.get(&referent).copied()
+    }
+
+    /// Moves `child` to a new parent, detaching it from its current parent if any.
+    ///
+    /// If `parent` is `None`, the child becomes a root instance.
+    pub fn set_parent(&mut self, child: Ref, parent: Option<Ref>) {
+        let old = self.parents.get(&child).copied();
+        self.detach(child);
+
+        match parent {
+            Some(parent_ref) => {
+                self.parents.insert(child, parent_ref);
+                if let Some(parent_instance) = self.instances.get_mut(&parent_ref) {
+                    parent_instance.children_mut().push(child);
+                }
+            }
+            None => self.root_refs.push(child),
+        }
+
+        self.log(Change::Parent {
+            referent: child,
+            old,
+            new: parent,
+        });
+    }
+
+    /// Moves `child` to sit right after `anchor` among their shared parent's
+    /// children (or among the roots). A no-op unless the two are distinct
+    /// siblings. Logs nothing of its own: it is meant for a child whose
+    /// `Added` or `Parent` change is already in the log, which is what makes
+    /// [`WeakDom::snapshot`] copy the parent, and so this order, anyway.
+    pub fn place_after(&mut self, child: Ref, anchor: Ref) {
+        let parent = self.parents.get(&anchor).copied();
+        if child == anchor
+            || !self.instances.contains_key(&child)
+            || !self.instances.contains_key(&anchor)
+            || self.parents.get(&child).copied() != parent
+        {
+            return;
+        }
+        let siblings = match parent {
+            Some(parent) => match self.instances.get_mut(&parent) {
+                Some(instance) => instance.children_mut(),
+                None => return,
+            },
+            None => &mut self.root_refs,
+        };
+        siblings.retain(|&sibling| sibling != child);
+        let at = siblings
+            .iter()
+            .position(|&sibling| sibling == anchor)
+            .map_or(siblings.len(), |index| index + 1);
+        siblings.insert(at, child);
+    }
+
+    fn detach(&mut self, child: Ref) {
+        match self.parents.remove(&child) {
+            Some(old_parent) => {
+                if let Some(parent_instance) = self.instances.get_mut(&old_parent) {
+                    parent_instance.children_mut().retain(|&r| r != child);
+                }
+            }
+            None => self.root_refs.retain(|&r| r != child),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insert_starts_as_root() {
+        let mut dom = WeakDom::new();
+        let r = Ref::new(1);
+        dom.insert(Instance::new(r, "Part", "Part"));
+
+        assert_eq!(dom.root_refs(), &[r]);
+        assert!(dom.get(r).is_some());
+    }
+
+    #[test]
+    fn set_parent_moves_child_out_of_roots() {
+        let mut dom = WeakDom::new();
+        let parent = Ref::new(1);
+        let child = Ref::new(2);
+        dom.insert(Instance::new(parent, "Folder", "Folder"));
+        dom.insert(Instance::new(child, "Part", "Part"));
+
+        dom.set_parent(child, Some(parent));
+
+        assert_eq!(dom.root_refs(), &[parent]);
+        assert_eq!(dom.get(parent).unwrap().children(), &[child]);
+    }
+
+    #[test]
+    fn set_parent_none_moves_child_back_to_roots() {
+        let mut dom = WeakDom::new();
+        let parent = Ref::new(1);
+        let child = Ref::new(2);
+        dom.insert(Instance::new(parent, "Folder", "Folder"));
+        dom.insert(Instance::new(child, "Part", "Part"));
+        dom.set_parent(child, Some(parent));
+
+        dom.set_parent(child, None);
+
+        assert!(dom.get(parent).unwrap().children().is_empty());
+        assert!(dom.root_refs().contains(&child));
+    }
+
+    #[test]
+    fn reparenting_removes_from_previous_parent() {
+        let mut dom = WeakDom::new();
+        let a = Ref::new(1);
+        let b = Ref::new(2);
+        let child = Ref::new(3);
+        dom.insert(Instance::new(a, "Folder", "A"));
+        dom.insert(Instance::new(b, "Folder", "B"));
+        dom.insert(Instance::new(child, "Part", "Part"));
+
+        dom.set_parent(child, Some(a));
+        dom.set_parent(child, Some(b));
+
+        assert!(dom.get(a).unwrap().children().is_empty());
+        assert_eq!(dom.get(b).unwrap().children(), &[child]);
+    }
+
+    #[test]
+    fn parent_follows_the_reverse_edge_and_is_none_at_the_root() {
+        let mut dom = WeakDom::new();
+        let folder = Ref::new(1);
+        let child = Ref::new(2);
+        dom.insert(Instance::new(folder, "Folder", "Folder"));
+        dom.insert(Instance::new(child, "Part", "Part"));
+
+        assert_eq!(dom.parent(folder), None);
+        assert_eq!(dom.parent(child), None);
+
+        dom.set_parent(child, Some(folder));
+        assert_eq!(dom.parent(child), Some(folder));
+
+        dom.set_parent(child, None);
+        assert_eq!(dom.parent(child), None);
+    }
+
+    #[test]
+    fn remove_property_drops_the_key_and_logs_only_a_real_removal() {
+        let mut dom = WeakDom::new();
+        let weld = dom.new_instance("Weld", "Weld", None);
+        dom.set_property(weld, "Part0", Variant::Ref(weld)).unwrap();
+        dom.take_changes();
+
+        let old = dom.remove_property(weld, "Part0").unwrap();
+        assert_eq!(old, Some(Variant::Ref(weld)));
+        assert!(!dom.get(weld).unwrap().properties().contains_key("Part0"));
+        assert_eq!(
+            dom.take_changes(),
+            vec![Change::Property {
+                referent: weld,
+                name: "Part0".to_string()
+            }]
+        );
+
+        assert_eq!(dom.remove_property(weld, "Part0").unwrap(), None);
+        assert!(dom.take_changes().is_empty());
+        assert!(dom.remove_property(Ref::new(99), "Part0").is_err());
+    }
+
+    #[test]
+    fn parent_of_an_unknown_referent_is_none() {
+        let dom = WeakDom::new();
+        assert_eq!(dom.parent(Ref::new(7)), None);
+    }
+}

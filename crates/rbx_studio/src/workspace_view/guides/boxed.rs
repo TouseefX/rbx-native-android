@@ -1,0 +1,61 @@
+//! Studio's floating measurement box (`FloatingValueInput`), as the read-only
+//! label a handle drag shows and the editable box a Move drag leaves
+//! behind (see `workspace_view::measure`) both draw it.
+
+use gpui_kit::*;
+
+/// The measurement text's size: Studio's `SourceSansBold` 24, at the
+/// viewport's own text size (`tokens::viewport_text`).
+pub(in crate::workspace_view) fn label_text() -> Pixels {
+    crate::tokens::viewport_text(24.0)
+}
+
+/// Studio's floating measurement box, legacy dark theme: a white bold number
+/// on RGB(37, 37, 37) with a `border` and small rounded corners
+/// (`FloatingValueInput`), padded 4/4/2/4. The colours come from the viewport
+/// readout tokens, so a theme can restyle them.
+pub(in crate::workspace_view) fn measurement_box(border: Rgba) -> Div {
+    div()
+        .pl(px(4.0))
+        .pr(px(4.0))
+        .pt(px(2.0))
+        .pb(px(4.0))
+        .bg(crate::tokens::viewport_readout())
+        .border_1()
+        .border_color(border)
+        .rounded(px(3.0))
+        .text_color(crate::tokens::viewport_readout_text())
+        .text_size(label_text())
+        .line_height(label_text())
+        .font_weight(FontWeight::BOLD)
+}
+
+/// `element` centred on `at`: a slot wider and taller than any box, centred
+/// on the anchor, with the box centred inside it, GPUI places a child by
+/// its corner, not its middle.
+pub(in crate::workspace_view) fn centred_on(
+    at: Point<Pixels>,
+    element: impl IntoElement,
+) -> impl IntoElement {
+    const SLOT: f32 = 200.0;
+    div()
+        .absolute()
+        .left(at.x - px(SLOT / 2.0))
+        .top(at.y - px(SLOT / 2.0))
+        .size(px(SLOT))
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(element)
+}
+
+/// The distance label a drag shows, read-only.
+pub(in crate::workspace_view) fn label_element(
+    at: Point<Pixels>,
+    text: SharedString,
+) -> impl IntoElement {
+    centred_on(
+        at,
+        measurement_box(crate::tokens::viewport_readout_border()).child(text),
+    )
+}

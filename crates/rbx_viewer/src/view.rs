@@ -1,0 +1,280 @@
+//! The renderer state that does not come from the place, and so is not
+//! rebuilt from it.
+//!
+//! [`crate::Headless::reload`], a Command Bar script's edit, a `Parent` move
+//! that crossed the `Workspace` boundary, any fast path that reported it could
+//! not take the shortcut, re-derives the whole scene from the new DOM, which
+//! is the only thing guaranteed to draw the right picture. Everything the
+//! *editor* asked for rather than the file is outside that derivation: the
+//! projection mode, the outlined selection, the transform gizmo. Each one
+//! silently missing afterwards is a visual regression with nothing on screen
+//! to explain it, an outline that vanished, draggers that stopped being
+//! drawn, a parallel projection that went back to perspective, and the
+//! user's only recourse is to toggle the setting off and on again. (This
+//! happened, back when a reload built a whole new renderer and lost the
+//! three with the old one.)
+//!
+//! Collecting them into one value that `Offscreen::new` and
+//! `Offscreen::reload` both *require* is the point: there is no way to build
+//! or rebuild a renderer without saying what view it is for, so a rebuild
+//! cannot quietly drop one of these, whatever it does or does not happen to
+//! keep of the renderer's own copy.
+
+use glam::Mat4;
+
+use crate::gizmo::Gizmo;
+use crate::perf::HeatBin;
+use crate::pick::Selected;
+use crate::renderer::{Fill, OverlayColors, Segment};
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub(crate) struct View {
+    pub(crate) orthographic: bool,
+    /// Outlined in the viewport, every instance in the selection, not just
+    /// one: `rbxstudio`'s `Shift`/`Ctrl`/`Cmd`-click adds another top-level
+    /// object rather than replacing it. Each entry already carries the parts
+    /// it covers (see [`Selected`]), which is what survives a rebuild: the
+    /// renderer has no DOM to resolve a bare referent against.
+    pub(crate) selected: Vec<Selected>,
+    /// The "about to click" cue's outline, see `renderer::hover::Hover`.
+    /// One entry per hovered instance (a model as its aggregate box, a part
+    /// as its own), what a click would select. Empty while `rbxview` runs,
+    /// which never asks for a hover outline in the first place.
+    pub(crate) hovered: Vec<Selected>,
+    /// `None` whenever no transform tool is active, which is every `rbxview`
+    /// frame: the standalone viewer edits nothing.
+    pub(crate) gizmo: Option<Gizmo>,
+    /// The ghost boxes a tool is previewing, where the Align tool would
+    /// put the selection, say. Empty unless an editor asked for one, and
+    /// carried here for the same reason the selection is: a reload must
+    /// not quietly drop it while the tool is still open.
+    pub(crate) preview: Vec<Mat4>,
+    /// The editor's own line segments, layer by layer (see
+    /// `Headless::set_lines`). Carried for the preview's reason: a reload
+    /// must not drop them while whatever they are drawn for is still
+    /// selected.
+    pub(crate) lines: Vec<Vec<Segment>>,
+    /// The editor's filled quads, layer by layer (see `Headless::set_fills`),
+    /// carried for the lines' reason.
+    pub(crate) fills: Vec<Vec<Fill>>,
+    /// Whether a part standing in front of the selection hides its outline.
+    /// `false`: the box shows through everything, which is what Studio
+    /// draws, unless the embedder asks otherwise; `rbxview` never does.
+    pub(crate) selection_occluded: bool,
+    /// The roots an isolated view draws (see `Headless::set_isolation`), or
+    /// `None` for the whole place. Carried here because the renderer's half
+    /// of it, the backdrop, the neutral light, is a switch a rebuild must
+    /// put back like every other one; the scene's half is re-applied from
+    /// the same roots by whoever builds the scene.
+    pub(crate) isolation: Option<Vec<rbx_dom::Ref>>,
+    /// The editor's layer filter (see `Headless::set_layer_filter`): when
+    /// set, only these and what hangs under them draw.
+    pub(crate) layer_only: Option<Vec<rbx_dom::Ref>>,
+    /// Instances the layer filter hides, with everything beneath them.
+    pub(crate) layer_hidden: Vec<rbx_dom::Ref>,
+    /// The colours the selection, hover and preview cues are drawn in,
+    /// baked into their pipelines, so a rebuilt renderer must be told them
+    /// again.
+    pub(crate) overlay: OverlayColors,
+    /// The Performance view's heat bins (see `Headless::set_heat`), empty
+    /// while it is off.
+    pub(crate) heat: Vec<HeatBin>,
+}
+
+impl View {
+    /// Replaces the outlined selection, never adds to it, the way selecting
+    /// another row in the Explorer replaces rather than extends.
+    pub(crate) fn select(&mut self, selected: &[Selected]) {
+        self.selected.clear();
+        self.selected.extend_from_slice(selected);
+    }
+
+    /// Replaces the hovered outline, the instances a hover covers, empty to
+    /// clear it.
+    pub(crate) fn set_hover(&mut self, selected: Vec<Selected>) {
+        self.hovered = selected;
+    }
+
+    /// Replaces the previewed boxes, empty to clear them.
+    pub(crate) fn set_preview(&mut self, boxes: Vec<Mat4>) {
+        self.preview = boxes;
+    }
+
+    /// Replaces one layer's line segments, empty to clear it.
+    pub(crate) fn set_lines(&mut self, layer: usize, segments: Vec<Segment>) {
+        if self.lines.len() <= layer {
+            self.lines.resize(layer + 1, Vec::new());
+        }
+        self.lines[layer] = segments;
+    }
+
+    /// Replaces one layer's filled quads, empty to clear it.
+    pub(crate) fn set_fills(&mut self, layer: usize, fills: Vec<Fill>) {
+        if self.fills.len() <= layer {
+            self.fills.resize(layer + 1, Vec::new());
+        }
+        self.fills[layer] = fills;
+    }
+
+    pub(crate) fn set_gizmo(&mut self, gizmo: Option<Gizmo>) {
+        self.gizmo = gizmo;
+    }
+
+    pub(crate) fn set_orthographic(&mut self, orthographic: bool) {
+        self.orthographic = orthographic;
+    }
+
+    pub(crate) fn set_selection_occluded(&mut self, occluded: bool) {
+        self.selection_occluded = occluded;
+    }
+
+    pub(crate) fn set_overlay(&mut self, colors: OverlayColors) {
+        self.overlay = colors;
+    }
+
+    pub(crate) fn set_isolation(&mut self, roots: Option<Vec<rbx_dom::Ref>>) {
+        self.isolation = roots;
+    }
+
+    pub(crate) fn set_layer_filter(
+        &mut self,
+        only: Option<Vec<rbx_dom::Ref>>,
+        hidden: Vec<rbx_dom::Ref>,
+    ) {
+        self.layer_only = only;
+        self.layer_hidden = hidden;
+    }
+
+    /// Only the Animation Editor's isolation: it alone puts the rig on the
+    /// stage backdrop and the neutral light.
+    pub(crate) fn isolated(&self) -> bool {
+        self.isolation.is_some()
+    }
+
+    /// The roots the scene is limited to: the animation rig when isolated,
+    /// otherwise the layer filter's.
+    pub(crate) fn scene_roots(&self) -> Option<&[rbx_dom::Ref]> {
+        self.isolation.as_deref().or(self.layer_only.as_deref())
+    }
+
+    /// Whether the scene needs an isolation of any kind.
+    pub(crate) fn filters_scene(&self) -> bool {
+        self.scene_roots().is_some() || !self.layer_hidden.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::gizmo::Kind;
+    use rbx_dom::Ref;
+
+    fn part(referent: u32) -> Selected {
+        Selected::part(Ref::new(referent))
+    }
+
+    #[test]
+    fn a_fresh_view_outlines_nothing_and_draws_no_draggers() {
+        // What `rbxview` renders every frame with, and what the editor starts
+        // from before anything is selected.
+        let view = View::default();
+
+        assert!(view.selected.is_empty());
+        assert!(view.hovered.is_empty());
+        assert_eq!(view.gizmo, None);
+        assert!(!view.orthographic);
+        assert!(
+            !view.selection_occluded,
+            "the selection box draws through geometry unless asked otherwise"
+        );
+    }
+
+    /// The occlusion choice lives in `View` rather than only in the renderer
+    /// for the reason this module exists: a reload rebuilds the renderer, and
+    /// a preference that only the renderer knew about would silently go back
+    /// to its default there with nothing on screen to explain it.
+    #[test]
+    fn the_selection_occlusion_choice_survives_in_the_view() {
+        let mut view = View::default();
+        view.set_selection_occluded(true);
+        assert!(view.selection_occluded);
+        view.set_selection_occluded(false);
+        assert!(!view.selection_occluded);
+    }
+
+    #[test]
+    fn selecting_replaces_rather_than_accumulates() {
+        let mut view = View::default();
+        view.select(&[part(1), part(2)]);
+        view.select(&[part(3)]);
+
+        assert_eq!(view.selected, [part(3)]);
+    }
+
+    #[test]
+    fn selecting_nothing_clears_the_outline() {
+        let mut view = View::default();
+        view.select(&[part(1)]);
+        view.select(&[]);
+
+        assert!(view.selected.is_empty());
+    }
+
+    #[test]
+    fn hovering_replaces_rather_than_accumulates() {
+        let mut view = View::default();
+        view.set_hover(vec![Selected::part(Ref::new(1))]);
+        view.set_hover(vec![Selected::part(Ref::new(2))]);
+
+        assert_eq!(view.hovered, vec![Selected::part(Ref::new(2))]);
+    }
+
+    #[test]
+    fn hovering_nothing_clears_the_outline() {
+        let mut view = View::default();
+        view.set_hover(vec![Selected::part(Ref::new(1))]);
+        view.set_hover(Vec::new());
+
+        assert!(view.hovered.is_empty());
+    }
+
+    /// The regression this type exists for: everything the editor asked for
+    /// between one rebuild and the next has to still be here when the next one
+    /// happens, because this value is the whole of what `Offscreen::reload`
+    /// puts back. Before it existed, a Command Bar script's reload left the
+    /// gizmo (and the outline, and the projection mode) switched off until
+    /// the user toggled each one by hand.
+    #[test]
+    fn a_rebuild_is_handed_everything_the_editor_last_asked_for() {
+        let mut view = View::default();
+        view.set_orthographic(true);
+        view.select(&[part(9)]);
+        view.set_hover(vec![Selected::part(Ref::new(7))]);
+        view.set_gizmo(Some(Gizmo {
+            kind: Kind::Rotate,
+            local: true,
+            ..Gizmo::default()
+        }));
+
+        // A tool switched away and back, and the local toggle flipped: what a
+        // rebuild gets is the latest of each, not the first.
+        view.set_gizmo(None);
+        view.set_gizmo(Some(Gizmo {
+            kind: Kind::Move,
+            local: false,
+            ..Gizmo::default()
+        }));
+
+        assert!(view.orthographic);
+        assert_eq!(view.selected, [part(9)]);
+        assert_eq!(view.hovered, vec![Selected::part(Ref::new(7))]);
+        assert_eq!(
+            view.gizmo,
+            Some(Gizmo {
+                kind: Kind::Move,
+                local: false,
+                ..Gizmo::default()
+            })
+        );
+    }
+}

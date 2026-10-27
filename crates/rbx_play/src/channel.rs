@@ -1,0 +1,337 @@
+//! Loopback HTTP/1.1 server the probe reaches through the tunnel. Plain
+//! `std::net`, one thread per connection, `Connection: close` on every reply.
+//! Routes and status codes are documented in `crate::protocol`.
+
+use std::collections::HashMap;
+use std::io::{BufReader, Read};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc, Condvar, Mutex, MutexGuard};
+use std::time::{Duration, Instant};
+
+use crate::protocol::{Command, CommandBody, Token, Uplink};
+
+mod http;
+
+use http::{read_head, reply, Head};
+
+/// How long `/v1/poll` holds a request open before answering `204`.
+pub const DEFAULT_HOLD: Duration = Duration::from_secs(25);
+/// Largest request body accepted; bigger ones get `413`.
+pub const MAX_BODY: usize = 1 << 20;
+
+const IO_TIMEOUT: Duration = Duration::from_secs(10);
+
+#[derive(Default)]
+struct Queue {
+    last_id: u64,
+    /// Bumped on every token rotation so held polls know their session ended.
+    epoch: u64,
+    commands: Vec<Command>,
+}
+
+struct Shared {
+    token: Mutex<Token>,
+    hold: Duration,
+    queue: Mutex<Queue>,
+    wake: Condvar,
+    shutdown: AtomicBool,
+    events: mpsc::Sender<Uplink>,
+    /// Commands a [`Requester`] is waiting on, by id: their ack goes to the
+    /// waiter instead of `events`.
+    waiters: Mutex<HashMap<u64, mpsc::Sender<(bool, String)>>>,
+}
+
+impl Shared {
+    fn lock(&self) -> MutexGuard<'_, Queue> {
+        self.queue.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn waiters(&self) -> MutexGuard<'_, HashMap<u64, mpsc::Sender<(bool, String)>>> {
+        self.waiters.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn queue_command(&self, body: CommandBody) -> u64 {
+        let mut q = self.lock();
+        q.last_id += 1;
+        let id = q.last_id;
+        q.commands.push(Command { id, body });
+        drop(q);
+        self.wake.notify_all();
+        id
+    }
+}
+
+pub struct ChannelServer {
+    shared: Arc<Shared>,
+    addr: SocketAddr,
+    events: mpsc::Receiver<Uplink>,
+}
+
+impl ChannelServer {
+    /// Binds `127.0.0.1:0` and starts accepting on a background thread.
+    pub fn start(token: Token, hold: Duration) -> std::io::Result<Self> {
+        let listener = TcpListener::bind(("127.0.0.1", 0))?;
+        let addr = listener.local_addr()?;
+        let (tx, rx) = mpsc::channel();
+        let shared = Arc::new(Shared {
+            token: Mutex::new(token),
+            hold,
+            queue: Mutex::new(Queue::default()),
+            wake: Condvar::new(),
+            shutdown: AtomicBool::new(false),
+            events: tx,
+            waiters: Mutex::new(HashMap::new()),
+        });
+        let accept_shared = Arc::clone(&shared);
+        std::thread::Builder::new()
+            .name("channel-accept".into())
+            .spawn(move || {
+                for stream in listener.incoming() {
+                    if accept_shared.shutdown.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    let Ok(stream) = stream else { continue };
+                    let conn_shared = Arc::clone(&accept_shared);
+                    let _ = std::thread::Builder::new()
+                        .name("channel-conn".into())
+                        .spawn(move || {
+                            let _ = handle(&conn_shared, stream);
+                        });
+                }
+            })?;
+        Ok(ChannelServer {
+            shared,
+            addr,
+            events: rx,
+        })
+    }
+
+    /// The bound loopback port.
+    pub fn port(&self) -> u16 {
+        self.addr.port()
+    }
+
+    /// Starts a new Play session on the same port (so the tunnel stays up):
+    /// requests must now carry `token`, queued commands are dropped, and
+    /// held polls answer `204`. Command ids keep increasing across sessions.
+    pub fn rotate_token(&self, token: Token) {
+        *self.shared.token.lock().unwrap_or_else(|e| e.into_inner()) = token;
+        let mut q = self.shared.lock();
+        q.commands.clear();
+        q.epoch += 1;
+        drop(q);
+        self.shared.wake.notify_all();
+        self.end_requests();
+    }
+
+    /// Queues a command for the probe; returns its id (1, 2, 3, …).
+    /// Wakes any held `/v1/poll` whose `since` is below it.
+    pub fn send(&self, body: CommandBody) -> u64 {
+        self.shared.queue_command(body)
+    }
+
+    /// A handle that sends commands and waits for their acks from any
+    /// thread, while `events` stays with the thread that drains it.
+    pub fn requester(&self) -> Requester {
+        Requester {
+            shared: Arc::clone(&self.shared),
+        }
+    }
+
+    /// The playtest ended: every [`Requester::request`] still waiting
+    /// returns [`RequestError::Ended`].
+    pub fn end_requests(&self) {
+        self.shared.waiters().clear();
+    }
+
+    /// Everything the probe has posted, in arrival order. An `Ack` also
+    /// removes its command from the queue so it is not re-sent.
+    pub fn events(&self) -> &mpsc::Receiver<Uplink> {
+        &self.events
+    }
+}
+
+/// Sends commands and waits for each one's ack. Cloned freely; it keeps the
+/// channel's state alive but not its listener.
+#[derive(Clone)]
+pub struct Requester {
+    shared: Arc<Shared>,
+}
+
+/// Why a [`Requester::request`] has no result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RequestError {
+    /// The probe ran the command and it failed; carries its error text.
+    Failed(String),
+    /// No ack within the timeout.
+    TimedOut,
+    /// The playtest ended first (`ChannelServer::end_requests`).
+    Ended,
+}
+
+impl Requester {
+    /// Queues `body` and waits up to `timeout` for its ack: the ack's text
+    /// when it succeeded.
+    pub fn request(&self, body: CommandBody, timeout: Duration) -> Result<String, RequestError> {
+        let (tx, rx) = mpsc::channel();
+        // Registered before the command is queued, so its ack cannot
+        // arrive with no one waiting for it.
+        let id = {
+            let mut waiters = self.shared.waiters();
+            let id = self.shared.queue_command(body);
+            waiters.insert(id, tx);
+            id
+        };
+        let answer = rx.recv_timeout(timeout);
+        self.shared.waiters().remove(&id);
+        match answer {
+            Ok((true, result)) => Ok(result),
+            Ok((false, error)) => Err(RequestError::Failed(error)),
+            Err(mpsc::RecvTimeoutError::Timeout) => Err(RequestError::TimedOut),
+            Err(mpsc::RecvTimeoutError::Disconnected) => Err(RequestError::Ended),
+        }
+    }
+}
+
+impl Drop for ChannelServer {
+    /// Stops accepting; held polls answer `204` and the thread exits.
+    fn drop(&mut self) {
+        self.shared.shutdown.store(true, Ordering::SeqCst);
+        // Take the lock so a waiter cannot miss the flag between check and wait.
+        drop(self.shared.lock());
+        self.shared.wake.notify_all();
+        let _ = TcpStream::connect(self.addr);
+    }
+}
+
+fn handle(shared: &Shared, mut stream: TcpStream) -> std::io::Result<()> {
+    stream.set_read_timeout(Some(IO_TIMEOUT))?;
+    stream.set_write_timeout(Some(IO_TIMEOUT))?;
+    let mut reader = BufReader::new(stream.try_clone()?);
+    let req = match read_head(&mut reader)? {
+        Head::Ok(r) => r,
+        Head::Bad => return finish(&mut stream, &mut reader, 400, ""),
+    };
+    let authorised = req.token.as_deref().is_some_and(|t| {
+        shared
+            .token
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .matches(t)
+    });
+    if !authorised {
+        return finish(&mut stream, &mut reader, 404, "");
+    }
+    let (path, query) = req.target.split_once('?').unwrap_or((&req.target, ""));
+    match (req.method.as_str(), path) {
+        ("GET", "/healthz") => finish(&mut stream, &mut reader, 200, "ok"),
+        ("POST", "/v1/ingest") => {
+            if req.content_length > MAX_BODY {
+                return finish(&mut stream, &mut reader, 413, "");
+            }
+            let mut body = vec![0u8; req.content_length];
+            reader.read_exact(&mut body)?;
+            if trace() {
+                eprintln!(
+                    "rbx_play ingest: {}",
+                    String::from_utf8_lossy(&body[..body.len().min(600)])
+                );
+            }
+            match serde_json::from_slice::<Vec<Uplink>>(&body) {
+                Ok(batch) => {
+                    for up in batch {
+                        if let Uplink::Ack { id, ok, result } = &up {
+                            shared.lock().commands.retain(|c| c.id != *id);
+                            if let Some(waiter) = shared.waiters().remove(id) {
+                                let _ = waiter.send((*ok, result.clone()));
+                                continue;
+                            }
+                        }
+                        let _ = shared.events.send(up);
+                    }
+                    finish(&mut stream, &mut reader, 204, "")
+                }
+                Err(_) => finish(&mut stream, &mut reader, 400, ""),
+            }
+        }
+        ("GET", "/v1/poll") => {
+            let since = query
+                .split('&')
+                .find_map(|kv| kv.strip_prefix("since="))
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(0);
+            let pending = wait_for_commands(shared, since);
+            if pending.is_empty() {
+                finish(&mut stream, &mut reader, 204, "")
+            } else {
+                let json = serde_json::to_string(&pending).unwrap_or_else(|_| "[]".into());
+                if trace() {
+                    eprintln!("rbx_play poll -> {}", &json[..json.len().min(600)]);
+                }
+                reply(&mut stream, 200, &json, true)?;
+                let _ = stream.shutdown(Shutdown::Write);
+                Ok(())
+            }
+        }
+        _ => finish(&mut stream, &mut reader, 404, ""),
+    }
+}
+
+fn wait_for_commands(shared: &Shared, since: u64) -> Vec<Command> {
+    let deadline = Instant::now() + shared.hold;
+    let mut q = shared.lock();
+    let epoch = q.epoch;
+    loop {
+        if q.epoch != epoch {
+            return Vec::new();
+        }
+        let pending: Vec<Command> = q
+            .commands
+            .iter()
+            .filter(|c| c.id > since)
+            .cloned()
+            .collect();
+        if !pending.is_empty() {
+            return pending;
+        }
+        let now = Instant::now();
+        if shared.shutdown.load(Ordering::SeqCst) || now >= deadline {
+            return Vec::new();
+        }
+        q = shared
+            .wake
+            .wait_timeout(q, deadline - now)
+            .unwrap_or_else(|e| e.into_inner())
+            .0;
+    }
+}
+
+/// Replies, then drains unread request bytes briefly so closing the socket
+/// does not reset the connection before the client has read the reply.
+fn finish(
+    stream: &mut TcpStream,
+    reader: &mut BufReader<TcpStream>,
+    status: u16,
+    body: &str,
+) -> std::io::Result<()> {
+    reply(stream, status, body, false)?;
+    let _ = stream.shutdown(Shutdown::Write);
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+    let mut sink = [0u8; 8192];
+    let mut drained = 0usize;
+    while drained < 2 * MAX_BODY {
+        match reader.read(&mut sink) {
+            Ok(0) | Err(_) => break,
+            Ok(n) => drained += n,
+        }
+    }
+    Ok(())
+}
+
+/// `RBX_PLAY_TRACE=1` prints every ingested batch and every command handed
+/// to the probe on stderr (truncated), for diagnosing a Play session.
+fn trace() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("RBX_PLAY_TRACE").is_some_and(|v| v != "0"))
+}

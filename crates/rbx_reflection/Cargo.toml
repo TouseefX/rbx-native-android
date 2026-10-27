@@ -1,0 +1,17 @@
+[package]
+name = "rbx_reflection"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[features]
+# The API dump is a 4 MB asset; only binaries that actually need it opt in.
+embedded-dump = []
+
+[dependencies]
+# A class's default values are handed out as the DOM's own `Variant`s, so a
+# caller can compare them with, or write them beside, what a file stored.
+rbx_dom = { path = "../rbx_dom" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"

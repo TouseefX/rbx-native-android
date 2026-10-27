@@ -1,0 +1,28 @@
+//! In-memory DOM representation of a Roblox instance tree.
+//!
+//! Provides a weak reference-based tree structure that maps directly onto
+//! the binary file format without circular strong references.
+
+pub mod attributes;
+mod brick_color;
+mod change;
+pub mod diff;
+mod dom;
+mod error;
+mod instance;
+pub mod merge;
+mod reference;
+pub mod rotation;
+mod variant;
+
+pub use brick_color::{BrickColor, DEFAULT_NUMBER as DEFAULT_BRICK_COLOR};
+pub use change::Change;
+pub use dom::{Snapshot, WeakDom};
+pub use error::DomError;
+pub use instance::Instance;
+pub use reference::Ref;
+pub use variant::{
+    Axes, CFrameData, Color3Data, ColorSequence, ColorSequenceKeypoint, Content, Faces, Font,
+    FontStyle, NumberRange, NumberSequence, NumberSequenceKeypoint, PhysicalProperties, Rect, UDim,
+    UDim2, UniqueId, Variant, Vector2Data, Vector3Data, FONT_UNKNOWN,
+};

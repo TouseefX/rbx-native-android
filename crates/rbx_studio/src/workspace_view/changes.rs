@@ -1,0 +1,115 @@
+//! Two ways the rest of the shell reaches into the 3D view from outside its
+//! own render loop: passing on a selection, a hover or the lines drawn over
+//! the scene, and reflecting an edit to the DOM.
+
+use rbx_dom::{Change, Snapshot};
+use rbx_viewer::pick::Selected;
+use rbx_viewer::Segment;
+
+use super::WorkspaceView;
+
+/// The line layer the light guides are drawn on; the dragger guides have
+/// theirs (see `guides::DRAGGER_GUIDES`).
+const LIGHT_GUIDES: usize = 0;
+/// The Animation Editor's floor grid (see `shell::animation::stage`).
+const STAGE_GRID: usize = 3;
+/// The Animation Editor's skeleton view (see `shell::animation::skeleton`).
+const SKELETON: usize = 4;
+/// Collaborators' selections and cameras (see `shell::team_presence`).
+const TEAM_PRESENCE: usize = 6;
+/// Replayed playtests: ghosts, trails, markers and heat cells (see
+/// `shell::playtests`).
+const PLAYTESTS: usize = 7;
+
+impl WorkspaceView {
+    /// Forwards the Explorer's selection, forcing one frame even at rest.
+    pub(crate) fn set_selection(&mut self, selected: &[Selected]) {
+        // Studio's measurement box belongs to the selection it measured.
+        self.close_measure();
+        self.outlined = selected.to_vec();
+        self.pump.select(selected.to_vec());
+    }
+
+    /// The same selection outlined again after an edit, a selected model's
+    /// pivot turned, so its box turns with it (see `Shell::reflect_changes`).
+    /// Sent only when it differs from what was, and the measurement box,
+    /// which belongs to the selection rather than to its box, stays open.
+    pub(crate) fn reoutline(&mut self, selected: Vec<Selected>) {
+        if selected != self.outlined {
+            self.outlined = selected.clone();
+            self.pump.select(selected);
+        }
+    }
+
+    /// Forwards the instances a hover covers (empty to clear it), forcing one
+    /// frame even at rest, the same reason `set_selection` above does.
+    pub(crate) fn set_hover(&mut self, selected: Vec<Selected>) {
+        self.pump.hover(selected);
+    }
+
+    /// Enters or leaves a Properties `Ref` pick. The hover is resolved again
+    /// at once, since a pick previews a different candidate than a click.
+    pub(crate) fn set_ref_picking(&mut self, picking: bool, cx: &mut gpui_kit::Context<Self>) {
+        if self.ref_picking != picking {
+            self.ref_picking = picking;
+            self.rehover();
+            cx.notify();
+        }
+    }
+
+    /// Forwards where a tool being configured would put the selection,
+    /// the Align popover's live preview. An empty list clears it.
+    pub(crate) fn set_preview(&mut self, boxes: Vec<glam::Mat4>) {
+        self.pump.preview(boxes);
+    }
+
+    /// The light guides' segments, on a line layer of their own apart from
+    /// the dragger guides' (see `guides`). An empty list clears them.
+    pub(crate) fn set_lines(&mut self, segments: Vec<Segment>) {
+        self.pump.lines(LIGHT_GUIDES, segments);
+    }
+
+    /// The Animation Editor's stage: its floor grid on a line layer of its
+    /// own. An empty list clears it.
+    pub(crate) fn set_stage_grid(&mut self, segments: Vec<Segment>) {
+        self.pump.lines(STAGE_GRID, segments);
+    }
+
+    /// The Animation Editor's skeleton view: the rig's bones, drawn over
+    /// it. An empty list clears them.
+    pub(crate) fn set_skeleton(&mut self, segments: Vec<Segment>) {
+        self.pump.lines(SKELETON, segments);
+    }
+
+    /// Collaborators' selection boxes and camera markers. An empty list
+    /// clears them.
+    pub(crate) fn set_presence(&mut self, segments: Vec<Segment>) {
+        self.pump.lines(TEAM_PRESENCE, segments);
+    }
+
+    /// Replayed playtests' lines and dots, and the heat map's cells. Empty
+    /// lists clear them.
+    pub(crate) fn set_playtests(&mut self, segments: Vec<Segment>, fills: Vec<rbx_viewer::Fill>) {
+        self.pump.lines(PLAYTESTS, segments);
+        self.pump.fills(PLAYTESTS, fills);
+    }
+
+    /// Draws only `roots` (the Animation Editor's rig) on a plain backdrop,
+    /// or the whole place again with `None`.
+    pub(crate) fn set_isolation(&mut self, roots: Option<Vec<rbx_dom::Ref>>) {
+        self.pump.isolation(roots);
+    }
+
+    /// Reflects one edit's `Change` log in the render thread's scene, every
+    /// instance it names patched in place there, between two frames (see
+    /// `rbx_viewer::Headless::apply_changes`), the render thread owns the
+    /// viewer, so that is where the patch happens. `snapshots` is what the
+    /// log is read against: the instances it names as they stand after the
+    /// edit, whichever way the edit went (an undo hands over the mutation's
+    /// own log with snapshots off the restored tree), brought into the
+    /// render thread's own copy of the DOM before the patch.
+    pub(crate) fn apply_changes(&mut self, snapshots: Vec<Snapshot>, changes: Vec<Change>) {
+        self.pump.apply_changes(snapshots, changes);
+        self.rehover();
+    }
+}

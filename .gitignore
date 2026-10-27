@@ -1,0 +1,30 @@
+/target
+shots/
+/gpui-ref
+
+# Working notes for the icon kit (spec + style references), not part of the
+# shipped icon set, and due to be superseded once Studio gets real icon/theme
+# pack support (see ROADMAP.md); no need to track their churn until then.
+/assets/icons/README.md
+/assets/icons/styles/
+
+# Local editor/agent state.
+/.claude/
+/CLAUDE.md
+
+# A Roblox Open Cloud API key must never be committed, see README.md for
+# where it actually belongs (an env var, or one of these files, outside the
+# repo). Ignored here only as a safety net in case one ends up in the tree
+# by habit or mistake.
+api_key
+roblox.key
+*.key
+.env
+.env.*
+docs/redesign/
+
+# The browser build's output (scripts/build-web.sh).
+/crates/rbx_viewer/web/pkg/
+
+# tokenforge plans, cheat sheets and run state.
+/.forge/

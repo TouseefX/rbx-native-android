@@ -1,0 +1,104 @@
+//! Encoders for scalar leaf types: string, bool, int, int64, float, double,
+//! token, BrickColor. Mirrors `value::scalar`, the reader's decoder counterpart.
+
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+use crate::serializer::writer::Writer;
+
+/// Writes the plain `string` tag, for a property Studio saves as one (see
+/// `serializer::value::encode` for the ones it saves under another tag).
+///
+/// Text XML 1.0 cannot hold at all (a control character other than tab and the
+/// two line breaks, even as a character reference) goes out as `BinaryString`
+/// instead, which reads back as the same `Variant::String`. Terrain's
+/// `PhysicsGrid` read from a binary place is one: written as text, Studio
+/// refuses the whole file as ill-formed XML.
+pub(crate) fn string(writer: &mut Writer, name: &str, text: &str) {
+    if !xml_safe(text) {
+        return binary_string(writer, name, text.as_bytes());
+    }
+    writer.leaf("string", &[("name", name)], text);
+}
+
+/// Script `Source`, which Studio only loads from a `ProtectedString` tag.
+/// Text XML cannot hold goes out as `BinaryString`, as in [`string`].
+pub(crate) fn protected_string(writer: &mut Writer, name: &str, text: &str) {
+    if !xml_safe(text) {
+        return binary_string(writer, name, text.as_bytes());
+    }
+    writer.leaf("ProtectedString", &[("name", name)], text);
+}
+
+fn xml_safe(text: &str) -> bool {
+    !text
+        .chars()
+        .any(|c| matches!(c, '\0'..='\u{8}' | '\u{b}' | '\u{c}' | '\u{e}'..='\u{1f}'))
+}
+
+pub(crate) fn bool_value(writer: &mut Writer, name: &str, value: bool) {
+    writer.leaf(
+        "bool",
+        &[("name", name)],
+        if value { "true" } else { "false" },
+    );
+}
+
+pub(crate) fn int32(writer: &mut Writer, name: &str, value: i32) {
+    writer.leaf("int", &[("name", name)], &value.to_string());
+}
+
+pub(crate) fn int64(writer: &mut Writer, name: &str, value: i64) {
+    writer.leaf("int64", &[("name", name)], &value.to_string());
+}
+
+// Rust's `f32`/`f64` `Display` already emits the shortest string that parses back
+// to the exact same bit pattern, and (per the reader's own `parse_f32` comment)
+// already spells INF/-INF/NaN the way `f32::from_str`/`f64::from_str` expect, so no
+// custom formatting is needed for either finite or non-finite values.
+pub(crate) fn float32(writer: &mut Writer, name: &str, value: f32) {
+    writer.leaf("float", &[("name", name)], &value.to_string());
+}
+
+pub(crate) fn float64(writer: &mut Writer, name: &str, value: f64) {
+    writer.leaf("double", &[("name", name)], &value.to_string());
+}
+
+pub(crate) fn enum_value(writer: &mut Writer, name: &str, value: u32) {
+    writer.leaf("token", &[("name", name)], &value.to_string());
+}
+
+pub(crate) fn brick_color(writer: &mut Writer, name: &str, value: u32) {
+    writer.leaf("BrickColor", &[("name", name)], &value.to_string());
+}
+
+/// Writes an opaque `Variant::Unknown` blob as `BinaryString`, the only XML type
+/// that carries arbitrary bytes. The caller (`serializer::value::encode`) only
+/// reaches this for a blob whose `type_id` is already `STRING_TYPE_ID`, since
+/// `BinaryString` has no side channel for an arbitrary wire type id: any other
+/// `type_id` would come back tagged `STRING_TYPE_ID` on read-back instead of its
+/// original one, so it is rejected as `Unsupported` before it gets here.
+pub(crate) fn binary_string(writer: &mut Writer, name: &str, raw: &[u8]) {
+    writer.leaf("BinaryString", &[("name", name)], &STANDARD.encode(raw));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn float_round_trips_infinity_spelling() {
+        let mut writer = Writer::new();
+        float32(&mut writer, "X", f32::NEG_INFINITY);
+        assert_eq!(writer.into_string(), "<float name=\"X\">-inf</float>\n");
+    }
+
+    #[test]
+    fn string_uses_the_plain_tag() {
+        let mut writer = Writer::new();
+        string(&mut writer, "Name", "Baseplate");
+        assert_eq!(
+            writer.into_string(),
+            "<string name=\"Name\">Baseplate</string>\n"
+        );
+    }
+}

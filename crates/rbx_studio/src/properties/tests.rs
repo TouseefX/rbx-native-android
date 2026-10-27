@@ -1,0 +1,1301 @@
+use rbx_dom::{
+    Axes, CFrameData, Color3Data, Content, Faces, Font, FontStyle, Instance, NumberRange,
+    NumberSequence, NumberSequenceKeypoint, PhysicalProperties, Rect, UDim, UDim2, UniqueId,
+    Vector2Data, Vector3Data,
+};
+
+use super::*;
+
+fn part() -> Ref {
+    Ref::new(2)
+}
+
+fn workspace() -> Ref {
+    Ref::new(1)
+}
+
+/// A tree and the panel reading it, paired the way `Shell` holds them: the
+/// panel borrows the DOM on every call, so a test asks the pair rather than
+/// the panel alone.
+struct Fixture {
+    dom: WeakDom,
+    properties: Properties,
+}
+
+impl Fixture {
+    fn rows(&self, reference: Ref) -> Vec<PropertyRow> {
+        self.properties.rows(&self.dom, &[reference], None)
+    }
+
+    fn rows_with_folder_color(&self, reference: Ref, color: (u8, u8, u8)) -> Vec<PropertyRow> {
+        self.properties.rows(&self.dom, &[reference], Some(color))
+    }
+
+    fn title(&self, reference: Ref) -> Option<String> {
+        self.properties.title(&self.dom, &[reference])
+    }
+
+    fn rows_matching(&self, reference: Ref, filter: &str) -> Vec<PropertyRow> {
+        self.properties
+            .rows_matching(&self.dom, &[reference], filter, None)
+    }
+}
+
+/// A Workspace holding one Part carrying `properties`, wrapped with the real
+/// reflection dump so enum names resolve the way they do in the editor.
+fn properties(values: &[(&str, Variant)]) -> Fixture {
+    let mut dom = WeakDom::new();
+    dom.insert(Instance::new(workspace(), "Workspace", "Workspace"));
+    let mut instance = Instance::new(part(), "Part", "Baseplate");
+    for (name, value) in values {
+        instance
+            .properties_mut()
+            .insert((*name).to_owned(), value.clone());
+    }
+    dom.insert(instance);
+    dom.set_parent(part(), Some(workspace()));
+
+    Fixture {
+        dom,
+        properties: Properties::new(ReflectionDatabase::embedded()),
+    }
+}
+
+/// The row for `name` specifically: `rows()` also carries a synthesized
+/// `Name` row (see `Properties::rows`), which is irrelevant to a test only
+/// checking one property's formatting.
+fn formatted(name: &str, value: Variant) -> String {
+    properties(&[(name, value)])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == name)
+        .expect("the row for the property under test")
+        .value
+}
+
+fn vector3(x: f32, y: f32, z: f32) -> Vector3Data {
+    Vector3Data { x, y, z }
+}
+
+/// The row for `name`'s [`EditKind`].
+fn edit_kind(name: &str, value: Variant) -> Option<EditKind> {
+    properties(&[(name, value)])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == name)
+        .expect("the row for the property under test")
+        .edit
+}
+
+/// The row for `name`'s resolved category.
+fn category(name: &str, value: Variant) -> String {
+    properties(&[(name, value)])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == name)
+        .expect("the row for the property under test")
+        .category
+}
+
+#[test]
+fn the_title_is_the_class_and_the_quoted_name() {
+    let properties = properties(&[]);
+
+    assert_eq!(
+        properties.title(part()).as_deref(),
+        Some("Part \"Baseplate\"")
+    );
+    assert_eq!(properties.title(Ref::new(99)), None);
+}
+
+#[test]
+fn rows_come_sorted_by_name() {
+    let rows = properties(&[
+        ("Transparency", Variant::Float32(0.5)),
+        ("Anchored", Variant::Bool(true)),
+        ("Name", Variant::String("Baseplate".into())),
+    ])
+    .rows(part());
+
+    let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+    assert!(names.windows(2).all(|pair| pair[0] < pair[1]), "{names:?}");
+    for name in ["Anchored", "Name", "Transparency"] {
+        assert!(names.contains(&name), "{name} missing from {names:?}");
+    }
+}
+
+#[test]
+fn a_missing_instance_has_no_rows() {
+    assert!(properties(&[]).rows(Ref::new(99)).is_empty());
+}
+
+#[test]
+fn the_attribute_and_tag_blobs_never_get_an_ordinary_row() {
+    let rows = properties(&[
+        ("Anchored", Variant::Bool(true)),
+        ("Tags", Variant::String("Climbable".into())),
+        ("AttributesSerialize", Variant::String("blob".into())),
+    ])
+    .rows(part());
+
+    let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+    for blob in ["Tags", "AttributesSerialize", "Attributes"] {
+        assert!(!names.contains(&blob), "{blob} in {names:?}");
+    }
+}
+
+#[test]
+fn the_filter_never_turns_up_the_attribute_and_tag_blobs_either() {
+    let fixture = properties(&[
+        ("Tags", Variant::String("Climbable".into())),
+        ("AttributesSerialize", Variant::String("blob".into())),
+    ]);
+
+    assert!(fixture.rows_matching(part(), "tag").is_empty());
+    assert!(fixture.rows_matching(part(), "attributes").is_empty());
+}
+
+#[test]
+fn a_folder_gets_the_synthetic_explorer_colour_row() {
+    let rows = instance_of("Folder", &[]).rows(part());
+    let row = rows
+        .iter()
+        .find(|row| row.name == edit::FOLDER_COLOR_PROPERTY)
+        .expect("Explorer Colour row");
+    // Untagged: seeded white, the same "no tint" the Explorer itself shows.
+    assert_eq!(
+        row.edit,
+        Some(EditKind::Color {
+            r: 255,
+            g: 255,
+            b: 255
+        })
+    );
+}
+
+#[test]
+fn a_non_folder_never_gets_the_synthetic_explorer_colour_row() {
+    for class in ["Part", "Model", "Workspace", "Script"] {
+        let rows = instance_of(class, &[]).rows(part());
+        assert!(
+            rows.iter()
+                .all(|row| row.name != edit::FOLDER_COLOR_PROPERTY),
+            "{class} should not carry an Explorer Colour row"
+        );
+    }
+}
+
+#[test]
+fn a_folders_explorer_colour_row_seeds_from_the_passed_in_tag() {
+    let rows = instance_of("Folder", &[]).rows_with_folder_color(part(), (10, 20, 30));
+    let row = rows
+        .iter()
+        .find(|row| row.name == edit::FOLDER_COLOR_PROPERTY)
+        .expect("Explorer Colour row");
+    assert_eq!(
+        row.edit,
+        Some(EditKind::Color {
+            r: 10,
+            g: 20,
+            b: 30
+        })
+    );
+    assert_eq!(row.value, "(10, 20, 30)");
+}
+
+#[test]
+fn scalars_print_plainly_and_strings_quoted() {
+    assert_eq!(formatted("Anchored", Variant::Bool(true)), "true");
+    assert_eq!(formatted("Count", Variant::Int32(-3)), "-3");
+    assert_eq!(formatted("Big", Variant::Int64(1 << 40)), "1099511627776");
+    assert_eq!(formatted("Reflectance", Variant::Float32(0.0)), "0");
+    // Not `BackParamA`: that name is real on `BasePart` and, as of the
+    // Hidden/read-only filtering below, tagged `Hidden` in the dump, this
+    // assertion only cares about plain `Float32` formatting.
+    assert_eq!(formatted("BevelAmount", Variant::Float32(-0.5)), "-0.5");
+    assert_eq!(formatted("Precise", Variant::Float64(2.5)), "2.5");
+    assert_eq!(
+        formatted("CollisionGroup", Variant::String("Default".into())),
+        "\"Default\""
+    );
+}
+
+#[test]
+fn long_and_binary_values_show_their_size_only() {
+    let long = "x".repeat(MAX_STRING_LEN + 1);
+    assert_eq!(
+        formatted("Source", Variant::String(long)),
+        format!("<{} bytes>", MAX_STRING_LEN + 1)
+    );
+    assert_eq!(
+        formatted(
+            "Mystery",
+            Variant::Unknown {
+                type_id: 0x7f,
+                raw: vec![0; 12],
+            }
+        ),
+        "<12 bytes>"
+    );
+    // Exactly at the limit still reads as text.
+    let fits = "y".repeat(MAX_STRING_LEN);
+    assert_eq!(
+        formatted("Fits", Variant::String(fits.clone())),
+        format!("{fits:?}")
+    );
+}
+
+#[test]
+fn vectors_are_parenthesized_triplets() {
+    assert_eq!(
+        formatted("Size", Variant::Vector3(vector3(512.0, 20.0, 512.0))),
+        "(512, 20, 512)"
+    );
+    assert_eq!(
+        formatted("Offset", Variant::Vector2(Vector2Data { x: 1.5, y: -2.0 })),
+        "(1.5, -2)"
+    );
+    assert_eq!(
+        formatted("Cell", Variant::Vector3int16 { x: 1, y: 2, z: 3 }),
+        "(1, 2, 3)"
+    );
+}
+
+#[test]
+fn a_cframe_shows_position_then_rotation() {
+    let frame = CFrameData {
+        position: vector3(0.0, -8.0, 0.0),
+        rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    };
+
+    assert_eq!(
+        formatted("CFrame", Variant::CFrame(frame)),
+        "pos=(0, -8, 0) rot=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]"
+    );
+    assert_eq!(
+        formatted("PivotOffset", Variant::OptionalCFrame(Some(frame))),
+        "pos=(0, -8, 0) rot=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]"
+    );
+    assert_eq!(
+        formatted("PivotOffset", Variant::OptionalCFrame(None)),
+        "none"
+    );
+}
+
+#[test]
+fn colors_are_byte_triplets_whichever_way_they_were_stored() {
+    let color = Color3Data {
+        r: 0.0,
+        g: 0.5,
+        b: 1.0,
+    };
+
+    assert_eq!(formatted("Color", Variant::Color3(color)), "(0, 128, 255)");
+    // Saved as `Color3uint8`, shown as the `Color` it is.
+    let rows = properties(&[(
+        "Color3uint8",
+        Variant::Color3uint8 {
+            r: 91,
+            g: 91,
+            b: 91,
+        },
+    )])
+    .rows(part());
+    let row = rows.iter().find(|row| row.name == "Color").unwrap();
+    assert_eq!(row.value, "(91, 91, 91)");
+    assert_eq!(
+        formatted("BrickColor", Variant::BrickColor(194)),
+        "Medium stone grey"
+    );
+}
+
+#[test]
+fn enums_resolve_to_their_name_through_the_reflection_dump() {
+    assert_eq!(formatted("Material", Variant::Enum(256)), "256 (Plastic)");
+    assert_eq!(formatted("BackSurface", Variant::Enum(0)), "0 (Smooth)");
+}
+
+#[test]
+fn an_unknown_enum_stays_a_bare_ordinal() {
+    // A value the dump has no name for, and a property it has never heard of.
+    assert_eq!(formatted("Material", Variant::Enum(999_999)), "999999");
+    assert_eq!(formatted("MadeUp", Variant::Enum(7)), "7");
+}
+
+#[test]
+fn an_enum_item_is_also_named_on_its_own() {
+    let fixture = properties(&[]);
+    assert_eq!(
+        fixture.properties.enum_item("Part", "Material", 256),
+        Some("Plastic")
+    );
+    assert_eq!(
+        fixture.properties.enum_item("Part", "Material", 999_999),
+        None
+    );
+    assert_eq!(fixture.properties.enum_item("Part", "MadeUp", 7), None);
+}
+
+#[test]
+fn an_unset_reference_is_listed_as_an_editable_nil() {
+    let mut dom = WeakDom::new();
+    let weld = dom.new_instance("Weld", "Weld", None);
+    let properties = Properties::new(ReflectionDatabase::embedded());
+
+    let rows = properties.rows(&dom, &[weld], None);
+    let part0 = rows
+        .iter()
+        .find(|row| row.name == "Part0")
+        .expect("a fresh Weld still lists Part0");
+
+    assert_eq!(part0.value, "nil");
+    assert_eq!(part0.edit, Some(EditKind::Ref("nil".to_owned())));
+}
+
+#[test]
+fn an_unset_asset_id_is_listed_with_its_twins_default_and_edits_as_a_string() {
+    let mut dom = WeakDom::new();
+    let decal = dom.new_instance("Decal", "Decal", None);
+    let emitter = dom.new_instance("ParticleEmitter", "ParticleEmitter", None);
+    let db = ReflectionDatabase::embedded();
+    let properties = Properties::new(ReflectionDatabase::embedded());
+
+    let texture = |reference: Ref| {
+        properties
+            .rows(&dom, &[reference], None)
+            .into_iter()
+            .find(|row| row.name == "Texture")
+            .expect("a fresh instance still lists Texture")
+    };
+    assert_eq!(texture(decal).value, "\"\"");
+    assert!(texture(decal).edit.is_some());
+    assert_eq!(
+        texture(emitter).value,
+        "\"rbxasset://textures/particles/sparkles_main.dds\""
+    );
+
+    edit::commit(&mut dom, &db, decal, "Texture", "7").unwrap();
+    assert_eq!(
+        dom.get(decal).unwrap().properties().get("Texture"),
+        Some(&Variant::String("rbxassetid://7".into()))
+    );
+}
+
+#[test]
+fn a_set_reference_edits_through_the_picker_and_parent_stays_read_only() {
+    let fixture = properties(&[]);
+    let mut dom = fixture.dom;
+    let weld = dom.new_instance("Weld", "Weld", Some(workspace()));
+    dom.set_property(weld, "Part0", Variant::Ref(part()))
+        .unwrap();
+
+    let rows = fixture.properties.rows(&dom, &[weld], None);
+    let row = |name: &str| rows.iter().find(|row| row.name == name).unwrap().clone();
+
+    assert_eq!(row("Part0").value, "Baseplate");
+    assert_eq!(
+        row("Part0").edit,
+        Some(EditKind::Ref(part().value().to_string()))
+    );
+    assert_eq!(row("Parent").value, "Workspace");
+    assert_eq!(row("Parent").edit, None);
+}
+
+#[test]
+fn a_mixed_reference_stays_pickable() {
+    let fixture = properties(&[]);
+    let mut dom = fixture.dom;
+    let set = dom.new_instance("Weld", "Weld", Some(workspace()));
+    dom.set_property(set, "Part0", Variant::Ref(part()))
+        .unwrap();
+    let unset = dom.new_instance("Weld", "Weld", Some(workspace()));
+
+    let rows = fixture.properties.rows(&dom, &[set, unset], None);
+    let part0 = rows.iter().find(|row| row.name == "Part0").unwrap();
+
+    assert!(part0.mixed);
+    assert_eq!(part0.edit, Some(EditKind::Ref(String::new())));
+}
+
+#[test]
+fn refs_read_as_the_target_name() {
+    assert_eq!(formatted("Parent", Variant::Ref(workspace())), "Workspace");
+    assert_eq!(formatted("Dangling", Variant::Ref(Ref::new(99))), "nil");
+    assert_eq!(
+        formatted("Mesh", Variant::Content(Content::Object(workspace()))),
+        "Workspace"
+    );
+}
+
+#[test]
+fn content_variants_keep_their_kind_visible() {
+    assert_eq!(
+        formatted("Texture", Variant::Content(Content::None)),
+        "Content(none)"
+    );
+    assert_eq!(
+        formatted(
+            "Texture",
+            Variant::Content(Content::Uri("rbxassetid://1".into()))
+        ),
+        "Content(\"rbxassetid://1\")"
+    );
+}
+
+#[test]
+fn bit_flags_list_the_set_names_in_wire_order() {
+    assert_eq!(
+        formatted("Faces", Variant::Faces(Faces::from_bits(0b01_0001))),
+        "Faces(Front|Top)"
+    );
+    assert_eq!(
+        formatted("Faces", Variant::Faces(Faces::default())),
+        "Faces()"
+    );
+    assert_eq!(
+        formatted("Axes", Variant::Axes(Axes::from_bits(0b101))),
+        "Axes(X|Z)"
+    );
+}
+
+#[test]
+fn compound_values_match_the_text_dump() {
+    assert_eq!(
+        formatted(
+            "Ray",
+            Variant::Ray {
+                origin: vector3(0.0, 1.0, 0.0),
+                direction: vector3(0.0, -1.0, 0.0),
+            }
+        ),
+        "Ray { origin: (0, 1, 0), direction: (0, -1, 0) }"
+    );
+    assert_eq!(
+        formatted(
+            "Range",
+            Variant::NumberRange(NumberRange { min: 1.0, max: 2.5 })
+        ),
+        "[1, 2.5]"
+    );
+    assert_eq!(
+        formatted(
+            "Rect",
+            Variant::Rect(rbx_dom::Rect {
+                min: Vector2Data { x: 0.0, y: 0.0 },
+                max: Vector2Data { x: 4.0, y: 2.0 },
+            })
+        ),
+        "{(0, 0), (4, 2)}"
+    );
+    assert_eq!(
+        formatted(
+            "Curve",
+            Variant::NumberSequence(NumberSequence {
+                keypoints: vec![NumberSequenceKeypoint {
+                    time: 0.0,
+                    value: 1.0,
+                    envelope: 0.0,
+                }],
+            })
+        ),
+        "NumberSequence[0: 1 ±0]"
+    );
+    assert_eq!(
+        formatted(
+            "Physics",
+            Variant::PhysicalProperties(PhysicalProperties::Default)
+        ),
+        "Default"
+    );
+}
+
+#[test]
+fn ui_dimensions_use_roblox_brace_notation() {
+    assert_eq!(
+        formatted(
+            "Size",
+            Variant::UDim(UDim {
+                scale: 0.5,
+                offset: 10
+            })
+        ),
+        "{0.5, 10}"
+    );
+    assert_eq!(
+        // Not `Position`: that name is real on `BasePart` and tagged
+        // `Hidden` in the dump, so the row wouldn't exist to format, this
+        // assertion only cares about plain `UDim2` formatting.
+        formatted(
+            "GuiPosition",
+            Variant::UDim2(UDim2 {
+                x: UDim {
+                    scale: 0.0,
+                    offset: 4
+                },
+                y: UDim {
+                    scale: 1.0,
+                    offset: -4
+                },
+            })
+        ),
+        "{{0, 4}, {1, -4}}"
+    );
+}
+
+#[test]
+fn identity_and_asset_values_keep_the_dump_spelling() {
+    assert_eq!(
+        formatted(
+            "UniqueId",
+            Variant::UniqueId(UniqueId {
+                index: 1,
+                time: 2,
+                random: 3,
+            })
+        ),
+        "00000001000000020000000000000003"
+    );
+    assert_eq!(
+        formatted(
+            "FontFace",
+            Variant::Font(Font {
+                family: "rbxasset://fonts/families/Arial.json".into(),
+                weight: 400,
+                style: FontStyle::Normal,
+                cached_face_id: None,
+            })
+        ),
+        "Font { family: \"rbxasset://fonts/families/Arial.json\", weight: 400, style: Normal }"
+    );
+    assert_eq!(
+        formatted("Capabilities", Variant::SecurityCapabilities(0x10)),
+        "SecurityCapabilities(0x10)"
+    );
+    // `MeshData` rather than `Tags`: both are stored as a shared blob, but
+    // the tag list has the Attributes/Tags section as its editor and so
+    // never gets a row of its own (see `attributes::is_backing_store`).
+    assert_eq!(
+        formatted("MeshData", Variant::SharedString(3)),
+        "SharedString(3)"
+    );
+}
+
+#[test]
+fn the_filter_is_a_case_insensitive_substring_of_the_name() {
+    assert!(matches("CanCollide", "collide"));
+    assert!(matches("CanCollide", "CANC"));
+    assert!(matches("CanCollide", ""));
+    assert!(matches("CanCollide", "  "));
+    assert!(!matches("CanCollide", "anchor"));
+    assert!(!matches("CanCollide", "Collide Can"));
+}
+
+#[test]
+fn filtered_rows_keep_only_matching_names_in_order() {
+    let properties = properties(&[
+        ("CanTouch", Variant::Bool(true)),
+        ("Anchored", Variant::Bool(true)),
+        ("CanCollide", Variant::Bool(false)),
+    ]);
+
+    let names = |filter: &str| -> Vec<String> {
+        properties
+            .rows_matching(part(), filter)
+            .into_iter()
+            .map(|row| row.name)
+            .collect()
+    };
+    // `AudioCanCollide` and `CanQuery` too: never stored here, they show their
+    // class defaults.
+    assert_eq!(
+        names("can"),
+        ["AudioCanCollide", "CanCollide", "CanQuery", "CanTouch"]
+    );
+    assert_eq!(names("").len(), properties.rows(part()).len());
+    assert!(names("zzz").is_empty());
+}
+
+#[test]
+fn a_part_lists_its_origin_and_a_filter_finds_cframe_fields_by_caption() {
+    let properties = properties(&[]);
+
+    let origin = properties
+        .rows_matching(part(), "origin")
+        .into_iter()
+        .find(|row| row.name == "Origin")
+        .expect("a part shows its pivot as Origin");
+    assert!(origin.edit.is_some(), "typing an Origin moves the part");
+
+    let names: Vec<String> = properties
+        .rows_matching(part(), "position")
+        .into_iter()
+        .map(|row| row.name)
+        .collect();
+    assert!(names.contains(&"Origin".to_owned()), "{names:?}");
+    assert!(names.contains(&"CFrame".to_owned()), "{names:?}");
+}
+
+#[test]
+fn category_comes_from_the_reflection_dump() {
+    assert_eq!(category("Anchored", Variant::Bool(true)), "Part");
+    assert_eq!(category("CanCollide", Variant::Bool(true)), "Collision");
+    assert_eq!(
+        category(
+            "Color",
+            Variant::Color3(Color3Data {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0
+            })
+        ),
+        "Appearance"
+    );
+}
+
+#[test]
+fn an_unreflected_property_falls_back_to_the_other_category() {
+    assert_eq!(category("MadeUp", Variant::Bool(true)), "Other");
+}
+
+#[test]
+fn bool_edits_as_a_checkbox() {
+    assert_eq!(
+        edit_kind("Anchored", Variant::Bool(true)),
+        Some(EditKind::Bool(true))
+    );
+}
+
+#[test]
+fn color3_edits_as_0_255_channels_matching_the_read_only_display() {
+    let color = Color3Data {
+        r: 0.0,
+        g: 0.5,
+        b: 1.0,
+    };
+    assert_eq!(
+        // Not `Color`: that name is real on `BasePart` and, per the dump's
+        // Serialization, not saveable, read-only there now, which this
+        // assertion isn't testing.
+        edit_kind("TintColor", Variant::Color3(color)),
+        Some(EditKind::Color {
+            r: 0,
+            g: 128,
+            b: 255
+        })
+    );
+}
+
+#[test]
+fn color3uint8_edits_its_stored_bytes_directly() {
+    assert_eq!(
+        edit_kind(
+            "Color3uint8Test",
+            Variant::Color3uint8 {
+                r: 10,
+                g: 20,
+                b: 30
+            }
+        ),
+        Some(EditKind::Color {
+            r: 10,
+            g: 20,
+            b: 30
+        })
+    );
+}
+
+#[test]
+fn any_brick_color_value_edits_through_the_palette_picker() {
+    // Not `BrickColor`, which a part derives from its `Color` (see
+    // `sheet`): any property holding one, a `SpawnLocation`'s `TeamColor`
+    // say, picks from the same palette.
+    assert_eq!(
+        edit_kind("LegacyBrickColor", Variant::BrickColor(194)),
+        Some(EditKind::BrickColor(194))
+    );
+}
+
+#[test]
+fn enum_edits_as_a_dropdown_of_every_resolved_member() {
+    let Some(EditKind::Enum { current, items }) = edit_kind("Material", Variant::Enum(256)) else {
+        panic!("Material should resolve to a dropdown");
+    };
+    assert_eq!(current, "Plastic");
+    assert!(items.iter().any(|item| item == "Plastic"));
+    assert!(items.len() > 1);
+}
+
+#[test]
+fn an_unresolved_enum_falls_back_to_its_raw_ordinal_as_text() {
+    assert_eq!(
+        edit_kind("MadeUp", Variant::Enum(7)),
+        Some(EditKind::Text("7".to_owned()))
+    );
+}
+
+#[test]
+fn vector3_and_cframe_edit_as_three_labeled_fields() {
+    let vector = vector3(1.0, 2.0, 3.0);
+    let expected = Some(EditKind::Fields {
+        fields: VECTOR3,
+        values: vec!["1".to_owned(), "2".to_owned(), "3".to_owned()],
+    });
+
+    // Not `Size`: that name is real on `BasePart` and, per the dump's
+    // Serialization, not saveable, read-only there now, which this
+    // assertion isn't testing (see `a_non_hidden_non_serializable_property_
+    // still_shows_but_has_no_edit_affordance` for that behaviour).
+    assert_eq!(edit_kind("Extents", Variant::Vector3(vector)), expected);
+}
+
+/// A `CFrame` is two captioned lines, not one, its rotation is as editable
+/// as its position (see `edit::orientation`).
+#[test]
+fn cframe_edits_as_a_position_and_an_orientation() {
+    let frame = CFrameData {
+        position: Vector3Data {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        },
+        rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    };
+
+    let Some(EditKind::Groups { groups, values }) = edit_kind("CFrame", Variant::CFrame(frame))
+    else {
+        panic!("a CFrame should edit as captioned groups");
+    };
+
+    assert_eq!(
+        groups.iter().map(|group| group.caption).collect::<Vec<_>>(),
+        ["Position", "Orientation"]
+    );
+    assert_eq!(values, ["1", "2", "3", "0", "0", "0"]);
+}
+
+// An absent optional used to have no editor at all, which left the value
+// stuck: nothing in the panel could give it one.
+#[test]
+fn an_absent_optional_cframe_edits_as_an_unchecked_box_over_a_cframe() {
+    let Some(EditKind::Optional { present, inner, .. }) =
+        edit_kind("WorldPivotData", Variant::OptionalCFrame(None))
+    else {
+        panic!("an OptionalCFrame should edit as a present/absent box");
+    };
+
+    assert!(!present, "an absent optional reads as unchecked");
+    // Seeded even while absent, this is the value the box turns on to.
+    assert_eq!(
+        *inner,
+        EditKind::Groups {
+            groups: CFRAME,
+            values: ["0", "0", "0", "0", "0", "0"].map(str::to_owned).to_vec(),
+        }
+    );
+}
+
+#[test]
+fn a_present_optional_cframe_keeps_the_cframe_editor_under_a_checked_box() {
+    let frame = CFrameData {
+        position: vector3(1.0, 2.0, 3.0),
+        rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    };
+
+    let Some(EditKind::Optional { present, inner, .. }) =
+        edit_kind("WorldPivotData", Variant::OptionalCFrame(Some(frame)))
+    else {
+        panic!("an OptionalCFrame should edit as a present/absent box");
+    };
+
+    assert!(present);
+    let EditKind::Groups { groups, values } = *inner else {
+        panic!("a present optional CFrame edits through the CFrame editor");
+    };
+    assert_eq!(
+        groups.iter().map(|group| group.caption).collect::<Vec<_>>(),
+        ["Position", "Orientation"]
+    );
+    assert_eq!(values, ["1", "2", "3", "0", "0", "0"]);
+}
+
+/// `PhysicalProperties` was the last of the three types the roadmap listed
+/// as "still read-only text", and the one that needed a shape, not just a
+/// field list, because it is an enum rather than a struct.
+#[test]
+fn default_physical_properties_edit_as_an_unticked_custom_box() {
+    let Some(EditKind::Optional {
+        present,
+        label,
+        inner,
+    }) = edit_kind(
+        "CustomPhysicalProperties",
+        Variant::PhysicalProperties(PhysicalProperties::Default),
+    )
+    else {
+        panic!("PhysicalProperties should edit as a Custom box over five fields");
+    };
+
+    assert!(!present, "a Default reads as unticked");
+    assert_eq!(label, "Custom");
+    // Seeded even while unticked, this is what the box turns on to.
+    assert_eq!(
+        *inner,
+        EditKind::Fields {
+            fields: PHYSICAL_PROPERTIES,
+            values: ["0.7", "0.3", "0.5", "1", "1"].map(str::to_owned).to_vec(),
+        }
+    );
+}
+
+#[test]
+fn custom_physical_properties_edit_as_five_fields_under_a_ticked_box() {
+    let Some(EditKind::Optional { present, inner, .. }) = edit_kind(
+        "CustomPhysicalProperties",
+        Variant::PhysicalProperties(PhysicalProperties::Custom {
+            density: 2.5,
+            friction: 0.4,
+            elasticity: 0.1,
+            friction_weight: 3.0,
+            elasticity_weight: 0.25,
+        }),
+    ) else {
+        panic!("PhysicalProperties should edit as a Custom box over five fields");
+    };
+
+    assert!(present);
+    assert_eq!(
+        *inner,
+        EditKind::Fields {
+            fields: PHYSICAL_PROPERTIES,
+            values: ["2.5", "0.4", "0.1", "3", "0.25"]
+                .map(str::to_owned)
+                .to_vec(),
+        }
+    );
+}
+
+/// The five captions are the panel's only clue to which number is which, and
+/// Roblox's own constructor order is the one a reader will be comparing to.
+#[test]
+fn the_physical_properties_fields_are_captioned_in_roblox_order() {
+    assert_eq!(
+        PHYSICAL_PROPERTIES
+            .iter()
+            .map(|field| field.label)
+            .collect::<Vec<_>>(),
+        [
+            "Density",
+            "Friction",
+            "Elasticity",
+            "Friction Weight",
+            "Elasticity Weight"
+        ]
+    );
+}
+
+#[test]
+fn vector2_edits_as_two_labeled_fields() {
+    assert_eq!(
+        edit_kind("Offset", Variant::Vector2(Vector2Data { x: 1.5, y: -2.0 })),
+        Some(EditKind::Fields {
+            fields: VECTOR2,
+            values: vec!["1.5".to_owned(), "-2".to_owned()],
+        })
+    );
+}
+
+#[test]
+fn rect_edits_as_four_labeled_fields() {
+    let slice_center = Rect {
+        min: Vector2Data { x: 1.0, y: 2.0 },
+        max: Vector2Data { x: 3.0, y: 4.0 },
+    };
+    assert_eq!(
+        edit_kind("SliceCenter", Variant::Rect(slice_center)),
+        Some(EditKind::Fields {
+            fields: RECT,
+            values: vec![
+                "1".to_owned(),
+                "2".to_owned(),
+                "3".to_owned(),
+                "4".to_owned()
+            ],
+        })
+    );
+}
+
+#[test]
+fn font_face_edits_as_family_weight_and_style_fields() {
+    let face = Font {
+        family: "rbxasset://fonts/families/FredokaOne.json".to_owned(),
+        weight: 600,
+        style: FontStyle::Normal,
+        cached_face_id: Some("stale".to_owned()),
+    };
+    assert_eq!(
+        edit_kind("FontFace", Variant::Font(face)),
+        Some(EditKind::Fields {
+            fields: FONT,
+            values: vec![
+                "FredokaOne".to_owned(),
+                "SemiBold".to_owned(),
+                "Normal".to_owned()
+            ],
+        })
+    );
+}
+
+#[test]
+fn udim2_edits_as_four_labeled_fields() {
+    let position = UDim2 {
+        x: UDim {
+            scale: 0.0,
+            offset: 4,
+        },
+        y: UDim {
+            scale: 1.0,
+            offset: -4,
+        },
+    };
+    assert_eq!(
+        // Not `Position`: that name is real on `BasePart` and tagged
+        // `Hidden` in the dump, so the row wouldn't exist at all, this
+        // assertion only cares about plain `UDim2` field-splitting.
+        edit_kind("GuiPosition", Variant::UDim2(position)),
+        Some(EditKind::Fields {
+            fields: UDIM2,
+            values: vec![
+                "0".to_owned(),
+                "4".to_owned(),
+                "1".to_owned(),
+                "-4".to_owned()
+            ],
+        })
+    );
+}
+
+#[test]
+fn rows_group_by_category_in_studio_order_with_no_empty_groups() {
+    let rows = properties(&[
+        ("Anchored", Variant::Bool(true)),
+        (
+            "Color",
+            Variant::Color3(Color3Data {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+            }),
+        ),
+        ("CanCollide", Variant::Bool(true)),
+    ])
+    .rows(part());
+
+    let groups = group_by_category(rows);
+    let categories: Vec<&str> = groups
+        .iter()
+        .map(|(category, _)| category.as_str())
+        .collect();
+    // Studio's ranked categories first, then the rest by name.
+    assert_eq!(
+        categories,
+        [
+            "Appearance",
+            "Data",
+            "Transform",
+            "Pivot",
+            "Behavior",
+            "Collision",
+            "Part",
+            "Assembly",
+            "Permissions",
+            "Surface",
+        ]
+    );
+    assert!(groups.iter().all(|(_, rows)| !rows.is_empty()));
+}
+
+#[test]
+fn unranked_categories_sort_by_name_after_ranked_ones() {
+    let rows = ["Zzz", UNCATEGORIZED, "Aaa", "Part", "Data"]
+        .into_iter()
+        .map(|category| PropertyRow {
+            name: category.into(),
+            value: String::new(),
+            category: category.into(),
+            edit: None,
+            mixed: false,
+            children: Vec::new(),
+        })
+        .collect();
+
+    let groups = group_by_category(rows);
+    let categories: Vec<&str> = groups
+        .iter()
+        .map(|(category, _)| category.as_str())
+        .collect();
+    assert_eq!(categories, ["Data", "Part", "Aaa", UNCATEGORIZED, "Zzz"]);
+}
+
+/// A Workspace holding one instance of `class` carrying `values`, for the
+/// rows whose shape depends on which class the property sits on.
+fn instance_of(class: &str, values: &[(&str, Variant)]) -> Fixture {
+    let mut dom = WeakDom::new();
+    dom.insert(Instance::new(workspace(), "Workspace", "Workspace"));
+    let mut instance = Instance::new(part(), class, "Greeter");
+    for (name, value) in values {
+        instance
+            .properties_mut()
+            .insert((*name).to_owned(), value.clone());
+    }
+    dom.insert(instance);
+    dom.set_parent(part(), Some(workspace()));
+
+    Fixture {
+        dom,
+        properties: Properties::new(ReflectionDatabase::embedded()),
+    }
+}
+
+fn source_row(class: &str, source: &str) -> PropertyRow {
+    instance_of(class, &[("Source", Variant::String(source.to_owned()))])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == "Source")
+        .expect("the Source row")
+}
+
+#[test]
+fn a_scripts_source_row_is_read_only_here_because_the_script_editor_owns_it() {
+    for class in ["Script", "LocalScript", "ModuleScript"] {
+        assert_eq!(
+            source_row(class, "print('hi')").edit,
+            None,
+            "{class}'s Source must not offer a one-line field that would trim the code"
+        );
+    }
+}
+
+#[test]
+fn a_scripts_source_row_still_shows_a_summary_of_the_code() {
+    // Read-only is not hidden: the row stays, spelled the way any other
+    // string is, so the panel still tells you the script has source.
+    let row = source_row("Script", "print('hi')");
+    assert_eq!(row.value, "\"print('hi')\"");
+}
+
+#[test]
+fn a_non_script_string_property_is_still_editable_here() {
+    // The read-only rule is about `Source` on a script, not about strings.
+    let editable = instance_of("StringValue", &[("Value", Variant::String("x".into()))])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == "Value")
+        .expect("the Value row");
+    assert_eq!(editable.edit, Some(EditKind::Text("x".to_owned())));
+}
+
+#[test]
+fn hidden_properties_never_appear_as_rows_at_all() {
+    // Position/Orientation are tagged Hidden in the real dump: Studio only
+    // exposes them through the dedicated Position/Orientation UI, never as
+    // a raw property row, not even a read-only one.
+    let rows = instance_of(
+        "Part",
+        &[
+            ("Position", Variant::Vector3(vector3(1.0, 2.0, 3.0))),
+            ("Orientation", Variant::Vector3(vector3(0.0, 0.0, 0.0))),
+        ],
+    )
+    .rows(part());
+
+    assert!(!rows.iter().any(|row| row.name == "Position"));
+    assert!(!rows.iter().any(|row| row.name == "Orientation"));
+}
+
+#[test]
+fn a_non_hidden_non_serializable_property_still_shows_but_has_no_edit_affordance() {
+    // BasePart.Rotation is not Hidden, but Studio never saves it under any
+    // name (it is a view of the CFrame): the row stays, just without an
+    // edit widget.
+    let row = instance_of(
+        "Part",
+        &[("Rotation", Variant::Vector3(vector3(0.0, 90.0, 0.0)))],
+    )
+    .rows(part())
+    .into_iter()
+    .find(|row| row.name == "Rotation")
+    .expect("the Rotation row");
+
+    assert_eq!(row.edit, None);
+}
+
+#[test]
+fn a_property_saved_under_another_name_is_still_editable() {
+    // The dump reports `BasePart.Size` as `CanSave: false` only because a
+    // file holds it as `size`.
+    let row = instance_of(
+        "Part",
+        &[("size", Variant::Vector3(vector3(4.0, 1.0, 2.0)))],
+    )
+    .rows(part())
+    .into_iter()
+    .find(|row| row.name == "Size")
+    .expect("the Size row");
+
+    assert!(matches!(row.edit, Some(EditKind::Fields { .. })));
+}
+
+#[test]
+fn cframe_stays_visible_and_editable_after_hidden_filtering() {
+    // The property this codebase actually uses in place of the not-yet-built
+    // Position/Orientation UI: it must not get caught by the Hidden filter
+    // just because Position/Orientation (which it stands in for) did.
+    let frame = CFrameData {
+        position: vector3(0.0, 5.0, 0.0),
+        rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    };
+    let row = instance_of("Part", &[("CFrame", Variant::CFrame(frame))])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == "CFrame")
+        .expect("the CFrame row");
+
+    let Some(EditKind::Groups { values, .. }) = row.edit else {
+        panic!("a CFrame should still edit as captioned groups after filtering");
+    };
+    assert_eq!(values, ["0", "5", "0", "0", "0", "0"]);
+}
+
+#[test]
+fn an_ordinary_property_is_unaffected_by_hidden_or_read_only_filtering() {
+    let row = instance_of("Part", &[])
+        .rows(part())
+        .into_iter()
+        .find(|row| row.name == "Name")
+        .expect("the Name row");
+
+    assert_eq!(row.edit, Some(EditKind::Text("Greeter".to_owned())));
+}
+
+#[test]
+fn a_source_property_on_a_class_that_is_not_a_script_stays_editable() {
+    // Only `LuaSourceContainer` hands its Source to the script editor; a
+    // property that merely shares the name elsewhere is untouched.
+    assert_eq!(
+        source_row("Part", "not code").edit,
+        Some(EditKind::Text("not code".to_owned()))
+    );
+}
+
+/// The field beside a numeric row's expander shows the value **whole**, and
+/// what it shows has to be exactly what committing it writes: the panel
+/// splits one text into components and the summary rejoins them, so a
+/// spelling that survives the round trip is the only thing keeping the two
+/// halves of the row from disagreeing about the same value.
+#[test]
+fn a_numeric_rows_components_rejoin_into_the_text_they_were_split_from() {
+    let values = [
+        Variant::Vector2(Vector2Data { x: 1.0, y: -2.5 }),
+        Variant::Vector3(vector3(1.0, -2.5, 3.0)),
+        Variant::Vector3int16 { x: 1, y: -2, z: 3 },
+        Variant::UDim(UDim {
+            scale: 0.5,
+            offset: 12,
+        }),
+        Variant::UDim2(UDim2 {
+            x: UDim {
+                scale: 0.5,
+                offset: 12,
+            },
+            y: UDim {
+                scale: 0.0,
+                offset: -4,
+            },
+        }),
+        Variant::Rect(Rect {
+            min: Vector2Data { x: 0.0, y: 1.0 },
+            max: Vector2Data { x: 4.0, y: 2.0 },
+        }),
+        Variant::NumberRange(NumberRange { min: 1.0, max: 2.5 }),
+        Variant::Font(Font {
+            family: "rbxasset://fonts/families/Arial.json".into(),
+            weight: 400,
+            style: FontStyle::Normal,
+            cached_face_id: None,
+        }),
+        // The captioned shape, whose components are split across two groups
+        // and still rejoin into one line.
+        Variant::CFrame(CFrameData {
+            position: vector3(1.0, 2.0, 3.0),
+            rotation: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        }),
+    ];
+
+    for value in values {
+        let whole = edit::edit_text(&value).expect("an editable value");
+        let components = match value_edit_kind(&value, whole.clone()) {
+            EditKind::Fields { values, .. } | EditKind::Groups { values, .. } => values,
+            other => panic!("{value:?} is not a numeric row: {other:?}"),
+        };
+
+        assert_eq!(components.join(", "), whole, "{value:?}");
+    }
+}
+
+/// Walks every property the live API dump (`assets/API-Dump.json`, via
+/// [`ReflectionDatabase::embedded`]) declares and checks that its default
+/// value, where the dump records one, never lands in `value_edit_kind`'s
+/// catch-all `Text` arm, the "generic fallback" the roadmap's type-coverage
+/// pass asked to go check for, unless it is one of the handful of types
+/// that genuinely are just typed text by design (a plain string or number,
+/// or a `Content` URI field). `Enum` and `BrickColor` pick their widget
+/// through `Properties::edit_kind` instead, which needs a database for enum
+/// member names that `value_edit_kind` alone doesn't have, so they're
+/// skipped here rather than duplicated.
+///
+/// Kept as a standing check rather than a one-off read of the dump: a new
+/// Roblox type landing through the daily API-dump sync with no row of its
+/// own now fails a test instead of quietly shipping as plain text.
+#[test]
+fn every_dump_property_gets_a_real_editor_or_is_text_by_design() {
+    let db = ReflectionDatabase::embedded();
+    let mut checked = 0;
+    for class in db.class_names() {
+        let descriptor = db
+            .class(class)
+            .expect("class_names only names classes the database itself has");
+        for property in &descriptor.properties {
+            if property.is_hidden() || property.is_deprecated() {
+                continue;
+            }
+            let Some(value) = db.default_value(class, &property.name) else {
+                continue;
+            };
+            if matches!(value, Variant::Enum(_) | Variant::BrickColor(_)) {
+                continue;
+            }
+            let Some(text) = edit::edit_text(value) else {
+                continue;
+            };
+            checked += 1;
+            let text_by_design = matches!(
+                value,
+                Variant::String(_)
+                    | Variant::Int32(_)
+                    | Variant::Int64(_)
+                    | Variant::Float32(_)
+                    | Variant::Float64(_)
+                    | Variant::Content(_)
+            );
+            assert!(
+                text_by_design || !matches!(value_edit_kind(value, text), EditKind::Text(_)),
+                "{class}.{} ({value:?}) renders as a plain text row",
+                property.name
+            );
+        }
+    }
+    assert!(
+        checked > 50,
+        "expected to have exercised plenty of real dump properties, only checked {checked}"
+    );
+}
