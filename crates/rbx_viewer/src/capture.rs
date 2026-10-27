@@ -472,6 +472,7 @@ pub(crate) fn write_png_on(
     size: (u32, u32),
     framing: Framing,
 ) -> Result<(), String> {
+    check_size(device, size)?;
     // A single capture outlines nothing and has no tool active; only the
     // projection mode is ever asked for from the command line.
     let view = View {
@@ -501,6 +502,18 @@ pub(crate) fn write_png_on(
     encode(output, &pixels, size)
 }
 
+/// Rejects a capture bigger than the device can make a texture of, which wgpu
+/// would otherwise answer with a validation panic.
+fn check_size(device: &wgpu::Device, (width, height): (u32, u32)) -> Result<(), String> {
+    let max = device.limits().max_texture_dimension_2d;
+    if width > max || height > max {
+        return Err(format!(
+            "--size {width}x{height} is bigger than this GPU can render, the limit is {max} pixels on each side"
+        ));
+    }
+    Ok(())
+}
+
 /// Writes tightly packed RGBA8 pixel data to a PNG file.
 fn encode(output: &Path, pixels: &[u8], size: (u32, u32)) -> Result<(), String> {
     let file = std::fs::File::create(output)
@@ -518,4 +531,24 @@ fn encode(output: &Path, pixels: &[u8], size: (u32, u32)) -> Result<(), String> 
         .map_err(|err| format!("failed to write {output:?}: {err}"))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod size_tests {
+    use super::*;
+
+    #[test]
+    fn a_size_past_the_device_limit_is_an_error_not_a_panic() {
+        let Some((device, _queue)) = gpu::for_tests() else {
+            return;
+        };
+        let max = device.limits().max_texture_dimension_2d;
+        assert!(check_size(&device, (max, max)).is_ok());
+        let err = check_size(&device, (20000, 20000)).unwrap_err();
+        assert!(
+            err.contains("20000x20000") && err.contains(&max.to_string()),
+            "{err}"
+        );
+        assert!(check_size(&device, (64, max + 1)).is_err());
+    }
 }
