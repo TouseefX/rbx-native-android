@@ -28,9 +28,9 @@ pub(crate) use fit::{
 };
 
 use super::material::{Catalog, Slot};
+use super::shape::{FILE_MESH, HEAD_MESH};
 
 const MESH_PART: &str = "MeshPart";
-const FILE_MESH: u32 = 5; // Enum.MeshType.FileMesh
 
 /// One file-mesh-backed instance found in the DOM, before its assets exist.
 #[derive(Clone)]
@@ -470,10 +470,10 @@ fn from_mesh_part(
     })
 }
 
-/// A plain `Part` wearing a `SpecialMesh` FileMesh child: the child replaces
-/// the part's geometry outright, same precedence as `scene::shape::resolve`.
-/// Only the FileMesh case reaches here, every other `MeshType` already has a
-/// procedural stand-in built in `shape::resolve` and is left alone.
+/// A plain `Part` wearing a `SpecialMesh` FileMesh or Head child: the child
+/// replaces the part's geometry outright, same precedence as
+/// `scene::shape::resolve`. Every other `MeshType` is procedural, built in
+/// `shape::resolve`, and is left alone.
 fn from_special_mesh_child(
     dom: &WeakDom,
     database: &ReflectionDatabase,
@@ -489,7 +489,12 @@ fn from_special_mesh_child(
 
     let properties = child.properties();
     let texture = properties.get("TextureId").and_then(parsed_asset_ref);
-    let tint = vector3(properties.get("VertexColor"), Vec3::ONE);
+    // "Changes the hue of a mesh's texture" (creator-docs `VertexColor`), and
+    // only that: Studio leaves an untextured mesh the part's own colour.
+    let tint = match texture {
+        Some(_) => vector3(properties.get("VertexColor"), Vec3::ONE),
+        None => Vec3::ONE,
+    };
 
     let color = std::array::from_fn(|axis| {
         let part_channel = super::srgb_to_linear(f32::from(part_color[axis]) / 255.0);

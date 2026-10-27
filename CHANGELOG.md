@@ -2,6 +2,15 @@
 
 ## 2026-10-27
 
+- **SpecialMesh shapes now match Studio**: a Head is Studio's own
+  `head.mesh` now (pulled from the content CDN like fonts and textures),
+  sized the way Studio sizes it, instead of a ball. A Cylinder mesh stays
+  round when Y and Z differ, and Prism, Pyramid, ParallelRamp and
+  RightAngleRamp draw nothing, same as Studio. Torso was already right,
+  it's a plain box. VertexColor only tints textured meshes now. Particle
+  keypoint envelopes work too: each particle rolls once, so a bigger one
+  is also more opaque, like in Studio. Every shape was checked against
+  Studio screenshots, all within about 2% silhouette diff. (@chteau)
 - **Editor leftovers from the E2E sweep**: Studio's own BuilderSans faces
   (ExtraBold included) now load from a Vinegar install on Linux, so the
   "BuilderSans-ExtraBold.otf does not contain the requested file" warning

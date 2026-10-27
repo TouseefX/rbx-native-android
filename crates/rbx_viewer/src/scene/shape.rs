@@ -19,6 +19,9 @@ use crate::shapes::{TrussAxis, TrussStyle};
 const WEDGE_PART: &str = "WedgePart";
 const CORNER_WEDGE_PART: &str = "CornerWedgePart";
 const TRUSS_PART: &str = "TrussPart";
+/// `Enum.MeshType.Head` and `Enum.MeshType.FileMesh`.
+pub(crate) const HEAD_MESH: u32 = 0;
+pub(crate) const FILE_MESH: u32 = 5;
 // Roblox restricts a real TrussPart.Size to 2*2*n studs, n a multiple of 2, up
 // to 512, n/2 (this cap) is the largest legitimate number of 2-stud repeats.
 const MAX_TRUSS_SEGMENTS: u32 = 256;
@@ -213,78 +216,103 @@ fn truss_style(raw: u32) -> TrussStyle {
     }
 }
 
-/// Looks for the first legacy mesh child that replaces the part's own shape.
-fn mesh_child(dom: &WeakDom, instance: &Instance, size: Vec3) -> Option<Geometry> {
-    instance.children().iter().find_map(|&child_ref| {
-        let child = dom.get(child_ref)?;
-        let (scale, offset) = mesh_scale_offset(child);
-
-        match child.class() {
-            "BlockMesh" => Some(Geometry {
-                kind: ShapeKind::Box,
-                size: size * scale,
-                offset,
-            }),
-            // Along Y, and "maintaining a 1:1 ratio for the part's X and Z
-            // axis, using the lowest value" (creator-docs `CylinderMesh`).
-            "CylinderMesh" => {
-                let size = size * scale;
-                let diameter = size.x.min(size.z);
-                Some(Geometry {
-                    kind: ShapeKind::CylinderY,
-                    size: Vec3::new(diameter, size.y, diameter),
-                    offset,
-                })
-            }
-            "SpecialMesh" => special_mesh(child, size * scale, offset),
-            // A plain `FileMesh` child (no MeshType) has no procedural stand-in
-            // yet, TODO: rbx_mesh will draw its actual geometry.
-            //
-            // A `DynamicMesh` child is the one other `DataModelMesh` a file
-            // can hold, and it is deliberately nothing here: the class
-            // carries no properties at all (the API dump lists none), its
-            // geometry arriving through the runtime editable-mesh API, so a
-            // place file's one has no shape to replace the part's with.
-            _ => None,
-        }
-    })
+/// The legacy mesh child that replaces the part's own shape: the first
+/// `BlockMesh`, `CylinderMesh` or non-FileMesh `SpecialMesh`. A `SpecialMesh`
+/// FileMesh has no procedural shape (its geometry is the asset `filemesh`
+/// draws), and a `DynamicMesh` carries no properties at all (the API dump
+/// lists none, its geometry arriving through the runtime editable-mesh API),
+/// so neither replaces anything here.
+fn legacy_mesh<'a>(dom: &'a WeakDom, instance: &Instance) -> Option<&'a Instance> {
+    instance
+        .children()
+        .iter()
+        .filter_map(|&child_ref| dom.get(child_ref))
+        .find(|child| match child.class() {
+            "BlockMesh" | "CylinderMesh" => true,
+            "SpecialMesh" => !matches!(
+                child.properties().get("MeshType"),
+                Some(&Variant::Enum(FILE_MESH))
+            ),
+            _ => false,
+        })
 }
 
-/// `Enum.MeshType`, mapped onto the meshes this viewer can actually draw.
-///
-/// TODO: Head and Torso are rough stand-ins (ball / box) rather than their
-/// true rounded shapes; Prism/ParallelRamp/RightAngleRamp reuse Wedge as a
-/// reasonable approximation; Pyramid has no dedicated mesh yet and falls back
-/// to a box. `VertexColor` is read nowhere yet, every shaped part keeps the
-/// part's own `Color3uint8`.
-fn special_mesh(mesh: &Instance, size: Vec3, offset: Vec3) -> Option<Geometry> {
-    let Some(&Variant::Enum(mesh_type)) = mesh.properties().get("MeshType") else {
-        return Some(Geometry {
+fn mesh_child(dom: &WeakDom, instance: &Instance, size: Vec3) -> Option<Geometry> {
+    let child = legacy_mesh(dom, instance)?;
+    let (scale, offset) = mesh_scale_offset(child);
+    let size = size * scale;
+    match child.class() {
+        "BlockMesh" => Some(Geometry {
             kind: ShapeKind::Box,
             size,
             offset,
-        });
-    };
+        }),
+        // Along Y, and "maintaining a 1:1 ratio for the part's X and Z
+        // axis, using the lowest value" (creator-docs `CylinderMesh`).
+        "CylinderMesh" => {
+            let diameter = size.x.min(size.z);
+            Some(Geometry {
+                kind: ShapeKind::CylinderY,
+                size: Vec3::new(diameter, size.y, diameter),
+                offset,
+            })
+        }
+        _ => Some(special_mesh(child, size, offset)),
+    }
+}
 
-    // The Head mesh is drawn at half the part's width: a classic 2 x 1 x 1
-    // head part shows a round head as wide as it is tall, not an ellipsoid
-    // twice as wide (Scale 1.25 gives the familiar 1.25 stud head).
-    let size = if mesh_type == 0 {
-        Vec3::new(size.x / 2., size.y, size.z)
-    } else {
-        size
+/// `Enum.MeshType`, mapped onto the meshes this viewer draws. Every mapping
+/// was measured against Studio's own render (front, side and top silhouettes
+/// at several sizes), not taken from the enum's names.
+///
+/// Torso is a plain box, as sharp-cornered as Brick, not the bevelled
+/// `torso.mesh` the docs' "default Humanoid torso" suggests. Head draws
+/// Studio's `head.mesh`, a file mesh planned in `filemesh::fit`; the cylinder
+/// here is only what shows until that mesh lands, at the same extent. The four
+/// deprecated types draw nothing at all, see [`draws_nothing`].
+fn special_mesh(mesh: &Instance, size: Vec3, offset: Vec3) -> Geometry {
+    let Some(&Variant::Enum(mesh_type)) = mesh.properties().get("MeshType") else {
+        return Geometry {
+            kind: ShapeKind::Box,
+            size,
+            offset,
+        };
     };
-    let kind = match mesh_type {
-        0 | 3 => ShapeKind::Ball, // Head, Sphere
-        // Along X like a Cylinder part, not Y like a `CylinderMesh`
-        // (creator-docs `CylinderMesh`, which contrasts the two).
-        4 => ShapeKind::CylinderX,
-        2 | 7 | 9 | 10 => ShapeKind::Wedge, // Wedge, Prism, ParallelRamp, RightAngleRamp
-        11 => ShapeKind::CornerWedge,
-        5 => return None,    // FileMesh: no procedural geometry yet
-        _ => ShapeKind::Box, // Torso, Brick, Pyramid, unknown
+    let (kind, size) = match mesh_type {
+        HEAD_MESH => (ShapeKind::CylinderY, head_extent(size)),
+        2 => (ShapeKind::Wedge, size),
+        3 => (ShapeKind::Ball, size),
+        // Along X like a Cylinder part, not Y like a `CylinderMesh`, and as
+        // wide as the smaller of Y and Z: a 4x8x4 one is 4 studs round.
+        4 => {
+            let diameter = size.y.min(size.z);
+            (ShapeKind::CylinderX, Vec3::new(size.x, diameter, diameter))
+        }
+        11 => (ShapeKind::CornerWedge, size),
+        _ => (ShapeKind::Box, size), // Torso, Brick, the deprecated four, unknown
     };
-    Some(Geometry { kind, size, offset })
+    Geometry { kind, size, offset }
+}
+
+/// The extent Studio draws a `MeshType.Head` at: Y as given, X and Z both the
+/// smaller of the two, so a classic 2x1x1 head part (Scale 1.25) is a 1.25
+/// stud round head, and an 8x4x4 one no wider than a 4x4x4 one.
+pub(crate) fn head_extent(size: Vec3) -> Vec3 {
+    let diameter = size.x.min(size.z);
+    Vec3::new(diameter, size.y, diameter)
+}
+
+/// Whether `instance` wears a `SpecialMesh` of one of the deprecated types
+/// (Prism, Pyramid, ParallelRamp, RightAngleRamp). Studio draws nothing for
+/// those, the part keeps only its box to click and select.
+pub(crate) fn draws_nothing(dom: &WeakDom, instance: &Instance) -> bool {
+    legacy_mesh(dom, instance).is_some_and(|mesh| {
+        mesh.class() == "SpecialMesh"
+            && matches!(
+                mesh.properties().get("MeshType"),
+                Some(&Variant::Enum(7..=10))
+            )
+    })
 }
 
 fn mesh_scale_offset(mesh: &Instance) -> (Vec3, Vec3) {
