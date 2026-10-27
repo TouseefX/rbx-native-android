@@ -13,6 +13,10 @@ fn main() -> ExitCode {
     let mut argv = std::env::args();
     let _program = argv.next();
     let mut argv = argv.peekable();
+    if matches!(argv.peek().map(String::as_str), Some("--help" | "-h")) {
+        println!("{}\n{}", args::usage(), test::USAGE);
+        return ExitCode::SUCCESS;
+    }
     if argv.peek().map(String::as_str) == Some("test") {
         argv.next();
         return match test::parse(argv) {
