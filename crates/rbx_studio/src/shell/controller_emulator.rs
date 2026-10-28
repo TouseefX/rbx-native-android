@@ -176,7 +176,7 @@ impl ControllerEmulator {
             match VirtualPad::create(self.device()) {
                 Ok(pad) => {
                     self.pad = Some(pad);
-                    self.push();
+                    self.push(cx);
                 }
                 Err(error) => self.problem = Some(error.to_string()),
             }
@@ -199,9 +199,16 @@ impl ControllerEmulator {
         )
     }
 
-    fn push(&mut self) {
+    #[cfg_attr(not(target_os = "linux"), allow(unused_variables))]
+    fn push(&mut self, cx: &App) {
         let output = self.output();
         if let Some(pad) = &mut self.pad {
+            // This window holds the keyboard while it is used, and the client
+            // ignores a pad while it lacks the focus (`Embedded::lend_focus`).
+            #[cfg(target_os = "linux")]
+            if let Some(client) = self.shell.read(cx).play_embedded() {
+                let _ = client.lend_focus();
+            }
             if let Err(error) = pad.send(output) {
                 self.problem = Some(PadError::Io(error).to_string());
                 self.pad = None;
@@ -228,19 +235,19 @@ impl ControllerEmulator {
 
     pub(super) fn pointer_button(&mut self, button: Button, down: bool, cx: &mut Context<Self>) {
         self.pointer.set(button, down);
-        self.push();
+        self.push(cx);
         cx.notify();
     }
 
     pub(super) fn pointer_stick(&mut self, side: Side, x: f32, y: f32, cx: &mut Context<Self>) {
         self.pointer.set_stick(side, x, y);
-        self.push();
+        self.push(cx);
         cx.notify();
     }
 
     pub(super) fn pointer_trigger(&mut self, side: Side, value: f32, cx: &mut Context<Self>) {
         self.pointer.set_trigger(side, value);
-        self.push();
+        self.push(cx);
         cx.notify();
     }
 
@@ -263,7 +270,7 @@ impl ControllerEmulator {
             return false;
         }
         if self.held.insert(key.to_owned()) {
-            self.push();
+            self.push(cx);
             cx.notify();
         }
         true
@@ -271,7 +278,7 @@ impl ControllerEmulator {
 
     fn key_up(&mut self, key: &str, cx: &mut Context<Self>) {
         if self.held.remove(key) {
-            self.push();
+            self.push(cx);
             cx.notify();
         }
     }
