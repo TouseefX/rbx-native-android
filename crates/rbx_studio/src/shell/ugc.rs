@@ -12,8 +12,8 @@ use rbx_ugc::{AssetType, BodyScale, Finding, Rule};
 
 mod check;
 mod collect;
-mod fitting;
 mod face_window;
+mod fitting;
 mod pickers;
 mod report;
 mod source;

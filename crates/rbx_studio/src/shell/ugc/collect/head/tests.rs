@@ -3,7 +3,7 @@ use rbx_reflection::ReflectionDatabase;
 use rbx_ugc::head::HeadRule;
 use rbx_ugc::Rule;
 
-use super::{head_part, head_plan, resolve_head};
+use super::{head_part, head_plan, resolve_head, Key};
 
 /// A `version 2.00` mesh of one triangle spanning a 2 stud cube.
 fn mesh_bytes() -> Vec<u8> {
@@ -24,9 +24,9 @@ fn mesh_bytes() -> Vec<u8> {
     body
 }
 
-fn fetch(id: u64) -> Result<Vec<u8>, String> {
-    match id {
-        9 => Err("offline".into()),
+fn fetch(key: &Key) -> Result<Vec<u8>, String> {
+    match key {
+        Key::Id(9) => Err("offline".into()),
         _ => Ok(mesh_bytes()),
     }
 }
@@ -76,8 +76,8 @@ fn a_model_previews_its_head_part() {
     let plan = head_plan(&dom, &database, model).unwrap();
     assert_eq!(plan.part, head);
     assert!(plan.face_controls);
-    assert_eq!(plan.mesh, Some(1));
-    assert_eq!(plan.cage.map(|c| c.0), Some(5));
+    assert_eq!(plan.mesh, Some(Key::Id(1)));
+    assert_eq!(plan.cage.map(|c| c.0), Some(Key::Id(5)));
 }
 
 #[test]
