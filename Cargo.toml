@@ -2,8 +2,12 @@
 resolver = "2"
 members = ["crates/*"]
 
+# The oldest Rust that builds the whole tree: wasmtime 49 (WASM plugins
+# through rbx_wasm) asks for 1.96, so cargo says so up front instead of
+# failing deep in a dependency.
 [workspace.package]
 edition = "2021"
+rust-version = "1.96"
 license = "MIT"
 
 # Test builds keep line tables (backtraces still name file and line) but drop
