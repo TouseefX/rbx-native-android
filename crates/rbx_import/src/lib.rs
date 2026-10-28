@@ -6,8 +6,11 @@
 //! `.gltf` has its side files inlined.
 
 mod fbx;
+mod geometry;
 mod gltf_file;
 mod obj;
+
+pub use geometry::{read_geometry, SourceGeometry, SourceMesh, SourceTexture};
 
 use std::path::Path;
 

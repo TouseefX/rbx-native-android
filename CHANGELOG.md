@@ -1,5 +1,61 @@
 # Changelog
 
+## 2026-10-28
+
+- **Check and upload avatar items**: Avatar › Check Item checks an
+  Accessory, MeshPart, Model or a 3D file against Roblox's published
+  Marketplace limits (triangles, textures, bone influences, size per type
+  and body scale, attachments, cages, body boxes) and says what to fix.
+  Same verdicts and numbers as Studio's Save to Roblox on the same items.
+  Avatar › Upload Item uploads the item as a Model through Open Cloud for
+  free, spells out the Creator Hub fees first and opens the item there,
+  since Roblox has no API for the paid avatar item step. The checks live in
+  a new `rbx_ugc` crate the fitting tool can reuse. (@chteau)
+- **Dynamic heads**: the viewport now poses a dynamic head from its
+  `FaceControls`, like Studio. Avatar › Face Preview gets a slider per FACS
+  control, the 5 validation expressions in one click and the eye and mouth
+  landmarks drawn on the face. Check Item knows a dynamic head and checks
+  its 17 poses, facial actions, landmarks, emote size and the schema bits
+  Studio wants, with the same verdicts as Studio's Save to Roblox on
+  Roblox's own head. (@chteau)
+- **Auto-rig a Roblox model**: Auto-rig a mesh… takes a `.rbxm` or `.rbxmx`
+  now, not just FBX, OBJ and glTF. Every MeshPart's mesh is fetched and
+  fitted to its Size and CFrame like the viewport does it (plain Parts
+  come along as their shape), merged into one body and rigged as usual.
+  When all the parts share a texture, a SurfaceAppearance or a colour,
+  the rig keeps it. An empty model, a model that's already rigged
+  (Bones or Motor6Ds), one with unions, and meshes that won't download
+  each get a clear message in the toast and Output. (@chteau)
+
+## 2026-10-27
+
+- **SpecialMesh shapes now match Studio**: a Head is Studio's own
+  `head.mesh` now (pulled from the content CDN like fonts and textures),
+  sized the way Studio sizes it, instead of a ball. A Cylinder mesh stays
+  round when Y and Z differ, and Prism, Pyramid, ParallelRamp and
+  RightAngleRamp draw nothing, same as Studio. Torso was already right,
+  it's a plain box. VertexColor only tints textured meshes now. Particle
+  keypoint envelopes work too: each particle rolls once, so a bigger one
+  is also more opaque, like in Studio. Every shape was checked against
+  Studio screenshots, all within about 2% silhouette diff. (@chteau)
+- **Editor leftovers from the E2E sweep**: Studio's own BuilderSans faces
+  (ExtraBold included) now load from a Vinegar install on Linux, so the
+  "BuilderSans-ExtraBold.otf does not contain the requested file" warning
+  at startup is gone and GUI text uses the real face. Auto-rig shows why it
+  refused a file (a `.rbxm`, say) as a toast in the Animation Editor instead
+  of failing quietly. The `RBX_STUDIO_SAVE_AS` docs now say what it does, one
+  save at startup, and a test pins that `GetService("Players")` works on a
+  place without one. (@chteau)
+- **CLI and file-format hardening**: a hostile binary file can't make us
+  allocate gigabytes anymore, since chunk decompression stops at what the
+  header declares (and a 1 GiB ceiling), and a cut-off file now says which
+  chunk is short and how much is actually left. `rbxview --size` past what
+  the GPU can render is an error instead of a wgpu panic. `--help` / `-h`
+  prints usage and exits 0 in rbxdump, rbxlua, rbxcloud, rbxaudit and
+  rbxmerge. `rbxdump --roundtrip` fills gaps like the editor's save does, so
+  editor-saved files stop failing it, and `rbxlua --print-changes` only
+  lists what the script did, in the order it did it. (@chteau)
+
 ## 2026-10-26
 
 - **Sign in to Roblox right from the first-run setup**: the setup wizard

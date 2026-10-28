@@ -7,7 +7,10 @@ license.workspace = true
 [dependencies]
 # Reads `.gltf`/`.glb` to count triangles per mesh; its `import` feature (image
 # decoding, buffer loading) is not needed to read accessor counts.
-gltf = { version = "1", default-features = false, features = ["names"] }
+gltf = { version = "1", default-features = false, features = ["names", "utils"] }
+# Reads a texture's pixel size from its header alone, so a 2048 px PNG is not
+# decoded just to compare its dimensions with the Marketplace limit.
+imagesize = "0.14"
 # `.obj` is the one format Roblox's Assets API does not take; it is read here
 # and rewritten as glTF.
 tobj = "4"
