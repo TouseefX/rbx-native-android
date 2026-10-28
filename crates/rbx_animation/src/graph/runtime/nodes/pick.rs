@@ -11,8 +11,8 @@ use crate::easing::Style;
 use crate::graph::model::{NodeKind, Value, DEFAULT_TRANSITION_DURATION};
 use crate::graph::pose::{self, Pose};
 
-use super::super::rng::Pcg32;
-use super::super::{Fade, Player, Status};
+use super::super::rng::Mt19937;
+use super::super::{Fade, Player, Status, NONE};
 use super::curve_named;
 
 impl Player {
@@ -42,19 +42,20 @@ impl Player {
         )
     }
 
-    /// Moves a picking node to input `to`, blending from what it shows now.
+    /// Moves a picking node to input `to` (or to [`NONE`]), blending from
+    /// the input it was on. A switch during a blend drops the blend's source
+    /// at once and blends from its target, as real Studio does: an A→B
+    /// blend interrupted halfway by C shows B fading into C, with no A.
     pub(in crate::graph::runtime) fn switch(&mut self, n: usize, to: usize, blend: (f32, Style)) {
         let (duration, curve) = blend;
         if let Some(child) = self.source(n, to) {
             self.restart(child);
         }
         let state = self.state(n);
-        let snapshot = state.fade.take().and(state.last.take());
         let from = state.active;
         state.active = to;
         state.fade = (duration > 0.).then_some(Fade {
             from,
-            snapshot,
             elapsed: 0.,
             duration,
             curve,
@@ -64,8 +65,7 @@ impl Player {
     /// The active input, blended from the previous one while a fade runs.
     /// Only the inputs in play pass events on; during a fade both do, each
     /// scaled by its share of the blend. UNVERIFIED: that this is what
-    /// Roblox's "global event rules" mean for a transition. A frozen
-    /// snapshot plays nothing, so it raises nothing.
+    /// Roblox's "global event rules" mean for a transition.
     pub(in crate::graph::runtime) fn current(&mut self, n: usize, dt: f32) -> (Pose, Status) {
         let active = self.states[n].active;
         let start = self.mark();
@@ -74,22 +74,15 @@ impl Player {
             return (to, status);
         };
         let middle = self.mark();
-        let from = match fade.snapshot.clone() {
-            Some(frozen) => frozen,
-            None => self.child(n, fade.from, dt).0,
-        };
+        let from = self.child(n, fade.from, dt).0;
         let end = self.mark();
         fade.elapsed += dt;
         let progress = fade.progress();
         self.weigh(start, middle, progress, progress);
         self.weigh(middle, end, 1. - progress, 1. - progress);
         let pose = pose::mix(&from, &to, progress);
-        let state = self.state(n);
-        if fade.done() {
-            state.last = None;
-        } else {
-            state.last = Some(pose.clone());
-            state.fade = Some(fade);
+        if !fade.done() {
+            self.state(n).fade = Some(fade);
         }
         (pose, status)
     }
@@ -106,27 +99,28 @@ impl Player {
         state.active = first;
     }
 
-    /// Plays the input whose pin name Selection holds. UNVERIFIED: a
-    /// Selection naming no input keeps the current one.
+    /// Plays the input whose pin name Selection holds. A Selection naming no
+    /// input (the empty default included) plays none: real Studio starts on
+    /// the rest pose, and fades the current input out to it over the
+    /// default transition when Selection is changed to an unknown name.
     pub(in crate::graph::runtime) fn select(&mut self, n: usize, dt: f32) -> (Pose, Status) {
-        let wanted = self.pin_index(n, &self.text(n, "Selection"));
-        let first = wanted
-            .or_else(|| self.connected(n).first().copied())
-            .unwrap_or(0);
-        self.begin(n, first);
-        if let Some(to) = wanted.filter(|&to| to != self.states[n].active) {
-            let blend = self.transition_of(n, to);
-            self.switch(n, to, blend);
+        let wanted = self
+            .pin_index(n, &self.text(n, "Selection"))
+            .unwrap_or(NONE);
+        self.begin(n, wanted);
+        if wanted != self.states[n].active {
+            let blend = self.transition_of(n, wanted);
+            self.switch(n, wanted, blend);
         }
         self.current(n, dt)
     }
 
     /// Plays the first input, top down, whose Trigger is on. Leaving the
     /// current input follows its Interruptible setting: Always, once it has
-    /// Finished, or while its InterruptibleTrigger is on. UNVERIFIED: with no
-    /// Trigger on the current input keeps playing (the first one until any
-    /// fires), and the Interruptible rule guards every change, not only one
-    /// to a higher input.
+    /// Finished, or while its InterruptibleTrigger is on. Until a Trigger
+    /// fires none plays, as in real Studio. UNVERIFIED: once one has, turning
+    /// every Trigger off keeps it playing, and the Interruptible rule guards
+    /// every change, not only one to a higher input; neither was measured.
     pub(in crate::graph::runtime) fn priority_select(
         &mut self,
         n: usize,
@@ -137,16 +131,18 @@ impl Player {
             .iter()
             .copied()
             .find(|&i| self.input_prop(n, i, "Trigger").is_some_and(|v| v.truthy()));
-        self.begin(n, wanted.or(connected.first().copied()).unwrap_or(0));
+        self.begin(n, wanted.unwrap_or(NONE));
         let active = self.states[n].active;
         if let Some(to) = wanted.filter(|&to| to != active) {
-            let allowed = match self.setting(n, active, "Interruptible").map(|v| v.text()) {
-                Some(rule) if rule == "Finished" => self.states[n].done,
-                Some(rule) if rule == "Trigger" => self
-                    .input_prop(n, active, "InterruptibleTrigger")
-                    .is_some_and(|v| v.truthy()),
-                _ => true,
-            };
+            let rule = self.setting(n, active, "Interruptible").map(|v| v.text());
+            let allowed = active == NONE
+                || match rule {
+                    Some(rule) if rule == "Finished" => self.states[n].done,
+                    Some(rule) if rule == "Trigger" => self
+                        .input_prop(n, active, "InterruptibleTrigger")
+                        .is_some_and(|v| v.truthy()),
+                    _ => true,
+                };
             if allowed {
                 let blend = self.transition_of(n, to);
                 self.switch(n, to, blend);
@@ -171,13 +167,13 @@ impl Player {
         let random = self.kind(n) == NodeKind::RandomSequence;
         if !self.states[n].started {
             // Seed −1 is a fresh draw each time the node starts.
-            let seed = self.number(n, "Seed", -1.);
-            let seed = if seed < 0. {
-                self.rng().next_u64()
+            let seed = self.prop(n, "Seed").map_or(-1., |v| v.number());
+            let rng = if seed.round() == -1. {
+                Mt19937::new(self.rng().next_u32())
             } else {
-                seed as u64
+                Mt19937::from_seed(seed)
             };
-            self.state(n).rng = Some(Pcg32::new(seed));
+            self.state(n).rng = Some(rng);
             let start = if random { self.pick(n, &order) } else { first };
             self.begin(n, start);
         }
@@ -232,14 +228,15 @@ impl Player {
         (pose, Status { finished, ..status })
     }
 
-    /// A weighted draw among `order`. UNVERIFIED: whether Roblox lets the
-    /// same input play twice running; here it can.
+    /// A weighted draw among `order`: one draw `u` in [0, 1), the input
+    /// whose share of the summed weights holds `u · total`. The same input
+    /// can play twice running, as it does in real Studio.
     fn pick(&mut self, n: usize, order: &[usize]) -> usize {
-        let weights: Vec<f32> = order
+        let weights: Vec<f64> = order
             .iter()
-            .map(|&i| self.input_number(n, i, "Weight", 1.).max(0.))
+            .map(|&i| f64::from(self.input_number(n, i, "Weight", 1.)).max(0.))
             .collect();
-        let total: f32 = weights.iter().sum();
+        let total: f64 = weights.iter().sum();
         let unit = match self.states[n].rng.as_mut() {
             Some(rng) => rng.unit(),
             None => self.rng.unit(),
