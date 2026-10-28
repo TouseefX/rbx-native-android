@@ -10,9 +10,10 @@
 //! stacks that key their button maps on those ids (SDL's controller
 //! database, Android's per-vendor key layouts) treat it as that pad.
 //!
-//! Windows and macOS have no equivalent without a driver: Windows would
-//! need ViGEmBus (a kernel driver the user installs), macOS a DriverKit
-//! HID extension. [`VirtualPad::create`] reports that rather than trying.
+//! Windows has no equivalent without a driver: there the pad is a ViGEmBus
+//! target ([`vigem`], the driver installed by the user). macOS would need a
+//! DriverKit HID extension, which needs Apple's entitlements;
+//! [`VirtualPad::create`] says so rather than trying.
 
 // Only the Linux back end reads the layouts and identities; elsewhere they
 // stay compiled (and unit-tested) so the model is the same on every platform.
@@ -21,6 +22,7 @@
 mod layout;
 #[cfg(target_os = "linux")]
 mod uinput;
+mod vigem;
 
 pub use layout::RawEvent;
 
@@ -270,21 +272,21 @@ impl std::error::Error for PadError {}
 
 #[cfg(target_os = "linux")]
 pub use uinput::VirtualPad;
+#[cfg(windows)]
+pub use vigem::VirtualPad;
 
-/// Off Linux there is no driver-free way to add a gamepad.
-#[cfg(not(target_os = "linux"))]
+/// Elsewhere (macOS) there is no driver-free way to add a gamepad.
+#[cfg(not(any(target_os = "linux", windows)))]
 pub struct VirtualPad {
     _never: std::convert::Infallible,
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", windows)))]
 impl VirtualPad {
     pub fn create(_device: Device) -> Result<VirtualPad, PadError> {
-        Err(PadError::Unavailable(if cfg!(windows) {
-            "Windows needs the ViGEmBus driver installed to add a virtual gamepad".into()
-        } else {
-            "this platform needs a HID driver extension to add a virtual gamepad".into()
-        }))
+        Err(PadError::Unavailable(
+            "this platform needs a HID driver extension to add a virtual gamepad".into(),
+        ))
     }
 
     pub fn device(&self) -> Device {
