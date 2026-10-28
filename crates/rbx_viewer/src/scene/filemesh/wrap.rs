@@ -20,7 +20,7 @@
 //! displacements. The reference cage rests in the garment's frame, which need
 //! not be where the body stands (the real Black Detective Trench Coat's sits
 //! 0.8 studs high), so for that fit the reference is first slid onto the body
-//! ([`register`]); matching vertices across that gap would pick the wrong
+//! (`nearest::register`); matching vertices across that gap would pick the wrong
 //! surface and tear the garment.
 //!
 //! `BindOffset` moves the fitted garment as a whole, a `CFrame` about the
@@ -36,7 +36,7 @@
 //! same at `Puffiness` -1, 0.5 and 1 and `ShrinkFactor` -1, 0.5 and 1, alone
 //! on the body or over a second layer. Studio clamps both to -1..1.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use glam::{Mat4, Vec3};
@@ -44,23 +44,15 @@ use rbx_assets::AssetRef;
 use rbx_dom::{Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
-use self::cage_map::{CageMap, Surface, WorldCage};
+use self::cage_map::{CageMap, Key, Surface, WorldCage};
+pub(crate) use self::hsr::{cull, Hsr};
+use self::nearest::deform;
 use super::fit::{self, Fit};
 use super::{parsed_asset_ref, Entry};
 use crate::scene::cframe_matrix;
 
 /// Neighbours blended per garment vertex.
 const BLEND: usize = 4;
-/// A body cage vertex further than this from its reference vertex is another
-/// limb's, not this one's resized.
-const MAX_SHIFT: f32 = 1.5;
-/// Reference vertices sampled per registration pass.
-const SAMPLES: usize = 600;
-/// Registration passes per starting offset.
-const PASSES: usize = 10;
-/// The share of the closest matches that steer registration, so a sleeve the
-/// body lacks does not drag the whole reference after it.
-const TRIM: f32 = 0.7;
 /// Studs of lift per `Order` step.
 const LIFT: f32 = 0.004;
 
@@ -77,6 +69,8 @@ pub(super) struct Wrap {
     /// `None` when it is the identity.
     bind: Option<Mat4>,
     targets: Vec<Target>,
+    /// The layer's hidden surface data, see [`hsr`].
+    hsr: Option<HsrSource>,
     /// The character the garment is worn on: the handle's accessory's parent,
     /// whose parts the wrapped garment is skinned to.
     pub(super) character: Ref,
@@ -91,6 +85,41 @@ struct Target {
     fit: Fit,
     /// The body part's `Name`: the bone its cage's vertices lend the garment.
     part: String,
+    /// The body part itself, whose faces under the clothing are hidden.
+    referent: Ref,
+    hsr: Option<HsrSource>,
+}
+
+/// Where a wrap's hidden surface data is: inline in `HSRData`, or in the
+/// `HiddenSurfaceRemovalAsset` its `HSRAssetId` names.
+#[derive(Clone)]
+enum HsrSource {
+    Inline(Arc<Hsr>),
+    Asset(AssetRef),
+}
+
+impl HsrSource {
+    fn of(wrap: &rbx_dom::Instance) -> Option<HsrSource> {
+        let properties = wrap.properties();
+        match hsr::data(properties.get("HSRData")).and_then(Hsr::parse) {
+            Some(inline) => Some(HsrSource::Inline(Arc::new(inline))),
+            None => parsed_asset_ref(properties.get("HSRAssetId")?).map(HsrSource::Asset),
+        }
+    }
+
+    fn get<'a>(&'a self, assets: &'a HashMap<AssetRef, Arc<Hsr>>) -> Option<&'a Hsr> {
+        match self {
+            HsrSource::Inline(inline) => Some(inline),
+            HsrSource::Asset(asset) => assets.get(asset).map(|hsr| &**hsr),
+        }
+    }
+
+    fn asset(&self) -> Option<&AssetRef> {
+        match self {
+            HsrSource::Asset(asset) => Some(asset),
+            HsrSource::Inline(_) => None,
+        }
+    }
 }
 
 /// The wrap of `handle`, when it carries a `WrapLayer` with a reference cage
@@ -103,6 +132,7 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
         .filter_map(|&c| dom.get(c))
         .find(|c| c.class() == "WrapLayer")?;
     let reference = parsed_asset_ref(layer.properties().get("ReferenceMeshId")?)?;
+    let hsr = HsrSource::of(layer);
     let origin = match layer.properties().get("ReferenceOrigin") {
         Some(Variant::CFrame(c)) => cframe_matrix(c),
         _ => Mat4::IDENTITY,
@@ -142,8 +172,8 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
         .get(rig)?
         .children()
         .iter()
-        .filter_map(|&part| {
-            let part = dom.get(part)?;
+        .filter_map(|&referent| {
+            let part = dom.get(referent)?;
             let (mesh, fit) = fit::mesh_part(database, part)?;
             let name = part.name().to_owned();
             let target = part
@@ -160,6 +190,8 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
                 mesh,
                 fit,
                 part: name,
+                referent,
+                hsr: HsrSource::of(target),
             })
         })
         .collect();
@@ -170,6 +202,7 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
         order,
         bind,
         targets,
+        hsr,
         character: rig,
     })
 }
@@ -181,10 +214,32 @@ impl Wrap {
             .chain(self.targets.iter().flat_map(|t| [&t.cage, &t.mesh]))
             .chain(self.outer.iter().map(|(cage, _)| cage))
     }
+
+    /// The `HiddenSurfaceRemovalAsset`s the wrap and its body name.
+    pub(super) fn hsr_assets(&self) -> impl Iterator<Item = &AssetRef> {
+        self.hsr
+            .iter()
+            .chain(self.targets.iter().flat_map(|t| t.hsr.iter()))
+            .filter_map(HsrSource::asset)
+    }
 }
 
 pub(super) fn key(referent: Ref) -> AssetRef {
     AssetRef::Thumb(format!("wrapped-mesh/{referent:?}"))
+}
+
+/// The key a body part's mesh is drawn under once faces are hidden.
+pub(super) fn hidden_key(referent: Ref) -> AssetRef {
+    AssetRef::Thumb(format!("hidden-surfaces/{referent:?}"))
+}
+
+/// What the wraps of a place make: every wrapped garment's deformed mesh,
+/// and the faces hidden under the clothing (see [`hsr`]) of each body part
+/// that has any.
+#[derive(Default)]
+pub(super) struct Wrapped {
+    pub(super) garments: HashMap<Ref, (AssetRef, Arc<rbx_mesh::SkinnedMesh>)>,
+    pub(super) hidden: HashMap<Ref, Vec<bool>>,
 }
 
 /// Every wrapped garment's deformed mesh, by referent, for those whose cages
@@ -192,19 +247,22 @@ pub(super) fn key(referent: Ref) -> AssetRef {
 /// first, over the surface the ones below left. Each is skinned to the
 /// character's parts: through the garment's own skin when its bones name the
 /// body parts it wraps, otherwise through one lent by the body (see
-/// [`lent_skin`]).
+/// [`lent_skin`]). Faces under a higher layer are left out of each garment,
+/// and of the body under all of them, by the HSR data in `surfaces` or
+/// inline.
 pub(super) fn derive(
     entries: &[Entry],
     meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
-) -> HashMap<Ref, (AssetRef, Arc<rbx_mesh::SkinnedMesh>)> {
+    surfaces: &HashMap<AssetRef, Arc<Hsr>>,
+) -> Wrapped {
     let mut worn: Vec<&Entry> = entries.iter().filter(|e| e.wrap.is_some()).collect();
     worn.sort_by(|a, b| {
         let order = |e: &Entry| e.wrap.as_ref().map_or(0.0, |w| w.order);
         order(a).total_cmp(&order(b))
     });
-    let mut surfaces: HashMap<Ref, Surface> = HashMap::new();
-    let mut out = HashMap::new();
-    for entry in worn {
+    let mut surface_of: HashMap<Ref, Surface> = HashMap::new();
+    let mut out = Wrapped::default();
+    for entry in &worn {
         let Some(wrap) = entry.wrap.as_ref() else {
             continue;
         };
@@ -212,7 +270,7 @@ pub(super) fn derive(
             continue;
         };
         let model = entry.fit.transform(garment);
-        let surface = match surfaces.entry(wrap.character) {
+        let surface = match surface_of.entry(wrap.character) {
             std::collections::hash_map::Entry::Occupied(found) => found.into_mut(),
             std::collections::hash_map::Entry::Vacant(slot) => {
                 slot.insert(body_surface(wrap, meshes))
@@ -228,18 +286,56 @@ pub(super) fn derive(
             Some(own) if names_the_body(wrap, own) => Some(own.clone()),
             _ => lent_skin(wrap, model, &deformed, meshes),
         };
-        out.insert(
-            entry.referent,
-            (
-                key(entry.referent),
-                Arc::new(rbx_mesh::SkinnedMesh {
-                    mesh: deformed,
-                    skin,
-                }),
-            ),
-        );
+        let mut fitted = rbx_mesh::SkinnedMesh {
+            mesh: deformed,
+            skin,
+        };
+        let above = covered(&worn, wrap.character, Some(wrap.order), meshes, surfaces);
+        let outer = wrap.outer.as_ref().and_then(|(cage, _)| meshes.get(cage));
+        if let (Some(hsr), Some(outer)) = (wrap.hsr.as_ref().and_then(|h| h.get(surfaces)), outer) {
+            fitted = hsr::cull(&fitted, &hsr.hidden(outer, &above));
+        }
+        out.garments
+            .insert(entry.referent, (key(entry.referent), Arc::new(fitted)));
+    }
+    // The body, under every layer of its character.
+    let mut seen = HashSet::new();
+    for wrap in worn.iter().filter_map(|e| e.wrap.as_ref()) {
+        if !seen.insert(wrap.character) {
+            continue;
+        }
+        let all = covered(&worn, wrap.character, None, meshes, surfaces);
+        for target in &wrap.targets {
+            let (Some(hsr), Some(cage)) = (
+                target.hsr.as_ref().and_then(|h| h.get(surfaces)),
+                meshes.get(&target.cage),
+            ) else {
+                continue;
+            };
+            let hidden = hsr.hidden(cage, &all);
+            if hidden.contains(&true) {
+                out.hidden.insert(target.referent, hidden);
+            }
+        }
     }
     out
+}
+
+/// The template UVs the layers worn on `character` cover: those above
+/// `order`, or all of them for the body.
+fn covered(
+    worn: &[&Entry],
+    character: Ref,
+    order: Option<f32>,
+    meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
+    surfaces: &HashMap<AssetRef, Arc<Hsr>>,
+) -> HashSet<Key> {
+    worn.iter()
+        .filter_map(|e| e.wrap.as_ref())
+        .filter(|w| w.character == character && order.is_none_or(|o| w.order > o))
+        .filter_map(|w| Some((w.hsr.as_ref()?.get(surfaces)?, meshes.get(&w.reference)?)))
+        .flat_map(|(hsr, inner)| hsr.covered(inner).collect::<Vec<_>>())
+        .collect()
 }
 
 /// `garment` moved by `by`, in its own mesh space: the fitted garment as
@@ -320,47 +416,6 @@ fn deform_over(
             }
             surface.lay(&laid);
         }
-    }
-    Some(out)
-}
-
-/// The nearest-vertex fit, for an inner cage the surface does not pair with.
-fn deform(
-    wrap: &Wrap,
-    model: Mat4,
-    garment: &rbx_mesh::Mesh,
-    meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
-) -> Option<rbx_mesh::Mesh> {
-    let reference = meshes.get(&wrap.reference)?;
-    let (body, _) = body(wrap, meshes)?;
-    let to_world = model * wrap.origin;
-    let reference_points: Vec<Vec3> = reference
-        .vertices
-        .iter()
-        .map(|v| to_world.transform_point3(Vec3::from(v.position)))
-        .collect();
-    let slide = register(&reference_points, &body);
-    // Where each reference vertex stands, and how far its body counterpart is.
-    let anchors: Vec<(Vec3, Vec3)> = reference_points
-        .iter()
-        .filter_map(|&point| {
-            let at = point + slide;
-            let shift = nearest(&body, at)? - at;
-            (shift.length() <= MAX_SHIFT).then_some((at, shift))
-        })
-        .collect();
-    if anchors.is_empty() {
-        return None;
-    }
-    let back = model.inverse();
-    let mut out = garment.clone();
-    for vertex in &mut out.vertices {
-        let at = model.transform_point3(Vec3::from(vertex.position)) + slide;
-        let normal = model
-            .transform_vector3(Vec3::from(vertex.normal))
-            .normalize_or_zero();
-        let moved = at + blended(&anchors, at) + normal * LIFT * (wrap.order + 1.0);
-        vertex.position = back.transform_point3(moved).to_array();
     }
     Some(out)
 }
@@ -463,86 +518,9 @@ fn lent_skin(
     })
 }
 
-/// The translation that lays the reference over the body: nearest-vertex
-/// matching from a few starting offsets, each pass moving by the mean of the
-/// closest [`TRIM`] of the gaps, and the start with the least left over wins.
-fn register(reference: &[Vec3], body: &[Vec3]) -> Vec3 {
-    let stride = (reference.len() / SAMPLES).max(1);
-    let sample: Vec<Vec3> = reference.iter().copied().step_by(stride).collect();
-    let (rb, bb) = (bounds(reference), bounds(body));
-    let starts = [
-        Vec3::ZERO,
-        (bb.0 + bb.1 - rb.0 - rb.1) * 0.5,
-        Vec3::new(0.0, bb.0.y - rb.0.y, 0.0),
-        Vec3::new(0.0, bb.1.y - rb.1.y, 0.0),
-    ];
-    let gaps = |slide: Vec3| -> Vec<Vec3> {
-        let mut gaps: Vec<Vec3> = sample
-            .iter()
-            .filter_map(|&p| nearest(body, p + slide).map(|n| n - p - slide))
-            .collect();
-        gaps.sort_by(|a, b| a.length_squared().total_cmp(&b.length_squared()));
-        gaps.truncate(((gaps.len() as f32 * TRIM).ceil() as usize).max(1));
-        gaps
-    };
-    let mean = |g: &[Vec3]| g.iter().copied().sum::<Vec3>() / g.len() as f32;
-    let mut best = (f32::INFINITY, Vec3::ZERO);
-    for start in starts {
-        let mut slide = start;
-        for _ in 0..PASSES {
-            let step = mean(&gaps(slide));
-            slide += step;
-            if step.length_squared() < 1e-8 {
-                break;
-            }
-        }
-        let left = gaps(slide);
-        let left = left.iter().map(|g| g.length()).sum::<f32>() / left.len() as f32;
-        if left < best.0 - 1e-6 {
-            best = (left, slide);
-        }
-    }
-    best.1
-}
-
-fn bounds(points: &[Vec3]) -> (Vec3, Vec3) {
-    points.iter().fold(
-        (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN)),
-        |(lo, hi), &p| (lo.min(p), hi.max(p)),
-    )
-}
-
-fn nearest(points: &[Vec3], at: Vec3) -> Option<Vec3> {
-    points
-        .iter()
-        .copied()
-        .min_by(|a, b| a.distance_squared(at).total_cmp(&b.distance_squared(at)))
-}
-
-/// The inverse-square-distance blend of the [`BLEND`] anchors nearest `at`.
-fn blended(anchors: &[(Vec3, Vec3)], at: Vec3) -> Vec3 {
-    let mut near = [(f32::INFINITY, Vec3::ZERO); BLEND];
-    for &(anchor, shift) in anchors {
-        let d = anchor.distance_squared(at);
-        if d < near[BLEND - 1].0 {
-            near[BLEND - 1] = (d, shift);
-            near.sort_by(|a, b| a.0.total_cmp(&b.0));
-        }
-    }
-    let (mut sum, mut weight) = (Vec3::ZERO, 0.0);
-    for (d, shift) in near.iter().filter(|(d, _)| d.is_finite()) {
-        let w = 1.0 / (d + 1e-6);
-        sum += *shift * w;
-        weight += w;
-    }
-    if weight > 0.0 {
-        sum / weight
-    } else {
-        Vec3::ZERO
-    }
-}
-
 mod cage_map;
+mod hsr;
+mod nearest;
 
 #[cfg(test)]
 #[path = "wrap/tests.rs"]
