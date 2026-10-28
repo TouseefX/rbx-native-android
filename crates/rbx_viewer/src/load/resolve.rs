@@ -53,9 +53,14 @@ impl Loaded {
     /// unresolved instance simply keeps drawing the box `Scene::from_dom`
     /// already gave it.
     fn resolve_file_meshes(&mut self, resident: &mut Resident) -> Vec<String> {
+        let hsr_refs = self.scene.hidden_surface_assets();
+        self.want(&hsr_refs);
+        let (surfaces, mut warnings) = resident.bytes(&hsr_refs);
+        self.scene.resolve_hidden_surfaces(surfaces);
         let (mesh_refs, texture_refs) = self.scene.file_mesh_assets();
         self.want(&mesh_refs);
-        let (meshes, mut warnings) = resident.meshes(&mesh_refs);
+        let (meshes, mesh_warnings) = resident.meshes(&mesh_refs);
+        warnings.extend(mesh_warnings);
         let images = if self.toggles.textures {
             self.want(&texture_refs);
             let (images, texture_warnings) = resident.images(&texture_refs);

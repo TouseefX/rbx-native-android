@@ -42,7 +42,10 @@ fn wrap(order: f32) -> Wrap {
                 initial_size: Some(Vec3::ONE),
             },
             part: "UpperTorso".into(),
+            referent: Ref::new(5),
+            hsr: None,
         }],
+        hsr: None,
         character: Ref::new(0),
     }
 }
