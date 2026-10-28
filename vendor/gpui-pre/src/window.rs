@@ -5554,6 +5554,15 @@ impl Window {
     /// dispatches whatever it resolves (scroll steps, synthesized taps)
     /// through the ordinary mouse-event path.
     fn dispatch_touch_event(&mut self, event: &TouchEvent, cx: &mut App) {
+        // rbx-native addition: Android input diagnostics — remove once the
+        // mobile input path is proven on device.
+        #[cfg(target_os = "android")]
+        log::info!(
+            "gpui touch: {:?} at ({:.0},{:.0})",
+            event.phase,
+            event.position.x,
+            event.position.y
+        );
         let mut event = event.clone();
         if !self.touch_prediction_enabled {
             event.predicted_position = None;
@@ -5593,6 +5602,22 @@ impl Window {
     }
 
     fn dispatch_recognized_touch_gesture(&mut self, gesture: RecognizedTouchGesture, cx: &mut App) {
+        // rbx-native addition: Android input diagnostics — remove once the
+        // mobile input path is proven on device.
+        #[cfg(target_os = "android")]
+        {
+            let (kind, position) = match &gesture {
+                RecognizedTouchGesture::Scroll(event) => ("scroll", event.position),
+                RecognizedTouchGesture::Tap { up, .. } => ("tap", up.position),
+                RecognizedTouchGesture::TouchDrag(event) => ("touch drag", event.position),
+                RecognizedTouchGesture::LongPress(event) => ("long press", event.position),
+            };
+            log::info!(
+                "gpui gesture: {kind} at ({:.0},{:.0})",
+                position.x,
+                position.y
+            );
+        }
         match gesture {
             RecognizedTouchGesture::Scroll(scroll_wheel) => {
                 self.mouse_position = scroll_wheel.position;
@@ -5675,6 +5700,24 @@ impl Window {
 
     fn dispatch_mouse_event(&mut self, event: &dyn Any, cx: &mut App) {
         let hit_test = self.rendered_frame.hit_test(self.mouse_position());
+        // rbx-native addition: Android input diagnostics — remove once the
+        // mobile input path is proven on device.
+        #[cfg(target_os = "android")]
+        if event.is::<MouseDownEvent>() || event.is::<MouseUpEvent>() {
+            let position = self.mouse_position();
+            log::info!(
+                "gpui mouse: {} at ({:.0},{:.0}) hits={} listeners={}",
+                if event.is::<MouseDownEvent>() {
+                    "down"
+                } else {
+                    "up"
+                },
+                position.x,
+                position.y,
+                hit_test.len(),
+                self.rendered_frame.mouse_listeners.len(),
+            );
+        }
         if hit_test != self.mouse_hit_test {
             self.mouse_hit_test = hit_test;
             self.reset_cursor_style(cx);
@@ -5711,6 +5754,17 @@ impl Window {
         }
 
         self.rendered_frame.mouse_listeners = mouse_listeners;
+
+        // rbx-native addition: Android input diagnostics — remove once the
+        // mobile input path is proven on device.
+        #[cfg(target_os = "android")]
+        if event.is::<MouseDownEvent>() || event.is::<MouseUpEvent>() {
+            log::info!(
+                "gpui mouse: dispatch done propagate={} prevented={}",
+                cx.propagate_event,
+                self.default_prevented
+            );
+        }
 
         if cx.has_active_drag() {
             if event.is::<MouseMoveEvent>() {
