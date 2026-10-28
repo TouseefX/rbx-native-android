@@ -128,6 +128,9 @@ struct FittingWindow {
     scales: Option<crate::shell::rig::Scales>,
     /// A slider moved and the body rebuild is waiting for it to settle.
     scale_pending: bool,
+    /// The sliders show another body's scales; render puts them right, as
+    /// it is the one place with a `Window` to hand.
+    scales_stale: bool,
     avatar: Job<Avatar>,
     motion: Option<Motion>,
     playing: bool,
@@ -263,6 +266,7 @@ impl FittingWindow {
             body: Body::Preset(rbx_ugc::BodyScale::Classic),
             scales: None,
             scale_pending: false,
+            scales_stale: true,
             avatar: Job::Idle,
             motion: None,
             playing: false,
@@ -305,8 +309,11 @@ impl FittingWindow {
         }
         if step != Step::Test {
             self.stop_motion(cx);
-        } else if self.layers.is_empty() {
-            self.load_layers(cx);
+        } else {
+            self.scales_stale = true;
+            if self.layers.is_empty() {
+                self.load_layers(cx);
+            }
         }
         self.step = step;
         self.scroll.set_offset(point(px(0.), px(0.)));
