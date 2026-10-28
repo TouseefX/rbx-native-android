@@ -55,13 +55,12 @@ class MainActivity : GameActivity() {
      * How much of a desktop the screen shows, emulator-style: the window's
      * logical size is the physical surface divided by the scale passed with
      * it, so dividing the density by this zoom widens the logical viewport
-     * from the phone-native ~415px to ~1025px — the whole desktop layout
-     * fits on screen at once, smaller, exactly like an emulator showing a
-     * full desktop. Touches divide by the same scale, so input stays
-     * aligned. 1f restores phone-native sizing; larger values zoom out
-     * further.
+     * from the phone-native ~411px to ~720px — most of the desktop layout
+     * fits on screen at once while touch targets stay large enough to hit.
+     * Touches divide by the same scale, so input stays aligned. 1f restores
+     * phone-native sizing; larger values zoom out further.
      */
-    private val desktopZoom = 2.5f
+    private val desktopZoom = 1.75f
 
     /** Hands surfaces to the editor's render thread, beside GameActivity's
      *  own callback (whose Rust side is inert). */
