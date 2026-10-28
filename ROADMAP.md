@@ -2466,7 +2466,10 @@ both the plain fetch failure and the silent fall back to a default
   written: it no longer shows changed in Properties or has to be stripped
   out before a save.
 - [x] **An auto-rigger and a skeleton view** (`crates/rbx_autorig`).
-  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ or glTF).
+  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ, glTF, or a
+    `.rbxm`/`.rbxmx` model of MeshParts and Parts, merged the way the
+    viewport places them; a texture, `SurfaceAppearance` and colour carry
+    over when every part shares one).
     - It finds the up axis, the front (−Z, left on −X) and the height.
     - It places the 15 R15 joints from the mesh's own shape:
       voxelised, with geodesic extremities, cross-section profiles and
@@ -3129,12 +3132,15 @@ both the plain fetch failure and the silent fall back to a default
   Studio: silhouette XOR 0.78 down to 0.12. `BindOffset` moves the fitted
   garment about the root part, like Studio; `Puffiness` and
   `ShrinkFactor` change nothing in Studio, so they change nothing here.
-- [ ] 📋 **UGC creator workflow, the rest**: the head side (landmarks, FACS
-  check, face preview), and a live check that the Creator Hub can turn an
-  API-uploaded Model into an avatar item. The upload fee, moderation and Marketplace publish have
-  no documented Open Cloud endpoint, so the last step stays a handoff to
-  the Creator Hub. Gap analysis, staged plan and what each stage was
-  checked against in real Studio: `docs/research/ugc-creators/README.md`.
+- [ ] 📋 **UGC creator workflow, the rest**: the validator, Model upload,
+  dynamic head side (FACS checks, landmarks, Avatar › Face Preview) and the
+  fitting tool above are done. Still open: a live check that the Creator
+  Hub can turn an API-uploaded Model into an avatar item, and that
+  Roblox's validator accepts cages made from the Mannequin template. The
+  upload fee, moderation and Marketplace publish have no documented Open
+  Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
+  analysis, staged plan and what each stage was checked against in real
+  Studio: `docs/research/ugc-creators/README.md`.
 
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows
