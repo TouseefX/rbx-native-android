@@ -62,8 +62,10 @@ impl Check {
     }
 
     /// The kind an instance most likely is: a `Model` holding `Head` and
-    /// `UpperTorso` is a Body, an `Accessory` by its `AccessoryType` (read
-    /// through the reflection database's enum), else `None`.
+    /// `UpperTorso` is a Body, a head with a `FaceControls` (alone or as
+    /// a `Model`'s only body part) a Head, an `Accessory` by its
+    /// `AccessoryType` (read through the reflection database's enum), else
+    /// `None`.
     pub(super) fn guess_kind(shell: &Shell, source: &ItemSource) -> Option<ItemKind> {
         let ItemSource::Instance { root, class, .. } = source else {
             return None;
@@ -73,7 +75,16 @@ impl Check {
             asset,
             scale: BodyScale::Normal,
         };
+        let has_face = |part: Option<rbx_dom::Ref>| {
+            part.and_then(|p| shell.dom.get(p)).is_some_and(|p| {
+                p.children()
+                    .iter()
+                    .filter_map(|c| shell.dom.get(*c))
+                    .any(|c| c.class() == "FaceControls")
+            })
+        };
         match class.as_str() {
+            "MeshPart" if has_face(Some(*root)) => Some(normal(AssetType::DynamicHead)),
             "Model" => {
                 let has = |name: &str| {
                     inst.children()
@@ -81,7 +92,12 @@ impl Check {
                         .filter_map(|c| shell.dom.get(*c))
                         .any(|c| c.name() == name)
                 };
-                (has("Head") && has("UpperTorso")).then(|| normal(AssetType::Body))
+                if has("Head") && has("UpperTorso") {
+                    Some(normal(AssetType::Body))
+                } else {
+                    has_face(collect::head_part(&shell.dom, *root))
+                        .then(|| normal(AssetType::DynamicHead))
+                }
             }
             "Accessory" => {
                 let Some(Variant::Enum(v)) = inst.properties().get("AccessoryType") else {
@@ -117,10 +133,18 @@ impl Check {
 
         let work: Box<dyn FnOnce() -> Result<Collected, String> + Send> = match source {
             ItemSource::Instance { root, .. } => {
-                match collect::plan(&shell.read(cx).dom, root, kind) {
-                    Ok(plan) => {
-                        Box::new(move || Ok(collect::resolve(&plan, &collect::fetch_cached)))
-                    }
+                let s = shell.read(cx);
+                let head = (kind.asset == AssetType::DynamicHead)
+                    .then(|| collect::head_plan(&s.dom, &s.database, root))
+                    .flatten();
+                match collect::plan(&s.dom, root, kind) {
+                    Ok(plan) => Box::new(move || {
+                        let mut collected = collect::resolve(&plan, &collect::fetch_cached);
+                        collected.head = head.map(|head| {
+                            Box::new(collect::resolve_head(&head, &collect::fetch_cached).0)
+                        });
+                        Ok(collected)
+                    }),
                     Err(msg) => {
                         self.run = Run::Failed(msg);
                         return;
