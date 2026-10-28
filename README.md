@@ -55,7 +55,9 @@ something's broken anyway, open an issue.
 
 ## Building
 
-You need a recent stable Rust toolchain ([rustup.rs](https://rustup.rs)). On
+You need Rust 1.96 or newer, from [rustup.rs](https://rustup.rs). If a build
+fails deep in a dependency, check that `rustc -V` is the toolchain rustup
+installed and not an older standalone install earlier in `PATH`. On
 Windows, the default MSVC toolchain also needs the Visual Studio C++ build
 tools. The rustup installer offers to set them up.
 
