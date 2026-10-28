@@ -3182,7 +3182,6 @@ dependencies = [
 [[package]]
 name = "gpui-pre-mobile"
 version = "0.1.0"
-source = "git+https://github.com/longbridge/gpui-mobile?rev=f70603903854751a5589242d4eadcd031823a75a#f70603903854751a5589242d4eadcd031823a75a"
 dependencies = [
  "android-activity",
  "android_logger",
@@ -6800,6 +6799,7 @@ dependencies = [
  "glam",
  "gpui-base",
  "gpui-kit",
+ "gpui-pre",
  "image",
  "libc",
  "lsp-types",
