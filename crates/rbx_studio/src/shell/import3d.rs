@@ -16,6 +16,9 @@
 //! Open Cloud refuses a new `Mesh` upload, so Model › Insert Mesh… uploads
 //! the file as a model like the rest and then places only the `MeshPart`s
 //! Roblox made of it, with no `Model` around a lone one.
+//!
+//! An avatar import (`ImportKind::Avatar`) is checked against the item
+//! limits before the upload and again, in studs, in the validator window once placed.
 
 use std::path::{Path, PathBuf};
 
@@ -52,6 +55,8 @@ pub(crate) enum ImportKind {
     Model,
     Mesh,
     Image,
+    /// A model checked as this avatar item before it is uploaded.
+    Avatar(super::ugc::ItemKind),
 }
 
 /// What a finished model upload brings back.
@@ -105,7 +110,11 @@ impl Shell {
             if is_image(&path) {
                 self.import_image(path, cx);
             } else if Format::of(&path).is_some() {
-                self.import_model(path, kind == ImportKind::Mesh, cx);
+                let avatar = match kind {
+                    ImportKind::Avatar(item) => Some(item),
+                    _ => None,
+                };
+                self.import_model(path, kind == ImportKind::Mesh, avatar, cx);
             } else {
                 self.import_report(
                     Err(format!("{}: not a 3D or image file", path.display())),
@@ -115,16 +124,24 @@ impl Shell {
         }
     }
 
-    fn import_model(&mut self, path: PathBuf, mesh: bool, cx: &mut Context<Self>) {
+    fn import_model(
+        &mut self,
+        path: PathBuf,
+        mesh: bool,
+        avatar: Option<super::ugc::ItemKind>,
+        cx: &mut Context<Self>,
+    ) {
         let name = stem(&path);
         self.command_bar
             .set_feedback(Feedback::Output(format!("Importing {name}\u{2026}")));
         cx.notify();
         cx.spawn(async move |this, cx| {
             let result = cx
-                .background_spawn(async move { upload_model(&path, &stem(&path)) })
+                .background_spawn(async move { upload_model(&path, &stem(&path), avatar) })
                 .await;
-            let _ = this.update(cx, |shell, cx| shell.finish_model(name, mesh, result, cx));
+            let _ = this.update(cx, |shell, cx| {
+                shell.finish_model(name, mesh, avatar, result, cx)
+            });
         })
         .detach();
     }
@@ -133,6 +150,7 @@ impl Shell {
         &mut self,
         name: String,
         mesh: bool,
+        avatar: Option<super::ugc::ItemKind>,
         result: Result<Imported, String>,
         cx: &mut Context<Self>,
     ) {
@@ -166,6 +184,16 @@ impl Shell {
             )),
         };
         self.import_report(outcome, cx);
+        if let (Some(kind), Some(root)) = (avatar, root) {
+            let placed = self
+                .dom
+                .get(root)
+                .map(|i| (i.name().to_string(), i.class().to_string()));
+            if let Some((name, class)) = placed {
+                let source = super::ugc::ItemSource::Instance { root, name, class };
+                self.open_ugc_validator(Some(source), Some(kind), cx);
+            }
+        }
     }
 
     fn import_image(&mut self, path: PathBuf, cx: &mut Context<Self>) {
@@ -254,10 +282,37 @@ fn is_base_part(dom: &WeakDom, database: &ReflectionDatabase, target: Ref) -> bo
 
 /// Blocking: reads and checks the file, uploads it, and downloads the model
 /// Roblox made of it.
-pub(crate) fn upload_model(path: &Path, name: &str) -> Result<Imported, String> {
+pub(crate) fn upload_model(
+    path: &Path,
+    name: &str,
+    avatar: Option<super::ugc::ItemKind>,
+) -> Result<Imported, String> {
     let (report, upload) = rbx_import::prepare(path)?;
     if let Some(refusal) = report.refusal() {
         return Err(refusal);
+    }
+    let mut unchecked = report.unchecked;
+    if let Some(kind) = avatar {
+        let findings = super::ugc::check_file(path, kind)?;
+        if rbx_ugc::blocks(&findings) {
+            let errors: Vec<&str> = findings
+                .iter()
+                .filter(|f| f.severity == rbx_ugc::Severity::Error)
+                .map(|f| f.message.as_str())
+                .collect();
+            return Err(format!(
+                "{name} can\u{2019}t be an avatar item yet: {}",
+                errors.join(" ")
+            ));
+        }
+        let rest: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
+        if !rest.is_empty() {
+            let joined = rest.join(" ");
+            unchecked = Some(match unchecked {
+                Some(existing) => format!("{existing} {joined}"),
+                None => joined,
+            });
+        }
     }
     if let Ok(message) = std::env::var(MOCK_ERROR_VARIABLE) {
         return Err(message);
@@ -270,7 +325,7 @@ pub(crate) fn upload_model(path: &Path, name: &str) -> Result<Imported, String> 
                 .ok()
                 .and_then(|id| id.parse().ok())
                 .unwrap_or(0),
-            note: report.unchecked,
+            note: unchecked,
         });
     }
     let (client, user) = authorize()?;
@@ -280,7 +335,12 @@ pub(crate) fn upload_model(path: &Path, name: &str) -> Result<Imported, String> 
         bytes: &upload.bytes,
     };
     let asset_id = client
-        .create_model_asset(name, "Imported by rbx-native.", user, &file)
+        .create_model_asset(
+            name,
+            "Imported by rbx-native.",
+            rbx_cloud::Owner::User(user),
+            &file,
+        )
         .map_err(|err| describe(&err))?;
     let model = fetch_asset(&client, asset_id)?;
     if let Some(dir) = std::env::var_os(KEEP_VARIABLE).map(PathBuf::from) {
@@ -294,7 +354,7 @@ pub(crate) fn upload_model(path: &Path, name: &str) -> Result<Imported, String> 
     Ok(Imported {
         dom,
         asset_id,
-        note: report.unchecked,
+        note: unchecked,
     })
 }
 

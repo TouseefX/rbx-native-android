@@ -5,15 +5,15 @@ use std::f64::consts::FRAC_PI_2;
 use super::*;
 use crate::graph::model::When;
 
-fn set(g: &mut Graph, node: usize, name: &str, value: Value) {
+pub(super) fn set(g: &mut Graph, node: usize, name: &str, value: Value) {
     g.nodes[node].props.insert(name.into(), Prop::Value(value));
 }
 
-fn set_pin(g: &mut Graph, node: usize, pin: usize, name: &str, prop: Prop) {
+pub(super) fn set_pin(g: &mut Graph, node: usize, pin: usize, name: &str, prop: Prop) {
     g.nodes[node].inputs[pin].props.insert(name.into(), prop);
 }
 
-fn param(g: &mut Graph, name: &str, kind: ParamKind) {
+pub(super) fn param(g: &mut Graph, name: &str, kind: ParamKind) {
     g.params.push(Param {
         name: name.into(),
         kind,
@@ -21,7 +21,7 @@ fn param(g: &mut Graph, name: &str, kind: ParamKind) {
     });
 }
 
-fn output(g: &mut Graph, from: usize) {
+pub(super) fn output(g: &mut Graph, from: usize) {
     let out = g.output().unwrap();
     g.connect(from, out, "Pose");
 }
@@ -110,7 +110,7 @@ fn priority(rule: &str) -> (Player, usize) {
 fn priority_select_takes_the_first_trigger_when_interruptible() {
     let (mut p, ps) = priority("Always");
     p.step(0.1);
-    assert_eq!(p.active(ps), Some(0), "the first input until one fires");
+    assert_eq!(p.active(ps), None, "nothing until one fires");
     p.set("b", Value::Bool(true));
     p.step(0.1);
     assert_eq!(p.active(ps), Some(1));
@@ -119,7 +119,10 @@ fn priority_select_takes_the_first_trigger_when_interruptible() {
     assert_eq!(p.active(ps), Some(0), "higher up wins at once");
 
     let (mut p, ps) = priority("Finished");
+    p.set("a", Value::Bool(true));
     p.step(0.1);
+    assert_eq!(p.active(ps), Some(0), "the first pick is never held back");
+    p.set("a", Value::Bool(false));
     p.set("b", Value::Bool(true));
     p.step(0.1);
     assert_eq!(p.active(ps), Some(0), "waits for the loop to end");
@@ -128,7 +131,9 @@ fn priority_select_takes_the_first_trigger_when_interruptible() {
     assert_eq!(p.active(ps), Some(1));
 
     let (mut p, ps) = priority("Trigger");
+    p.set("a", Value::Bool(true));
     p.step(0.1);
+    p.set("a", Value::Bool(false));
     p.set("b", Value::Bool(true));
     p.step(1.5);
     assert_eq!(p.active(ps), Some(0));
@@ -332,7 +337,7 @@ fn blend2d_weighs_by_gradient_bands() {
 }
 
 #[test]
-fn an_interrupted_blend_carries_on_from_where_it_was() {
+fn an_interrupted_blend_restarts_from_its_target() {
     let mut g = Graph::default();
     param(&mut g, "pick", ParamKind::Text);
     let sel = g.add(NodeKind::Select);
@@ -351,9 +356,10 @@ fn an_interrupted_blend_carries_on_from_where_it_was() {
     p.set("pick", Value::Text("run".into()));
     let mid = x(&p.step(0.5), "Torso");
     assert!((mid - 5.5).abs() < 1e-3, "{mid}");
+    // Idle drops out at once; run (at 10.5 by now) fades into jog.
     p.set("pick", Value::Text("jog".into()));
     let after = x(&p.step(0.), "Torso");
-    assert!((after - mid).abs() < 1e-3, "no pop: {after}");
+    assert!((after - 10.5).abs() < 1e-3, "{after}");
 }
 
 #[test]

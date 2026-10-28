@@ -145,7 +145,7 @@ change (`.github/workflows/android.yml`).
 | `rbx_binary` | Reads and writes binary `.rbxl`/`.rbxm`. |
 | `rbx_xml` | Reads and writes XML `.rbxlx`/`.rbxmx`. |
 | `rbx_reflection` | The class, property and enum database, built from Roblox's API dump (CI syncs it daily). |
-| `rbx_mesh` | Parses Roblox `.mesh` files, versions `1.00` to `5.00`. |
+| `rbx_mesh` | Parses Roblox `.mesh` files, versions `1.00` to `7.00`. |
 | `rbx_lua` | A sandboxed Luau runtime over a DOM, like Studio's command bar. No scheduler, no events, no yielding. |
 | `rbx_assets` | Resolves, caches and decodes the assets a place uses (`rbxassetid://`, `rbxasset://`, old URLs). The network side comes from `rbx_cloud`. |
 | `rbx_materials` | The texture packs (colour, normal, metalness, roughness) behind each `Enum.Material`. |

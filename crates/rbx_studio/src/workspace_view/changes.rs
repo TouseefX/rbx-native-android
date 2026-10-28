@@ -20,6 +20,9 @@ const TEAM_PRESENCE: usize = 6;
 /// Replayed playtests: ghosts, trails, markers and heat cells (see
 /// `shell::playtests`).
 const PLAYTESTS: usize = 7;
+/// A dynamic head's eye and mouth landmarks (see `shell::ugc`'s Face
+/// Preview).
+const FACE_LANDMARKS: usize = 8;
 
 impl WorkspaceView {
     /// Forwards the Explorer's selection, forcing one frame even at rest.
@@ -85,6 +88,12 @@ impl WorkspaceView {
     /// clears them.
     pub(crate) fn set_presence(&mut self, segments: Vec<Segment>) {
         self.pump.lines(TEAM_PRESENCE, segments);
+    }
+
+    /// Face Preview's landmark loops over the head. An empty list clears
+    /// them.
+    pub(crate) fn set_face_landmarks(&mut self, segments: Vec<Segment>) {
+        self.pump.lines(FACE_LANDMARKS, segments);
     }
 
     /// Replayed playtests' lines and dots, and the heat map's cells. Empty

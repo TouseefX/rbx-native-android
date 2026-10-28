@@ -184,3 +184,52 @@ fn touch_rotation_matches_camera_input() {
     let clamped: f64 = call(&m, "clampPitch", (2.0, 0.0));
     assert!((clamped - 80f64.to_radians()).abs() < 1e-12);
 }
+
+fn keyboard(m: &Table, rect: (i32, i32, i32, i32)) -> Table {
+    call(m, "keyboardProps", rect)
+}
+
+fn keyboard_changes(m: &Table, old: &Table, new: &Table) -> Vec<String> {
+    call::<Table>(m, "keyboardChanges", (old, new))
+        .sequence_values::<String>()
+        .map(Result::unwrap)
+        .collect()
+}
+
+#[test]
+fn keyboard_cover_reports_visible_position_and_size() {
+    let (_lua, m) = load_module();
+    let up = keyboard(&m, (0, 552, 393, 300));
+    assert!(up.get::<bool>("OnScreenKeyboardVisible").unwrap());
+    let position: Vec<i32> = up.get("OnScreenKeyboardPosition").unwrap();
+    let size: Vec<i32> = up.get("OnScreenKeyboardSize").unwrap();
+    assert_eq!((position, size), (vec![0, 552], vec![393, 300]));
+
+    // A cover with no height is a keyboard that is down, all zero.
+    let down = keyboard(&m, (0, 852, 393, 0));
+    assert!(!down.get::<bool>("OnScreenKeyboardVisible").unwrap());
+    let position: Vec<i32> = down.get("OnScreenKeyboardPosition").unwrap();
+    assert_eq!(position, [0, 0]);
+}
+
+#[test]
+fn keyboard_changes_name_only_what_moved() {
+    let (_lua, m) = load_module();
+    let down = keyboard(&m, (0, 0, 0, 0));
+    let up = keyboard(&m, (0, 552, 393, 300));
+    assert_eq!(
+        keyboard_changes(&m, &down, &up),
+        [
+            "OnScreenKeyboardVisible",
+            "OnScreenKeyboardPosition",
+            "OnScreenKeyboardSize"
+        ]
+    );
+    // Rotated: a new rect, still up.
+    let turned = keyboard(&m, (0, 193, 852, 200));
+    assert_eq!(
+        keyboard_changes(&m, &up, &turned),
+        ["OnScreenKeyboardPosition", "OnScreenKeyboardSize"]
+    );
+    assert!(keyboard_changes(&m, &up, &keyboard(&m, (0, 552, 393, 300))).is_empty());
+}

@@ -183,6 +183,8 @@ fn package_candidates_for_path(path: &str) -> Option<Vec<&'static str>> {
         "fonts" => Some(vec!["content-fonts.zip"]),
         "sounds" => Some(vec!["content-sounds.zip"]),
         "models" => Some(vec!["content-models.zip"]),
+        // The engine's own character meshes, `SpecialMesh` Head's among them.
+        "avatar" => Some(vec!["content-avatar.zip"]),
         _ => None,
     }
 }
@@ -329,6 +331,10 @@ mod tests {
         assert_eq!(
             package_candidates_for_path("models/foo.mesh"),
             Some(vec!["content-models.zip"])
+        );
+        assert_eq!(
+            package_candidates_for_path("avatar/heads/head.mesh"),
+            Some(vec!["content-avatar.zip"])
         );
     }
 

@@ -7,12 +7,12 @@
 //! their curve; only Linear and CubicV2 (eased in and out, the editor's
 //! "In/Out") are honoured, anything else runs Linear.
 //!
-//! The semantics follow Roblox's documentation. Where it is silent the
-//! choice made is marked UNVERIFIED on the code that makes it; the larger
-//! ones are Blend2D's weighting (a gradient-band stand-in), the random
-//! number generator (PCG32, as Luau's `Random` is, but not seeded as Roblox
-//! seeds it), and interrupting a blend mid-way (which blends on from a
-//! frozen snapshot of the pose at that moment). Transitions are always
+//! The semantics follow Roblox's documentation, and where it is silent,
+//! what real Studio was measured doing (Blend2D's weights, the layering
+//! maths, RandomSequence's generator and seeding, the transition curves, an
+//! interrupted blend; `docs/research/animation-graph-measured.md`). What is
+//! still a reading rather than a measurement is marked UNVERIFIED on the
+//! code that makes it. Transitions are always
 //! crossfades: `AnimationNodeTransitionType`'s InertialBlend and DeadBlend
 //! exist in the API but nothing sets them. Root motion (`Animator.RootMotion`,
 //! hidden and undocumented) is not extracted.
@@ -41,15 +41,11 @@ mod nodes;
 mod rng;
 
 pub use events::Event;
-use rng::Pcg32;
+use rng::Mt19937;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Fade {
     pub from: usize,
-    /// The pose to blend from instead of `from`'s, when this blend
-    /// interrupted another. UNVERIFIED: Roblox does not say how it handles
-    /// an interrupted blend; a frozen snapshot has no pop and is cheap.
-    pub snapshot: Option<Pose>,
     pub elapsed: f32,
     pub duration: f32,
     pub curve: Style,
@@ -68,9 +64,9 @@ impl Fade {
     }
 }
 
-/// A transition curve at `t` (clamped to 0..1). UNVERIFIED: that CubicV2
-/// here is PoseEasingStyle's CubicV2 eased in and out; the editor's "In/Out"
-/// label is the evidence.
+/// A transition curve at `t` (clamped to 0..1). CubicV2 is the cubic eased
+/// in and out, `4t³` up to the midpoint: real Studio's blend weights over a
+/// one-second CubicV2 transition match it at every 1/30 s step.
 pub(crate) fn curve_at(curve: Style, t: f32) -> f32 {
     let t = t.clamp(0., 1.);
     match curve {
@@ -79,6 +75,11 @@ pub(crate) fn curve_at(curve: Style, t: f32) -> f32 {
     }
 }
 
+/// `State::active` of a picking node playing no input, which shows the
+/// rest pose: a Select whose Selection names no pin, a PrioritySelect
+/// before any Trigger.
+pub(crate) const NONE: usize = usize::MAX;
+
 /// What a node keeps between steps.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct State {
@@ -86,8 +87,6 @@ pub(crate) struct State {
     /// The input (or state) in play, for the kinds that pick one.
     pub active: usize,
     pub fade: Option<Fade>,
-    /// The blended pose while a fade runs, in case another interrupts it.
-    pub last: Option<Pose>,
     /// Loops or plays completed, for Sequence and RandomSequence.
     pub count: u32,
     pub started: bool,
@@ -101,7 +100,7 @@ pub(crate) struct State {
     /// OneShot: the weight the blend-out started from.
     pub shot_from: f32,
     pub fading_out: bool,
-    pub rng: Option<Pcg32>,
+    pub rng: Option<Mt19937>,
     /// PingPong clips: true while playing backwards.
     pub backwards: bool,
 }
@@ -125,7 +124,7 @@ pub struct Player {
     fired: Vec<String>,
     /// Draws ties between state-machine transitions and seeds Random
     /// Sequences whose `Seed` is -1.
-    rng: Pcg32,
+    rng: Mt19937,
     /// This step's events and node evaluations, each with the weight the
     /// nodes above have scaled it by so far.
     emitted: Vec<Event>,
@@ -152,7 +151,7 @@ impl Player {
             clips,
             params: BTreeMap::new(),
             fired: Vec::new(),
-            rng: Pcg32::new(RandomState::new().hash_one(0u8)),
+            rng: Mt19937::new(RandomState::new().hash_one(0u8) as u32),
             emitted: Vec::new(),
             visits: Vec::new(),
             events: Vec::new(),
@@ -161,7 +160,7 @@ impl Player {
 
     /// Makes every random choice from here on reproducible.
     pub fn set_seed(&mut self, seed: u64) {
-        self.rng = Pcg32::new(seed);
+        self.rng = Mt19937::new(seed as u32);
     }
 
     pub fn graph(&self) -> &Graph {
@@ -216,6 +215,7 @@ impl Player {
         let n = self.graph.nodes.get(node)?;
         (n.kind.grows_pins() && n.kind != NodeKind::Blend1D && n.kind != NodeKind::Blend2D)
             .then(|| self.states[node].active)
+            .filter(|&a| a != NONE)
     }
 
     /// Restarts everything, as `ResetGraph` does.
@@ -360,7 +360,7 @@ impl Player {
         self.graph.nodes[node].kind
     }
 
-    pub(crate) fn rng(&mut self) -> &mut Pcg32 {
+    pub(crate) fn rng(&mut self) -> &mut Mt19937 {
         &mut self.rng
     }
 }

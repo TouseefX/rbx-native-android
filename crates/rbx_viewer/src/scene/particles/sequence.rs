@@ -1,35 +1,55 @@
 //! Evaluates `NumberSequence`/`ColorSequence` at a normalized time, the way
 //! `ParticleEmitter.Size`/`Transparency`/`Color` are read over a particle's age.
 //!
-//! Keypoint `envelope` (a per-keypoint random spread) is not applied: it is a
-//! per-particle-per-keypoint detail that has no visible effect on the steady
-//! state this viewer renders, so it is left at its base value, a documented
-//! TODO rather than a silent approximation.
+//! A keypoint's `envelope` is the random spread around its value a particle
+//! draws from, see [`eval_number_spread`]; only particles use it, a beam's or
+//! trail's sequence is read at its plain values.
 
-use rbx_dom::{ColorSequence, NumberSequence};
+use rbx_dom::{ColorSequence, NumberSequence, NumberSequenceKeypoint};
 
 use crate::scene::srgb_to_linear;
 
 /// Linearly interpolates `seq` at `t` (clamped to `[0, 1]`), the same rule
 /// Roblox uses for a particle's age over its lifetime.
 pub(crate) fn eval_number(seq: &NumberSequence, t: f32) -> f32 {
+    eval_keypoints(seq, t, |keypoint| keypoint.value)
+}
+
+/// [`eval_number`] with every keypoint moved `spread` (in `[-1, 1]`) of its
+/// envelope off its value: the docs' "chosen randomly within [value -
+/// envelope, value + envelope]".
+///
+/// One `spread` per particle, for its whole life and every keypoint: measured
+/// in Studio, a particle of a constant `Size` with an envelope keeps the size
+/// it was born with rather than drifting between two random keypoint values.
+pub(crate) fn eval_number_spread(seq: &NumberSequence, t: f32, spread: f32) -> f32 {
+    eval_keypoints(seq, t, |keypoint| {
+        keypoint.value + spread * keypoint.envelope
+    })
+}
+
+fn eval_keypoints(
+    seq: &NumberSequence,
+    t: f32,
+    value: impl Fn(&NumberSequenceKeypoint) -> f32,
+) -> f32 {
     let t = t.clamp(0.0, 1.0);
     let keypoints = &seq.keypoints;
     let Some(first) = keypoints.first() else {
         return 0.0;
     };
     if keypoints.len() == 1 || t <= first.time {
-        return first.value;
+        return value(first);
     }
     for pair in keypoints.windows(2) {
-        let (a, b) = (pair[0], pair[1]);
+        let (a, b) = (&pair[0], &pair[1]);
         if t <= b.time {
             let span = b.time - a.time;
             let f = if span > 0.0 { (t - a.time) / span } else { 0.0 };
-            return a.value + (b.value - a.value) * f;
+            return value(a) + (value(b) - value(a)) * f;
         }
     }
-    keypoints.last().map_or(0.0, |last| last.value)
+    keypoints.last().map_or(0.0, value)
 }
 
 /// Same rule as [`eval_number`], but for a colour gradient.
@@ -75,16 +95,20 @@ pub(crate) fn eval_color(seq: &ColorSequence, t: f32) -> [f32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rbx_dom::{Color3Data, ColorSequenceKeypoint, NumberSequenceKeypoint};
+    use rbx_dom::{Color3Data, ColorSequenceKeypoint};
 
     fn numbers(points: &[(f32, f32)]) -> NumberSequence {
+        enveloped(&points.iter().map(|&(t, v)| (t, v, 0.0)).collect::<Vec<_>>())
+    }
+
+    fn enveloped(points: &[(f32, f32, f32)]) -> NumberSequence {
         NumberSequence {
             keypoints: points
                 .iter()
-                .map(|&(time, value)| NumberSequenceKeypoint {
+                .map(|&(time, value, envelope)| NumberSequenceKeypoint {
                     time,
                     value,
-                    envelope: 0.0,
+                    envelope,
                 })
                 .collect(),
         }
@@ -136,6 +160,26 @@ mod tests {
     fn an_empty_sequence_evaluates_to_zero() {
         let seq = NumberSequence { keypoints: vec![] };
         assert_eq!(eval_number(&seq, 0.5), 0.0);
+    }
+
+    #[test]
+    fn a_spread_moves_each_keypoint_that_far_along_its_own_envelope() {
+        let seq = enveloped(&[(0.0, 1.0, 0.8), (1.0, 3.0, 0.0)]);
+        let at = |t, spread| eval_number_spread(&seq, t, spread);
+        for (got, want) in [
+            (at(0.0, 1.0), 1.8),
+            (at(0.0, -1.0), 0.2),
+            (at(0.5, 1.0), 2.4),
+            (at(1.0, -1.0), 3.0),
+        ] {
+            assert!((got - want).abs() < 1e-6, "{got} != {want}");
+        }
+    }
+
+    #[test]
+    fn no_spread_reads_the_plain_values() {
+        let seq = enveloped(&[(0.0, 1.0, 0.8), (1.0, 3.0, 0.5)]);
+        assert_eq!(eval_number_spread(&seq, 0.25, 0.0), eval_number(&seq, 0.25));
     }
 
     #[test]

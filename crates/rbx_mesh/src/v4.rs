@@ -34,6 +34,7 @@ struct Header {
     bone_names_size: usize,
     num_subsets: usize,
     facs_data_size: usize,
+    facs_format: u32,
 }
 
 pub(crate) fn parse(version: (u8, u8), body: &[u8]) -> Result<(Mesh, Option<Skin>), MeshError> {
@@ -57,11 +58,17 @@ pub(crate) fn parse(version: (u8, u8), body: &[u8]) -> Result<(Mesh, Option<Skin
     let bones = skin::read_bones(&mut reader, header.num_bones)?;
     let names = reader.take(header.bone_names_size)?;
     let subsets = skin::read_subsets(&mut reader, header.num_subsets)?;
-    // FACS is consumed but not surfaced: nothing here drives face bones.
-    reader.take(header.facs_data_size)?;
+    let facs = reader.take(header.facs_data_size)?;
     reader.expect_eof()?;
 
-    let skin = (header.num_bones > 0).then(|| Skin::new(bones.named(names), subsets, envelopes));
+    let skin = (header.num_bones > 0).then(|| Skin {
+        // Lenient like the v6 skinning chunk: a FACS block this reader cannot
+        // balance leaves the head skinned, just without a face.
+        facs: (header.facs_format == 1)
+            .then(|| crate::facs::read(facs).ok())
+            .flatten(),
+        ..Skin::new(bones.named(names), subsets, envelopes)
+    });
     Ok((Mesh::assemble(version, vertices, &faces, &lod_table)?, skin))
 }
 
@@ -98,12 +105,11 @@ fn read_header(reader: &mut Reader<'_>, major: u8) -> Result<Header, MeshError> 
 
     // v5 appends the FACS descriptor and the block itself goes at the very end of
     // the file, after the subsets. The format id (0 means "no data") says how to
-    // read it, which this crate only skips.
-    let facs_data_size = if major >= 5 {
-        let _facs_data_format = reader.u32()?;
-        reader.u32()? as usize
+    // read it; 1 is the only documented layout.
+    let (facs_format, facs_data_size) = if major >= 5 {
+        (reader.u32()?, reader.u32()? as usize)
     } else {
-        0
+        (0, 0)
     };
 
     Ok(Header {
@@ -114,6 +120,7 @@ fn read_header(reader: &mut Reader<'_>, major: u8) -> Result<Header, MeshError> 
         bone_names_size,
         num_subsets,
         facs_data_size,
+        facs_format,
     })
 }
 

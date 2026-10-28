@@ -9,7 +9,9 @@ use crate::graph::pose::{self, Pose};
 use super::{Player, Status};
 
 /// How much more an angle counts than a magnitude in Polar mode, where
-/// Roblox says only that "direction is weighted more heavily". UNVERIFIED.
+/// Roblox says only that "direction is weighted more heavily". Measured: 2
+/// fits real Studio's weights on an irregular layout to 1e-5, and 1 is off
+/// by up to 0.16 (`docs/research/animation-graph-measured.md`).
 const ANGLE_WEIGHT: f32 = 2.;
 
 impl Player {
@@ -52,16 +54,15 @@ impl Player {
 
     /// Gradient-band interpolation: each input's weight is the least, over
     /// every other input, of how far the target still is from passing that
-    /// other one, then normalised. Cartesian mode works on (X, Y); Polar
+    /// other one (never below 0, but above 1 where the target lies beyond
+    /// the input), then normalised. Cartesian mode works on (X, Y); Polar
     /// mode on (angle X in radians, magnitude Y), comparing angles and
-    /// relative magnitudes. Roblox documents only that Polar weights direction
-    /// more and that events come from "the highest-weight active input"
-    /// (`AnimationNodeType.yaml`); the editor's code in Client Tracker
-    /// (`AnimationEditor` `Blend2DMap`) only draws the pins.
-    /// Roblox documents no algorithm for Blend2D; this is the scheme Unity's
-    /// freeform blend trees use, and in Cartesian mode it gives exactly real
-    /// Studio's weights on four corner inputs at seven points, inside and
-    /// outside the square (`tests/studio_graph.rs`). UNVERIFIED: Polar mode.
+    /// relative magnitudes. Roblox documents no algorithm for Blend2D; this
+    /// is the scheme Unity's freeform blend trees use, and it gives real
+    /// Studio's weights to 1e-5 on 57 targets over six layouts, both modes,
+    /// inside and outside the inputs (`tests/studio_graph.rs`,
+    /// `tests/studio_graph_probe.rs`). Leaving a band above 1 is what Studio
+    /// does: clamping it changes the split on the far side of a Polar fan.
     fn weights_2d(&self, n: usize, inputs: &[usize]) -> Vec<(usize, f32)> {
         let polar = self.text(n, "InputMode") == "Polar";
         let target = (self.number(n, "X", 0.), self.number(n, "Y", 0.));
@@ -82,15 +83,17 @@ impl Player {
                 ((b.0 - a.0, b.1 - a.1), (target.0 - a.0, target.1 - a.1))
             };
             let len2 = ij.0 * ij.0 + ij.1 * ij.1;
-            (len2 > 1e-12).then(|| (1. - (ip.0 * ij.0 + ip.1 * ij.1) / len2).clamp(0., 1.))
+            (len2 > 1e-12).then(|| (1. - (ip.0 * ij.0 + ip.1 * ij.1) / len2).max(0.))
         };
         let mut weights: Vec<f32> = (0..points.len())
             .map(|i| {
                 (0..points.len())
                     .filter(|&j| j != i)
                     .filter_map(|j| band(i, j))
-                    .fold(1., f32::min)
+                    .fold(f32::INFINITY, f32::min)
             })
+            // A lone input (or one sharing every other's place) has no band.
+            .map(|w| if w.is_finite() { w } else { 1. })
             .collect();
         let total: f32 = weights.iter().sum();
         if total > 1e-6 {

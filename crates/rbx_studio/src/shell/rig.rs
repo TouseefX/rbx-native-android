@@ -14,6 +14,7 @@
 
 mod animate;
 mod autorig;
+mod autorig_model;
 mod avatar;
 mod bones;
 mod build;
@@ -21,6 +22,7 @@ mod bundle;
 mod cage_templates;
 mod cframe;
 mod dialog;
+mod hidden_surfaces;
 mod insert;
 mod layout;
 mod proportions;
@@ -30,10 +32,15 @@ mod r6;
 
 use rbx_dom::{Variant, WeakDom};
 
+pub(crate) use animate::r15_animation;
 pub(crate) use autorig::{has_local_meshes, AutoRig};
+pub(crate) use avatar::{apply_packages, dress, fetch as fetch_avatar, options_for, Fetched, Worn};
 pub(crate) use build::build_rig;
+pub(crate) use cage_templates::mannequin as mannequin_cages;
+pub(crate) use cframe::Cf;
 pub(crate) use cframe::V3;
 pub(crate) use dialog::RigDialog;
+pub(crate) use insert::spawn_top;
 pub(crate) use proportions::{BodyScale, BodyShape, RigType, Scales};
 pub(crate) use publish_result::{PublishOutcome, PublishResult};
 

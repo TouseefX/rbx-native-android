@@ -726,7 +726,7 @@ fn layered_clothing_is_seated_on_its_body_part() {
     let [Fate::Approximated(note)] = &fates[..] else {
         panic!("{fates:?}");
     };
-    assert!(note.contains("nearest cage vertices"));
+    assert!(note.contains("cage to cage"));
     let handle = child_named(&dom, child_named(&dom, rig, "Jacket").unwrap(), "Handle").unwrap();
     let torso = child_named(&dom, rig, "UpperTorso").unwrap();
     let position = |node| {
@@ -754,7 +754,7 @@ fn layered_clothing_is_refused_on_r6_and_approximations_are_noted() {
     assert!(
         notes
             .iter()
-            .any(|n| n.contains("Jacket") && n.contains("nearest cage vertices")),
+            .any(|n| n.contains("Jacket") && n.contains("cage to cage")),
         "{notes:?}"
     );
 }
@@ -907,4 +907,30 @@ fn the_real_body_packages_supply_their_r15_parts() {
     assert_eq!(options.pieces["UpperTorso"].mesh, 123_703_027_718_030);
     assert_eq!(options.pieces["RightUpperArm"].mesh, 100_418_658_789_083);
     assert_eq!(options.pieces["RightHand"].mesh, 106_255_216_464_982);
+}
+
+#[test]
+fn a_package_parts_hidden_surface_data_reaches_the_rigs_wrap_target() {
+    let avatar = avatar_r15();
+    let (_, _, mut options) = rig_of(&avatar);
+    let mut package = package(&[("Head", 777, &["NeckRigAttachment"])]);
+    let part = package.root_refs()[0];
+    let part = package.get(part).unwrap().children()[0];
+    let target = package.new_instance("WrapTarget", "HeadWrapTarget", Some(part));
+    set(&mut package, target, "CageMeshId", uri("rbxassetid://778"));
+    let blob = Variant::Unknown {
+        type_id: 0x1c,
+        raw: vec![18, 1, 2, 3],
+    };
+    set(&mut package, target, "HSRData", blob.clone());
+    apply_packages(&mut options, &[worn_asset(10, 27, package)]);
+    let mut dom = WeakDom::new();
+    let root = dom.new_instance("DataModel", "Game", None);
+    let rig = build_rig(&mut dom, &options, root);
+    let head = child_named(&dom, rig, "Head").unwrap();
+    let wrap = child_of_class(&dom, head, "WrapTarget").unwrap();
+    assert_eq!(
+        dom.get(wrap).unwrap().properties().get("HSRData"),
+        Some(&blob)
+    );
 }
