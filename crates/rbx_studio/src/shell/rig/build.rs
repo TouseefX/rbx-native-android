@@ -441,6 +441,15 @@ fn dress_mesh(dom: &mut WeakDom, part: Ref, name: &str, piece: &Piece) {
             "CageOrigin",
             Variant::CFrame(Cf::at(origin).data()),
         );
+        for (key, value) in &piece.hsr {
+            set(dom, target, key, value.clone());
+        }
+        if let (true, Some(hsr)) = (
+            piece.hsr.is_empty(),
+            super::hidden_surfaces::stock(piece.mesh),
+        ) {
+            set(dom, target, "HSRAssetId", asset(hsr));
+        }
     }
     if let Some(maps) = piece.surface {
         let surface = dom.new_instance("SurfaceAppearance", "SurfaceAppearance", Some(part));

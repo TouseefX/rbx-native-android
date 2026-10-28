@@ -228,6 +228,7 @@ fn pieces(cut: &Cut, look: &Look, mut stock: Pieces) -> Pieces {
                 init: v3(part.size),
                 original: v3(part.size),
                 cage: None,
+                hsr: Vec::new(),
                 rig: part
                     .attachments
                     .iter()
