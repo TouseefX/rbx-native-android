@@ -3132,11 +3132,18 @@ both the plain fetch failure and the silent fall back to a default
   Studio: silhouette XOR 0.78 down to 0.12. `BindOffset` moves the fitted
   garment about the root part, like Studio; `Puffiness` and
   `ShrinkFactor` change nothing in Studio, so they change nothing here.
+  The body and lower layers hide under the clothing by Roblox's own HSR
+  data, like Studio: XOR 0.07 on the blocky bodies, 0.05 to 0.06 on the
+  Mannequin.
 - [ ] 📋 **UGC creator workflow, the rest**: the validator, Model upload,
   dynamic head side (FACS checks, landmarks, Avatar › Face Preview) and the
   fitting tool above are done. Still open: a live check that the Creator
   Hub can turn an API-uploaded Model into an avatar item, and that
-  Roblox's validator accepts cages made from the Mannequin template. The
+  Roblox's validator accepts cages made from the Mannequin template, and
+  that the stock bodies' HSR assets download with an API key (anonymous
+  downloads get a 401, so without a key the test body isn't hidden under
+  the clothing; Studio-saved places and packages carry the data inline and
+  work either way). The
   upload fee, moderation and Marketplace publish have no documented Open
   Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
   analysis, staged plan and what each stage was checked against in real

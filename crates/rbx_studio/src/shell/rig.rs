@@ -22,6 +22,7 @@ mod bundle;
 mod cage_templates;
 mod cframe;
 mod dialog;
+mod hidden_surfaces;
 mod insert;
 mod layout;
 mod proportions;

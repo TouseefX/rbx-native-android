@@ -60,6 +60,9 @@ pub(super) struct Piece {
     pub(super) original: V3,
     /// `CageMeshId` and `CageOrigin` of the `WrapTarget` (layered clothing).
     pub(super) cage: Option<(u64, V3)>,
+    /// The `WrapTarget`'s hidden surface data, from a package part (see
+    /// [`super::hidden_surfaces`]); empty on a stock part.
+    pub(super) hsr: super::hidden_surfaces::Props,
     /// `<Joint>RigAttachment`s.
     pub(super) rig: Vec<(String, V3)>,
     /// Accessory attachments.
@@ -115,6 +118,7 @@ fn owned(raw: &Raw, family: Family) -> Piece {
         init: raw.init,
         original: raw.original,
         cage: raw.cage,
+        hsr: Vec::new(),
         rig: list(raw.rig),
         extra: list(raw.extra),
     }
