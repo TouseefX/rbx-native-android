@@ -20,6 +20,18 @@ pub fn start(internal_data_path: Option<&str>) {
     if let Some(path) = internal_data_path.filter(|path| !path.is_empty()) {
         std::env::set_var("XDG_CONFIG_HOME", format!("{path}/.config"));
     }
+    // Android has no OS keyring behind GPUI's credentials API, and the
+    // platform read never answers there: Home's startup `load_session`
+    // awaits it with no timeout, on the render thread, inside the task
+    // queue the host loop is draining — one call and the whole pump is
+    // frozen (no frames, no input, ever again). The desktop boot wraps
+    // the same read in a five-second timeout for exactly this failure;
+    // the session path has none. `RBX_NO_KEYRING` is the switch
+    // `rbx_cloud` already provides for keyring-less environments: every
+    // keyring read and write then answers "empty" instantly and Home
+    // stays interactive. Revisit when the platform layer grows a real
+    // Android Keystore delegate.
+    std::env::set_var("RBX_NO_KEYRING", "1");
 
     host::start_with_assets(gpui_kit::assets::AllAssets, |cx| {
         rbx_studio::boot_mobile(cx);
