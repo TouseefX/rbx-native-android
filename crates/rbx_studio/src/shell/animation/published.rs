@@ -44,7 +44,7 @@ pub(super) fn fetch_clip_with(
 
 /// Blocking: downloads (anonymously, then through the stored Open Cloud key
 /// if Roblox refuses), falling back to the shared cache.
-pub(super) fn fetch_clip(id: u64) -> Result<Clip, String> {
+pub(in crate::shell) fn fetch_clip(id: u64) -> Result<Clip, String> {
     let cache = AssetCache::new(None).ok();
     fetch_clip_with(cache.as_ref(), id, |id| {
         let client = rbx_cloud::Client::new(rbx_cloud::ApiKey::from_env_or_config());

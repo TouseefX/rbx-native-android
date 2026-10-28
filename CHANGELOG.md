@@ -11,6 +11,16 @@
   free, spells out the Creator Hub fees first and opens the item there,
   since Roblox has no API for the paid avatar item step. The checks live in
   a new `rbx_ugc` crate the fitting tool can reuse. (@chteau)
+- **Accessory Fitting Tool**: Avatar › Accessory fits a mesh as a rigid
+  accessory or layered clothing, tries it on preset bodies, your own
+  avatar, animations, body scales and other items, then writes the
+  Accessory the same way Studio's tool does. Clothing gets inner and outer
+  cages made for it, with an overlay and a nudge. Layered clothing
+  now fits cage to cage everywhere it shows, a lot closer to what Studio
+  draws, and follows `BindOffset` like Studio does. Eyebrows and eyelashes
+  sit in the Accessory list like in Studio but get cages, since Studio
+  won't save them rigid. Undo and redo never bring the preview back, and
+  undoing Generate puts the item back the way it was. (@chteau)
 - **Dynamic heads**: the viewport now poses a dynamic head from its
   `FaceControls`, like Studio. Avatar › Face Preview gets a slider per FACS
   control, the 5 validation expressions in one click and the eye and mouth
