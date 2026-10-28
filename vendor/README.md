@@ -96,6 +96,14 @@ ease instead of snapping, each piece marked "rbx-native addition":
   A running fade asks for the next frame; a settled one asks for nothing.
 - `src/gpui.rs`: the module and its re-export.
 
+Plus Android first-frame diagnostics (each `#[cfg(target_os = "android")]`,
+marked "rbx-native addition" in place, to remove once the mobile boot is
+proven on device): `src/app.rs` logs whether `App::open_window` drew the
+initial scene or failed, and `src/window.rs` logs each frame callback, the
+draw-and-present arm it takes, and the primitive counts `Window::present`
+hands the platform. The host-driven Android loop presents only frames GPUI
+asks for, so the first frame's path is exactly what a black screen hides.
+
 GPUI has no property transitions of its own, so this is what lets every
 `hover`/`group_hover` style in the editor — and in `gpui-base`'s widgets —
 fade without each call site animating a value by hand. With no
@@ -107,4 +115,4 @@ this crate's own tests need fonts from outside it and do not build here.
 
 To upgrade GPUI: re-copy the matching `gpui-pre` from
 `~/.cargo/registry/src/*/`, drop the example and test targets from its
-`Cargo.toml`, re-apply the three marked pieces, and bump the version.
+`Cargo.toml`, re-apply the marked pieces, and bump the version.

@@ -23,5 +23,23 @@ pub fn start(internal_data_path: Option<&str>) {
 
     host::start_with_assets(gpui_kit::assets::AllAssets, |cx| {
         rbx_studio::boot_mobile(cx);
+        // The host loop presents only the frames GPUI asks for, and the
+        // first one needs asking for from outside the launch closure:
+        // `App::open_window`'s initial draw builds the scene without
+        // presenting it and leaves the window clean, so the frame its
+        // birth-dirty waker scheduled arrives to nothing and never re-arms —
+        // a black screen forever after. (The android-activity entry point
+        // kicks a frame right after its launch callback; the host-driven one
+        // has no such kick.) `AsyncApp::refresh` is the purpose-built ask:
+        // it runs inside an update scope — a bare `refresh_windows` out here
+        // would queue an effect nothing flushes, as the host's launch
+        // closure runs without an App update scope — and the task lands on
+        // the foreground executor, which the host loop drains the moment the
+        // boot returns.
+        cx.spawn(async move |cx| {
+            cx.refresh();
+            log::info!("rbx_android: first-frame refresh asked for");
+        })
+        .detach();
     });
 }

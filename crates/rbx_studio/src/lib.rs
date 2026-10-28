@@ -399,22 +399,6 @@ pub fn boot_mobile(cx: &mut App) {
         launch: Launch::default(),
         user,
     };
-    // The host-driven Android loop presents only the frames GPUI asks for.
-    // `App::open_window`'s initial draw builds the scene but never presents
-    // it, and it leaves the window clean — so the frame the invalidator's
-    // waker scheduled when the window was created arrives to a clean window,
-    // does nothing, and never re-arms: a black screen forever after. (The
-    // android-activity entry point kicks a frame right after its launch
-    // callback; the host-driven one has no such kick.) Marking the windows
-    // dirty asks for the frame — the waker schedules the vsync, and the
-    // frame callback redraws and presents.
-    //
-    // This must run right before `open_home`, not after it: the host's
-    // launch closure runs without an App update scope, so an effect pushed
-    // after the window opened would sit unflushed until the first input,
-    // while this one rides the effect flush `App::open_window` performs at
-    // the end of its own update scope.
-    cx.refresh_windows();
     launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx);
 }
 
