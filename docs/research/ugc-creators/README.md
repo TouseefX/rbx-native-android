@@ -147,7 +147,8 @@ loading, instance editing for all the avatar classes, skinned rendering.
      1.87 x 2.5 x 1.87); a rigid handle needs a `TextureID` or a
      `SurfaceAppearance`, a layered one doesn't. Both are mirrored.
    - Not mirrored: Studio's "Missing HSR data" error on a layered item
-     (Studio generates that data itself) and its schema check (stray
+     (Studio generates that data itself; ours reads it, see stage 3, but
+     can't make it) and its schema check (stray
      instances under the handle). The Studio importer decimates a mesh over
      20k triangles instead of refusing it; our importer still refuses.
    - The AFT never got past its Select step on these items in our run, so
@@ -189,9 +190,34 @@ loading, instance editing for all the avatar classes, skinned rendering.
      Cargo Pants (6984740059) on the default blocky body at Normal,
      Slender and Classic, same camera: garment-pixel XOR over union went
      from 0.81 / 0.75 / 0.76 with the old nearest-vertex fit to 0.11 /
-     0.13 / 0.12 (whole frame 0.78 to 0.12). What's left is a few spots
-     between the legs where Studio hides the body under the cloth (its HSR
-     data) and we don't.
+     0.13 / 0.12 (whole frame 0.78 to 0.12).
+   - Hidden surface removal (`wrap/hsr.rs`): Studio hides the body under
+     the cloth, which left grey spots between the legs in ours. Roblox's
+     only page on it
+     (<https://create.roblox.com/docs/reference/engine/classes/HiddenSurfaceRemovalAsset>)
+     says the data marks "the faces of a wrap's mesh that are fully
+     occluded by clothing layers worn above it" so the engine strips them;
+     the format isn't published. Every `WrapLayer` and `WrapTarget` carries
+     it, inline as `HSRData` (the Mannequin's packages, the Denim Jacket)
+     or as an `HSRAssetId` model (the blocky body, the Cargo Pants).
+     Read off those (versions 16 and 18): a bit per inner cage vertex, 0
+     where the layer covers what's under it (the pants' 0 bits are the
+     legs and hips), then per mesh face the cage vertices it sits under
+     (the outer cage for a layer: 0.14 studs from the face on average,
+     1.9 on the inner one). A face hides when every one of those is
+     covered, by UV, by a layer above it. Studio's scene saved and drawn
+     by ours from the same cameras: XOR 0.119 / 0.124 / 0.128 down to
+     0.070 / 0.068 / 0.075 on Classic / Normal / Slender, the grey patch
+     between the legs gone. With the garments made transparent in both,
+     Studio and ours hide the same faces (neck, the strip under the open
+     jacket, hands, ankles and the blocky shoulders, feet and head stay).
+     Ours draws the back of that strip from behind where Studio culls it,
+     which only shows with see-through clothing.
+   - Stock bodies get the `HSRAssetId` the reference avatar models give
+     each body mesh, and a player's package parts keep theirs. Those
+     stock HSR assets answer 401 without sign-in, so the fitting tool's
+     test body hides under clothing only with an API key; not checked with
+     one.
    - `WrapLayer` tuning, measured in Studio on the same jacket (Normal
      body, one camera per setting): `BindOffset` moves the fitted garment
      as a whole, about the character's `HumanoidRootPart`. `(0, 0.5, 0)`
@@ -202,10 +228,16 @@ loading, instance editing for all the avatar classes, skinned rendering.
      and 2, which Studio clamps to 1) and `ShrinkFactor` (-1, 0.5, 1) draw
      pixel for pixel the same as the defaults in Studio, alone or over a
      second layer; the API page marks both deprecated. So they're written
-     but not applied, and the tool clamps them to -1..1 like Studio. On
-     the Mannequin our jacket is still slimmer than Studio's (garment
-     XOR/union 0.31 at the defaults on that body, the same before and
-     after this change).
+     but not applied, and the tool clamps them to -1..1 like Studio.
+   - The Mannequin jacket isn't slimmer than Studio's. The 0.31 (3736
+     against 5363 px) came from the measurement: our test scene had no
+     `Lighting` and kept the jacket's Plastic, so the brighter highlights
+     fell out of the magenta mask. Studio's 5363 px comes back exactly from
+     the same camera; our fitting tool's own Mannequin and jacket, with
+     Studio's `Lighting` and SmoothPlastic, read 5185 px and XOR 0.054,
+     the same as Studio's own scene drawn by ours (0.054 jacket, 0.059
+     jacket and pants). Same meshes, cages, sizes and handle on both
+     sides; the outlines sit on each other.
    - Eyebrows and eyelashes: Studio's AFT lists them with the rigid types,
      but Save to Roblox on a rigid eyebrow says "Could not find required
      WrapLayer" and "Asset type 'EyebrowAccessory' is not a rigid
