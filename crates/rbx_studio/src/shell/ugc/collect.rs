@@ -17,8 +17,8 @@ mod head;
 mod resolve;
 mod studio;
 
-pub(super) use resolve::mesh_geometry;
 pub(super) use head::{head_part, head_plan, resolve_head, HeadMesh};
+pub(super) use resolve::mesh_geometry;
 pub(super) use resolve::{fetch_cached, resolve};
 
 const SURFACE_SLOTS: [&str; 4] = ["ColorMap", "NormalMap", "MetalnessMap", "RoughnessMap"];
