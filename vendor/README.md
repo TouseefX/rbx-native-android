@@ -96,13 +96,17 @@ ease instead of snapping, each piece marked "rbx-native addition":
   A running fade asks for the next frame; a settled one asks for nothing.
 - `src/gpui.rs`: the module and its re-export.
 
-Plus Android first-frame diagnostics (each `#[cfg(target_os = "android")]`,
-marked "rbx-native addition" in place, to remove once the mobile boot is
-proven on device): `src/app.rs` logs whether `App::open_window` drew the
-initial scene or failed, and `src/window.rs` logs each frame callback, the
-draw-and-present arm it takes, and the primitive counts `Window::present`
-hands the platform. The host-driven Android loop presents only frames GPUI
-asks for, so the first frame's path is exactly what a black screen hides.
+Plus, marked the same way: `src/app.rs` presents the initial scene
+`App::open_window` just drew on Android (`Window::present` in
+`src/window.rs` widened to `pub(crate)` for it) — the host-driven Android
+loop presents only the frames GPUI asks for, and nothing asks for the first
+one, which was a black screen on device. And Android first-frame
+diagnostics, to remove once the mobile boot is proven: `src/app.rs` logs
+whether `open_window` drew or failed, `src/window.rs` logs each frame
+callback, the draw-and-present arm it takes, and the primitive counts
+`Window::present` hands the platform, and `src/executor.rs` and
+`src/platform_scheduler.rs` log foreground spawns and their dispatch to the
+main thread.
 
 GPUI has no property transitions of its own, so this is what lets every
 `hover`/`group_hover` style in the editor — and in `gpui-base`'s widgets —

@@ -1308,6 +1308,18 @@ impl App {
                     #[cfg(target_os = "android")]
                     log::info!("gpui app: open_window drew the initial scene");
 
+                    // rbx-native addition: the host-driven Android loop
+                    // presents only the frames GPUI asks for, and nothing
+                    // asks for the first one — the android-activity entry
+                    // point requests a frame right after its launch callback
+                    // for exactly this reason (the fresh window's
+                    // `force_render_once` makes it a full redraw). Present
+                    // the scene just drawn so the window is never black at
+                    // boot; later frames flow through the normal
+                    // invalidation path.
+                    #[cfg(target_os = "android")]
+                    window.present();
+
                     cx.window_handles.insert(id, window.handle);
                     cx.windows.get_mut(id).unwrap().replace(Box::new(window));
                     Ok(handle)

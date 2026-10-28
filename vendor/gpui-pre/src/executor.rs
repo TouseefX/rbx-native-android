@@ -346,6 +346,10 @@ impl ForegroundExecutor {
     where
         R: 'static,
     {
+        // rbx-native addition: Android first-frame diagnostics — remove once
+        // the mobile boot is proven on device.
+        #[cfg(target_os = "android")]
+        log::info!("gpui exec: foreground spawn");
         self.inner.spawn(future.boxed_local())
     }
 
