@@ -2,6 +2,16 @@
 
 ## 2026-10-28
 
+- **Animation Graphs play as real Studio does**: the guesses the graph
+  runtime made where Roblox's docs are silent were measured in real Studio
+  and fixed to match. RandomSequence now picks what Studio picks for the
+  same Seed (it's a Mersenne Twister, not Luau's `Random`), Blend2D's
+  weights match past the edge of a Polar fan, an interrupted blend drops
+  its source as Studio's does, a Select with no matching Selection or a
+  Priority Select with no Trigger plays nothing, a mask leaves out the
+  joints it doesn't list, and a backwards trim holds its end frame. XML
+  places now keep a state machine's entry state, which Studio saves as a
+  `__attrRef_EntryState` Ref. (@chteau)
 - **Shortcuts survive an undo**: when an undo removed the thing a field
   was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
   new Accessory selected), the first Ctrl+Y did nothing until you clicked
