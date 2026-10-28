@@ -2,6 +2,16 @@
 
 ## 2026-10-28
 
+- **Alpha test builds**: a hand-dispatched `Test build` workflow builds
+  `rbxstudio` in release for Windows, macOS (Apple Silicon) and Linux and
+  uploads one zip per OS, with a `README-ALPHA.txt` on opening an unsigned
+  build, the API key wizard and where to send feedback. No signing,
+  installer or Release, that's still the release pipeline's job. A copied
+  binary also no longer reaches back into the checkout it was built from:
+  the Tests dock's Loren runner read `vendor/loren` from the source tree,
+  so Loren specs failed on any other machine; Loren's runner and specs now
+  ship inside the binary next to its project template. (@chteau)
+
 - **Shortcuts survive an undo**: when an undo removed the thing a field
   was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
   new Accessory selected), the first Ctrl+Y did nothing until you clicked
