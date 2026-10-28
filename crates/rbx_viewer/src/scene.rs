@@ -75,7 +75,8 @@ pub(crate) use resync::{Drawn, PartSync};
 pub(crate) use shape::{resolve as resolve_shape, unknown_part_types, ShapeKind};
 pub(crate) use trail::{segments as trail_segments, Recorder as TrailRecorder, Trail};
 pub(crate) use union::fit as union_fit;
-// Read by the mesh export, which leaves such a union out too.
+// Read by the mesh export, which leaves out what these say draws nothing.
+pub(crate) use shape::draws_nothing;
 pub(crate) use union::is_empty as union_is_empty;
 pub(crate) use union::triangles as union_triangles;
 pub(crate) use union::{unit_mesh, Evaluations as UnionEvaluations};
@@ -848,9 +849,11 @@ fn build_part(
         cframe_matrix(cframe),
         PartId::whole(referent),
     );
-    // A union with no geometry anywhere draws nothing in Studio; a box in
-    // its place would be invented.
-    part.suppressed = union::is_empty(dom, database, referent);
+    // A union with no geometry anywhere, or a part wearing a deprecated
+    // `SpecialMesh` type, draws nothing in Studio; a box in its place would
+    // be invented.
+    part.suppressed =
+        union::is_empty(dom, database, referent) || shape::draws_nothing(dom, instance);
     Some(part)
 }
 

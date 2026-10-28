@@ -134,12 +134,29 @@ loading, instance editing for all the avatar classes, skinned rendering.
 
 ## Staged plan
 
-1. **Validator** (stage 1). Asset-type table, 4k/2048/size/influence checks
-   on an imported mesh, a report window. Smallest piece, useful alone, and
-   the import dialog can reuse it.
-   - Check in real Studio: import the same mesh, run the AFT and
-     Save to Roblox up to the validation step and compare every message and
-     number. The size table especially, per accessory type and body scale.
+1. **Validator** (stage 1). Done: `crates/rbx_ugc` (no UI; `validate(&Item)`
+   returns findings with rule, severity, measured value, limit and the part)
+   and Avatar › Check Item. Import 3D can check a file as an avatar item.
+   - Checked in real Studio 2026-10-28 on generated items (1k, 5k and 21k
+     triangle spheres, a 4-stud hat, a 4096 texture, a shirt with no
+     cages): Save to Roblox gave the same verdicts as ours, with the same
+     numbers (5000 over 4000, 4096x4096 over 2048x2048, the Hat box
+     [3, 4, 3]).
+   - What Studio taught us that no page says: the size box comes from the
+     handle's `AvatarPartScaleType` value and an accessory without one is
+     sized as Classic (so an unmarked hat gets 3 x 4 x 3, not Normal's
+     1.87 x 2.5 x 1.87); a rigid handle needs a `TextureID` or a
+     `SurfaceAppearance`, a layered one doesn't. Both are mirrored.
+   - Not mirrored: Studio's "Missing HSR data" error on a layered item
+     (Studio generates that data itself) and its schema check (stray
+     instances under the handle). The Studio importer decimates a mesh over
+     20k triangles instead of refusing it; our importer still refuses.
+   - The AFT never got past its Select step on these items in our run, so
+     its own messages were not compared.
+   - No page gives a size box for shoes, a vertex/UV count for Roblox's
+     template cages, or a publishing advance for eyebrows and eyelashes;
+     those rules are skipped. The Slender hair depth row adds up wrong on
+     the page (1.892 + 1.189 for 2.08); 0.892 front is used.
 2. **Fitting tool, rigid items** (stage 2). Accessory type, attachment
    placement on the mannequin, scale, writes the `Accessory`.
    - Check: the generated `Accessory` saved to a `.rbxl` and diffed against
@@ -149,14 +166,48 @@ loading, instance editing for all the avatar classes, skinned rendering.
    - Check: upload through the API, read back what the importer made, wear
      the item in Studio on Normal, Slender and Classic bodies, compare the
      fit to ours. This is where the deformer gap shows.
-4. **Heads** (stage 4). Landmarks, FACS check, face preview.
-   - Check: Studio's own dynamic head validation on the same head.
-5. **Upload and handoff** (stage 5). Window, fee notice, Model upload,
-   Creator Hub link.
-   - Check, live: does a Model uploaded by the API show up as something the
-     Creator Hub can turn into an avatar item? If not, say so in the window.
-   Needs the tester's account, a key with the assets scope, and real Robux
-   for the upload fee, so Chee has to be the one pressing it.
+4. **Heads** (stage 4). Done: `rbx_ugc::head` (FaceControls, the 17
+   required FACS poses present and moving, the 5 facial actions moving
+   their landmark, eye and mouth landmarks found on the cage and close to
+   the mesh, the emote box, part settings, extra objects), FACS read from
+   the mesh (`rbx_mesh::Facs`) and posed in the viewer from `FaceControls`
+   the way Studio does, and Avatar › Face Preview (a slider per control,
+   the 5 expressions, landmarks drawn over the face).
+   - Checked in real Studio 2026-10-28 on Roblox's own
+     `characterR15DynamicHeadV2`. Same camera, `JawDrop`, `LeftEyeClosed`
+     and `Pucker` at 1: the dark eye and mouth regions overlap Studio's at
+     IoU 0.91 (0.83 at rest), the open mouth is within 2% of Studio's area
+     and the closed eye's slit 339 against 389 px. The outline match
+     reads IoU 0.89, held back by our sky being close to the head's
+     colour (the edges sit on each other in the overlay).
+   - Save to Roblox › Avatar Item › Head on the same head (the validation
+     step only): Studio says `LeftCheekRaiser` and `RightCheekRaiser` are
+     inactive, same as ours. Removing `FaceControls`, putting a hand mesh
+     in (no FACS) and pointing the cage at a hand cage (no landmarks) gave
+     Studio's "Could not find required FaceControls", "missing FACS
+     information ... at least 17 poses" and "must be properly caged so
+     that the eyes and mouth vertices on the cage line up" errors, which
+     ours raise too.
+   - What Studio taught us that no page says, now mirrored: a head needs an
+     `AvatarPartScaleType` `StringValue` and `CollisionFidelity` Default
+     (Roblox's own head ships as Box, stored as a `BLOCK` marker in
+     `PhysicalConfigData`), and the outer cage keeps the template's 343
+     unique UVs (to 1e-4).
+   - Not mirrored: Studio's asset ownership checks, its cage-to-mesh
+     distance (0.60) and cage-inside-mesh percentages, and the server side
+     scoring of facial actions. Our landmark thresholds (projection under
+     8% of head height, an action moving its landmark over 1%) are ours.
+   - A head with one required pose missing was not run in Studio: making
+     one needs a new mesh asset and nothing gets uploaded. It is unit
+     tested only.
+5. **Upload and handoff** (stage 5). Done: Avatar › Upload Item (type,
+   title, creator, the check, the fees, Model upload through Open Cloud,
+   Creator Hub link). Tested against a mock Open Cloud server.
+   - Still to check, live: does a Model uploaded by the API show up as
+     something the Creator Hub can turn into an avatar item? The window
+     says it isn't confirmed. Needs the tester's account, a key with the
+     assets scope, and real Robux for the upload fee, so Chee has to be
+     the one pressing it.
 6. **Test rig** (stage 6). Wear on Player / My Avatar and the presets, play
    animations, body scales.
    - Check: same item on the same avatar in real Studio, screenshot against
@@ -167,9 +218,11 @@ before it counts as done, same as the rest of the project.
 
 ## Open questions
 
-- Which accessory types the AFT lists today, and their exact size table
-  (the spec page has the numbers by body scale; copy them from the page, not
-  from memory, when stage 1 starts).
+- Which accessory types the AFT lists today. Save to Roblox's Asset
+  Category list (2026-10-28): Body, Head, Shoes, Avatar Animations, Back,
+  Dress Skirt, Emote, Eyebrow, Eyelash, Eye Makeup, Face, Face Makeup,
+  Front, Hair, Hat, Jacket, Lip Makeup, Neck, Pants, Shirt, Shorts,
+  Shoulder, Sweater, T-Shirt, Waist.
 - Whether the Open Cloud Assets API will ever take avatar item metadata.
 - Whether a validator can lean on `rbx_autorig`'s voxeliser for the
   watertight check or needs its own.

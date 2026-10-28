@@ -152,6 +152,35 @@ fn a_lua_runtime_error_exits_with_code_one() {
     );
 }
 
+// `WeakDom::take_changes` drains a Vec in mutation order, so the listing is
+// the same on every run and follows the script's own order.
+#[test]
+fn print_changes_order_is_stable_and_follows_the_script() {
+    let script = r#"
+        local a = Instance.new("Part", workspace)
+        a.Name = "First"
+        local b = Instance.new("Part", workspace)
+        b.Name = "Second"
+        a.Anchored = true
+        b:Destroy()
+    "#;
+    let run = || {
+        let output = run_script(&fixture("TestPlace.rbxl"), script, &["--print-changes"]);
+        assert!(output.status.success());
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    };
+    let first = run();
+    assert_eq!(first, run());
+    assert_eq!(first, run());
+    assert_eq!(first.matches("Added").count(), 2, "{first}");
+    assert!(
+        first.find("Added").unwrap() < first.find("Removed").unwrap(),
+        "{first}"
+    );
+    let last_added = first.rfind("Added").unwrap();
+    assert!(first.find("Removed").unwrap() > last_added, "{first}");
+}
+
 #[test]
 fn print_changes_lists_an_added_entry() {
     let output = run_script(

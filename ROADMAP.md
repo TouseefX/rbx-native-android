@@ -19,10 +19,10 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   against real files (16k+ instance places), including the shared-string
   (`SSTR`) table.
 - [x] XML `.rbxlx`/`.rbxmx`: read **and** write, exact round-trip.
-- [x] Reflection database (682 classes, `Service`/`NotCreatable`/
+- [x] Reflection database (938 classes, `Service`/`NotCreatable`/
   `NotBrowsable`/property-category tags) parsed straight from Roblox's own
   public API dump, kept current by a daily CI sync.
-- [x] Mesh format `.mesh` v1.00–v5.00.
+- [x] Mesh format `.mesh` v1.00–v7.00 (v6 and v7 are the chunked layout).
 - [x] Mutable in-memory DOM (`set_property`/`remove`/`new_instance`/
   `take_changes`), what live editing is built on.
 - [x] `rbxdump --roundtrip`: a continuous-verification tool that found and
@@ -156,7 +156,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   axis of the light-to-fragment direction, bloom/stars/
   `ColorCorrectionEffect`/`ColorGradingEffect`/`BlurEffect`/
   `SunRaysEffect`/`DepthOfFieldEffect`.
-- [x] 43 official Roblox materials (`rbx_materials`) with real texture
+- [x] 45 Roblox materials (`rbx_materials`, every `Enum.Material` value, `Air` and `Water` drawn as plain plastic) with real texture
   packs, `MaterialVariant`, `SurfaceAppearance` (with its emissive mask,
   `EmissiveStrength` and `EmissiveTint`: the mask's grey level times the
   tinted strength is added to the lighting before the albedo multiplies it,
@@ -282,7 +282,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     per element, a gradient inside a stroke not read), `UIPadding`.
   - Layout: `UIListLayout` with `HorizontalFlex`/`VerticalFlex`, `Wraps`
     and `ItemLineAlignment`, `UIFlexItem`, `UIGridLayout`, `UITableLayout`.
-    `UIPageLayout` is not read (one page at a time, animated).
+    `UIPageLayout` lays out the current page (no transition).
   - Sizing: `UIScale`, `UIAspectRatioConstraint` (both `AspectType`s, both
     `DominantAxis`), `UISizeConstraint`, `UITextSizeConstraint`,
     `AutomaticSize` (children extent, a layout's `AbsoluteContentSize`,
@@ -679,8 +679,7 @@ and, on a model, each part's own face middles and centre, as the
 ### Editor (`rbx_studio`, binary `rbxstudio`)
 - [x] Explorer: this project's own flat, from-scratch class icon kit
   (`assets/icons/default/dark`, 329 classes onto 142 of its 152 tiles,
-  Roblox's 147-tile layout plus five of its own, spec'd in
-  `assets/icons/README.md`) rasterized and painted per row
+  Roblox's 147-tile layout plus five of its own) rasterized and painted per row
   (`class_icons.rs`), with Lucide glyphs as the fallback for anything the
   kit doesn't cover, Roblox's own sprite sheet is no longer downloaded or
   drawn anywhere in the editor. Default service filter with a "show all"
@@ -1324,8 +1323,8 @@ both the plain fetch failure and the silent fall back to a default
     a list or grid child dragged to a new place in it; double-click to
     type into a text element; the Explorer's menu on right-click (Group in
     a Frame, and Ungroup, which lets a `Frame` go where its children
-    stand); Ctrl+[ / ] for paint order (Shift for all the way); Ctrl+0 to
-    fit and Ctrl+1 to zoom to the selection; Space to pan; Shift to hold a
+    stand); `[` / `]` for paint order (Shift for all the way); 0 to
+    fit and 1 to zoom to the selection; Space to pan; Shift to hold a
     move to one axis, draw a square; Alt to resize about the centre.
   - **The 3D view emulates the same screen.** The Viewport dock's Screen
     setting is the canvas's resolution: the scene letterboxes to the
@@ -1732,7 +1731,8 @@ both the plain fetch failure and the silent fall back to a default
   `appearance.json` names another one or its own files are saved. A
   widgets-only `themes/<name>.json` from before still loads. An installer
   that downloads a theme from a GitHub repository link, validates it and
-  swaps it in atomically is in place but not yet reachable from the UI.
+  swaps it in atomically is reachable from Settings › Appearance ›
+  Theme (Install from GitHub).
 - [x] **Light and High contrast, built in beside Default**
   (`assets/themes/{light,high-contrast}`, Studio Settings › Appearance ›
   Theme). Both are ordinary themes layered over Default, only the
@@ -1839,7 +1839,7 @@ both the plain fetch failure and the silent fall back to a default
   surfaces, state washes, borders, a seven-step text ramp, one radius, the
   frame's measured dimensions and its type scale, with the palette also
   expressed as a `ThemeSet`/`ThemeConfig` JSON
-  (`assets/themes/dark-soft.json`) so the toolkit's own widgets follow it
+  (`assets/themes/default/widgets.json`) so the toolkit's own widgets follow it
   without a rebuild, and a test that fails the moment the two disagree.
 
   The palette is not this bullet's original `#1a1a1a`-to-`#f0f0f0` ramp and
@@ -2466,7 +2466,10 @@ both the plain fetch failure and the silent fall back to a default
   written: it no longer shows changed in Properties or has to be stripped
   out before a save.
 - [x] **An auto-rigger and a skeleton view** (`crates/rbx_autorig`).
-  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ or glTF).
+  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ, glTF, or a
+    `.rbxm`/`.rbxmx` model of MeshParts and Parts, merged the way the
+    viewport places them; a texture, `SurfaceAppearance` and colour carry
+    over when every part shares one).
     - It finds the up axis, the front (−Z, left on −X) and the height.
     - It places the 15 R15 joints from the mesh's own shape:
       voxelised, with geodesic extremities, cross-section profiles and
@@ -2505,6 +2508,20 @@ both the plain fetch failure and the silent fall back to a default
   - a live upload confirmed the cages: Roblox's importer turns the 15
     `<Part>_OuterCage` meshes into one `<Part>WrapTarget` per part, and a
     layered jacket and pants worn in Studio follow the published body.
+- [x] **Avatar item validator and upload** (`crates/rbx_ugc`,
+  `shell::ugc`). Avatar › Check Item runs the documented Marketplace rules
+  on the selected Accessory, MeshPart or Model, or on a `.fbx`/`.obj`/
+  `.gltf`/`.glb`: 4k triangles per accessory, 20k per mesh, the body
+  budgets, 2048 textures, 4 bone influences, the attachment per type, the
+  size box per type and body scale (read from `AvatarPartScaleType` like
+  Studio does), body part boxes, inner and outer cages, watertight meshes.
+  Numbers come from the creator-docs spec pages, linked from every finding.
+  Checked against Studio's Save to Roblox on the same items: same triangle,
+  texture, size and cage verdicts. Avatar › Upload Item picks type, title
+  and creator (you or a group), blocks on errors, spells out the Creator
+  Hub fees, uploads the item as a Model through Open Cloud (free) and opens
+  it on the Creator Hub. Import can check a file as an avatar item first.
+  The crate has no UI, so the fitting tool can call it.
 - [x] **The Animation Editor writes `CurveAnimation`s and fits the stage's
   shadow to the rig**:
   - `ValuesAndTimes` was decoded from catalog emotes. The writer
@@ -2609,7 +2626,7 @@ both the plain fetch failure and the silent fall back to a default
     compile-checked here and have never run on those systems.
   - **Customize Shortcuts** (`File › Customize Shortcuts…`, and the
     Settings nav's Keyboard shortcuts), a window of its own as in Studio.
-    It lists every rebindable command (89, from Save to the Animation
+    It lists every rebindable command (94, from Save to the Animation
     Editor's keys) by category, with search. Click `+` or a key chip and
     press the new key. Chips remove a key, and Reset or Reset all go back
     to the defaults. A clash is shown ("Also runs: Copy (Edit)") but
@@ -2626,8 +2643,8 @@ both the plain fetch failure and the silent fall back to a default
   `beta.json` and applied after a restart: `enabled` answers from the
   choices at launch. A banner counts the pending changes and offers
   "Restart now", which asks to save unsaved work first, then relaunches
-  the editor on the same place. Nothing ships behind a switch yet, so the
-  page shows its empty state; `RBX_STUDIO_BETA_SAMPLE=1` lists a sample
+  the editor on the same place. Live co-editing and the MCP server ship behind
+  switches; `RBX_STUDIO_BETA_SAMPLE=1` also lists a sample
   feature to try the page.
 - [x] **More New templates on Home.** Home's New row now offers
   Baseplate, Classic Baseplate and Flat Terrain, each with the parts,
@@ -3100,16 +3117,18 @@ both the plain fetch failure and the silent fall back to a default
   Later, the same plan could also restart servers onto the new version and
   send an in-game announcement through MessagingService.
 
-- [ ] 📋 **UGC creator workflow**: build, check, test and upload avatar
-  items (rigid accessories, layered clothing, bodies, dynamic heads) from
-  rbx-native. The auto-rigger, body cages, 3D import and Player / My Avatar
-  are there already. Missing: an Accessory Fitting Tool, a validator with
-  the real budgets (4k triangles, 2048 textures, size per asset type, cage
-  checks), cage authoring for items, a closer layered-clothing deformer and
-  the head side. The upload fee, moderation and Marketplace publish have no
-  documented Open Cloud endpoint, so the last step is a handoff to the
-  Creator Hub. Gap analysis, staged plan and what each stage must be
-  checked against in real Studio: `docs/research/ugc-creators/README.md`.
+- [ ] 📋 **UGC creator workflow**: build, test and finish avatar items
+  (rigid accessories, layered clothing, bodies, dynamic heads) from
+  rbx-native. The auto-rigger, body cages, 3D import, Player / My Avatar,
+  the validator, the Model upload and the dynamic head side (FACS
+  checks, landmarks, Avatar › Face Preview) are there already. Missing: an
+  Accessory Fitting Tool, cage authoring for items, a closer
+  layered-clothing deformer, and a live check that the
+  Creator Hub can turn an API-uploaded Model into an avatar item. The
+  upload fee, moderation and Marketplace publish have no documented Open
+  Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
+  analysis, staged plan and what each stage must be checked against in
+  real Studio: `docs/research/ugc-creators/README.md`.
 
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows

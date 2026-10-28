@@ -9,6 +9,10 @@ fn main() -> ExitCode {
 
     let mut roundtrip = false;
     let mut path_arg = args.next();
+    if matches!(path_arg.as_deref(), Some("--help" | "-h")) {
+        println!("usage: {program} [--roundtrip] <file.rbxm|.rbxl|.rbxmx|.rbxlx>");
+        return ExitCode::SUCCESS;
+    }
     if path_arg.as_deref() == Some("--roundtrip") {
         roundtrip = true;
         path_arg = args.next();

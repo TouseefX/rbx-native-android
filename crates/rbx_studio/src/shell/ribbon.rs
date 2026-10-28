@@ -113,7 +113,57 @@ impl Shell {
                     .into_any_element(),
                 );
                 tiles.push(self.avatar_setup_tile(cx));
-                vec![settings, tiles]
+                let items = vec![
+                    tile(
+                        &self.ribbon_nav,
+                        "ribbon-check-item",
+                        IconName::ShieldCheck,
+                        "Check Item",
+                        cx,
+                    )
+                    .tooltip(|window, cx| {
+                        super::tooltip::text(
+                            "Check Item \u{2014} check an avatar item against Roblox\u{2019}s Marketplace limits",
+                            window,
+                            cx,
+                        )
+                    })
+                    .on_click(cx.listener(|shell, _, _, cx| shell.open_ugc_validator(None, None, cx)))
+                    .into_any_element(),
+                    tile(
+                        &self.ribbon_nav,
+                        "ribbon-upload-item",
+                        IconName::CloudUpload,
+                        "Upload Item",
+                        cx,
+                    )
+                    .tooltip(|window, cx| {
+                        super::tooltip::text(
+                            "Upload Item \u{2014} upload an avatar item and finish it on the Creator Hub",
+                            window,
+                            cx,
+                        )
+                    })
+                    .on_click(cx.listener(|shell, _, _, cx| shell.open_ugc_upload(cx)))
+                    .into_any_element(),
+                    tile(
+                        &self.ribbon_nav,
+                        "ribbon-face-preview",
+                        IconName::ScanFace,
+                        "Face Preview",
+                        cx,
+                    )
+                    .tooltip(|window, cx| {
+                        super::tooltip::text(
+                            "Face Preview \u{2014} pose a dynamic head\u{2019}s FACS controls and see its landmarks",
+                            window,
+                            cx,
+                        )
+                    })
+                    .on_click(cx.listener(|shell, _, _, cx| shell.open_face_preview(cx)))
+                    .into_any_element(),
+                ];
+                vec![settings, tiles, items]
             }
             Tab::Ui => vec![
                 vec![self.insert_gui(cx).into_any_element()],

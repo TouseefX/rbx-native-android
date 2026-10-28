@@ -406,7 +406,7 @@ impl Shell {
                 h_flex()
                     .gap(px(12.))
                     .child(label("Description"))
-                    .child(field(&form.description, "text")),
+                    .child(field(&form.description, "text-align-start")),
             )
             .child(
                 h_flex()

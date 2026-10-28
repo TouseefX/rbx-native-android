@@ -96,7 +96,7 @@ fn live_upload_round_trip() {
     const TRIANGLE: &str = r#"{"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],"meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]}],"bufferViews":[{"buffer":0,"byteLength":36}],"buffers":[{"byteLength":36,"uri":"data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA"}]}"#;
     let path = std::env::temp_dir().join("rbx_native_live_triangle.gltf");
     std::fs::write(&path, TRIANGLE).unwrap();
-    let imported = super::upload_model(&path, "rbx-native live test").unwrap();
+    let imported = super::upload_model(&path, "rbx-native live test", None).unwrap();
     let mut place = WeakDom::new();
     let workspace = place.new_instance("Workspace", "Workspace", None);
     let has_mesh = place_meshes(&mut place, &imported.dom, "t", workspace).is_some();
