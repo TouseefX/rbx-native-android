@@ -2,6 +2,7 @@
 name = "rbx_figma"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 
 # Figma sign-in (OAuth 2 + PKCE), its REST API, and the Figma → Roblox GUI
