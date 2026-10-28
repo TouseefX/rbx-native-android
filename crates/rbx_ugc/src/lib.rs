@@ -7,6 +7,7 @@
 //! These are the documented rules (see [`spec`]); Roblox's own validator runs
 //! server-side and can refuse things the pages don't spell out.
 
+pub mod head;
 pub mod spec;
 
 mod rules;
@@ -124,6 +125,7 @@ pub enum Rule {
     CageUvs,
     Watertight,
     Unreadable,
+    Head(head::HeadRule),
 }
 
 impl Rule {
@@ -146,6 +148,7 @@ impl Rule {
             Rule::CageUvs => "Cage UVs",
             Rule::Watertight => "Watertight",
             Rule::Unreadable => "Not checked",
+            Rule::Head(rule) => rule.title(),
         }
     }
 
@@ -169,6 +172,7 @@ impl Rule {
             Rule::BodyTriangles | Rule::BodyPartSize | Rule::BodySize | Rule::Watertight => {
                 "https://create.roblox.com/docs/avatar/character-bodies/specifications"
             }
+            Rule::Head(rule) => rule.source(),
         }
     }
 }
