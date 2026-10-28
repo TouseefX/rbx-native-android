@@ -33,6 +33,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.Selection
 import android.text.TextWatcher
+import android.util.Log
 import android.view.KeyEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -155,6 +156,10 @@ class MainActivity : GameActivity() {
     // that was already dismissed are dropped.
 
     fun gpuiShowKeyboard(keyboardType: Int, session: Long) {
+        // rbx-native diagnostics (temporary): proves the platform asked for
+        // the keyboard at all — the focus → text_input_state_changed →
+        // show_keyboard_android chain.
+        Log.i("rbxstudio", "rbx_android: gpuiShowKeyboard type=$keyboardType session=$session")
         runOnUiThread {
             if (input == null) {
                 input = InputProxy()
@@ -183,6 +188,8 @@ class MainActivity : GameActivity() {
     }
 
     fun gpuiHideKeyboard(session: Long) {
+        // rbx-native diagnostics (temporary): the losing-focus counterpart.
+        Log.i("rbxstudio", "rbx_android: gpuiHideKeyboard session=$session")
         runOnUiThread {
             val input = this.input ?: return@runOnUiThread
             input.reset(session)
