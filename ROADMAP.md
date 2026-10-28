@@ -3028,6 +3028,33 @@ both the plain fetch failure and the silent fall back to a default
 - [x] macOS build CI, a `macos-latest` job beside the Windows one:
   clippy, build and test. macOS is still not a supported target; the job
   only keeps the workspace from rotting there.
+- [x] Android, the editor as an APK. A new host crate,
+  `rbx_android` (see its README for the full architecture), packages the
+  studio as a [GameActivity](https://developer.android.com/games/sdk/game-activity)
+  app through [xbuild](https://github.com/rust-mobile/xbuild): a Kotlin
+  `MainActivity` owns the surface and forwards touches, keys and IME
+  events over JNI, while the 24 `GameActivity` native glue functions are
+  satisfied inertly so the games-activity AAR loads — the real entry is
+  our own bridge, which drives gpui-pre-mobile's host path (`Application::run_embedded`
+  on a render thread that outlives the Activity, so rotation and
+  recreation don't restart the app). `rbx_studio` became a lib + bin for
+  this: the desktop `main` is `run_desktop()`, and `boot_mobile()` gives
+  Android the same init with an `XDG_CONFIG_HOME` pointed at the app's
+  private storage. The version pairing moved to GPUI Kit 0.6.2 — its
+  first release with mobile support — which meant re-vendoring
+  `gpui-pre` at 0.3.5 and `gpui-base` at 0.6.2 (pristine upstream, with
+  this project's hover-fade and editor additions re-applied on top), and
+  pinning `gpui-pre-mobile` to the last revision built against 0.3.5.
+  Like Windows before it, Android compiles only in CI: no Android
+  SDK/NDK sits in the dev environment, so `.github/workflows/android.yml`
+  builds `aarch64-linux-android` through xbuild on every push and
+  uploads a zipaligned, debug-signed APK (`dist/rbx-studio.apk` in the
+  artifacts). What that job cannot answer is anything about the editor
+  *running*: density scaling, touch handling and the IME port (an
+  invisible `EditText` that echoes composition back over JNI, the
+  pattern gpui-mobile's own example uses) are unchecked until the APK
+  is driven on a real device. minSdk 26 (the Vulkan floor), package
+  `com.touseefx.rbxnative`, arm64 only for now.
 
 ### Collaboration (`rbx_presence`)
 - [x] **Live co-editing between rbx-native editors, and with Studio

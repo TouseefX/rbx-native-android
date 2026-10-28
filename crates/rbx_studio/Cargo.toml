@@ -4,6 +4,13 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 
+# The editor itself: the `rbxstudio` binary is the desktop launch, and the
+# Android host in `crates/rbx_android` builds the library into the app and
+# calls `rbx_studio::boot_mobile` with the GPUI application the host owns.
+[lib]
+name = "rbx_studio"
+path = "src/lib.rs"
+
 [[bin]]
 name = "rbxstudio"
 path = "src/main.rs"
@@ -17,7 +24,14 @@ glam = "0.33"
 # `anyhow` and `lsp-types` are the types GPUI Kit's `DefinitionProvider` trait
 # is written in (Go to Declaration); both are already in the tree through it.
 anyhow = "1"
-gpui-kit = "0.6"
+# Pinned exactly: 0.6.2 is the release that can be hosted on iOS and Android
+# (`gpui_kit::is_mobile`, the desktop platform selector compiled out), and it
+# is built against gpui-pre 0.3.5 — the same snapshot `gpui-pre-mobile` (the
+# mobile platform `crates/rbx_android` hosts the editor through) pins, and the
+# same one the vendored `vendor/gpui-pre` carries. A later 0.6.x moves to a
+# later snapshot, which would put two `gpui-pre`s in the tree; bump this, the
+# vendor and the mobile pin together.
+gpui-kit = "=0.6.2"
 # Already in the tree under gpui-kit, and patched to `vendor/gpui-base`; named
 # directly only for the script editor's gutter slot, which gpui-kit's own
 # re-exports do not list (see `vendor/README.md`).
@@ -87,9 +101,6 @@ resvg = "0.46"
 # GPUI's own handle type: the X11 window id the pointer lock warps in comes out
 # of it, so a second copy of the crate would not typecheck.
 raw-window-handle = "0.6"
-# Already in the tree under GPUI's X11 backend; `xfixes` hides the cursor and
-# `randr` is where the display's refresh rate comes from.
-x11rb = { version = "0.13", features = ["randr", "xfixes"] }
 
 # Dock layout state serialization, uses same version serde_json brings in.
 serde = { version = "1", features = ["derive"] }
@@ -133,14 +144,18 @@ getrandom = "0.3"
 # The colour popover's eyedropper.
 rbx_eyedropper = { path = "../rbx_eyedropper" }
 
-# The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and
-# hide. Already in the tree (under `mio`, `rustix`, …) at this version.
 # Linux only: `malloc_trim`, so a parked place's freed scene goes back to
-# the system rather than staying in the render thread's arena. Already in
-# Cargo.lock through rbx_play.
+# the system rather than staying in the render thread's arena (already in
+# Cargo.lock through rbx_play), and the pointer lock's X11 backend —
+# `xfixes` hides the cursor, `randr` is where the display's refresh rate
+# comes from (both already in the tree under GPUI's X11 backend). Android is
+# not X11, so both stay desktop-Linux-only.
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
+x11rb = { version = "0.13", features = ["randr", "xfixes"] }
 
+# The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and
+# hide. Already in the tree (under `mio`, `rustix`, …) at this version.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
@@ -164,5 +179,5 @@ rbx_autorig = { path = "../rbx_autorig", features = ["test-humanoid"] }
 # GPUI's headless test window/entity harness (`#[gpui_kit::test]`,
 # `TestAppContext`), for the dock registration regression test in
 # `shell/dock/tests.rs`. Test-only: `dev-dependencies` features never reach
-# the shipped binary.
-gpui-kit = { version = "0.6", features = ["test-support"] }
+# the shipped binary. Same exact pin as above.
+gpui-kit = { version = "=0.6.2", features = ["test-support"] }
