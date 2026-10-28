@@ -14,6 +14,7 @@
 
 mod animate;
 mod autorig;
+mod autorig_model;
 mod avatar;
 mod bones;
 mod build;

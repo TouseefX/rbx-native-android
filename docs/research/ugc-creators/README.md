@@ -215,8 +215,40 @@ loading, instance editing for all the avatar classes, skinned rendering.
    - Not checked: whether Roblox's own
      validator accepts cages built from the Mannequin template once
      uploaded, since that takes a paid upload.
-4. **Heads** (stage 4). Landmarks, FACS check, face preview.
-   - Check: Studio's own dynamic head validation on the same head.
+4. **Heads** (stage 4). Done: `rbx_ugc::head` (FaceControls, the 17
+   required FACS poses present and moving, the 5 facial actions moving
+   their landmark, eye and mouth landmarks found on the cage and close to
+   the mesh, the emote box, part settings, extra objects), FACS read from
+   the mesh (`rbx_mesh::Facs`) and posed in the viewer from `FaceControls`
+   the way Studio does, and Avatar › Face Preview (a slider per control,
+   the 5 expressions, landmarks drawn over the face).
+   - Checked in real Studio 2026-10-28 on Roblox's own
+     `characterR15DynamicHeadV2`. Same camera, `JawDrop`, `LeftEyeClosed`
+     and `Pucker` at 1: the dark eye and mouth regions overlap Studio's at
+     IoU 0.91 (0.83 at rest), the open mouth is within 2% of Studio's area
+     and the closed eye's slit 339 against 389 px. The outline match
+     reads IoU 0.89, held back by our sky being close to the head's
+     colour (the edges sit on each other in the overlay).
+   - Save to Roblox › Avatar Item › Head on the same head (the validation
+     step only): Studio says `LeftCheekRaiser` and `RightCheekRaiser` are
+     inactive, same as ours. Removing `FaceControls`, putting a hand mesh
+     in (no FACS) and pointing the cage at a hand cage (no landmarks) gave
+     Studio's "Could not find required FaceControls", "missing FACS
+     information ... at least 17 poses" and "must be properly caged so
+     that the eyes and mouth vertices on the cage line up" errors, which
+     ours raise too.
+   - What Studio taught us that no page says, now mirrored: a head needs an
+     `AvatarPartScaleType` `StringValue` and `CollisionFidelity` Default
+     (Roblox's own head ships as Box, stored as a `BLOCK` marker in
+     `PhysicalConfigData`), and the outer cage keeps the template's 343
+     unique UVs (to 1e-4).
+   - Not mirrored: Studio's asset ownership checks, its cage-to-mesh
+     distance (0.60) and cage-inside-mesh percentages, and the server side
+     scoring of facial actions. Our landmark thresholds (projection under
+     8% of head height, an action moving its landmark over 1%) are ours.
+   - A head with one required pose missing was not run in Studio: making
+     one needs a new mesh asset and nothing gets uploaded. It is unit
+     tested only.
 5. **Upload and handoff** (stage 5). Done: Avatar › Upload Item (type,
    title, creator, the check, the fees, Model upload through Open Cloud,
    Creator Hub link). Tested against a mock Open Cloud server.

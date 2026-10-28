@@ -155,6 +155,22 @@ impl Shell {
                     })
                     .on_click(cx.listener(|shell, _, _, cx| shell.open_ugc_upload(None, None, cx)))
                     .into_any_element(),
+                    tile(
+                        &self.ribbon_nav,
+                        "ribbon-face-preview",
+                        IconName::ScanFace,
+                        "Face Preview",
+                        cx,
+                    )
+                    .tooltip(|window, cx| {
+                        super::tooltip::text(
+                            "Face Preview \u{2014} pose a dynamic head\u{2019}s FACS controls and see its landmarks",
+                            window,
+                            cx,
+                        )
+                    })
+                    .on_click(cx.listener(|shell, _, _, cx| shell.open_face_preview(cx)))
+                    .into_any_element(),
                 ];
                 vec![settings, tiles, items]
             }
