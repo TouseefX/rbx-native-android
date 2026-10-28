@@ -1,0 +1,75 @@
+name: Test build
+
+# Hand-dispatched alpha builds for testers on Windows, macOS and Linux. Not
+# the release pipeline: nothing is signed, packaged as an installer, or
+# published as a GitHub Release; each OS gets one workflow artifact zip that
+# expires with the run.
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Test build (${{ matrix.os }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # One OS failing should not throw away the builds the others finished.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runner: windows-latest # x86_64-pc-windows-msvc
+            exe: rbxstudio.exe
+          - os: macos
+            runner: macos-latest # aarch64-apple-darwin
+            exe: rbxstudio
+          - os: linux
+            runner: ubuntu-latest # x86_64-unknown-linux-gnu
+            exe: rbxstudio
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        if: matrix.os == 'linux'
+        # Same set as ci.yml: rbx_studio (GPUI Kit) needs these for
+        # window/input handling on X11.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-dev libx11-xcb-dev libssl-dev libfontconfig1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # rbxstudio is the only program a tester needs: luau-lsp, cloudflared
+      # and slirp4netns are fetched by rbx_studio's build.rs and embedded,
+      # Loren's runner and template are embedded by rbx_loren's, and the
+      # icons, themes, fonts and API dump are compiled in. WinDivert (Play's
+      # network simulator on Windows) is LGPLv3 and deliberately not shipped;
+      # the editor says where to get it when it is missing.
+      - name: cargo build --release
+        run: cargo build --release -p rbx_studio --bin rbxstudio
+
+      - name: Stage the artifact
+        shell: bash
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          echo "SHORT_SHA=$short_sha" >> "$GITHUB_ENV"
+          mkdir dist
+          cp "target/release/${{ matrix.exe }}" dist/
+          {
+            cat .github/test-build/README-ALPHA.txt
+            echo
+            echo "Build: ${{ matrix.os }}, commit $GITHUB_SHA ($GITHUB_REF_NAME)"
+          } > dist/README-ALPHA.txt
+
+      # upload-artifact zips `dist/` itself, so the download is one zip with
+      # the binary and the README at its root. Zip drops the Unix executable
+      # bit, which is why the README starts with `chmod +x`.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rbxstudio-${{ matrix.os }}-${{ env.SHORT_SHA }}
+          path: dist/
+          if-no-files-found: error
