@@ -2,6 +2,15 @@
 
 ## 2026-10-28
 
+- **Shortcuts survive an undo**: when an undo removed the thing a field
+  was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
+  new Accessory selected), the first Ctrl+Y did nothing until you clicked
+  the window again. Focus now moves to the nearest surviving panel, or the
+  window, so shortcuts keep working. Slider rails use the track colour, so
+  they show on dock and raised cards in every theme (the Animation panel's
+  face sliders were invisible), and Face Preview no longer needs a raised
+  card to show its own. (@chteau)
+
 - **Check and upload avatar items**: Avatar › Check Item checks an
   Accessory, MeshPart, Model or a 3D file against Roblox's published
   Marketplace limits (triangles, textures, bone influences, size per type

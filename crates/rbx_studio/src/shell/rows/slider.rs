@@ -53,7 +53,9 @@ pub(in crate::shell) fn slider(state: &Entity<SliderState>, cx: &App) -> impl In
                         .w_full()
                         .h(tokens::slider_rail())
                         .rounded_full()
-                        .bg(tokens::chrome())
+                        // The translucent track, not a surface: it reads on
+                        // a dock and on a raised card alike.
+                        .bg(tokens::track())
                         .child(
                             div()
                                 .absolute()
