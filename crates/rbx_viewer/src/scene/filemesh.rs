@@ -26,6 +26,7 @@ pub(crate) use appearance::{of as appearance_of, AlphaMode, Appearance};
 pub(crate) use fit::{
     mesh_part as mesh_part_asset, of as fit_of, special_mesh as special_mesh_asset, Fit,
 };
+pub(crate) use wrap::Hsr;
 
 use super::material::{Catalog, Slot};
 use super::shape::{FILE_MESH, HEAD_MESH};
@@ -74,6 +75,8 @@ pub(crate) struct Plan {
     pub(crate) rebinds: HashSet<Ref>,
     /// Derived meshes rebuilt by a patch, whose GPU copy is stale.
     pub(crate) rebound: Vec<AssetRef>,
+    /// The `HiddenSurfaceRemovalAsset`s read so far, see `wrap::hsr`.
+    pub(crate) surfaces: HashMap<AssetRef, Arc<Hsr>>,
 }
 
 /// One instance ready for the renderer: which downloaded mesh/texture it
@@ -235,6 +238,16 @@ impl Plan {
         }))
     }
 
+    /// The `HiddenSurfaceRemovalAsset`s worn garments and their bodies name,
+    /// for the faces to hide under the clothing.
+    pub(crate) fn hsr_refs(&self) -> Vec<AssetRef> {
+        dedup(
+            self.entries
+                .iter()
+                .flat_map(|entry| entry.wrap.iter().flat_map(wrap::Wrap::hsr_assets)),
+        )
+    }
+
     /// Swaps one part's entry for `entry`, in the place the old one held, or
     /// drops it where the part is no longer file-mesh-backed at all.
     ///
@@ -322,7 +335,7 @@ pub(crate) fn resolve(
     let mut meshes = meshes;
     let mut images = images;
     let dressed = clothing::derive(&plan.entries, &meshes, &images);
-    let wrapped = wrap::derive(&plan.entries, &meshes);
+    let wrapped = wrap::derive(&plan.entries, &meshes, &plan.surfaces);
 
     for entry in &plan.entries {
         let Some(mesh) = meshes.get(&entry.mesh).cloned() else {
@@ -347,7 +360,7 @@ pub(crate) fn resolve(
             images.insert(image_key.clone(), image.clone());
             (mesh_key, texture, color) = (key.clone(), Some(image_key.clone()), [1.0; 3]);
         }
-        if let Some((key, derived)) = wrapped.get(&entry.referent) {
+        if let Some((key, derived)) = wrapped.garments.get(&entry.referent) {
             meshes.insert(key.clone(), derived.clone());
             mesh_key = key.clone();
             // The wrapped garment follows the character's pose through a
@@ -358,12 +371,27 @@ pub(crate) fn resolve(
                 rigs.insert(entry.referent, rig);
             }
         }
+        // A body part under layered clothing leaves out the faces it hides
+        // (the dressed copy keeps the source's triangle order).
+        let mut drawn = mesh.clone();
+        if let Some(hidden) = wrapped.hidden.get(&entry.referent) {
+            if let Some(source) = meshes.get(&mesh_key) {
+                drawn = Arc::new(wrap::cull(source, hidden));
+                // Wholly under the clothing: nothing of it is drawn.
+                if drawn.indices.is_empty() {
+                    continue;
+                }
+                mesh_key = wrap::hidden_key(entry.referent);
+                meshes.insert(mesh_key.clone(), drawn.clone());
+            }
+        }
         // A skinned mesh drawn as itself (not dressed, not wrapped) draws
         // through a copy of its own, posed later, the very same `Arc` at
         // rest, so nothing is copied until a bone moves.
-        if mesh_key == entry.mesh {
-            if let Some(rig) = skinned::Rig::of(entry, &mesh, &plan.poses) {
-                meshes.insert(rig.key.clone(), mesh.clone());
+        if !dressed.contains_key(&entry.referent) && !wrapped.garments.contains_key(&entry.referent)
+        {
+            if let Some(rig) = skinned::Rig::of(entry, &drawn, &plan.poses) {
+                meshes.insert(rig.key.clone(), drawn.clone());
                 mesh_key = rig.key.clone();
                 rigs.insert(entry.referent, rig);
             }

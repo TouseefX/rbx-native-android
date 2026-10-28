@@ -572,7 +572,7 @@ fn piece_of(dom: &WeakDom, part: Ref) -> Option<Piece> {
         _ => return None,
     };
     let (mut rig, mut extra) = (Vec::new(), Vec::new());
-    let mut cage = None;
+    let (mut cage, mut hsr) = (None, Vec::new());
     for &child in node.children() {
         let Some(c) = dom.get(child) else { continue };
         match c.class() {
@@ -587,6 +587,7 @@ fn piece_of(dom: &WeakDom, part: Ref) -> Option<Piece> {
             "WrapTarget" => {
                 cage = content_id(dom, child, "CageMeshId")
                     .map(|id| (id, cframe_of_property(dom, child, "CageOrigin").p));
+                hsr = super::hidden_surfaces::of(c);
             }
             _ => {}
         }
@@ -602,6 +603,7 @@ fn piece_of(dom: &WeakDom, part: Ref) -> Option<Piece> {
         family: bundle::Family::Classic,
         init,
         cage,
+        hsr,
         rig,
         extra,
     })
@@ -634,7 +636,7 @@ fn asset_id(text: &str) -> Option<u64> {
         .filter(|&id| id != 0)
 }
 
-fn content_id(dom: &WeakDom, node: Ref, key: &str) -> Option<u64> {
+pub(super) fn content_id(dom: &WeakDom, node: Ref, key: &str) -> Option<u64> {
     asset_id(uri_text(dom.get(node)?.properties().get(key)?)?)
 }
 
@@ -700,7 +702,7 @@ pub(crate) fn dress(dom: &mut WeakDom, rig: Ref, worn: &[Worn]) -> Vec<Fate> {
         .collect()
 }
 
-fn descendants(dom: &WeakDom, root: Ref) -> Vec<Ref> {
+pub(super) fn descendants(dom: &WeakDom, root: Ref) -> Vec<Ref> {
     let mut found = Vec::new();
     let mut pending = vec![root];
     while let Some(next) = pending.pop() {
