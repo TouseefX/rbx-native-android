@@ -118,7 +118,9 @@ impl FittingWindow {
         match picked {
             Ok(source) => {
                 if let Some(wrap) = wrap {
-                    self.settings.set_mode(Mode::Clothing);
+                    if !self.settings.layered() {
+                        self.settings.set_mode(Mode::Clothing);
+                    }
                     self.settings.wrap = wrap;
                 }
                 self.source = Some(source);

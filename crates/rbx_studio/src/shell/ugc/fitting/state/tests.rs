@@ -9,6 +9,21 @@ fn studio_lists_ten_accessory_types_and_nine_clothing_entries() {
 }
 
 #[test]
+fn eyebrows_and_eyelashes_are_listed_as_accessories_but_fitted_layered() {
+    for asset in [AssetType::Eyebrow, AssetType::Eyelash] {
+        let mut s = Settings::default();
+        s.set_asset(asset);
+        assert_eq!(s.mode, Mode::Accessory);
+        assert!(s.layered());
+        assert_eq!(s.attachment, "FaceFrontAttachment");
+        assert_eq!(layered_part(asset), "Head");
+    }
+    let mut s = Settings::default();
+    s.set_asset(AssetType::Face);
+    assert!(!s.layered());
+}
+
+#[test]
 fn a_new_type_keeps_an_allowed_attachment_and_resets_the_fit() {
     let mut s = Settings::default();
     assert_eq!(s.attachment, "HatAttachment");

@@ -3,7 +3,7 @@
 //! `WrapLayer` a layered one gets, and the test body and animation.
 
 use glam::{EulerRot, Mat3};
-use rbx_ugc::{AssetType, BodyScale};
+use rbx_ugc::{AssetType, BodyScale, Category};
 
 use crate::shell::rig::{self, Cf};
 
@@ -45,9 +45,9 @@ pub(super) enum Mode {
     Clothing,
 }
 
-/// Studio's Accessory list, in its order. Eyebrows and eyelashes are rigid
-/// here, as Studio lists them, though the Marketplace files them with
-/// layered items.
+/// Studio's Accessory list, in its order. Eyebrows and eyelashes are listed
+/// here as Studio lists them, but they are fitted as layered items (see
+/// [`Settings::layered`]).
 const RIGID: [AssetType; 10] = [
     AssetType::Back,
     AssetType::Eyebrow,
@@ -137,6 +137,7 @@ pub(super) fn layered_part(asset: AssetType) -> &'static str {
         AssetType::Pants | AssetType::Shorts | AssetType::DressSkirt => "LowerTorso",
         AssetType::LeftShoe => "LeftFoot",
         AssetType::RightShoe => "RightFoot",
+        AssetType::Eyebrow | AssetType::Eyelash => "Head",
         _ => "UpperTorso",
     }
 }
@@ -269,8 +270,13 @@ impl Default for Settings {
 }
 
 impl Settings {
+    /// Whether the item gets cages and a `WrapLayer`. Eyebrows and eyelashes
+    /// do from either list: Studio's own Accessory list carries them, but its
+    /// Save to Roblox check refuses one without a `WrapLayer` ("Asset type
+    /// 'EyebrowAccessory' is not a rigid accessory category. It can only be
+    /// used with layered clothing."), as `rbx_ugc` files them.
     pub(super) fn layered(&self) -> bool {
-        self.mode == Mode::Clothing
+        self.mode == Mode::Clothing || self.asset.category() == Category::Layered
     }
 
     pub(super) fn set_mode(&mut self, mode: Mode) {

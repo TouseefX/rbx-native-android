@@ -63,6 +63,11 @@ impl AssetType {
         AssetType::DynamicHead,
     ];
 
+    /// Eyebrows and eyelashes are layered, though Studio's Accessory Fitting
+    /// Tool lists them with the rigid types: "Face accessories, such as
+    /// eyebrows and eyelashes, are unique layered accessories"
+    /// (<https://create.roblox.com/docs/avatar/layered-accessories/specifications>),
+    /// and Studio's Save to Roblox refuses one without a `WrapLayer`.
     pub fn category(self) -> Category {
         use AssetType::*;
         match self {

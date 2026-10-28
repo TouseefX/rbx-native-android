@@ -1,4 +1,4 @@
-use crate::{Cage, CageKind, Category, Finding, Geometry, Item, Rule, Severity, Value};
+use crate::{AssetType, Cage, CageKind, Category, Finding, Geometry, Item, Rule, Severity, Value};
 
 const UV_TOLERANCE: f32 = 1e-4;
 
@@ -47,7 +47,11 @@ fn find<'a>(
             } else {
                 "CageMeshId"
             };
-            format!("Add the {word} cage: a mesh named {expected} in the source file, which the importer turns into the WrapLayer\u{2019}s {field}.")
+            let mut message = format!("Add the {word} cage: a mesh named {expected} in the source file, which the importer turns into the WrapLayer\u{2019}s {field}.");
+            if matches!(item.asset_type, AssetType::Eyebrow | AssetType::Eyelash) {
+                message.push_str(" Eyebrows and eyelashes are layered: Studio\u{2019}s Save to Roblox refuses them as rigid accessories.");
+            }
+            message
         }
         Some(c) if c.name != expected => {
             format!(
@@ -113,7 +117,7 @@ fn compare(cage: &Cage, base: &Geometry, base_name: &str, lead: &str, out: &mut 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AssetType, BodyScale};
+    use crate::BodyScale;
 
     fn geo(n: usize, u: f32) -> Geometry {
         Geometry {
@@ -163,6 +167,18 @@ mod tests {
             f[0].message,
             "Add the inner cage: a mesh named Coat_InnerCage in the source file, which the importer turns into the WrapLayer\u{2019}s ReferenceMeshId."
         );
+    }
+
+    #[test]
+    fn a_rigid_eyebrow_is_missing_its_cages_as_studio_says() {
+        for asset in [AssetType::Eyebrow, AssetType::Eyelash] {
+            let f = run(&item(asset, vec![]));
+            assert_eq!(f.len(), 2);
+            assert!(f.iter().all(|f| f.rule == Rule::CageMissing));
+            assert!(f[0].message.ends_with(
+                "Eyebrows and eyelashes are layered: Studio\u{2019}s Save to Roblox refuses them as rigid accessories."
+            ));
+        }
     }
 
     #[test]
