@@ -2,7 +2,8 @@
 //!
 //! Each chunk is an 8-byte NUL-padded type, a `u32` chunk version, a `u32`
 //! payload size and the payload. `COREMESH`, `LODS` and `SKINNING` are read;
-//! `FACS`, `HSRAVIS` and any unknown type are skipped by size. The two file
+//! `FACS` is read leniently (see [`crate::facs`]); `HSRAVIS` and any unknown
+//! type are skipped by size. The two file
 //! versions differ in the `COREMESH` chunk version alone: 1 holds the v4 vertex
 //! and face records verbatim, 2 a Draco bitstream. Dispatching on the chunk
 //! version rather than the file version keeps one reader for both.
@@ -19,6 +20,7 @@ pub(crate) fn parse(version: (u8, u8), body: &[u8]) -> Result<(Mesh, Option<Skin
     let mut core = None;
     let mut lod_table = Vec::new();
     let mut skin = None;
+    let mut facs = None;
 
     while reader.remaining() > 0 {
         let tag = reader.take(8)?;
@@ -42,6 +44,15 @@ pub(crate) fn parse(version: (u8, u8), body: &[u8]) -> Result<(Mesh, Option<Skin
                     .filter(|_| payload.expect_eof().is_ok());
                 continue;
             }
+            (b"FACS\0\0\0\0", 1) => {
+                facs = payload
+                    .u32()
+                    .and_then(|len| payload.take(len as usize))
+                    .and_then(crate::facs::read)
+                    .ok()
+                    .filter(|_| payload.expect_eof().is_ok());
+                continue;
+            }
             (b"COREMESH" | b"LODS\0\0\0\0", _) => {
                 return Err(MeshError::UnsupportedChunkVersion {
                     chunk: String::from_utf8_lossy(tag)
@@ -60,7 +71,9 @@ pub(crate) fn parse(version: (u8, u8), body: &[u8]) -> Result<(Mesh, Option<Skin
     let (vertices, faces) = core.ok_or(MeshError::MissingCoreMesh)?;
     // One envelope per vertex or none at all: a count that disagrees cannot be
     // matched to the geometry.
-    let skin = skin.filter(|skin: &Skin| skin.influences.len() == vertices.len());
+    let skin = skin
+        .filter(|skin: &Skin| skin.influences.len() == vertices.len())
+        .map(|skin| Skin { facs, ..skin });
     Ok((Mesh::assemble(version, vertices, &faces, &lod_table)?, skin))
 }
 
@@ -176,6 +189,24 @@ mod tests {
             skin.influences[1].iter().collect::<Vec<_>>(),
             [(0, 128.0 / 255.0), (1, 127.0 / 255.0)]
         );
+    }
+
+    #[test]
+    fn a_facs_chunk_lands_on_the_skin_wherever_it_sits() {
+        let block = crate::facs::tests::block();
+        let mut payload = (block.len() as u32).to_le_bytes().to_vec();
+        payload.extend(&block);
+        let mut body = chunk(b"FACS\0\0\0\0", 1, &payload);
+        body.extend(v6_skinned_body());
+        let (_, skin) = parse((6, 0), &body).unwrap();
+        assert_eq!(skin.unwrap().facs.unwrap().controls, ["c_JD", "c_PK"]);
+
+        // A broken block keeps the skin, without a face.
+        payload.push(0);
+        let mut body = v6_skinned_body();
+        body.extend(chunk(b"FACS\0\0\0\0", 1, &payload));
+        let (_, skin) = parse((6, 0), &body).unwrap();
+        assert!(skin.unwrap().facs.is_none());
     }
 
     #[test]
