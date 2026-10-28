@@ -13,6 +13,7 @@ use rbx_ugc::{AssetType, BodyScale, Finding, Rule};
 mod check;
 mod collect;
 mod face_window;
+mod fitting;
 mod pickers;
 mod report;
 mod source;
@@ -20,6 +21,7 @@ mod upload;
 mod upload_window;
 mod validator_window;
 
+pub(crate) use fitting::strip_preview;
 pub(crate) use source::check_file;
 
 /// The asset type an item is checked and uploaded as, and the body scale

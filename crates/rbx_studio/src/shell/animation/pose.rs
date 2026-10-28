@@ -44,7 +44,7 @@ fn cframe_of(dom: &WeakDom, part: Ref) -> Option<CFrameData> {
 /// the name of the part the joint drives; identity when absent), first
 /// keeping in `originals` what each joint held before the editor touched it.
 /// Whether anything was written.
-pub(super) fn write_transforms(
+pub(in crate::shell) fn write_transforms(
     dom: &mut WeakDom,
     rig: &Rig,
     transforms: &BTreeMap<String, Frame>,

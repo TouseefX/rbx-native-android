@@ -84,8 +84,8 @@ the code on `origin/dev`.
   side of Avatar Setup, minus facial animation and head work.
 - **Rig Builder, Player / My Avatar**: builds R6/R15 rigs, loads a real
   player's avatar with accessories welded at the right attachment, layered
-  clothing keeping its `WrapLayer` and fitted by nearest vertex blend.
-  That is a viewer-side approximation, not Roblox's deformer.
+  clothing keeping its `WrapLayer` and fitted cage to cage (see stage 3
+  below). Close to Roblox's fit, not its exact deformer.
 - **Properties, Explorer, viewer**: `Accessory`, `Attachment`, `WrapLayer`,
   `WrapTarget` and `FaceControls` load, show and edit as normal instances.
 - **Save/Publish to Roblox** uploads places. Nothing there uploads an
@@ -108,9 +108,8 @@ loading, instance editing for all the avatar classes, skinned rendering.
 3. **Cage authoring for items**: auto-make an inner/outer cage for a
    layered accessory (the auto-rigger only does body cages), show the cage
    as an overlay, and a way to nudge it.
-4. **Real layered-clothing preview**: today it's a nearest-vertex blend. A
-   deformer closer to Roblox's, checked against real Studio, is the thing
-   that makes try-on trustworthy.
+4. **Real layered-clothing preview**: was a nearest-vertex blend, now a
+   cage-to-cage fit checked against real Studio (stage 3).
 5. **Head side**: dynamic head cage landmarks, FACS pose check, facial
    animation preview. `FaceControls` already loads.
 6. **Avatar Setup for items**, not just bodies: attachments and skin for a
@@ -157,15 +156,65 @@ loading, instance editing for all the avatar classes, skinned rendering.
      template cages, or a publishing advance for eyebrows and eyelashes;
      those rules are skipped. The Slender hair depth row adds up wrong on
      the page (1.892 + 1.189 for 2.08); 0.892 front is used.
-2. **Fitting tool, rigid items** (stage 2). Accessory type, attachment
-   placement on the mannequin, scale, writes the `Accessory`.
-   - Check: the generated `Accessory` saved to a `.rbxl` and diffed against
-     the AFT's output (Handle, attachment name and `CFrame`, `AvatarPartScaleType`).
-3. **Fitting tool, layered items plus cage authoring** (stage 3). Inner and
-   outer cage creation, `WrapLayer` properties, preview.
-   - Check: upload through the API, read back what the importer made, wear
-     the item in Studio on Normal, Slender and Classic bodies, compare the
-     fit to ours. This is where the deformer gap shows.
+2. **Fitting tool, rigid items** (stage 2). Done: Avatar › Accessory opens
+   the Accessory Fitting Tool. Pick a `MeshPart` or `Model`, Accessory or
+   Clothing, the asset type (Studio's list, Shoulder with its five
+   attachments) and the body scale, place it on the test body, Generate.
+   - Checked against Studio's AFT run on the bow (6874004992), its output
+     saved and dumped: the `Accessory` is named after the source with
+     `AccessoryType` Unknown, the source part becomes `Handle` and keeps
+     its mesh, size and children, then a `StringValue`
+     `AvatarPartScaleType` (Classic, ProportionsNormal, ProportionsSlender)
+     and an `Attachment` named for the type whose `CFrame` is the handle's
+     inverse times the body attachment's world `CFrame` (identity for an
+     untouched fit, `(0.783, 0, 0)` after a 0.783 stud move). `Anchored`
+     and `Massless` off, rigid `CanCollide` on, layered off. Ours writes
+     the same; the generator's tests are built from that dump.
+3. **Fitting tool, layered items plus cage authoring** (stage 3). Done:
+   Clothing makes `<item>_InnerCage` and `<item>_OuterCage` from the
+   Mannequin's body cages (`rbx_autorig::item_cages`: the template welded,
+   pushed out along its normals until it clears the item, smoothed, every
+   UV kept; each bit of the item pushes only the cage vertex nearest it),
+   shows them as an overlay with a nudge by region, and writes a
+   `WrapLayer` the way Studio's tool does (renamed `HandleWrapLayer`,
+   Order 1, Puffiness 1, ShrinkFactor 0, `AutoSkin` kept).
+   - The deformer is new (`rbx_viewer` `wrap/cage_map.rs`): body cages and
+     every item cage share one template, and the template UV is the
+     pairing key (checked: all 705 UVs of the Mannequin's UpperTorso cage
+     are in the Denim Jacket's inner cage). Each garment vertex is bound to
+     the closest spot on its inner cage and rebuilt at the same spot of the
+     body cage with the same clearance; each layer's outer cage becomes the
+     surface the next layer is worn over.
+   - Checked in real Studio on the catalog Denim Jacket (8516609675) and
+     Cargo Pants (6984740059) on the default blocky body at Normal,
+     Slender and Classic, same camera: garment-pixel XOR over union went
+     from 0.81 / 0.75 / 0.76 with the old nearest-vertex fit to 0.11 /
+     0.13 / 0.12 (whole frame 0.78 to 0.12). What's left is a few spots
+     between the legs where Studio hides the body under the cloth (its HSR
+     data) and we don't.
+   - `WrapLayer` tuning, measured in Studio on the same jacket (Normal
+     body, one camera per setting): `BindOffset` moves the fitted garment
+     as a whole, about the character's `HumanoidRootPart`. `(0, 0.5, 0)`
+     raises it half a stud (21 px in Studio, 20 px in ours, same camera),
+     `CFrame.Angles(0, 0, 0.3)` turns it about the root part, not the
+     handle (checked on a 1.5x tall body where the two sit 0.58 studs
+     apart). Ours does the same. `Puffiness` (-1, 0, 0.5, 1,
+     and 2, which Studio clamps to 1) and `ShrinkFactor` (-1, 0.5, 1) draw
+     pixel for pixel the same as the defaults in Studio, alone or over a
+     second layer; the API page marks both deprecated. So they're written
+     but not applied, and the tool clamps them to -1..1 like Studio. On
+     the Mannequin our jacket is still slimmer than Studio's (garment
+     XOR/union 0.31 at the defaults on that body, the same before and
+     after this change).
+   - Eyebrows and eyelashes: Studio's AFT lists them with the rigid types,
+     but Save to Roblox on a rigid eyebrow says "Could not find required
+     WrapLayer" and "Asset type 'EyebrowAccessory' is not a rigid
+     accessory category. It can only be used with layered clothing." The
+     tool keeps them in the Accessory list and fits them layered on the
+     Head, and Check Item keeps asking for their cages.
+   - Not checked: whether Roblox's own
+     validator accepts cages built from the Mannequin template once
+     uploaded, since that takes a paid upload.
 4. **Heads** (stage 4). Done: `rbx_ugc::head` (FaceControls, the 17
    required FACS poses present and moving, the 5 facial actions moving
    their landmark, eye and mouth landmarks found on the cage and close to
@@ -208,10 +257,11 @@ loading, instance editing for all the avatar classes, skinned rendering.
      says it isn't confirmed. Needs the tester's account, a key with the
      assets scope, and real Robux for the upload fee, so Chee has to be
      the one pressing it.
-6. **Test rig** (stage 6). Wear on Player / My Avatar and the presets, play
-   animations, body scales.
-   - Check: same item on the same avatar in real Studio, screenshot against
-     screenshot.
+6. **Test rig** (stage 6). Done, inside the fitting tool: Player / My
+   Avatar bodies and the Normal, Slender and Classic presets, the default
+   animations, body scale swaps and other items layered on top.
+   - Check: the same jacket and pants on the same three bodies in real
+     Studio, screenshot against screenshot (the stage 3 numbers above).
 
 Every stage needs a real place or item opened in real Studio on an X server
 before it counts as done, same as the rest of the project.

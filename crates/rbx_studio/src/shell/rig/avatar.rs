@@ -823,7 +823,7 @@ fn wear_character_meshes(dom: &mut WeakDom, rig: Ref, source: &WeakDom) -> Resul
 /// fitted by; every other accessory is rigid.
 const LAYERED: std::ops::RangeInclusive<u32> = 64..=72;
 
-const LAYERED_NOTE: &str = "the garment is on the rig, but only approximately fitted (its exact cage deformation is not run): the viewer slides its reference cage onto the body and moves it with the nearest cage vertices, so it follows the body less exactly than Roblox does";
+const LAYERED_NOTE: &str = "the garment is fitted cage to cage, close to Roblox but not its exact deformer: Puffiness, ShrinkFactor and BindOffset are not applied, and a body that hides under the cloth in Roblox can still show through in a few spots";
 
 fn wear_accessory(
     dom: &mut WeakDom,

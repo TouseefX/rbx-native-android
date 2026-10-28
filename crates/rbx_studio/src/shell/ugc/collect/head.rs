@@ -14,11 +14,11 @@ use super::*;
 pub(in crate::shell::ugc) struct HeadPlan {
     pub(in crate::shell::ugc) part: Ref,
     name: String,
-    mesh: Option<u64>,
+    mesh: Option<Key>,
     size: [f32; 3],
     face_controls: bool,
     /// The outer cage's mesh and its `CageOrigin`.
-    cage: Option<(u64, CFrame)>,
+    cage: Option<(Key, CFrame)>,
     material: String,
     transparency: f32,
     vertex_color: [f32; 3],
@@ -97,7 +97,7 @@ pub(in crate::shell::ugc) fn head_plan(
     };
     let cage = child("WrapTarget").and_then(|wrap| {
         let props = wrap.properties();
-        let mesh = uri(props, "CageMeshId").and_then(asset_id)?;
+        let mesh = uri(props, "CageMeshId").and_then(mesh_key)?;
         Some((mesh, cframe_at(props, "CageOrigin")))
     });
     let material = match props.get("Material") {
@@ -171,11 +171,12 @@ fn apply(cframe: &CFrame, p: [f32; 3]) -> [f32; 3] {
 /// check. `None` mesh when it would not load (the item's notes say why).
 pub(in crate::shell::ugc) fn resolve_head(
     plan: &HeadPlan,
-    fetch: &dyn Fn(u64) -> Result<Vec<u8>, String>,
+    fetch: &dyn Fn(&Key) -> Result<Vec<u8>, String>,
 ) -> (Head, Option<HeadMesh>) {
     let source = plan
         .mesh
-        .and_then(|id| fetch(id).ok())
+        .as_ref()
+        .and_then(|key| fetch(key).ok())
         .and_then(|bytes| rbx_mesh::parse_skinned(&bytes).ok());
     let mesh = source.map(|source| {
         let (center, size) = (source.bounds.center(), source.bounds.size());
@@ -221,15 +222,15 @@ pub(in crate::shell::ugc) fn resolve_head(
         influences: Vec::new(),
         in_studs: true,
     });
-    let cage = plan.cage.and_then(|(id, origin)| {
-        let cage = rbx_mesh::parse(&fetch(id).ok()?).ok()?;
+    let cage = plan.cage.as_ref().and_then(|(key, origin)| {
+        let cage = rbx_mesh::parse(&fetch(key).ok()?).ok()?;
         let factor = mesh.as_ref().map_or([1.0; 3], |m| m.factor);
         Some(Geometry {
             positions: cage
                 .vertices
                 .iter()
                 .map(|v| {
-                    let p = apply(&origin, v.position);
+                    let p = apply(origin, v.position);
                     std::array::from_fn(|a| p[a] * factor[a])
                 })
                 .collect(),

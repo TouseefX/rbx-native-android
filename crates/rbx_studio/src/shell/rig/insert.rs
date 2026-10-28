@@ -160,7 +160,7 @@ impl Shell {
 }
 
 /// The top of the first `SpawnLocation`, or the origin: where a rig's feet go.
-pub(super) fn spawn_top(dom: &WeakDom, workspace: Ref) -> V3 {
+pub(crate) fn spawn_top(dom: &WeakDom, workspace: Ref) -> V3 {
     let mut pending = vec![workspace];
     while let Some(next) = pending.pop() {
         let Some(instance) = dom.get(next) else {
