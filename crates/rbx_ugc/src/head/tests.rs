@@ -19,14 +19,17 @@ fn plane() -> Geometry {
 }
 
 /// A cage vertex for every landmark UV, just in front of the plane at
-/// `gap`, placed where its UV says on the face.
+/// `gap`, placed where its UV says on the face, padded with the rest of
+/// the template's unique UVs (off the face, so no landmark matches them).
 fn cage(gap: f32) -> Geometry {
-    let uvs: Vec<[f32; 2]> = LEFT_EYE
+    let mut uvs: Vec<[f32; 2]> = LEFT_EYE
         .iter()
         .chain(&RIGHT_EYE)
         .chain(&MOUTH)
         .copied()
         .collect();
+    let landmarks = uvs.len();
+    uvs.extend((landmarks..rules::TEMPLATE_UVS).map(|i| [0.001 * i as f32, 0.9]));
     Geometry {
         positions: uvs
             .iter()
@@ -66,6 +69,8 @@ fn head() -> Head {
         transparency: 0.0,
         vertex_color: [1.0; 3],
         extraneous: Vec::new(),
+        collision_fidelity: "Default".into(),
+        scale_type: true,
     }
 }
 
@@ -184,8 +189,34 @@ fn marketplace_part_settings_and_extra_objects() {
 }
 
 #[test]
+fn studio_schema_and_the_cage_template_uv_count() {
+    let mut h = head();
+    h.scale_type = false;
+    h.collision_fidelity = "Hull".into();
+    if let Some(cage) = &mut h.cage {
+        cage.uvs.truncate(85);
+        cage.positions.truncate(85);
+    }
+    let found = rules(&h);
+    let kinds: Vec<HeadRule> = found.iter().map(|f| f.0).collect();
+    assert_eq!(
+        kinds,
+        [HeadRule::Schema, HeadRule::Schema, HeadRule::CageTemplate],
+        "{found:?}"
+    );
+    assert!(found[0].1.contains("AvatarPartScaleType"));
+    assert!(found[1].1.starts_with("CollisionFidelity is Hull"));
+    assert!(found[2].1.starts_with("The outer cage has 85 unique UVs"));
+}
+
+#[test]
 fn every_rule_cites_a_dynamic_head_page() {
-    for rule in [HeadRule::FaceControls, HeadRule::Landmarks] {
+    for rule in [
+        HeadRule::FaceControls,
+        HeadRule::Landmarks,
+        HeadRule::Schema,
+        HeadRule::CageTemplate,
+    ] {
         assert!(rule.source().contains("/avatar/dynamic-heads/"));
         assert!(!rule.title().is_empty());
     }

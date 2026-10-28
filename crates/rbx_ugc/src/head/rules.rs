@@ -99,6 +99,52 @@ pub(super) fn part_settings(head: &Head, out: &mut Vec<Finding>) {
     }
 }
 
+/// Unique UVs, to 1e-4, in Roblox's head cage template (Studio's own count,
+/// 2026-10-28; the template cage itself has 352 bit-exact ones).
+pub(super) const TEMPLATE_UVS: usize = 343;
+
+/// Studio's checks no page states, seen in its Save to Roblox on Roblox's
+/// own head (see `HeadRule::Schema`).
+pub(super) fn schema(head: &Head, out: &mut Vec<Finding>) {
+    if !head.scale_type {
+        out.push(finding(
+            HeadRule::Schema,
+            &head.name,
+            "Add a StringValue named AvatarPartScaleType under the head part; Studio refuses a head without one.".into(),
+        ));
+    }
+    if head.collision_fidelity != "Default" {
+        out.push(finding(
+            HeadRule::Schema,
+            &head.name,
+            format!(
+                "CollisionFidelity is {}, not Default. Studio refuses any other value on a head.",
+                head.collision_fidelity
+            ),
+        ));
+    }
+    let Some(cage) = &head.cage else { return };
+    let unique: std::collections::BTreeSet<(i64, i64)> = cage
+        .uvs
+        .iter()
+        .map(|uv| ((uv[0] * 1e4).round() as i64, (uv[1] * 1e4).round() as i64))
+        .collect();
+    if unique.len() != TEMPLATE_UVS {
+        out.push(measured(
+            finding(
+                HeadRule::CageTemplate,
+                &head.name,
+                format!(
+                    "The outer cage has {} unique UVs, Roblox's head template has {TEMPLATE_UVS}. Start the cage from the template and only move its vertices.",
+                    unique.len()
+                ),
+            ),
+            Value::Count(unique.len()),
+            Value::Count(TEMPLATE_UVS),
+        ));
+    }
+}
+
 fn extent(points: &[[f32; 3]]) -> [f32; 3] {
     let mut lo = [f32::MAX; 3];
     let mut hi = [f32::MIN; 3];

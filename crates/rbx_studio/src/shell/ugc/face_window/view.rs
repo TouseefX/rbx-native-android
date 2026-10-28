@@ -278,7 +278,9 @@ impl FaceWindow {
                     .children(rows),
             );
         }
-        card().gap(px(18.)).children(sections)
+        // The rail is drawn in the dock's own colour, so the sliders sit on
+        // the raised field fill to read at all.
+        card().gap(px(18.)).bg(ui::panel2()).children(sections)
     }
 
     fn footer(&self, cx: &mut Context<Self>) -> Div {
