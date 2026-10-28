@@ -172,6 +172,10 @@ impl Patcher<'_> {
                 self.gui_changed(Some(old_parent), false);
                 Ok(())
             }
+            Some(Role::Inert) if dom.get(moved).is_some_and(|i| i.class() == "FaceControls") => {
+                self.resync_face(old_parent);
+                Ok(())
+            }
             // A `Folder` (or any other plain container) draws nothing itself,
             // yet a GUI tree may hang off one, and the whole subtree moves
             // with it, so the container it left is stale for the same
@@ -257,6 +261,11 @@ impl Patcher<'_> {
                 if scene.resync_joint(self.dom, self.database, referent) {
                     self.pending.parts = true;
                 }
+                if instance.class() == "FaceControls" {
+                    if let Some(part) = dom.parent(referent) {
+                        self.resync_face(part);
+                    }
+                }
                 Ok(())
             }
         }
@@ -331,7 +340,19 @@ impl Patcher<'_> {
             }
             Role::Material => Err(Rebuild::Materials),
             Role::Terrain => self.sync_terrain(),
-            Role::Inert => Ok(()),
+            Role::Inert => {
+                if let Some(part) = known.parent {
+                    self.resync_face(part);
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// A `FaceControls` under `part` was written, added or taken away.
+    fn resync_face(&mut self, part: Ref) {
+        if self.loaded.scene_mut().resync_face(self.dom, part) {
+            self.pending.parts = true;
         }
     }
 
