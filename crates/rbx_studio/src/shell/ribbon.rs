@@ -104,12 +104,21 @@ impl Shell {
                 let mut tiles = self.rig_tiles(cx);
                 tiles.push(self.animation_tile(cx));
                 tiles.push(
-                    unavailable_tile(
+                    tile(
+                        &self.ribbon_nav,
                         "ribbon-accessory",
                         IconName::Package,
                         "Accessory",
-                        "attaching accessories to a rig isn't built",
+                        cx,
                     )
+                    .tooltip(|window, cx| {
+                        super::tooltip::text(
+                            "Accessory \u{2014} fit a mesh to a body as an accessory or layered clothing, test it, and generate it",
+                            window,
+                            cx,
+                        )
+                    })
+                    .on_click(cx.listener(|shell, _, _, cx| shell.open_ugc_fitting(None, None, cx)))
                     .into_any_element(),
                 );
                 tiles.push(self.avatar_setup_tile(cx));
@@ -144,7 +153,7 @@ impl Shell {
                             cx,
                         )
                     })
-                    .on_click(cx.listener(|shell, _, _, cx| shell.open_ugc_upload(cx)))
+                    .on_click(cx.listener(|shell, _, _, cx| shell.open_ugc_upload(None, None, cx)))
                     .into_any_element(),
                 ];
                 vec![settings, tiles, items]

@@ -282,6 +282,8 @@ pub(crate) struct Shell {
     /// Check Avatar Item and Upload Avatar Item, while open, see `ugc`.
     ugc_validator: Option<WindowHandle<gpui_kit::component::Root>>,
     ugc_upload: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// The Accessory Fitting Tool, while open, see `ugc::fitting`.
+    ugc_fitting: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
     /// The Explorer's type-ahead buffer, see `shell::tree_keys`.
@@ -849,6 +851,7 @@ impl Shell {
             data_stores: None,
             ugc_validator: None,
             ugc_upload: None,
+            ugc_fitting: None,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,
             typeahead: tree_keys::Typeahead::default(),
@@ -1088,10 +1091,12 @@ impl Shell {
             shell.import_as(vec![path.into()], kind, cx);
         }
 
-        // `RBX_STUDIO_UGC=check|upload` (`check:<file>` checks a source file)
-        // opens the avatar item window for a screenshot, as
+        // `RBX_STUDIO_UGC=check|upload|fit` (`check:<file>` checks a source
+        // file, `fit:<name>` fits the first instance of that name) opens the
+        // avatar item window for a screenshot, as
         // `RBX_STUDIO_UGC_TYPE=<asset type label without spaces>` (Hat,
-        // TShirt...) picks the type it is checked as.
+        // TShirt...) picks the type it is checked as. The Fitting Tool's own
+        // knobs are in `ugc::fitting`.
         if let Ok(spec) = std::env::var("RBX_STUDIO_UGC") {
             let kind = std::env::var("RBX_STUDIO_UGC_TYPE").ok().and_then(|label| {
                 rbx_ugc::AssetType::ALL
@@ -1111,7 +1116,12 @@ impl Shell {
                     let source = ugc::ItemSource::File(file.into());
                     shell.open_ugc_validator(Some(source), kind, cx);
                 }
-                _ if spec == "upload" => shell.open_ugc_upload(cx),
+                Some(("fit", name)) => {
+                    let source = crate::explorer::find_by_name(&shell.dom, name);
+                    shell.open_ugc_fitting(source, kind.map(|k| k.asset), cx);
+                }
+                _ if spec == "fit" => shell.open_ugc_fitting(None, kind.map(|k| k.asset), cx),
+                _ if spec == "upload" => shell.open_ugc_upload(None, None, cx),
                 _ => shell.open_ugc_validator(None, kind, cx),
             }
         }
