@@ -659,8 +659,7 @@ impl TouchGestureRecognizer {
                                 / 2.),
                         );
                         let separation = touch.last_position - secondary.last_position;
-                        let last_distance =
-                            f32::from(separation.x.powi(2) + separation.y.powi(2)).sqrt();
+                        let last_distance = separation.magnitude() as f32;
                         recognized.push(RecognizedTouchGesture::Pinch(PinchEvent {
                             position: anchor,
                             delta: 0.,
@@ -731,7 +730,7 @@ impl TouchGestureRecognizer {
                         return recognized;
                     }
                     let separation = primary.last_position - secondary.last_position;
-                    let distance = f32::from(separation.x.powi(2) + separation.y.powi(2)).sqrt();
+                    let distance = separation.magnitude() as f32;
                     if last_distance > 0. && distance > 0. {
                         let delta = distance / last_distance - 1.;
                         if delta != 0. {
