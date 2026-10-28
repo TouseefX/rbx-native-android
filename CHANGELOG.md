@@ -2,6 +2,16 @@
 
 ## 2026-10-28
 
+- **Controller Emulator reaches the game**: the virtual pad did nothing in
+  a Play, though Sober saw it. Sober drops a gamepad's input while its
+  window doesn't have the keyboard focus, and using the emulator's window
+  takes it. The emulator now tells the embedded client it still has the
+  focus before each change of the pad, so sticks, buttons and triggers
+  reach the game while the emulator keeps your keyboard bindings. On
+  Windows the pad is now a ViGEmBus Xbox 360 or DualShock 4, through a
+  `ViGEmClient.dll` you put next to the editor (not shipped, and not yet
+  tried on Windows). `examples/gamepad_demo.rs` makes a place that logs
+  what a game script sees from the pad. (@chteau)
 - **Shortcuts survive an undo**: when an undo removed the thing a field
   was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
   new Accessory selected), the first Ctrl+Y did nothing until you clicked
