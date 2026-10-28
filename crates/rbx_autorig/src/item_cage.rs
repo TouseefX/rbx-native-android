@@ -8,20 +8,17 @@
 //! between other cages"). So both cages here are the template moved, never
 //! remeshed: the inner cage is the template as it stands (the body surface
 //! the item was made on), and the outer cage pushes each template vertex out
-//! along its normal until it clears the item, then evens the push out over
-//! its neighbours so the shell has no spikes.
-
-use std::collections::HashMap;
+//! along its normal until it clears the part of the item nearest it, then
+//! evens the push out over its neighbours so the shell has no spikes. Each
+//! item vertex pushes only the template vertex it is closest to: going by
+//! what lies along the normal instead, a torso vertex would reach through
+//! the gap to the sleeve and the shell would tent between arm and body.
 
 use glam::Vec3;
 
 use crate::mesh::{smooth_normals, weld, Mesh};
 
-/// Lateral distance (studs) within which an item vertex counts as sitting
-/// over a template vertex; wider would let far-off fabric push the cage.
-const RADIUS: f32 = 0.3;
-/// Farthest (studs) along the normal an item vertex can be and still be
-/// treated as this vertex's clothing rather than another body part.
+/// Farthest (studs) out the outer cage is pushed.
 const REACH: f32 = 1.5;
 /// Clearance (studs) left between the outer cage and the item surface so
 /// the item is strictly inside the shell.
@@ -55,13 +52,16 @@ pub fn item_cages(item: &Mesh, template: &Mesh) -> ItemCages {
         .map(|t| t.map(|i| welded.of[i as usize]))
         .collect();
     let normals = smooth_normals(&welded.positions, &triangles);
-    let grid = Grid::of(&item.positions);
-    let required: Vec<f32> = welded
-        .positions
-        .iter()
-        .zip(&normals)
-        .map(|(&v, &n)| grid.clearance(v, n))
-        .collect();
+    let mut required = vec![0.0f32; welded.positions.len()];
+    for &p in &item.positions {
+        let Some(w) = closest(&welded.positions, p) else {
+            break;
+        };
+        let along = (p - welded.positions[w]).dot(normals[w]);
+        if along > 0.0 {
+            required[w] = required[w].max((along + MARGIN).min(REACH + MARGIN));
+        }
+    }
 
     let mut neighbours: Vec<Vec<u32>> = vec![Vec::new(); welded.positions.len()];
     for t in &triangles {
@@ -97,54 +97,16 @@ pub fn item_cages(item: &Mesh, template: &Mesh) -> ItemCages {
     ItemCages { inner, outer }
 }
 
-/// The item's vertices bucketed by [`RADIUS`]-sized cells.
-struct Grid(HashMap<(i32, i32, i32), Vec<Vec3>>);
-
-fn cell_of(p: Vec3) -> (i32, i32, i32) {
-    let q = (p / RADIUS).floor();
-    (q.x as i32, q.y as i32, q.z as i32)
-}
-
-impl Grid {
-    fn of(points: &[Vec3]) -> Grid {
-        let mut cells: HashMap<(i32, i32, i32), Vec<Vec3>> = HashMap::new();
-        for &p in points {
-            cells.entry(cell_of(p)).or_default().push(p);
-        }
-        Grid(cells)
-    }
-
-    /// How far out along `n` the cage vertex at `v` must go to clear every
-    /// item vertex over it (within [`RADIUS`] of the normal line, at most
-    /// [`REACH`] out), plus [`MARGIN`]; 0 when nothing is over it. The cells
-    /// are visited by stepping along the normal, so the search covers the
-    /// whole reach without scanning a reach-sized cube.
-    fn clearance(&self, v: Vec3, n: Vec3) -> f32 {
-        let mut visited = std::collections::HashSet::new();
-        let mut best = 0.0f32;
-        let steps = (REACH / RADIUS).ceil() as i32;
-        for step in 0..=steps {
-            let (cx, cy, cz) = cell_of(v + n * (step as f32 * RADIUS));
-            for dx in -1..=1 {
-                for dy in -1..=1 {
-                    for dz in -1..=1 {
-                        let cell = (cx + dx, cy + dy, cz + dz);
-                        if !visited.insert(cell) {
-                            continue;
-                        }
-                        for &p in self.0.get(&cell).into_iter().flatten() {
-                            let d = p - v;
-                            let along = d.dot(n);
-                            if along > 0.0 && along <= REACH && (d - n * along).length() <= RADIUS {
-                                best = best.max(along + MARGIN);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        best
-    }
+/// The index of the point in `points` closest to `at`.
+fn closest(points: &[Vec3], at: Vec3) -> Option<usize> {
+    points
+        .iter()
+        .enumerate()
+        .min_by(|a, b| {
+            a.1.distance_squared(at)
+                .total_cmp(&b.1.distance_squared(at))
+        })
+        .map(|(i, _)| i)
 }
 
 /// Moves every vertex of `cage` within `radius` of `centre` along its own

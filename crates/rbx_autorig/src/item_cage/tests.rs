@@ -119,3 +119,36 @@ fn seam_copies_of_a_vertex_move_as_one() {
         assert!(a.distance(b) < 1e-4, "vertex {i}: {a} vs {b}");
     }
 }
+
+#[test]
+fn a_sleeve_does_not_tent_the_body_beside_it() {
+    // A torso and an arm 0.6 studs apart, the item a sleeve round the arm
+    // only. The torso's side faces the sleeve along its normals, but the
+    // sleeve is the arm's: the torso keeps its shape.
+    let torso = sphere(1.0);
+    let offset = Vec3::X * 2.2;
+    let mut template = torso.clone();
+    let base = template.positions.len() as u32;
+    template
+        .positions
+        .extend(sphere(0.6).positions.iter().map(|p| *p + offset));
+    template
+        .uvs
+        .extend(sphere(0.6).uvs.iter().map(|uv| *uv + Vec2::X));
+    template
+        .triangles
+        .extend(sphere(0.6).triangles.iter().map(|t| t.map(|i| i + base)));
+    let sleeve = Mesh {
+        positions: sphere(0.75).positions.iter().map(|p| *p + offset).collect(),
+        ..Mesh::default()
+    };
+    let cages = item_cages(&sleeve, &template);
+    for i in 0..torso.positions.len() {
+        let moved = cages.outer.positions[i].distance(template.positions[i]);
+        assert!(moved < 0.05, "torso vertex {i} moved {moved}");
+    }
+    for i in torso.positions.len()..template.positions.len() {
+        let out = cages.outer.positions[i].distance(offset);
+        assert!(out >= 0.75, "arm vertex {i} only {out} out");
+    }
+}
