@@ -10,7 +10,8 @@
   does. On a simulated console `PreferredInput` reads `Gamepad`. Roblox's
   own menus still go by the real values. A second Play crashing GNOME
   Shell could not be reproduced under the same GNOME Shell and mutter
-  nested in Xephyr, so it stays open. (@chteau)- **Animation Graphs play as real Studio does**: the guesses the graph
+  nested in Xephyr, so it stays open. (@chteau)
+- **Animation Graphs play as real Studio does**: the guesses the graph
   runtime made where Roblox's docs are silent were measured in real Studio
   and fixed to match. RandomSequence now picks what Studio picks for the
   same Seed (it's a Mersenne Twister, not Luau's `Random`), Blend2D's
