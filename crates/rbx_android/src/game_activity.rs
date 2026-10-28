@@ -19,7 +19,9 @@
 //! `MainActivity` does not reach them, and were something to, returning
 //! `false`/doing nothing is inert.
 
-use gpui_mobile::android::jni;
+// As `bridge`: the module's functions are imported directly so the `jni`
+// crate name stays free for the types the signatures below use.
+use gpui_mobile::android::jni::{get_string, install_panic_hook, set_host_activity, with_env};
 use jni::objects::JObject;
 use jni::sys::{jboolean, jlong, jobject};
 
@@ -54,16 +56,16 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
     );
     // A panic on the render thread would abort the process through the
     // platform's hooks; install them while the JVM is reachable.
-    jni::install_panic_hook();
+    install_panic_hook();
 
-    let path = match jni::with_env(|env| {
+    let path = match with_env(|env| {
         let path = unsafe { JObject::from_raw(env, internal_data_path as jobject) };
-        let path = jni::get_string(env, &path);
+        let path = get_string(env, &path);
         // `thiz` is the live Activity: the platform's IME (its
         // `gpuiShowKeyboard` & co.) and Java-side helpers find it through
         // this registry, and a recreated Activity replaces the entry.
         let activity = unsafe { JObject::from_raw(env, thiz as jobject) };
-        jni::set_host_activity(env, &activity)?;
+        set_host_activity(env, &activity)?;
         Ok(path)
     }) {
         Ok(path) => path,

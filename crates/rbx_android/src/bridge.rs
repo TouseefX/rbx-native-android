@@ -11,8 +11,11 @@
 //! let the surface go, which is what `SurfaceHolder.Callback` owes the
 //! framework before returning).
 
+// The `jni` module of `gpui-pre-mobile` is imported by the functions it
+// provides (`with_env`, …), not as a name: it would shadow the `jni` crate
+// every signature below types its JNI arguments through.
 use gpui_mobile::android::host;
-use gpui_mobile::android::jni;
+use gpui_mobile::android::jni::{get_string, with_env};
 use jni::objects::{JObject, JPrimitiveArray};
 use jni::sys::{jboolean, jfloat, jint, jlong, jobject};
 use jni::Env;
@@ -97,7 +100,7 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeMot
     xs: jni::sys::jfloatArray,
     ys: jni::sys::jfloatArray,
 ) -> jboolean {
-    let forwarded = jni::with_env(|env| {
+    let forwarded = with_env(|env| {
         let ids = read_int_array(env, ids)?;
         let xs = read_float_array(env, xs)?;
         let ys = read_float_array(env, ys)?;
@@ -160,9 +163,9 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeIme
     start: jint,
     end: jint,
 ) {
-    let _ = jni::with_env(|env| {
+    let _ = with_env(|env| {
         let text = unsafe { JObject::from_raw(env, text as jobject) };
-        let text = jni::get_string(env, &text);
+        let text = get_string(env, &text);
         host::ime_event(
             session as u64,
             kind,
