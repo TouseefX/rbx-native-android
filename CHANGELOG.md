@@ -10,7 +10,15 @@
   they show on dock and raised cards in every theme (the Animation panel's
   face sliders were invisible), and Face Preview no longer needs a raised
   card to show its own. (@chteau)
-
+- **Body hidden under layered clothing**: the body no longer pokes out
+  from under layered clothing, like the grey patch between the legs of a
+  blocky body in pants. The viewport hides what Roblox's own hidden surface
+  data says is covered, read off each cage (inline or by `HSRAssetId`), on
+  the body and on lower layers. Stock bodies from the Rig dialog and the
+  fitting tool point at that data now (Roblox only hands it out with an
+  API key), and bodies built from a player's packages keep theirs. Checked against Studio on the same jacket and pants: the
+  garment outline is now within 0.07 of Studio's on the blocky bodies (was
+  0.12). (@chteau)
 - **Check and upload avatar items**: Avatar › Check Item checks an
   Accessory, MeshPart, Model or a 3D file against Roblox's published
   Marketplace limits (triangles, textures, bone influences, size per type
