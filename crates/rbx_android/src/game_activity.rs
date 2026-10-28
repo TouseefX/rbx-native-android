@@ -73,8 +73,8 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
     // closure's error: `EnvOutcome`'s resolve wants the jni crate's own
     // error type, and `set_host_activity` answers with a String.
     let mut registered: Result<(), String> = Ok(());
-    let path: String = env
-        .with_env(|env| -> Result<String, jni::errors::Error> {
+    let (path, cache_path): (String, String) = env
+        .with_env(|env| -> Result<(String, String), jni::errors::Error> {
             let path = unsafe { JObject::from_raw(env, internal_data_path as jobject) };
             let path = get_string(env, &path);
             // `thiz` is the live Activity: the platform's IME (its
@@ -83,7 +83,23 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
             // the entry.
             let activity = unsafe { JObject::from_raw(env, thiz as jobject) };
             registered = set_host_activity(env, &activity);
-            Ok(path)
+            // The system cache dir the editor's downloads land in. Android
+            // sets no HOME or XDG_* for the process, and GameActivity's
+            // fixed signature has no slot for it, so ask the Activity —
+            // the same object whose `getFilesDir()` supplied `path`.
+            let cache_file = env
+                .call_method(&activity, "getCacheDir", "()Ljava/io/File;", &[])?
+                .l()?;
+            let cache_str = env
+                .call_method(
+                    &cache_file,
+                    "getAbsolutePath",
+                    "()Ljava/lang/String;",
+                    &[],
+                )?
+                .l()?;
+            let cache_path = get_string(env, &cache_str);
+            Ok((path, cache_path))
         })
         .resolve::<jni::errors::LogErrorAndDefault>();
     if let Err(error) = registered {
@@ -93,11 +109,18 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
 
     // The render thread, the GPUI application and the editor's state: once
     // per process, on the first Activity; later calls are no-ops inside.
-    super::boot::start(if path.is_empty() {
-        None
-    } else {
-        Some(path.as_str())
-    });
+    super::boot::start(
+        if path.is_empty() {
+            None
+        } else {
+            Some(path.as_str())
+        },
+        if cache_path.is_empty() {
+            None
+        } else {
+            Some(cache_path.as_str())
+        },
+    );
     1
 }
 

@@ -15,10 +15,29 @@ use gpui_mobile::android::host;
 /// Recent list and packs resolve their directory through it (see
 /// `rbx_studio::settings::default_config_dir`) and Android sets no `HOME`
 /// for the process. Without it those all fall back to their defaults and
-/// nothing the editor saves survives a restart.
-pub fn start(internal_data_path: Option<&str>) {
-    if let Some(path) = internal_data_path.filter(|path| !path.is_empty()) {
+/// nothing the editor saves survives a restart. `cache_path` is the
+/// Activity's `getCacheDir()`: `rbx_assets`' asset cache — every download
+/// the editor makes — resolves to `$XDG_CACHE_HOME/rbx-native` and answers
+/// `NoCacheDir` without it, so nothing downloads at all.
+pub fn start(internal_data_path: Option<&str>, cache_path: Option<&str>) {
+    let files = internal_data_path.filter(|path| !path.is_empty());
+    if let Some(path) = files {
         std::env::set_var("XDG_CONFIG_HOME", format!("{path}/.config"));
+        std::env::set_var("XDG_DATA_HOME", format!("{path}/.local/share"));
+    }
+    // Prefer the system cache dir — Android can clear it when storage runs
+    // low — falling back to a folder beside the config one when the
+    // Activity could not be asked.
+    let cache = match cache_path.filter(|path| !path.is_empty()) {
+        Some(cache) => Some(cache.to_string()),
+        None => files.map(|path| format!("{path}/cache")),
+    };
+    match cache {
+        Some(cache) => std::env::set_var("XDG_CACHE_HOME", cache),
+        None => log::warn!(
+            "rbx_android: no storage paths from the Activity — downloads \
+             will have nowhere to go"
+        ),
     }
     // Android has no OS keyring behind GPUI's credentials API, and the
     // platform read never answers there: Home's startup `load_session`
