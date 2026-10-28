@@ -1187,6 +1187,10 @@ pub struct Window {
     default_prevented: bool,
     mouse_position: Point<Pixels>,
     mouse_hit_test: HitTest,
+    /// rbx-native addition: Android input diagnostics — remove once the
+    /// mobile input path is proven on device.
+    #[cfg(target_os = "android")]
+    pub(crate) touch_debug_position: Option<Point<Pixels>>,
     modifiers: Modifiers,
     capslock: Capslock,
     scale_factor: f32,
@@ -1719,15 +1723,6 @@ impl Window {
                 let force_render =
                     mem::take(&mut deferred_force_render) || request_frame_options.force_render;
 
-                // rbx-native addition: Android first-frame diagnostics —
-                // remove once the mobile boot is proven on device.
-                #[cfg(target_os = "android")]
-                log::info!(
-                    "gpui window: frame callback (dirty={}, force_render={})",
-                    invalidator.is_dirty(),
-                    force_render
-                );
-
                 let thermal_state = handle
                     .update(&mut cx, |_, _, cx| cx.thermal_state())
                     .log_err();
@@ -2062,6 +2057,8 @@ impl Window {
             default_prevented: true,
             mouse_position,
             mouse_hit_test: HitTest::default(),
+            #[cfg(target_os = "android")]
+            touch_debug_position: None,
             modifiers,
             capslock,
             scale_factor,
@@ -3347,6 +3344,40 @@ impl Window {
             self.rendered_frame.scene.shadows.len(),
             self.rendered_frame.scene.monochrome_sprites.len()
         );
+        // rbx-native addition: Android input diagnostics — remove once the
+        // mobile input path is proven on device. Two markers painted on top
+        // of the scene, outside the element tree so hit-testing is
+        // untouched: red is where gesture dispatch believes the pointer is,
+        // yellow is the last raw touch gpui received. Where they sit against
+        // the finger is the ground truth for the input-position bug.
+        #[cfg(target_os = "android")]
+        {
+            let scale = self.scale_factor;
+            let marker = |position: Point<Pixels>, color: Hsla| Quad {
+                order: u32::MAX,
+                bounds: Bounds::new(
+                    point(position.x - px(6.), position.y - px(6.)),
+                    size(px(12.), px(12.)),
+                )
+                .scale(scale),
+                content_mask: ContentMask {
+                    bounds: Bounds::new(point(px(0.), px(0.)), size(px(100000.), px(100000.)))
+                        .scale(scale),
+                },
+                background: Background::Color(color),
+                ..Default::default()
+            };
+            self.rendered_frame
+                .scene
+                .quads
+                .push(marker(self.mouse_position, crate::rgba(0xff0000ff)));
+            if let Some(position) = self.touch_debug_position {
+                self.rendered_frame
+                    .scene
+                    .quads
+                    .push(marker(position, crate::rgba(0xffee00ff)));
+            }
+        }
         #[cfg(feature = "profiler")]
         let _foreground_turn = profiler::journal::foreground_turn();
         #[cfg(feature = "profiler")]
@@ -5557,12 +5588,19 @@ impl Window {
         // rbx-native addition: Android input diagnostics — remove once the
         // mobile input path is proven on device.
         #[cfg(target_os = "android")]
-        log::info!(
-            "gpui touch: {:?} at ({:.0},{:.0})",
-            event.phase,
-            event.position.x,
-            event.position.y
-        );
+        {
+            self.touch_debug_position = Some(event.position);
+            if event.phase != crate::TouchPhase::Moved {
+                log::info!(
+                    "gpui touch: {:?} at ({:.0},{:.0}) window={:.0}x{:.0}",
+                    event.phase,
+                    event.position.x,
+                    event.position.y,
+                    self.bounds.size.width,
+                    self.bounds.size.height
+                );
+            }
+        }
         let mut event = event.clone();
         if !self.touch_prediction_enabled {
             event.predicted_position = None;
@@ -5606,17 +5644,28 @@ impl Window {
         // mobile input path is proven on device.
         #[cfg(target_os = "android")]
         {
-            let (kind, position) = match &gesture {
-                RecognizedTouchGesture::Scroll(event) => ("scroll", event.position),
-                RecognizedTouchGesture::Tap { up, .. } => ("tap", up.position),
-                RecognizedTouchGesture::TouchDrag(event) => ("touch drag", event.position),
-                RecognizedTouchGesture::LongPress(event) => ("long press", event.position),
-            };
-            log::info!(
-                "gpui gesture: {kind} at ({:.0},{:.0})",
-                position.x,
-                position.y
+            let muted = matches!(
+                &gesture,
+                RecognizedTouchGesture::Scroll(event)
+                    if event.touch_phase == crate::TouchPhase::Moved
+            ) || matches!(
+                &gesture,
+                RecognizedTouchGesture::TouchDrag(event)
+                    if event.phase == crate::TouchPhase::Moved
             );
+            if !muted {
+                let (kind, position) = match &gesture {
+                    RecognizedTouchGesture::Scroll(event) => ("scroll", event.position),
+                    RecognizedTouchGesture::Tap { up, .. } => ("tap", up.position),
+                    RecognizedTouchGesture::TouchDrag(event) => ("touch drag", event.position),
+                    RecognizedTouchGesture::LongPress(event) => ("long press", event.position),
+                };
+                log::info!(
+                    "gpui gesture: {kind} at ({:.0},{:.0})",
+                    position.x,
+                    position.y
+                );
+            }
         }
         match gesture {
             RecognizedTouchGesture::Scroll(scroll_wheel) => {
