@@ -420,3 +420,14 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_onEdit
     _action: jni::sys::jint,
 ) {
 }
+
+/// The one symbol `android-activity`'s native-activity glue — compiled into
+/// `gpui-pre-mobile`, though the host-driven path this crate drives never
+/// runs it — requires of the application: Android's `dlopen` refuses a
+/// library that leaves it unresolved, so `MainActivity`'s
+/// `System.loadLibrary` died with an `UnsatisfiedLinkError` before this
+/// existed. Nothing ever calls it — GameActivity is not a `NativeActivity`,
+/// and the editor's real entry points are the JNI functions above and in
+/// [`super::bridge`] — so it returns immediately.
+#[unsafe(no_mangle)]
+fn android_main(_app: android_activity::AndroidApp) {}

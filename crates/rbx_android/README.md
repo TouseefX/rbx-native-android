@@ -23,7 +23,7 @@ plugin versions).
 | Path | What |
 |---|---|
 | `src/lib.rs` | The module map and the architecture doc comment. |
-| `src/game_activity.rs` | The JNI surface of the AAR's `GameActivity` base class itself — `initializeNativeCode` starts the host, the rest are the no-ops the class needs to link. |
+| `src/game_activity.rs` | The JNI surface of the AAR's `GameActivity` base class itself — `initializeNativeCode` starts the host, the rest are the no-ops the class needs to link — plus the inert `android_main` the native-activity glue `gpui-pre-mobile` links in requires (Android's `dlopen` refuses the library without it, `UnsatisfiedLinkError` and all). |
 | `src/bridge.rs` | The JNI surface of `MainActivity` — surfaces, touch, keys, IME, resumed/paused, forwarded to `gpui_mobile::android::host`. |
 | `src/boot.rs` | What `initializeNativeCode` starts: the render thread, the asset source, and `XDG_CONFIG_HOME` so the editor's settings persist. |
 | `kotlin/MainActivity.kt` | The Activity: GameActivity subclass, surface callback, input parsing, and the invisible-`EditText` IME proxy. |

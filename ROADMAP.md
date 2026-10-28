@@ -3037,7 +3037,12 @@ both the plain fetch failure and the silent fall back to a default
   satisfied inertly so the games-activity AAR loads — the real entry is
   our own bridge, which drives gpui-pre-mobile's host path (`Application::run_embedded`
   on a render thread that outlives the Activity, so rotation and
-  recreation don't restart the app). `rbx_studio` became a lib + bin for
+  recreation don't restart the app). One more symbol the library must
+  export came out of the first launch on a device: an inert `android_main`,
+  because the native-activity glue `gpui-pre-mobile` links in (without
+  using it) references it, and Android's `dlopen` refuses a library that
+  leaves it unresolved — `UnsatisfiedLinkError` at
+  `System.loadLibrary` otherwise. `rbx_studio` became a lib + bin for
   this: the desktop `main` is `run_desktop()`, and `boot_mobile()` gives
   Android the same init with an `XDG_CONFIG_HOME` pointed at the app's
   private storage. The version pairing moved to GPUI Kit 0.6.2 — its

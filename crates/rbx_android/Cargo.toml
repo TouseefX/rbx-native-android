@@ -42,6 +42,11 @@ ndk = { version = "0.9", default-features = false, features = [
 # `gpui-pre-mobile` pins (0.22 is the `Env` API rework its code is written
 # against).
 jni = "0.22"
+# Only for the `AndroidApp` type the `android_main` stub in `game_activity`
+# is declared with — the one symbol the native-activity glue `gpui-pre-mobile`
+# links in requires of the application. Same version and feature set it pins,
+# so cargo unifies the two into one crate.
+android-activity = { version = "0.6", features = ["native-activity"] }
 # Rust `log` → logcat, so the host's render thread is observable.
 android_logger = "0.15"
 log = "0.4"
