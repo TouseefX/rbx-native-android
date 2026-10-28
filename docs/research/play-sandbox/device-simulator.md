@@ -110,8 +110,18 @@ from outside, not of the probe.
 - **A second Play in one editor session crashed GNOME Shell on X11**
   (mutter 46.2, `clutter_actor_add_child: assertion 'child->priv->parent ==
   NULL' failed`, then a trap) the moment the second Sober window was
-  reparented into the editor; the first embed was fine. Not seen under
-  Xephyr, which has no window manager.
+  reparented into the editor; the first embed was fine. The window was
+  already withdrawn from the window manager before the reparent (ICCCM
+  4.1.4, `embed::x11::withdraw`, in since 2026-10-14). **Not reproduced**
+  (2026-10-28) in GNOME Shell 46.0 on mutter 46.2, the crashing versions,
+  run as the window manager of a nested Xephyr (`gnome-shell --x11
+  --replace` on a private session bus; this mutter has no standalone
+  binary): three Sober windows in a row, on Sober's home screen and in a
+  game, each embedded into the real editor window with `Embedded::attach`
+  and `FocusFollow`, then hidden, killed and dropped as Stop does, and the
+  same with a stand-in X client; no assertion, the shell kept running. The
+  desktop session that crashed also had the uinput touchscreen below
+  attached; whether that matters is untested. No fix is claimed.
 - **Roblox's own thumbstick and jump button never appear**, since no touch
   ever arrives and `PreferredInput` stays `KeyboardAndMouse` (the
   PlayerModule shows its TouchGui only on `PreferredInput == Touch`).
@@ -247,9 +257,10 @@ from outside, not of the probe.
   Screenshot: `controller-emulator/play-focus-lend.png` (top: focus
   elsewhere, before and after the presses; bottom: the same with
   `lend_focus`).
-- **The keyboard cover is ours, not the device's.** The game is not told:
-  `OnScreenKeyboardVisible` stays false and `OnScreenKeyboardSize` 0, so UI
-  that moves out of the keyboard's way does not. Its keys type through XTest
+- **The keyboard cover is ours, not the device's.** The real
+  `OnScreenKeyboardVisible` stays false and `OnScreenKeyboardSize` 0, so
+  Roblox's own UI does not move out of its way. **Built:** game scripts are
+  told through the touch stand-in (item 5). Its keys type through XTest
   (Linux only); the first use of a character missing from the X keymap
   (€, emoji) waits 0.3 s while Sober picks up the remapped key.
 - **Android back is Escape.** It opens Roblox's menu, as on a phone, but a
@@ -369,10 +380,24 @@ screen looks, so that is what was built.
   Sans Symbols2 come first and draw many faces as monochrome outlines.
   Naming Noto Color Emoji does not help: GPUI drops any font without an
   "m" glyph from its database when loading it by name.
-- **Limit:** the game is never told. `OnScreenKeyboardSize` stays (0, 0) and
-  `OnScreenKeyboardVisible` stays false, because both are read-only and no
-  API sets them. The cover shows what a keyboard would hide. It does not
-  move the game's own UI the way a real keyboard can.
+- **Game scripts are told; Roblox is not.** The real `OnScreenKeyboard*`
+  properties are read-only and no API sets them, so the editor sends the
+  cover's rect to the client (`keyboard` command, `[x, y, width, height]`
+  in client pixels, `device_sim::report::keyboard_rect`) whenever it moves,
+  and the touch stand-in's `UserInputService` (`probe/touch_input.luau`)
+  reports it: `OnScreenKeyboardVisible`, `OnScreenKeyboardPosition` and
+  `OnScreenKeyboardSize` as Vector2s, with `Changed` and
+  `GetPropertyChangedSignal` firing for each one that changed.
+  **Verified** in Roblox's engine (Studio playtest, the stand-in switched
+  on, `device-simulator/studio-keyboard-report.png`): the values read back,
+  both signals fire, and a cover going down reads (0, 0). Not yet run end to end through
+  Sober: Play needs a working Open Cloud key, which this machine lacked on
+  2026-10-28. Roblox's own UI still does not move out of the cover's way.
+- On a simulated console's client (`IsTenFootInterface`), the stand-in
+  reports `PreferredInput` `Gamepad` and changes nothing else; the mouse
+  stays a mouse. Touch devices already read `Touch`. Roblox's own CoreGui
+  reads the real service, so it still picks its UI by the real value.
+  **Verified** in the same Studio playtest.
 
 ![Keyboard cover: AZERTY letters, 123 and emoji pages](device-simulator/keyboard-pages.png)
 

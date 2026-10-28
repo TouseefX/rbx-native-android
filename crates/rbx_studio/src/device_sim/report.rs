@@ -1,5 +1,6 @@
 //! What the Play client reports about itself (`Uplink::Device`), as the
-//! Device Simulator shows it: a badge line and a first-report Output line.
+//! Device Simulator shows it: a badge line and a first-report Output line;
+//! and what the client is told back, the keyboard cover's rect.
 
 use rbx_play::protocol::DeviceReport;
 
@@ -60,6 +61,17 @@ pub(crate) fn output_line(report: &DeviceReport, screen: Option<(u32, u32)>) -> 
         line.push('.');
     }
     line
+}
+
+/// The keyboard cover as the client's `OnScreenKeyboardPosition` and
+/// `OnScreenKeyboardSize`: `[x, y, width, height]` of a `height`-tall cover
+/// across the bottom of a `screen`-sized client (1:1 in Play), all zero
+/// while it is down.
+pub(crate) fn keyboard_rect((w, h): (u32, u32), height: u32) -> [u32; 4] {
+    match height.min(h) {
+        0 => [0; 4],
+        k => [0, h - k, w, k],
+    }
 }
 
 fn viewport(report: &DeviceReport) -> (u32, u32) {
@@ -131,5 +143,13 @@ mod tests {
         let none = output_line(&base(), None);
         assert!(none.ends_with("OnScreenKeyboardVisible false."));
         assert!(none.contains("PreferredInput unavailable"));
+    }
+
+    #[test]
+    fn keyboard_rect_sits_on_the_bottom_edge() {
+        assert_eq!(keyboard_rect((393, 852), 300), [0, 552, 393, 300]);
+        assert_eq!(keyboard_rect((852, 393), 0), [0; 4]);
+        // Never taller than the screen.
+        assert_eq!(keyboard_rect((100, 50), 80), [0, 0, 100, 50]);
     }
 }

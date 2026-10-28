@@ -278,12 +278,12 @@ local function handle(cmd)
 		end
 		return
 	end
-	if kind == "pointer" then
+	if kind == "pointer" or kind == "keyboard" then
 		-- Only the latest matters, and only to a client that is playing.
 		if tester then
 			remote:FireClient(tester, { kind = "cmd", command = cmd })
 		end
-		ack(cmd.id, true, "pointer")
+		ack(cmd.id, true, kind)
 		return
 	end
 	if LIVE_COMMANDS[kind] then
