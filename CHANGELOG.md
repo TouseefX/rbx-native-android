@@ -2,6 +2,14 @@
 
 ## 2026-10-28
 
+- **Shortcuts survive an undo**: when an undo removed the thing a field
+  was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
+  new Accessory selected), the first Ctrl+Y did nothing until you clicked
+  the window again. Focus now moves to the nearest surviving panel, or the
+  window, so shortcuts keep working. Slider rails use the track colour, so
+  they show on dock and raised cards in every theme (the Animation panel's
+  face sliders were invisible), and Face Preview no longer needs a raised
+  card to show its own. (@chteau)
 - **Body hidden under layered clothing**: the body no longer pokes out
   from under layered clothing, like the grey patch between the legs of a
   blocky body in pants. The viewport hides what Roblox's own hidden surface
