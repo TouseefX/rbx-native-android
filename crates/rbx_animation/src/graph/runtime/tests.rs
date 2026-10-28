@@ -6,6 +6,7 @@ use crate::graph::model::{Mask, MaskJoint, Param, Transition, WaitFor};
 
 mod events;
 mod semantics;
+mod studio;
 
 /// A one-second clip holding `joint` at x = `x` (and at `x + 1` at its end,
 /// so its time can be read off the pose).
@@ -250,7 +251,10 @@ fn sequence_plays_inputs_in_order_and_mask_hides_joints() {
     assert!(p.step(0.5).is_empty(), "the torso is masked off");
     p.step(0.6);
     assert_eq!(p.active(seq), Some(1));
-    assert!(p.step(0.1).contains_key("Arm"), "an unlisted joint passes");
+    assert!(
+        p.step(0.1).is_empty(),
+        "an unlisted joint is masked off too"
+    );
 }
 
 #[test]

@@ -5,6 +5,7 @@
 //! shapes `rbx_binary` produces for the binary format; [`serialize`] walks a DOM
 //! tree the other way, writing the same shapes back out as XML text.
 
+mod attr_refs;
 mod deserializer;
 mod error;
 mod format;

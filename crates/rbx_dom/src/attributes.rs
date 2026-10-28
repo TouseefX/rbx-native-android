@@ -27,10 +27,11 @@
 //! `Instance` attribute cannot exist, `SetAttribute(name, nil)` removes the
 //! attribute, so no null referent is written.
 //!
-//! The XML formats have no settled form for it: `rbx_xml` keeps the blob as
-//! `BinaryString` bytes, but XML referents are strings (`RBX…`) that a `u32`
-//! cannot name, and no Studio-saved `.rbxmx` holding one has been seen. So
-//! an `Instance` attribute is only meaningful in a binary file.
+//! XML referents are strings (`RBX…`) that a `u32` cannot name, so Studio
+//! writes an `Instance` attribute in an XML file outside the blob, as a
+//! `__attrRef_<name>` `Ref` property; `rbx_xml` folds it into the blob on
+//! reading and splits it back out on writing, so the DOM holds it the same
+//! way whichever format a file came from.
 
 use std::collections::BTreeMap;
 
