@@ -5616,6 +5616,7 @@ impl Window {
                     RecognizedTouchGesture::Tap { up, .. } => ("tap", up.position),
                     RecognizedTouchGesture::TouchDrag(event) => ("touch drag", event.position),
                     RecognizedTouchGesture::LongPress(event) => ("long press", event.position),
+                    RecognizedTouchGesture::Pinch(event) => ("pinch", event.position),
                 };
                 log::info!(
                     "gpui gesture: {kind} at ({:.0},{:.0})",
@@ -5672,6 +5673,14 @@ impl Window {
                 if ended {
                     self.long_press_capture = None;
                 }
+            }
+            // rbx-native addition: a two-finger pinch, dispatched like any
+            // other gesture-derived mouse event so pinch listeners under the
+            // gesture's anchor receive it.
+            RecognizedTouchGesture::Pinch(pinch) => {
+                self.mouse_position = pinch.position;
+                cx.propagate_event = true;
+                self.dispatch_mouse_event(&pinch, cx);
             }
         }
     }

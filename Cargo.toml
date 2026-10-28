@@ -62,3 +62,10 @@ gpui-base = { path = "vendor/gpui-base" }
 # that made the toolkit hostable on mobile) and `gpui-pre-mobile` are built
 # against, so the whole tree shares one GPUI.
 gpui-pre = { path = "vendor/gpui-pre" }
+# The mobile platform's Android clipboard was an in-process stub, so the API
+# key screen's Paste button could never see what another app copied.
+# `vendor/gpui-mobile` is gpui-pre-mobile f706039 unchanged but for the real
+# ClipboardManager bridge (see `vendor/README.md`); drop this once upstream
+# grows one.
+[patch."https://github.com/longbridge/gpui-mobile"]
+gpui-pre-mobile = { path = "vendor/gpui-mobile" }

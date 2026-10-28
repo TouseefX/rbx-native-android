@@ -19,8 +19,8 @@ use smallvec::SmallVec;
 
 use crate::{
     Axis, GestureEvent, InputEvent, IsZero, Modifiers, MouseButton, MouseDownEvent, MouseEvent,
-    MouseUpEvent, Pixels, PlatformInput, Point, ScrollDelta, ScrollWheelEvent, TouchEvent, TouchId,
-    TouchPhase, point, px, seal::Sealed,
+    MouseUpEvent, PinchEvent, Pixels, PlatformInput, Point, ScrollDelta, ScrollWheelEvent,
+    TouchEvent, TouchId, TouchPhase, point, px, seal::Sealed,
 };
 
 const SCROLL_EVENT_SEPARATION: Duration = Duration::from_millis(28);
@@ -485,8 +485,12 @@ const VELOCITY_MAX_SAMPLES: usize = 20;
 /// [`ClickEvent::Touch`](crate::ClickEvent), which keeps every existing
 /// mouse-driven behavior (click listeners, caret placement, double-tap
 /// selection) working before elements grow a direct tap-delivery path.
-/// Pinch recognition is not implemented yet, and additional touches are ignored
-/// while one is being recognized.
+///
+/// rbx-native addition: pan deltas are not axis-locked here — the camera
+/// viewport needs both axes from one gesture, and scrollables lock their own
+/// axis per gesture (see gpui-base's `scrollable_mask`) — and a second
+/// finger landing turns a pending touch or pan into a pinch, emitted as
+/// [`PinchEvent`](crate::PinchEvent)s until either contact lifts.
 pub(crate) struct TouchGestureRecognizer {
     tuning: GestureTuning,
     state: TouchGestureState,
@@ -508,6 +512,9 @@ pub(crate) enum RecognizedTouchGesture {
     },
     TouchDrag(TouchDragEvent),
     LongPress(LongPressEvent),
+    /// One step of a two-finger pinch, delivered to pinch listeners anchored
+    /// at the gesture's starting midpoint.
+    Pinch(PinchEvent),
 }
 
 enum TouchGestureState {
@@ -528,6 +535,16 @@ enum TouchGestureState {
     },
     LongPressing(ActiveTouch),
     TouchDragging(ActiveTouch),
+    /// Two contacts down: their changing separation is a pinch. The primary is
+    /// the contact the gesture started from; either lifting ends it.
+    Pinching {
+        primary: ActiveTouch,
+        secondary: ActiveTouch,
+        /// The gesture's hit-test position, the midpoint where it began.
+        anchor: Point<Pixels>,
+        /// The contact separation the previous event reported.
+        last_distance: f32,
+    },
 }
 
 struct ActiveTouch {
@@ -606,6 +623,59 @@ impl TouchGestureRecognizer {
                 } else {
                     None
                 };
+                // rbx-native addition: a second finger on a pending touch or
+                // a pan turns the gesture into a pinch. Pan listeners get a
+                // terminal scroll first, so whatever the pan was driving
+                // (a scrolling list, a camera look) stops smoothly.
+                let was_panning =
+                    matches!(&self.state, TouchGestureState::Panning { .. });
+                match mem::replace(&mut self.state, TouchGestureState::Idle) {
+                    TouchGestureState::Pending { touch, .. }
+                    | TouchGestureState::Panning { touch, .. } => {
+                        self.momentum = None;
+                        if was_panning {
+                            recognized.push(RecognizedTouchGesture::Scroll(scroll_event(
+                                touch.start_position,
+                                Point::default(),
+                                TouchPhase::Ended,
+                            )));
+                        }
+                        let mut velocity_tracker = VelocityTracker::default();
+                        velocity_tracker.push(now, event.position);
+                        let secondary = ActiveTouch {
+                            id: event.id,
+                            start_position: event.position,
+                            last_position: event.position,
+                            emitted_position: event.position,
+                            last_movement: Point::default(),
+                            velocity_tracker,
+                        };
+                        let anchor = point(
+                            px((f32::from(touch.last_position.x)
+                                + f32::from(secondary.last_position.x))
+                                / 2.),
+                            px((f32::from(touch.last_position.y)
+                                + f32::from(secondary.last_position.y))
+                                / 2.),
+                        );
+                        let separation = touch.last_position - secondary.last_position;
+                        let last_distance =
+                            f32::from(separation.x.powi(2) + separation.y.powi(2)).sqrt();
+                        recognized.push(RecognizedTouchGesture::Pinch(PinchEvent {
+                            position: anchor,
+                            delta: 0.,
+                            modifiers: Modifiers::default(),
+                            phase: TouchPhase::Started,
+                        }));
+                        self.state = TouchGestureState::Pinching {
+                            primary: touch,
+                            secondary,
+                            anchor,
+                            last_distance,
+                        };
+                    }
+                    other => self.state = other,
+                }
                 if matches!(self.state, TouchGestureState::Idle) {
                     let mut velocity_tracker = VelocityTracker::default();
                     velocity_tracker.push(now, event.position);
@@ -640,6 +710,47 @@ impl TouchGestureRecognizer {
                 }
             }
             TouchPhase::Moved => match mem::replace(&mut self.state, TouchGestureState::Idle) {
+                TouchGestureState::Pinching {
+                    mut primary,
+                    mut secondary,
+                    anchor,
+                    mut last_distance,
+                } => {
+                    if event.id == primary.id {
+                        primary.last_position = event.position;
+                    } else if event.id == secondary.id {
+                        secondary.last_position = event.position;
+                    } else {
+                        // Not ours: put the gesture back untouched.
+                        self.state = TouchGestureState::Pinching {
+                            primary,
+                            secondary,
+                            anchor,
+                            last_distance,
+                        };
+                        return recognized;
+                    }
+                    let separation = primary.last_position - secondary.last_position;
+                    let distance = f32::from(separation.x.powi(2) + separation.y.powi(2)).sqrt();
+                    if last_distance > 0. && distance > 0. {
+                        let delta = distance / last_distance - 1.;
+                        if delta != 0. {
+                            recognized.push(RecognizedTouchGesture::Pinch(PinchEvent {
+                                position: anchor,
+                                delta,
+                                modifiers: Modifiers::default(),
+                                phase: TouchPhase::Moved,
+                            }));
+                        }
+                        last_distance = distance;
+                    }
+                    self.state = TouchGestureState::Pinching {
+                        primary,
+                        secondary,
+                        anchor,
+                        last_distance,
+                    };
+                }
                 TouchGestureState::Pending {
                     mut touch,
                     deadline,
@@ -652,17 +763,18 @@ impl TouchGestureRecognizer {
                     if accumulated.magnitude() > f64::from(self.tuning.touch_slop) {
                         // Carry the full movement so far into the first scroll
                         // step: the content catches up to the finger instead
-                        // of losing the slop distance.
+                        // of losing the slop distance. rbx-native addition:
+                        // not locked to the dominant axis — the camera
+                        // viewport wants both axes from one gesture, and
+                        // scrollables lock their own axis (gpui-base's
+                        // `scrollable_mask`).
                         let mut target = event.predicted_position.unwrap_or(event.position);
                         let axis = dominant_axis(accumulated);
                         let mut delta = target - touch.start_position;
-                        lock_delta_to_axis(&mut delta, axis);
                         touch.last_movement = accumulated;
-                        lock_delta_to_axis(&mut touch.last_movement, axis);
                         if movements_oppose(delta, touch.last_movement) {
                             target = event.position;
                             delta = accumulated;
-                            lock_delta_to_axis(&mut delta, axis);
                         }
                         touch.emitted_position = target;
                         recognized.push(RecognizedTouchGesture::Scroll(scroll_event(
@@ -681,8 +793,10 @@ impl TouchGestureRecognizer {
                     }
                 }
                 TouchGestureState::Panning { mut touch, axis } if touch.id == event.id => {
+                    // rbx-native addition: as at the pan's start, the delta is
+                    // not locked to the gesture's dominant axis; `axis` is
+                    // still recorded for the fling that may follow.
                     let mut raw_delta = event.position - touch.last_position;
-                    lock_delta_to_axis(&mut raw_delta, axis);
                     if raw_delta != Point::default() {
                         touch.last_movement = raw_delta;
                     }
@@ -690,14 +804,12 @@ impl TouchGestureRecognizer {
                     touch.last_position = event.position;
                     let mut target = event.predicted_position.unwrap_or(event.position);
                     let mut delta = target - touch.emitted_position;
-                    lock_delta_to_axis(&mut delta, axis);
                     // Prediction error must not reverse content while the raw
                     // touch still advances. Fall back to the raw position so a
                     // real finger reversal remains responsive.
                     if movements_oppose(delta, touch.last_movement) {
                         target = event.position;
                         delta = target - touch.emitted_position;
-                        lock_delta_to_axis(&mut delta, axis);
                         if movements_oppose(delta, touch.last_movement) {
                             target = touch.emitted_position;
                             delta = Point::default();
@@ -783,13 +895,8 @@ impl TouchGestureRecognizer {
                     } else {
                         touch.velocity_tracker.velocity()
                     };
-                    match axis {
-                        Axis::Vertical => velocity.x = 0.,
-                        Axis::Horizontal => velocity.y = 0.,
-                    }
                     let speed = (velocity.x.powi(2) + velocity.y.powi(2)).sqrt();
                     let mut release_delta = event.position - touch.emitted_position;
-                    lock_delta_to_axis(&mut release_delta, axis);
                     if speed >= self.tuning.min_fling_velocity {
                         let direction = point(velocity.x / speed, velocity.y / speed);
                         let speed = speed.min(MAX_FLING_VELOCITY);
@@ -837,6 +944,19 @@ impl TouchGestureRecognizer {
                         position: event.position,
                     }));
                 }
+                TouchGestureState::Pinching {
+                    primary,
+                    secondary,
+                    anchor,
+                    ..
+                } if event.id == primary.id || event.id == secondary.id => {
+                    recognized.push(RecognizedTouchGesture::Pinch(PinchEvent {
+                        position: anchor,
+                        delta: 0.,
+                        modifiers: Modifiers::default(),
+                        phase: TouchPhase::Ended,
+                    }));
+                }
                 TouchGestureState::TouchDragging(touch) if touch.id == event.id => {
                     recognized.push(RecognizedTouchGesture::TouchDrag(TouchDragEvent {
                         phase: TouchPhase::Ended,
@@ -854,6 +974,19 @@ impl TouchGestureRecognizer {
                         Point::default(),
                         TouchPhase::Cancelled,
                     )));
+                }
+                TouchGestureState::Pinching {
+                    primary,
+                    secondary,
+                    anchor,
+                    ..
+                } if event.id == primary.id || event.id == secondary.id => {
+                    recognized.push(RecognizedTouchGesture::Pinch(PinchEvent {
+                        position: anchor,
+                        delta: 0.,
+                        modifiers: Modifiers::default(),
+                        phase: TouchPhase::Cancelled,
+                    }));
                 }
                 TouchGestureState::LongPressing(touch) if touch.id == event.id => {
                     recognized.push(RecognizedTouchGesture::LongPress(LongPressEvent {
@@ -1341,7 +1474,7 @@ mod tests {
     }
 
     #[test]
-    fn touch_pan_stays_locked_to_its_initial_dominant_axis() {
+    fn touch_pan_carries_both_axes_from_one_gesture() {
         let mut recognizer = TouchGestureRecognizer::new(GestureTuning::default());
         let now = Instant::now();
         let touch = TouchId(1);
@@ -1355,7 +1488,9 @@ mod tests {
         let [RecognizedTouchGesture::Scroll(scroll)] = recognized.as_slice() else {
             panic!("expected scroll, got {recognized:?}");
         };
-        assert_eq!(scroll.delta.pixel_delta(px(16.)), point(px(0.), px(20.)));
+        // rbx-native: not locked to the dominant axis — the camera viewport
+        // turns on both, and scrollables lock their own axis.
+        assert_eq!(scroll.delta.pixel_delta(px(16.)), point(px(4.), px(20.)));
 
         let recognized = recognizer.handle_event_at(
             &touch_event(touch, TouchPhase::Moved, 134., 125.),
@@ -1364,11 +1499,11 @@ mod tests {
         let [RecognizedTouchGesture::Scroll(scroll)] = recognized.as_slice() else {
             panic!("expected scroll, got {recognized:?}");
         };
-        assert_eq!(scroll.delta.pixel_delta(px(16.)), point(px(0.), px(5.)));
+        assert_eq!(scroll.delta.pixel_delta(px(16.)), point(px(30.), px(5.)));
     }
 
     #[test]
-    fn touch_pan_locks_to_horizontal_axis() {
+    fn touch_pan_horizontal_dominant_step_carries_its_minor_axis_too() {
         let mut recognizer = TouchGestureRecognizer::new(GestureTuning::default());
         let now = Instant::now();
         let touch = TouchId(1);
@@ -1382,7 +1517,58 @@ mod tests {
         let [RecognizedTouchGesture::Scroll(scroll)] = recognized.as_slice() else {
             panic!("expected scroll, got {recognized:?}");
         };
-        assert_eq!(scroll.delta.pixel_delta(px(16.)), point(px(20.), px(0.)));
+        assert_eq!(scroll.delta.pixel_delta(px(16.)), point(px(20.), px(4.)));
+    }
+
+    #[test]
+    fn second_finger_turns_a_pan_into_a_pinch() {
+        let mut recognizer = TouchGestureRecognizer::new(GestureTuning::default());
+        let now = Instant::now();
+        let first = TouchId(1);
+        let second = TouchId(2);
+
+        recognizer.handle_event_at(&touch_event(first, TouchPhase::Started, 100., 100.), now);
+        recognizer.handle_event_at(
+            &touch_event(first, TouchPhase::Moved, 100., 120.),
+            now + Duration::from_millis(16),
+        );
+
+        // The second finger lands: the pan ends (a terminal scroll) and the
+        // pinch begins at the contacts' midpoint.
+        let recognized = recognizer.handle_event_at(
+            &touch_event(second, TouchPhase::Started, 150., 100.),
+            now + Duration::from_millis(32),
+        );
+        assert_eq!(recognized.len(), 2);
+        assert!(matches!(
+            &recognized[0],
+            RecognizedTouchGesture::Scroll(scroll) if scroll.touch_phase == TouchPhase::Ended
+        ));
+        assert!(matches!(
+            &recognized[1],
+            RecognizedTouchGesture::Pinch(pinch) if pinch.phase == TouchPhase::Started
+        ));
+
+        // The fingers spread apart: each step is a positive zoom fraction.
+        let recognized = recognizer.handle_event_at(
+            &touch_event(second, TouchPhase::Moved, 200., 100.),
+            now + Duration::from_millis(48),
+        );
+        let [RecognizedTouchGesture::Pinch(pinch)] = recognized.as_slice() else {
+            panic!("expected pinch, got {recognized:?}");
+        };
+        assert_eq!(pinch.phase, TouchPhase::Moved);
+        assert!(pinch.delta > 0.);
+
+        // Either finger lifting ends the pinch.
+        let recognized = recognizer.handle_event_at(
+            &touch_event(first, TouchPhase::Ended, 100., 120.),
+            now + Duration::from_millis(64),
+        );
+        let [RecognizedTouchGesture::Pinch(pinch)] = recognized.as_slice() else {
+            panic!("expected pinch, got {recognized:?}");
+        };
+        assert_eq!(pinch.phase, TouchPhase::Ended);
     }
 
     #[test]
@@ -1604,7 +1790,7 @@ mod tests {
     }
 
     #[test]
-    fn diagonal_release_flings_only_on_locked_axis() {
+    fn diagonal_release_flings_on_both_axes() {
         let mut recognizer = TouchGestureRecognizer::new(GestureTuning::default());
         let now = Instant::now();
         let touch = TouchId(1);
@@ -1623,7 +1809,9 @@ mod tests {
             let [RecognizedTouchGesture::Scroll(scroll)] = recognized.as_slice() else {
                 panic!("expected scroll, got {recognized:?}");
             };
-            assert_eq!(scroll.delta.pixel_delta(px(16.)).x, px(0.));
+            // rbx-native: the pan carries its minor axis, and so does the
+            // fling it releases into.
+            assert!(scroll.delta.pixel_delta(px(16.)).x > px(0.));
         }
         recognizer.handle_event_at(
             &touch_event(touch, TouchPhase::Ended, 115., 200.),
@@ -1637,7 +1825,7 @@ mod tests {
             if let Some(RecognizedTouchGesture::Scroll(scroll)) = recognizer.tick_momentum_at(time)
             {
                 let delta = scroll.delta.pixel_delta(px(16.));
-                assert_eq!(delta.x, px(0.));
+                assert!(delta.x >= px(0.));
                 assert!(delta.y <= px(0.));
             }
         }
