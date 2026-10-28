@@ -73,6 +73,15 @@ android:
       theme: "@style/Theme.AppCompat.NoActionBar"
 
       activities:
+        - name: "dev.gpui.mobile.GpuiPathPicker"
+          # GPUI's file prompts (open place/file) import SAF documents into
+          # the app cache through this activity, packaged from
+          # kotlin/dev/gpui/mobile/GpuiPathPicker.java. Not exported, and it
+          # survives rotation so a picker already open keeps its results.
+          # xbuild's schema has no per-activity theme, so it shows the app
+          # theme for the instant before the system picker covers it.
+          exported: false
+          config_changes: "orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode|density"
         - name: ".MainActivity"
           # GameActivity hosts one SurfaceView for the process's lifetime;
           # the editor's render thread survives recreation, and the new
