@@ -1303,12 +1303,23 @@ impl App {
                     let clear = window.draw(cx);
                     clear.clear(cx);
 
+                    // rbx-native addition: Android first-frame diagnostics —
+                    // remove once the mobile boot is proven on device.
+                    #[cfg(target_os = "android")]
+                    log::info!("gpui app: open_window drew the initial scene");
+
                     cx.window_handles.insert(id, window.handle);
                     cx.windows.get_mut(id).unwrap().replace(Box::new(window));
                     Ok(handle)
                 }
                 Err(e) => {
                     cx.windows.remove(id);
+                    // rbx-native addition: Android first-frame diagnostics —
+                    // remove once the mobile boot is proven on device. The
+                    // callers on the mobile path discard this error, and it
+                    // is the difference between a window and a black screen.
+                    #[cfg(target_os = "android")]
+                    log::info!("gpui app: open_window failed: {e:#}");
                     Err(e)
                 }
             }

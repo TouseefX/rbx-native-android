@@ -1719,6 +1719,15 @@ impl Window {
                 let force_render =
                     mem::take(&mut deferred_force_render) || request_frame_options.force_render;
 
+                // rbx-native addition: Android first-frame diagnostics —
+                // remove once the mobile boot is proven on device.
+                #[cfg(target_os = "android")]
+                log::info!(
+                    "gpui window: frame callback (dirty={}, force_render={})",
+                    invalidator.is_dirty(),
+                    force_render
+                );
+
                 let thermal_state = handle
                     .update(&mut cx, |_, _, cx| cx.thermal_state())
                     .log_err();
@@ -1781,6 +1790,11 @@ impl Window {
                     || input_rate_tracker.borrow_mut().is_high_rate();
 
                 if invalidator.is_dirty() || force_render {
+                    // rbx-native addition: Android first-frame diagnostics —
+                    // remove once the mobile boot is proven on device.
+                    #[cfg(target_os = "android")]
+                    log::info!("gpui window: frame callback drawing and presenting");
+
                     measure("frame duration", || {
                         handle
                             .update(&mut cx, |_, window, cx| {
@@ -3320,6 +3334,16 @@ impl Window {
 
     #[profiling::function]
     fn present(&mut self) {
+        // rbx-native addition: Android first-frame diagnostics — remove once
+        // the mobile boot is proven on device.
+        #[cfg(target_os = "android")]
+        log::info!(
+            "gpui window: presenting scene ({} quads, {} paths, {} shadows, {} mono sprites)",
+            self.rendered_frame.scene.quads.len(),
+            self.rendered_frame.scene.paths.len(),
+            self.rendered_frame.scene.shadows.len(),
+            self.rendered_frame.scene.monochrome_sprites.len()
+        );
         #[cfg(feature = "profiler")]
         let _foreground_turn = profiler::journal::foreground_turn();
         #[cfg(feature = "profiler")]
