@@ -5,8 +5,7 @@ use std::collections::HashMap;
 
 use crate::error::CloudError;
 use crate::heartbeats::SessionCookie;
-
-const DEVELOP: &str = "https://develop.roblox.com";
+use crate::web::{self, Method, DEVELOP};
 
 /// Ids `multiget` takes at once; 101 is refused.
 const MULTIGET: usize = 100;
@@ -14,7 +13,7 @@ const MULTIGET: usize = 100;
 /// Archives (`archived`) or restores an experience the way Studio's start
 /// page does: `PATCH develop.roblox.com/v1/universes/{id}/configuration
 /// {"isArchived":…}`. Open Cloud has no universe archive, so this takes the
-/// web sign-in's cookie, with the usual CSRF dance.
+/// web sign-in's cookie (see `web`).
 pub fn set_experience_archived(
     cookie: &SessionCookie,
     universe_id: u64,
@@ -30,15 +29,6 @@ pub fn archived_experiences(universe_ids: &[u64]) -> Result<HashMap<u64, bool>, 
     archived_at(DEVELOP, universe_ids)
 }
 
-fn agent() -> ureq::Agent {
-    ureq::Agent::config_builder()
-        .user_agent(concat!("rbx-native/", env!("CARGO_PKG_VERSION")))
-        .http_status_as_error(false)
-        .timeout_global(Some(std::time::Duration::from_secs(15)))
-        .build()
-        .into()
-}
-
 fn archived_at(root: &str, universe_ids: &[u64]) -> Result<HashMap<u64, bool>, CloudError> {
     #[derive(serde::Deserialize)]
     struct Universe {
@@ -50,7 +40,7 @@ fn archived_at(root: &str, universe_ids: &[u64]) -> Result<HashMap<u64, bool>, C
     struct Page {
         data: Vec<Universe>,
     }
-    let agent = agent();
+    let agent = web::agent();
     let mut archived = HashMap::new();
     for chunk in universe_ids.chunks(MULTIGET) {
         let ids: Vec<String> = chunk.iter().map(|id| format!("ids={id}")).collect();
@@ -82,91 +72,14 @@ fn archive_at(
     archived: bool,
 ) -> Result<(), CloudError> {
     let url = format!("{root}/v1/universes/{universe_id}/configuration");
-    let agent = agent();
-    let cookie = format!(".ROBLOSECURITY={}", cookie.value());
-    let mut csrf = String::new();
-    loop {
-        let mut request = agent.patch(&url).header("Cookie", &cookie);
-        if !csrf.is_empty() {
-            request = request.header("x-csrf-token", &csrf);
-        }
-        let mut response = request
-            .send_json(serde_json::json!({ "isArchived": archived }))
-            .map_err(|err| CloudError::Transport(err.to_string()))?;
-        let status = response.status().as_u16();
-        if (200..300).contains(&status) {
-            return Ok(());
-        }
-        let fresh = response
-            .headers()
-            .get("x-csrf-token")
-            .and_then(|value| value.to_str().ok())
-            .filter(|token| *token != csrf)
-            .map(str::to_owned);
-        if let Some(token) = fresh.filter(|_| status == 403 && csrf.is_empty()) {
-            csrf = token;
-            continue;
-        }
-        let body = response.body_mut().read_to_vec().unwrap_or_default();
-        let message = serde_json::from_slice(&body)
-            .ok()
-            .as_ref()
-            .and_then(crate::assets::complaint)
-            .unwrap_or_else(|| format!("HTTP {status} from {url}"));
-        return Err(CloudError::Refused { status, message });
-    }
+    let body = serde_json::json!({ "isArchived": archived });
+    web::send(cookie, Method::Patch(&body), &url, &[]).map(|_| ())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Answers one request per reply (`status`, extra headers, body), each
-    /// on its own connection, handing back every request it was sent.
-    fn serve(
-        replies: Vec<(u16, &'static str, &'static str)>,
-    ) -> (String, std::thread::JoinHandle<Vec<String>>) {
-        use std::io::{Read, Write};
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let root = format!("http://{}", listener.local_addr().unwrap());
-        let served = std::thread::spawn(move || {
-            let mut requests = Vec::new();
-            for (status, headers, body) in replies {
-                let (mut stream, _) = listener.accept().unwrap();
-                let mut seen = Vec::new();
-                let mut buf = [0u8; 4096];
-                while !request_done(&seen) {
-                    let read = stream.read(&mut buf).unwrap();
-                    seen.extend_from_slice(&buf[..read]);
-                }
-                let reply = format!(
-                    "HTTP/1.1 {status} X\r\n{headers}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                stream.write_all(reply.as_bytes()).unwrap();
-                requests.push(String::from_utf8_lossy(&seen).into_owned());
-            }
-            requests
-        });
-        (root, served)
-    }
-
-    /// Whether `seen` holds the whole head and as much body as it announced.
-    fn request_done(seen: &[u8]) -> bool {
-        let text = String::from_utf8_lossy(seen);
-        let Some((head, body)) = text.split_once("\r\n\r\n") else {
-            return false;
-        };
-        let length = head
-            .lines()
-            .find_map(|line| {
-                line.to_lowercase()
-                    .strip_prefix("content-length:")
-                    .map(|n| n.trim().parse().unwrap_or(0))
-            })
-            .unwrap_or(0);
-        body.len() >= length
-    }
+    use crate::web::serve::serve;
 
     fn cookie() -> SessionCookie {
         SessionCookie::new("test-cookie")

@@ -2,6 +2,7 @@
 //! where they live, and the Save/Cancel footer.
 
 mod rows;
+mod team_create;
 
 use gpui_kit::component::{h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
@@ -87,6 +88,11 @@ impl GameSettingsWindow {
         let tab = self.tab;
         let cloud_rows = self.cloud_rows(cx);
         let local_rows = self.local_rows(cx);
+        let team_create_rows = if tab == Tab::BasicInfo {
+            self.team_create_rows(cx)
+        } else {
+            Vec::new()
+        };
         let missed: Vec<AnyElement> = UNREACHABLE
             .iter()
             .filter(|u| u.tab == tab)
@@ -132,6 +138,14 @@ impl GameSettingsWindow {
                     Some("Roblox"),
                     "Saved to the live experience through Open Cloud.",
                     cloud_rows,
+                ))
+            })
+            .when(!team_create_rows.is_empty(), |d| {
+                d.child(section(
+                    "Team Create",
+                    Some("Roblox sign-in"),
+                    "Saved to the live experience with your Roblox sign-in, not the API key.",
+                    team_create_rows,
                 ))
             })
             .when(!local_rows.is_empty(), |d| {
