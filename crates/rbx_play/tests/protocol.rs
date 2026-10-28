@@ -147,6 +147,21 @@ fn pointer_body_serializes_to_wire_shape() {
 }
 
 #[test]
+fn keyboard_body_serializes_to_wire_shape() {
+    let body = CommandBody::Keyboard {
+        x: 0,
+        y: 552,
+        width: 393,
+        height: 300,
+    };
+    let value = serde_json::to_value(body).expect("serialize");
+    assert_eq!(
+        value,
+        json!({ "type": "keyboard", "x": 0, "y": 552, "width": 393, "height": 300 })
+    );
+}
+
+#[test]
 fn input_commands_serialize_to_wire_shape() {
     let navigate = CommandBody::Navigate {
         path: None,

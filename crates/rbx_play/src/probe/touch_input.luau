@@ -26,6 +26,13 @@
 --   over the game's active UI, does not move it.
 -- - TouchEnabled reads true, MouseEnabled and KeyboardEnabled false,
 --   PreferredInput Touch and GetLastInputType Touch.
+-- - OnScreenKeyboardVisible, OnScreenKeyboardPosition and
+--   OnScreenKeyboardSize report the editor's keyboard cover (`setKeyboard`),
+--   and Changed and GetPropertyChangedSignal fire for them.
+--
+-- On a simulated console's client (IsTenFootInterface) only PreferredInput
+-- changes: Gamepad, as on a console with its pad. Roblox's own CoreGui
+-- reads the real service, so it still picks its UI by the real values.
 --
 -- A touch is a stand-in InputObject (a table): its properties, Changed,
 -- GetPropertyChangedSignal and IsA work, and `typeof` reads "Instance".
@@ -295,7 +302,80 @@ function M.typeof(v)
 	return typeof(v)
 end
 
+-- The keyboard cover ---------------------------------------------------------------
+
+local KEYBOARD_PROPS = { "OnScreenKeyboardVisible", "OnScreenKeyboardPosition", "OnScreenKeyboardSize" }
+
+-- The OnScreenKeyboard* values for a cover at (x, y), w by h client pixels;
+-- an empty one is a keyboard that is down. Vectors are { x, y } here, so
+-- the logic runs outside Roblox; the proxy hands out Vector2s.
+function M.keyboardProps(x, y, w, h)
+	if w <= 0 or h <= 0 then
+		x, y, w, h = 0, 0, 0, 0
+	end
+	return {
+		OnScreenKeyboardVisible = w > 0,
+		OnScreenKeyboardPosition = { x, y },
+		OnScreenKeyboardSize = { w, h },
+	}
+end
+
+-- The properties that differ between two `keyboardProps`, in a fixed order.
+function M.keyboardChanges(old, new)
+	local changed = {}
+	for _, name in KEYBOARD_PROPS do
+		local a, b = old[name], new[name]
+		local same = if type(a) == "table" then a[1] == b[1] and a[2] == b[2] else a == b
+		if not same then
+			table.insert(changed, name)
+		end
+	end
+	return changed
+end
+
+local keyboard = M.keyboardProps(0, 0, 0, 0)
+
+local function keyboardValue(k)
+	local v = keyboard[k]
+	if type(v) == "table" then
+		return Vector2.new(v[1], v[2])
+	end
+	return v
+end
+
 -- The engine ---------------------------------------------------------------------
+
+-- A UserInputService whose `overrides` win; `read` and `write` see every
+-- other key first (`read` returning nil, `write` false: not theirs).
+local function makeProxy(real, overrides, read, write)
+	return setmetatable({}, {
+		__index = function(_, k)
+			local override = overrides[k]
+			if override ~= nil then
+				return override
+			end
+			local own = read and read(k)
+			if own ~= nil then
+				return own
+			end
+			local value = real[k]
+			if type(value) == "function" then
+				return function(_, ...)
+					return real[k](real, ...)
+				end
+			end
+			return value
+		end,
+		__newindex = function(_, k, v)
+			if not (write and write(k, v)) then
+				real[k] = v
+			end
+		end,
+		__tostring = function()
+			return "UserInputService"
+		end,
+	})
+end
 
 local SIGNALS = {
 	"InputBegan",
@@ -788,47 +868,95 @@ local function build()
 	for name, signal in E.signals do
 		overrides[name] = signal
 	end
-	E.proxy = setmetatable({}, {
-		__index = function(_, k)
-			local override = overrides[k]
-			if override ~= nil then
-				return override
-			end
-			if k == "MouseBehavior" then
-				return mouseBehavior
-			end
-			local value = real[k]
-			if type(value) == "function" then
-				return function(_, ...)
-					return real[k](real, ...)
-				end
-			end
-			return value
-		end,
-		__newindex = function(_, k, v)
-			if k == "MouseBehavior" then
-				mouseBehavior = v
-				return
-			end
-			real[k] = v
-		end,
-		__tostring = function()
-			return "UserInputService"
-		end,
-	})
+
+	-- The keyboard's properties are ours, so are their change signals.
+	local changed, fireChanged = M.signal()
+	local keyboardSignals = {}
+	for _, name in KEYBOARD_PROPS do
+		keyboardSignals[name] = table.pack(M.signal())
+	end
+	real.Changed:Connect(function(property)
+		if not keyboardSignals[property] then
+			fireChanged(property)
+		end
+	end)
+	overrides.Changed = changed
+	overrides.GetPropertyChangedSignal = function(_, property)
+		local entry = keyboardSignals[property]
+		if entry then
+			return entry[1]
+		end
+		return real:GetPropertyChangedSignal(property)
+	end
+	E.keyboardChanged = function(property)
+		fireChanged(property)
+		keyboardSignals[property][2]()
+	end
+
+	E.proxy = makeProxy(real, overrides, function(k)
+		if k == "MouseBehavior" then
+			return mouseBehavior
+		end
+		return keyboardValue(k)
+	end, function(k, v)
+		if k == "MouseBehavior" then
+			mouseBehavior = v
+			return true
+		end
+		return false
+	end)
 	return E
 end
 
--- The engine on a simulated touch device's client, false anywhere else.
+-- A simulated console's client: the mouse stays a mouse, and only
+-- PreferredInput reads Gamepad.
+local function buildConsole()
+	local real = game:GetService("UserInputService")
+	local overrides = {}
+	pcall(function()
+		overrides.PreferredInput = Enum.PreferredInput.Gamepad
+	end)
+	return { real = real, signals = {}, proxy = makeProxy(real, overrides) }
+end
+
+local function tenFoot()
+	local ok, yes = pcall(function()
+		return game:GetService("GuiService"):IsTenFootInterface()
+	end)
+	return ok and yes == true
+end
+
+-- The engine on a simulated touch device's or console's client, false
+-- anywhere else.
 local engine = nil
 
 local function current()
 	if engine == nil then
 		local real = game:GetService("UserInputService")
-		local simulated = game:GetService("RunService"):IsClient() and real.TouchEnabled and not preferredTouch(real)
-		engine = if simulated then build() else false
+		local client = game:GetService("RunService"):IsClient()
+		if client and real.TouchEnabled and not preferredTouch(real) then
+			engine = build()
+		elseif client and tenFoot() then
+			engine = buildConsole()
+		else
+			engine = false
+		end
 	end
 	return engine or nil
+end
+
+-- The editor's keyboard cover moved (`keyboard` command): x, y, width,
+-- height in client pixels, an empty one when it went down.
+function M.setKeyboard(x, y, width, height)
+	local new = M.keyboardProps(tonumber(x) or 0, tonumber(y) or 0, tonumber(width) or 0, tonumber(height) or 0)
+	local changes = M.keyboardChanges(keyboard, new)
+	keyboard = new
+	local e = current()
+	if e and e.keyboardChanged then
+		for _, property in changes do
+			e.keyboardChanged(property)
+		end
+	end
 end
 
 -- Started by the probe's client script, so the mouse is a finger even in
@@ -856,7 +984,7 @@ function M.event(object, name)
 			if object == e.real then
 				return e.signals[name] or object[name]
 			end
-			if object:IsA("GuiObject") and (name ~= "Activated" or object:IsA("GuiButton")) then
+			if e.guiEvent and object:IsA("GuiObject") and (name ~= "Activated" or object:IsA("GuiButton")) then
 				return e.guiEvent(object, name)
 			end
 		end

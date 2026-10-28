@@ -21,9 +21,10 @@
 //!
 //! The on-screen keyboard is a cover we draw over the bottom of the screen:
 //! in Edit when the menu's toggle asks for it, in Play only while the client
-//! reports a focused TextBox (cut out of the client window); the client is
-//! never told,
-//! so `OnScreenKeyboardSize` stays 0, no API sets it. The Android back
+//! reports a focused TextBox (cut out of the client window). The real
+//! `OnScreenKeyboard*` properties are read-only, so the cover's rect goes to
+//! the client (`keyboard` command) and game scripts read it through the
+//! touch stand-in's `UserInputService`. The Android back
 //! button sends Escape to the embedded client (Linux only, `client`).
 //!
 //! `RBX_STUDIO_DEVICE=<device name>[,rotate][,keyboard][,fit|actual|physical]`
@@ -75,6 +76,9 @@ pub(super) struct DeviceSim {
     pub(super) layout: KeyboardLayout,
     /// The running Play client's latest self-report.
     client: Option<rbx_play::protocol::DeviceReport>,
+    /// The keyboard cover last told to the running client
+    /// (`report::keyboard_rect`).
+    keyboard_sent: Option<[u32; 4]>,
     /// The device was on the view when the Animation Editor took its
     /// screen away, and comes back when it is left.
     suspended: bool,
@@ -95,6 +99,7 @@ impl DeviceSim {
             scaling,
             layout,
             client: None,
+            keyboard_sent: None,
             suspended: false,
         }
     }
@@ -197,6 +202,8 @@ impl Shell {
     fn refresh_device_view(&mut self, cx: &mut Context<Self>) {
         if let Some(device) = self.simulated_device(cx) {
             let simulated = self.simulated(&device);
+            let screen = device.screen(self.device_sim.orientation);
+            self.device_keyboard_to_client(screen, simulated.keyboard);
             self.viewport
                 .update(cx, |view, cx| view.set_device(Some(simulated), cx));
         }
@@ -275,6 +282,7 @@ impl Shell {
         if self.play.phase == Phase::Idle {
             self.device_sim.launched = None;
             self.device_sim.client = None;
+            self.device_sim.keyboard_sent = None;
         }
         self.viewport
             .update(cx, |view, cx| view.set_playing(playing, cx));
