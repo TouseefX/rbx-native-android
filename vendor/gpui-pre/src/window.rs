@@ -3364,18 +3364,18 @@ impl Window {
                     bounds: Bounds::new(point(px(0.), px(0.)), size(px(100000.), px(100000.)))
                         .scale(scale),
                 },
-                background: Background::Color(color),
+                background: crate::solid_background(color),
                 ..Default::default()
             };
             self.rendered_frame
                 .scene
                 .quads
-                .push(marker(self.mouse_position, crate::rgba(0xff0000ff)));
+                .push(marker(self.mouse_position, crate::rgba(0xff0000ff).into()));
             if let Some(position) = self.touch_debug_position {
                 self.rendered_frame
                     .scene
                     .quads
-                    .push(marker(position, crate::rgba(0xffee00ff)));
+                    .push(marker(position, crate::rgba(0xffee00ff).into()));
             }
         }
         #[cfg(feature = "profiler")]
@@ -5596,8 +5596,8 @@ impl Window {
                     event.phase,
                     event.position.x,
                     event.position.y,
-                    self.bounds.size.width,
-                    self.bounds.size.height
+                    self.bounds().size.width,
+                    self.bounds().size.height
                 );
             }
         }
