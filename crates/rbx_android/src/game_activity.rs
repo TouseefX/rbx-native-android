@@ -88,13 +88,18 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
             // fixed signature has no slot for it, so ask the Activity —
             // the same object whose `getFilesDir()` supplied `path`.
             let cache_file = env
-                .call_method(&activity, "getCacheDir", "()Ljava/io/File;", &[])?
+                .call_method(
+                    &activity,
+                    jni::jni_str!("getCacheDir"),
+                    jni::jni_sig!("()Ljava/io/File;"),
+                    &[],
+                )?
                 .l()?;
             let cache_str = env
                 .call_method(
                     &cache_file,
-                    "getAbsolutePath",
-                    "()Ljava/lang/String;",
+                    jni::jni_str!("getAbsolutePath"),
+                    jni::jni_sig!("()Ljava/lang/String;"),
                     &[],
                 )?
                 .l()?;
