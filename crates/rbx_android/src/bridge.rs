@@ -59,9 +59,7 @@ fn surface_arrived(env: *mut jni::sys::JNIEnv, surface: jobject, density: jfloat
     // two `jni-sys` majors the graph carries (jni 0.22 pins 0.4, ndk 0.9 pins
     // 0.3): both bind the same C `JNIEnv*`/`jobject` values, and
     // `from_surface` only forwards them to `ANativeWindow_fromSurface`.
-    match unsafe {
-        ndk::native_window::NativeWindow::from_surface(env.cast(), surface.cast())
-    } {
+    match unsafe { ndk::native_window::NativeWindow::from_surface(env.cast(), surface.cast()) } {
         Some(window) => host::surface_created(window, density),
         None => log::error!("rbx_android: ANativeWindow_fromSurface failed"),
     }
