@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use rbx_dom::{Content, Instance, Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
+use crate::attr_refs;
 use crate::error::XmlError;
 use crate::value::{self, Ctx};
 use crate::xml_tree::{self, Node};
@@ -147,6 +148,9 @@ fn apply_properties(
                 instance.properties_mut().insert(name.to_owned(), value);
             }
         }
+    }
+    if let Some(instance) = dom.get_mut(referent) {
+        attr_refs::fold(instance.properties_mut());
     }
 }
 
