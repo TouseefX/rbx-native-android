@@ -42,7 +42,9 @@
 //! see `rbx_dom::attributes`) naming the state's ObjectValue, and
 //! `InputPinData` is `u32` 1, the pin count, then each pin name behind a
 //! `u32` length; both are checked against a state machine Studio saved
-//! (`tests/fixtures/studio_state_machine.rbxm`). A Mask parameter's default
+//! (`tests/fixtures/studio_state_machine.rbxm`). Studio saves the same graph
+//! in XML with `EntryState` as a `__attrRef_EntryState` Ref property, which
+//! `rbx_xml` maps to and from the attribute (`studio_state_machine.rbxmx`). A Mask parameter's default
 //! (an instance) is not written.
 //!
 //! Reading is more lenient than writing, taking what Roblox's docs describe
