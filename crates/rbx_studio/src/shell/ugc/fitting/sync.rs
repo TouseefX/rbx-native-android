@@ -25,7 +25,11 @@ use crate::shell::rig::{
 pub(super) struct BodyKey {
     body: Body,
     scales: Option<Scales>,
+    feet: [f32; 3],
 }
+
+/// Studs kept clear between the item and the test body.
+const AISLE: f32 = 3.0;
 
 const INNER_COLOUR: [u8; 3] = [86, 156, 255];
 const OUTER_COLOUR: [u8; 3] = [255, 170, 64];
@@ -165,6 +169,11 @@ impl FittingWindow {
     fn active_body(&self) -> Body {
         if self.step == Step::Test {
             self.body
+        } else if self.settings.layered() {
+            // Cages are made from the Mannequin's, so the item is fitted on
+            // the Mannequin, as Studio's tool does: on a blocky body they
+            // would be stretched off the shape the item was made around.
+            Body::Preset(rbx_ugc::BodyScale::Normal)
         } else {
             Body::Preset(self.settings.scale)
         }
@@ -196,6 +205,21 @@ impl FittingWindow {
         }
         options.name = "FittingMannequin".into();
         Some((options, worn))
+    }
+
+    /// Where the test body stands: on the spawn, stepped aside when the item
+    /// itself stands there, so the two never overlap.
+    fn feet(&self, ws: Ref, cx: &App) -> [f32; 3] {
+        let dom = &self.shell.read(cx).dom;
+        let mut feet = rig::spawn_top(dom, ws);
+        if let Some(part) = self.source.as_ref().map(|s| s.part) {
+            let at = preview::cframe(dom, part, "CFrame").p;
+            let reach = preview::size(dom, part).into_iter().fold(0.0, f32::max) / 2.0 + AISLE;
+            if (at[0] - feet[0]).hypot(at[2] - feet[2]) < reach {
+                feet[0] = at[0] - reach - AISLE;
+            }
+        }
+        feet
     }
 
     /// Rebuilds the preview from the window's state and checks the item
@@ -234,7 +258,7 @@ impl FittingWindow {
                 .map(|(_, suffix, uri, mesh, color)| Overlay {
                     name: format!("{name}_{suffix}"),
                     uri: uri.clone(),
-                    bounds: bounds(mesh),
+                    size: bounds(mesh).1,
                     color,
                 })
                 .collect()
@@ -248,11 +272,12 @@ impl FittingWindow {
         };
         let ws = workspace(&self.shell.read(cx).dom);
         let Some(ws) = ws else { return };
-        options.feet = rig::spawn_top(&self.shell.read(cx).dom, ws);
+        options.feet = self.feet(ws, cx);
         let plan = Plan {
             key: BodyKey {
                 body: self.active_body(),
                 scales: self.scales.filter(|_| testing),
+                feet: options.feet,
             },
             options,
             worn,

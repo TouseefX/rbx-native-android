@@ -234,8 +234,8 @@ pub(super) fn paint_box(dom: &mut WeakDom, outline: Ref, over: bool) {
 pub(super) struct Overlay {
     pub(super) name: String,
     pub(super) uri: String,
-    /// The cage's extent in the handle's space, as (centre, size).
-    pub(super) bounds: ([f32; 3], [f32; 3]),
+    /// The cage's extent.
+    pub(super) size: [f32; 3],
     pub(super) color: [u8; 3],
 }
 
@@ -250,7 +250,7 @@ pub(super) fn overlay(
     let Overlay {
         name,
         uri,
-        bounds,
+        size,
         color,
     } = cage;
     let part = dom.new_instance("MeshPart", name, Some(folder));
@@ -270,10 +270,14 @@ pub(super) fn overlay(
     ] {
         set(dom, part, key, Variant::Bool(on));
     }
-    set(dom, part, "size", v3(bounds.1));
-    set(dom, part, "InitialSize", v3(bounds.1));
-    let at = handle.mul(&Cf::at(bounds.0));
-    set(dom, part, "CFrame", Variant::CFrame(at.data()));
+    // A size equal to InitialSize draws the cage at scale one. The viewer
+    // draws a MeshPart's vertices about the part's origin without
+    // recentring them, so the cage, already in the handle's space, sits
+    // at the handle itself: moving it to its bounds' centre would shift it
+    // twice.
+    set(dom, part, "size", v3(*size));
+    set(dom, part, "InitialSize", v3(*size));
+    set(dom, part, "CFrame", Variant::CFrame(handle.data()));
     let [r, g, b] = *color;
     set(dom, part, "Color3uint8", Variant::Color3uint8 { r, g, b });
     set(dom, part, "Transparency", Variant::Float32(transparency));

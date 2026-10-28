@@ -135,6 +135,7 @@ impl FittingWindow {
     pub(super) fn set_body(&mut self, body: Body, cx: &mut Context<Self>) {
         self.body = body;
         self.scales = None;
+        self.scales_stale = true;
         match body {
             Body::Preset(_) => self.avatar = Job::Idle,
             Body::Player(id) => self.fetch_avatar(Some(id), cx),
@@ -160,6 +161,7 @@ impl FittingWindow {
                     }),
                     Err(e) => Job::Failed(e),
                 };
+                view.scales_stale = true;
                 view.sync(cx);
                 cx.notify();
             });

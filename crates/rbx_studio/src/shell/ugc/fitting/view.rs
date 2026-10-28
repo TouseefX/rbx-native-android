@@ -62,11 +62,11 @@ impl FittingWindow {
             Step::Item => self.item_cards(cx),
             Step::Fit => self.fit_cards(cx),
             Step::Test => self.test_cards(window, cx),
-            Step::Generate => self.generate_cards(cx),
+            Step::Generate => self.generate_cards(),
         }
     }
 
-    fn generate_cards(&self, cx: &mut Context<Self>) -> Vec<Div> {
+    fn generate_cards(&self) -> Vec<Div> {
         let name = self.source.as_ref().map(|s| s.name.clone());
         let body = match &self.generated {
             None => {
@@ -120,7 +120,6 @@ impl FittingWindow {
                     .child(upload)
             }
         };
-        let _ = cx;
         vec![card(
             "package",
             "Generate",
@@ -167,7 +166,7 @@ impl FittingWindow {
                     Some(_) => ui::disabled_button("ugc-fit-upload", "Upload Item\u{2026}")
                         .into_any_element(),
                 },
-                step => {
+                _ => {
                     let next = Step::ALL[index + 1];
                     if next.reachable(self.source.is_some()) {
                         ui::button(
@@ -180,7 +179,6 @@ impl FittingWindow {
                         .on_click(cx.listener(move |v, _, _, cx| v.go(next, cx)))
                         .into_any_element()
                     } else {
-                        let _ = step;
                         ui::disabled_button("ugc-fit-next", "Pick an item first").into_any_element()
                     }
                 }
@@ -205,6 +203,10 @@ impl FittingWindow {
 
 impl Render for FittingWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if std::mem::take(&mut self.scales_stale) {
+            let s = self.current_scales();
+            self.inputs.show_scales(&s, window, cx);
+        }
         let step = self.step.index();
         let mut cards: Vec<AnyElement> = self
             .step_body(window, cx)
@@ -212,14 +214,12 @@ impl Render for FittingWindow {
             .enumerate()
             .map(|(i, card)| entrance(format!("ugc-fit-card-{step}-{i}"), card, i))
             .collect();
-        if self.step != Step::Item {
-            let n = cards.len();
-            cards.push(entrance(
-                format!("ugc-fit-card-{step}-{n}"),
-                self.check_card(),
-                n,
-            ));
-        }
+        let n = cards.len();
+        cards.push(entrance(
+            format!("ugc-fit-card-{step}-{n}"),
+            self.check_card(),
+            n,
+        ));
         v_flex()
             .size_full()
             .bg(tokens::dock())
