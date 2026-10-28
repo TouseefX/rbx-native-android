@@ -42,6 +42,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use glam::{Mat3, Mat4, Vec3};
+use gpui::{PinchEvent, TouchPhase};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use rbx_dom::{Ref, WeakDom};
@@ -70,6 +71,9 @@ pub(crate) use terrain::{Dial, TerrainInput, TerrainPhase};
 // How long a speed change stays on screen, matching the standalone viewer's
 // title bar.
 const SPEED_LABEL: Duration = Duration::from_millis(1500);
+// How much camera zoom a pinch's fractional step is worth in wheel notches:
+// a full spread (delta 1.0) zooms as far as three wheel steps.
+const PINCH_ZOOM_NOTCHES: f32 = 3.;
 // How many times per frame budget the UI thread looks for a finished frame. Two
 // loops running at the same rate beat against each other, and every beat is a
 // frame shown a whole budget late; waking twice as often costs one `try_recv`.
@@ -253,6 +257,13 @@ pub(crate) struct WorkspaceView {
     /// doc). What hover resolution gates on instead of `PointerLock::holds`
     /// (see `hover::suppressed`).
     looking: bool,
+    /// Whether the look in progress is a touch pan rather than the right
+    /// button: touch pans reach the scroll listener as pixel scrolls that
+    /// carry a touch phase (`Started`..`Ended`), the desktop wheel reports
+    /// none distinct from the default `Moved`, so this is what tells a
+    /// finger turning the camera from a wheel zooming it (see the scroll
+    /// listener in `render`).
+    touch_look: bool,
     /// The latest un-resolved cursor position from an ordinary move,
     /// waiting for `advance` to decide it's due (see `hover::due`) and cast
     /// a ray against the DOM. Cleared, not just left to resolve stale, at
@@ -507,6 +518,7 @@ impl WorkspaceView {
             cursor: None,
             lock: PointerLock::new(),
             looking: false,
+            touch_look: false,
             hover_pending: None,
             hover_part: None,
             drag_pending: None,
@@ -1249,16 +1261,62 @@ impl Render for WorkspaceView {
                 }
             }))
             // Not straight to the camera: a `ScrollingFrame` under the
-            // cursor takes the notch first (see `scroll`).
+            // cursor takes the notch first (see `scroll`). A finger pan on
+            // the viewport itself is not a zoom either: it arrives here as a
+            // pixel scroll carrying a touch phase (`Started` first, `Ended`
+            // or `Cancelled` last, momentum's tail included) and turns the
+            // camera instead, Roblox-mobile style, so the release's fling
+            // spins it on. The desktop wheel reports no distinct phase, so
+            // it keeps zooming.
             .on_scroll_wheel(cx.listener(|view, event: &ScrollWheelEvent, window, cx| {
                 view.note_input();
+                let delta = event.delta.pixel_delta(px(1.));
+                match event.touch_phase {
+                    TouchPhase::Started => {
+                        view.touch_look = true;
+                        view.begin_look(window, cx);
+                        // The pan's first step carries the whole slop
+                        // distance; it turns the camera like any other.
+                        view.pump.input(CameraInput::MouseLook {
+                            dx: f32::from(delta.x),
+                            dy: f32::from(delta.y),
+                        });
+                        return;
+                    }
+                    TouchPhase::Ended | TouchPhase::Cancelled => {
+                        if view.touch_look {
+                            view.touch_look = false;
+                            view.end_look();
+                            return;
+                        }
+                    }
+                    TouchPhase::Moved => {
+                        if view.touch_look {
+                            view.pump.input(CameraInput::MouseLook {
+                                dx: f32::from(delta.x),
+                                dy: f32::from(delta.y),
+                            });
+                            return;
+                        }
+                    }
+                }
                 if view.terrain_wheel(event.delta, event.modifiers, cx) {
                     return;
                 }
                 let scale = window.scale_factor();
-                let notch = f32::from(event.delta.pixel_delta(px(1.)).y);
+                let notch = f32::from(delta.y);
                 view.plugin_mouse_wheel(notch, event.position, scale, cx);
                 view.wheel(event.position, event.delta, event.modifiers.shift, scale);
+            }))
+            // Two fingers pinching: `PinchEvent`'s delta is the fractional
+            // zoom step (0.1 = 10% in), the camera's wheel takes notches,
+            // so three notches per full spread matches the wheel's feel.
+            .on_pinch(cx.listener(|view, event: &PinchEvent, _, cx| {
+                view.note_input();
+                let notches = event.delta * PINCH_ZOOM_NOTCHES;
+                if notches != 0. {
+                    view.pump.input(CameraInput::Wheel { notches });
+                }
             }))
             .on_key_down(cx.listener(|view, event: &KeyDownEvent, window, cx| {
                 view.note_input();

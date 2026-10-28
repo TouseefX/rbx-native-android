@@ -28,6 +28,10 @@
 
 package com.touseefx.rbxnative
 
+import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
@@ -461,6 +465,30 @@ class MainActivity : GameActivity() {
             // first only makes the native methods of THIS class resolve
             // should any be reached before that.
             System.loadLibrary("rbx_android")
+        }
+
+        // The Android clipboard, for the platform layer's JNI bridge (the
+        // same contract as GpuiPathPicker.openFiles: a static taking the
+        // activity, called from Rust). The system clipboard only allows
+        // this app to READ it while it is focused, which is when a paste
+        // happens anyway.
+        @JvmStatic
+        fun readClipboardText(activity: Activity): String? {
+            val clipboard =
+                activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                ?: return null
+            val clip = clipboard.primaryClip ?: return null
+            if (clip.itemCount == 0) return null
+            val text = clip.getItemAt(0)?.coerceToText(activity) ?: return null
+            return text.toString()
+        }
+
+        @JvmStatic
+        fun writeClipboardText(activity: Activity, text: String) {
+            val clipboard =
+                activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                ?: return
+            clipboard.setPrimaryClip(ClipData.newPlainText("rbxstudio", text))
         }
     }
 }

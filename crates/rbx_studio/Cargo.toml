@@ -36,6 +36,11 @@ gpui-kit = "=0.6.2"
 # directly only for the script editor's gutter slot, which gpui-kit's own
 # re-exports do not list (see `vendor/README.md`).
 gpui-base = "0.6"
+# Also already in the tree under gpui-kit (same snapshot `gpui-pre-mobile`
+# pins, patched to `vendor/gpui-pre`); named directly for `TouchPhase` and
+# `PinchEvent`, the viewport's touch camera controls match on, which
+# gpui-kit's re-exports do not list either.
+gpui = { package = "gpui-pre", version = "=0.3.5", default-features = false }
 lsp-types = "0.97"
 # GPUI's own version: a RenderImage is built from its `image::Frame`s, so a
 # second copy of the crate would not typecheck.
