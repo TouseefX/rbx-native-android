@@ -290,6 +290,7 @@ fn lent_skin(
         subsets: Vec::new(),
         envelopes: Vec::new(),
         influences,
+        facs: None,
     })
 }
 

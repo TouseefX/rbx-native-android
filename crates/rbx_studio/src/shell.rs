@@ -281,6 +281,7 @@ pub(crate) struct Shell {
     data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Check Avatar Item and Upload Avatar Item, while open, see `ugc`.
     ugc_validator: Option<WindowHandle<gpui_kit::component::Root>>,
+    ugc_face: Option<WindowHandle<gpui_kit::component::Root>>,
     ugc_upload: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
@@ -848,6 +849,7 @@ impl Shell {
             game_settings: None,
             data_stores: None,
             ugc_validator: None,
+            ugc_face: None,
             ugc_upload: None,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,
@@ -1114,6 +1116,12 @@ impl Shell {
                 _ if spec == "upload" => shell.open_ugc_upload(cx),
                 _ => shell.open_ugc_validator(None, kind, cx),
             }
+        }
+
+        // `RBX_STUDIO_FACE=1` opens Face Preview on the selection, for a
+        // screenshot.
+        if std::env::var_os("RBX_STUDIO_FACE").is_some() {
+            shell.open_face_preview(cx);
         }
 
         // `--run` / `RBX_STUDIO_RUN`: runs exactly the pipeline Enter would,

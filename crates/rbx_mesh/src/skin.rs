@@ -104,6 +104,9 @@ pub struct Skin {
     pub envelopes: Vec<Envelope>,
     /// Resolved influences, one per vertex, parallel to [`crate::Mesh::vertices`].
     pub influences: Vec<Influences>,
+    /// The facial animation block of a dynamic head, when the file has a
+    /// readable one.
+    pub facs: Option<crate::Facs>,
 }
 
 impl Skin {
@@ -129,6 +132,7 @@ impl Skin {
             subsets,
             envelopes,
             influences,
+            facs: None,
         }
     }
 }

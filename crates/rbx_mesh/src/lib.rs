@@ -9,6 +9,7 @@
 mod chunked;
 mod draco;
 mod error;
+mod facs;
 mod header;
 mod mesh;
 mod reader;
@@ -19,6 +20,7 @@ mod v2;
 mod v4;
 
 pub use error::MeshError;
+pub use facs::{control_property, deform_positions, FacePose, Facs, CONTROL_NAMES};
 pub use mesh::{Aabb, Mesh, SkinnedMesh, Vertex};
 pub use skin::{Bone, Envelope, Influences, Skin, Subset, MAX_SUBSET_BONES};
 
