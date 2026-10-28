@@ -29,6 +29,7 @@ fn wrap(order: f32) -> Wrap {
     Wrap {
         reference: id(1),
         origin: Mat4::IDENTITY,
+        outer: None,
         order,
         targets: vec![Target {
             cage: id(2),

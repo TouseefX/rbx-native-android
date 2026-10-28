@@ -1,20 +1,30 @@
 //! Layered clothing, wrapped to the body.
 //!
-//! A layered garment's `WrapLayer` names the body it was modelled on
-//! (`ReferenceMeshId`, a cage in the garment's own frame, shifted by
-//! `ReferenceOrigin`); each body part of the character it is worn on carries a
-//! `WrapTarget` whose `CageMeshId` is the body as it is now. Roblox fits the
-//! garment by cage-to-cage correspondence. Here every reference-cage vertex
-//! is matched to the nearest current-cage vertex in the world, and each
-//! garment vertex moves by the inverse-distance blend of the four nearest
-//! reference vertices' displacements, then a little along its normal by the
-//! layer's `Order`, so stacked layers do not fight over one surface. On a
-//! body shaped like the reference the displacement is nil.
+//! A layered garment's `WrapLayer` carries its inner cage (`ReferenceMeshId`,
+//! in the garment's own frame, shifted by `ReferenceOrigin`) and its outer
+//! cage (`CageMeshId`, shifted by `CageOrigin`); each body part of the
+//! character it is worn on carries a `WrapTarget` whose `CageMeshId` is the
+//! body as it is now. Roblox fits the garment cage to cage: the inner cage
+//! goes onto the body cage vertex for vertex, and a layer above goes onto the
+//! outer cage of the layer below. [`cage_map`] does that pairing by template
+//! UV and carries each garment vertex with its nearest inner cage vertices;
+//! layers are fitted lowest `Order` first, each one's outer cage laid over
+//! the surface the next one is worn on. Then each vertex rises a little
+//! along its normal by the layer's `Order`, so stacked layers do not fight
+//! over one surface.
 //!
-//! The reference cage rests in the garment's frame, which need not be where the
-//! body stands (the real Black Detective Trench Coat's sits 0.8 studs high), so
-//! first the reference is slid onto the body ([`register`]); matching vertices
-//! across that gap would pick the wrong surface and tear the garment.
+//! An inner cage that is not made from the body's template (no UV pairing)
+//! falls back to the nearest-vertex fit: every reference vertex is matched to
+//! the nearest body cage vertex in the world, and each garment vertex moves
+//! by the inverse-distance blend of the four nearest reference vertices'
+//! displacements. The reference cage rests in the garment's frame, which need
+//! not be where the body stands (the real Black Detective Trench Coat's sits
+//! 0.8 studs high), so for that fit the reference is first slid onto the body
+//! ([`register`]); matching vertices across that gap would pick the wrong
+//! surface and tear the garment.
+//!
+//! `Puffiness`, `ShrinkFactor` and `BindOffset` are not applied: Roblox
+//! publishes no formula for them.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -24,6 +34,7 @@ use rbx_assets::AssetRef;
 use rbx_dom::{Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
+use self::cage_map::{CageMap, Surface, WorldCage};
 use super::fit::{self, Fit};
 use super::{parsed_asset_ref, Entry};
 use crate::scene::cframe_matrix;
@@ -48,6 +59,9 @@ pub(super) struct Wrap {
     reference: AssetRef,
     /// `ReferenceOrigin`, in the garment's mesh space.
     origin: Mat4,
+    /// `CageMeshId` and `CageOrigin`: the outer cage the layer above is
+    /// worn over.
+    outer: Option<(AssetRef, Mat4)>,
     order: f32,
     targets: Vec<Target>,
     /// The character the garment is worn on: the handle's accessory's parent,
@@ -80,6 +94,17 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
         Some(Variant::CFrame(c)) => cframe_matrix(c),
         _ => Mat4::IDENTITY,
     };
+    let outer = layer
+        .properties()
+        .get("CageMeshId")
+        .and_then(parsed_asset_ref)
+        .map(|cage| {
+            let origin = match layer.properties().get("CageOrigin") {
+                Some(Variant::CFrame(c)) => cframe_matrix(c),
+                _ => Mat4::IDENTITY,
+            };
+            (cage, origin)
+        });
     let order = crate::scene::number(layer.properties().get("Order"));
     let rig = dom.parent(dom.parent(handle)?)?;
     let targets: Vec<Target> = dom
@@ -110,6 +135,7 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
     (!targets.is_empty()).then_some(Wrap {
         reference,
         origin,
+        outer,
         order,
         targets,
         character: rig,
@@ -119,7 +145,9 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
 impl Wrap {
     /// The meshes the wrap needs besides the garment's own.
     pub(super) fn meshes(&self) -> impl Iterator<Item = &AssetRef> {
-        std::iter::once(&self.reference).chain(self.targets.iter().flat_map(|t| [&t.cage, &t.mesh]))
+        std::iter::once(&self.reference)
+            .chain(self.targets.iter().flat_map(|t| [&t.cage, &t.mesh]))
+            .chain(self.outer.iter().map(|(cage, _)| cage))
     }
 }
 
@@ -128,38 +156,128 @@ pub(super) fn key(referent: Ref) -> AssetRef {
 }
 
 /// Every wrapped garment's deformed mesh, by referent, for those whose cages
-/// have all arrived. Each is skinned to the character's parts: through the
-/// garment's own skin when its bones name the body parts it wraps, otherwise
-/// through one lent by the body (see [`lent_skin`]).
+/// have all arrived. Each character's garments are fitted lowest `Order`
+/// first, over the surface the ones below left. Each is skinned to the
+/// character's parts: through the garment's own skin when its bones name the
+/// body parts it wraps, otherwise through one lent by the body (see
+/// [`lent_skin`]).
 pub(super) fn derive(
     entries: &[Entry],
     meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
 ) -> HashMap<Ref, (AssetRef, Arc<rbx_mesh::SkinnedMesh>)> {
-    entries
-        .iter()
-        .filter_map(|entry| {
-            let wrap = entry.wrap.as_ref()?;
-            let garment = meshes.get(&entry.mesh)?;
-            let model = entry.fit.transform(garment);
-            let deformed = deform(wrap, model, garment, meshes)?;
-            let skin = match &garment.skin {
-                Some(own) if names_the_body(wrap, own) => Some(own.clone()),
-                _ => lent_skin(wrap, model, &deformed, meshes),
-            };
-            Some((
-                entry.referent,
-                (
-                    key(entry.referent),
-                    Arc::new(rbx_mesh::SkinnedMesh {
-                        mesh: deformed,
-                        skin,
-                    }),
-                ),
-            ))
-        })
-        .collect()
+    let mut worn: Vec<&Entry> = entries.iter().filter(|e| e.wrap.is_some()).collect();
+    worn.sort_by(|a, b| {
+        let order = |e: &Entry| e.wrap.as_ref().map_or(0.0, |w| w.order);
+        order(a).total_cmp(&order(b))
+    });
+    let mut surfaces: HashMap<Ref, Surface> = HashMap::new();
+    let mut out = HashMap::new();
+    for entry in worn {
+        let Some(wrap) = entry.wrap.as_ref() else {
+            continue;
+        };
+        let Some(garment) = meshes.get(&entry.mesh) else {
+            continue;
+        };
+        let model = entry.fit.transform(garment);
+        let surface = match surfaces.entry(wrap.character) {
+            std::collections::hash_map::Entry::Occupied(found) => found.into_mut(),
+            std::collections::hash_map::Entry::Vacant(slot) => {
+                let Some(surface) = body_surface(wrap, meshes) else {
+                    continue;
+                };
+                slot.insert(surface)
+            }
+        };
+        let Some(deformed) = deform_over(wrap, model, garment, meshes, surface) else {
+            continue;
+        };
+        let skin = match &garment.skin {
+            Some(own) if names_the_body(wrap, own) => Some(own.clone()),
+            _ => lent_skin(wrap, model, &deformed, meshes),
+        };
+        out.insert(
+            entry.referent,
+            (
+                key(entry.referent),
+                Arc::new(rbx_mesh::SkinnedMesh {
+                    mesh: deformed,
+                    skin,
+                }),
+            ),
+        );
+    }
+    out
 }
 
+/// The body's cages as the surface the first layer is worn over.
+fn body_surface(
+    wrap: &Wrap,
+    meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
+) -> Option<Surface> {
+    let mut surface = Surface::default();
+    for target in &wrap.targets {
+        let (cage, part) = (meshes.get(&target.cage)?, meshes.get(&target.mesh)?);
+        let to_world = target.fit.transform(part) * target.origin;
+        surface.lay(&world_cage(cage, to_world));
+    }
+    Some(surface)
+}
+
+fn world_cage(cage: &rbx_mesh::Mesh, to_world: Mat4) -> WorldCage<'_> {
+    WorldCage {
+        positions: cage
+            .vertices
+            .iter()
+            .map(|v| to_world.transform_point3(Vec3::from(v.position)))
+            .collect(),
+        mesh: cage,
+    }
+}
+
+/// The garment fitted over `surface` by its cages, then its outer cage laid
+/// over `surface` for the layer above. Falls back to [`deform`] when the
+/// inner cage does not pair with the surface.
+fn deform_over(
+    wrap: &Wrap,
+    model: Mat4,
+    garment: &rbx_mesh::Mesh,
+    meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
+    surface: &mut Surface,
+) -> Option<rbx_mesh::Mesh> {
+    let reference = meshes.get(&wrap.reference)?;
+    let inner = world_cage(reference, model * wrap.origin);
+    let Some(map) = CageMap::pair(&inner, surface) else {
+        return deform(wrap, model, garment, meshes);
+    };
+    let back = model.inverse();
+    let lift = LIFT * (wrap.order + 1.0);
+    let mut out = garment.clone();
+    for vertex in &mut out.vertices {
+        let at = model.transform_point3(Vec3::from(vertex.position));
+        let normal = model
+            .transform_vector3(Vec3::from(vertex.normal))
+            .normalize_or_zero();
+        let (moved, turned) = map.carry(at, normal);
+        vertex.position = back.transform_point3(moved + turned * lift).to_array();
+        vertex.normal = back
+            .transform_vector3(turned)
+            .normalize_or_zero()
+            .to_array();
+    }
+    if let Some((cage, origin)) = &wrap.outer {
+        if let Some(outer) = meshes.get(cage) {
+            let mut laid = world_cage(outer, model * *origin);
+            for p in &mut laid.positions {
+                *p = map.carry(*p, Vec3::ZERO).0;
+            }
+            surface.lay(&laid);
+        }
+    }
+    Some(out)
+}
+
+/// The nearest-vertex fit, for an inner cage the surface does not pair with.
 fn deform(
     wrap: &Wrap,
     model: Mat4,
@@ -371,6 +489,8 @@ fn blended(anchors: &[(Vec3, Vec3)], at: Vec3) -> Vec3 {
         Vec3::ZERO
     }
 }
+
+mod cage_map;
 
 #[cfg(test)]
 #[path = "wrap/tests.rs"]
