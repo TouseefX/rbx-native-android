@@ -569,7 +569,7 @@ impl Shell {
                         let file = std::env::temp_dir().join(format!("{name}.glb"));
                         std::fs::write(&file, bytes)
                             .map_err(|e| format!("{}: {e}", file.display()))?;
-                        let imported = crate::shell::import3d::upload_model(&file, &name);
+                        let imported = crate::shell::import3d::upload_model(&file, &name, None);
                         let _ = std::fs::remove_file(&file);
                         imported
                     };
