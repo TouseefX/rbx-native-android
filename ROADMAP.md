@@ -2391,7 +2391,7 @@ both the plain fetch failure and the silent fall back to a default
     `avatar.roblox.com/v1/users/{id}/avatar` endpoint and anonymous
     `assetdelivery` are read (My Avatar only needs the key to learn its
     user id). It applies body scales, colours, accessories welded at the
-    matching attachment (layered clothing keeps its `WrapLayer` and sits on its body part, fitted to the body cages by nearest-vertex blend; makeup is painted into the head's colour map), shirts,
+    matching attachment (layered clothing keeps its `WrapLayer` and sits on its body part, fitted cage to cage over the body cages; makeup is painted into the head's colour map), shirts,
     pants and T-shirts, the player's animation choices into the `Animate`
     states, R15 body-part packages (mesh, texture, attachments, cage; a
     package missing a rig attachment is skipped) and R6 `CharacterMesh`es.
@@ -3114,17 +3114,26 @@ both the plain fetch failure and the silent fall back to a default
   Later, the same plan could also restart servers onto the new version and
   send an in-game announcement through MessagingService.
 
-- [ ] 📋 **UGC creator workflow**: build, test and finish avatar items
-  (rigid accessories, layered clothing, bodies, dynamic heads) from
-  rbx-native. The auto-rigger, body cages, 3D import, Player / My Avatar,
-  the validator and the Model upload are there already. Missing: an
-  Accessory Fitting Tool, cage authoring for items, a closer
-  layered-clothing deformer, the head side, and a live check that the
-  Creator Hub can turn an API-uploaded Model into an avatar item. The
-  upload fee, moderation and Marketplace publish have no documented Open
-  Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
-  analysis, staged plan and what each stage must be checked against in
-  real Studio: `docs/research/ugc-creators/README.md`.
+- [x] **Accessory Fitting Tool** (Avatar › Accessory): pick a `MeshPart` or
+  `Model`, Accessory or Clothing, the asset type and body scale, fit it on
+  the test body, try it on Normal, Slender, Classic, Player and My Avatar
+  bodies with the default animations, body scale sliders and other items
+  layered on, then Generate writes the `Accessory` the way Studio's tool
+  does (checked against its output on the same bow) and Upload Item takes
+  it from there. Clothing gets `<item>_InnerCage` / `_OuterCage` made from
+  the Mannequin's cages, an overlay with a nudge by region and the
+  `WrapLayer` settings. The live check runs on every step.
+- [x] **Cage-to-cage layered clothing fit**: garments pair their inner cage
+  with the body cage by template UV and keep their clearance over it, layer
+  over layer. Same jacket and pants on the same blocky bodies as real
+  Studio: silhouette XOR 0.78 down to 0.12.
+- [ ] 📋 **UGC creator workflow, the rest**: the head side (landmarks, FACS
+  check, face preview), Puffiness / ShrinkFactor / BindOffset in the fit,
+  and a live check that the Creator Hub can turn an API-uploaded Model into
+  an avatar item. The upload fee, moderation and Marketplace publish have
+  no documented Open Cloud endpoint, so the last step stays a handoff to
+  the Creator Hub. Gap analysis, staged plan and what each stage was
+  checked against in real Studio: `docs/research/ugc-creators/README.md`.
 
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows
