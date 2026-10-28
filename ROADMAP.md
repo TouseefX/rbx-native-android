@@ -2505,6 +2505,20 @@ both the plain fetch failure and the silent fall back to a default
   - a live upload confirmed the cages: Roblox's importer turns the 15
     `<Part>_OuterCage` meshes into one `<Part>WrapTarget` per part, and a
     layered jacket and pants worn in Studio follow the published body.
+- [x] **Avatar item validator and upload** (`crates/rbx_ugc`,
+  `shell::ugc`). Avatar › Check Item runs the documented Marketplace rules
+  on the selected Accessory, MeshPart or Model, or on a `.fbx`/`.obj`/
+  `.gltf`/`.glb`: 4k triangles per accessory, 20k per mesh, the body
+  budgets, 2048 textures, 4 bone influences, the attachment per type, the
+  size box per type and body scale (read from `AvatarPartScaleType` like
+  Studio does), body part boxes, inner and outer cages, watertight meshes.
+  Numbers come from the creator-docs spec pages, linked from every finding.
+  Checked against Studio's Save to Roblox on the same items: same triangle,
+  texture, size and cage verdicts. Avatar › Upload Item picks type, title
+  and creator (you or a group), blocks on errors, spells out the Creator
+  Hub fees, uploads the item as a Model through Open Cloud (free) and opens
+  it on the Creator Hub. Import can check a file as an avatar item first.
+  The crate has no UI, so the fitting tool can call it.
 - [x] **The Animation Editor writes `CurveAnimation`s and fits the stage's
   shadow to the rig**:
   - `ValuesAndTimes` was decoded from catalog emotes. The writer
@@ -3100,16 +3114,17 @@ both the plain fetch failure and the silent fall back to a default
   Later, the same plan could also restart servers onto the new version and
   send an in-game announcement through MessagingService.
 
-- [ ] 📋 **UGC creator workflow**: build, check, test and upload avatar
-  items (rigid accessories, layered clothing, bodies, dynamic heads) from
-  rbx-native. The auto-rigger, body cages, 3D import and Player / My Avatar
-  are there already. Missing: an Accessory Fitting Tool, a validator with
-  the real budgets (4k triangles, 2048 textures, size per asset type, cage
-  checks), cage authoring for items, a closer layered-clothing deformer and
-  the head side. The upload fee, moderation and Marketplace publish have no
-  documented Open Cloud endpoint, so the last step is a handoff to the
-  Creator Hub. Gap analysis, staged plan and what each stage must be
-  checked against in real Studio: `docs/research/ugc-creators/README.md`.
+- [ ] 📋 **UGC creator workflow**: build, test and finish avatar items
+  (rigid accessories, layered clothing, bodies, dynamic heads) from
+  rbx-native. The auto-rigger, body cages, 3D import, Player / My Avatar,
+  the validator and the Model upload are there already. Missing: an
+  Accessory Fitting Tool, cage authoring for items, a closer
+  layered-clothing deformer, the head side, and a live check that the
+  Creator Hub can turn an API-uploaded Model into an avatar item. The
+  upload fee, moderation and Marketplace publish have no documented Open
+  Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
+  analysis, staged plan and what each stage must be checked against in
+  real Studio: `docs/research/ugc-creators/README.md`.
 
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows

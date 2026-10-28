@@ -111,6 +111,9 @@ pub enum Rule {
     BodyTriangles,
     SingleMesh,
     TextureSize,
+    /// A handle with neither a `TextureID` nor a `SurfaceAppearance`. No
+    /// spec page states it; Studio's Save to Roblox refuses it.
+    MissingTexture,
     BoneInfluences,
     Attachment,
     ItemSize,
@@ -132,6 +135,7 @@ impl Rule {
             Rule::BodyTriangles => "Body triangles",
             Rule::SingleMesh => "Single mesh",
             Rule::TextureSize => "Texture size",
+            Rule::MissingTexture => "Texture",
             Rule::BoneInfluences => "Bone influences",
             Rule::Attachment => "Attachment",
             Rule::ItemSize => "Item size",
@@ -154,6 +158,7 @@ impl Rule {
             Rule::AccessoryTriangles
             | Rule::SingleMesh
             | Rule::TextureSize
+            | Rule::MissingTexture
             | Rule::Attachment
             | Rule::ItemSize => {
                 "https://create.roblox.com/docs/avatar/rigid-accessories/specifications"

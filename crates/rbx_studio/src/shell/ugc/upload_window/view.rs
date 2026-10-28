@@ -148,7 +148,12 @@ impl UploadWindow {
         v_flex()
             .gap(px(12.))
             .child(field("Title", "type", &self.title, busy))
-            .child(field("Description", "text", &self.description, busy))
+            .child(field(
+                "Description",
+                "text-align-start",
+                &self.description,
+                busy,
+            ))
             .child(
                 v_flex()
                     .gap(px(6.))

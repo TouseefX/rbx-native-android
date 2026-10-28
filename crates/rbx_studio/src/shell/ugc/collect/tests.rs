@@ -47,13 +47,14 @@ fn uri(id: u64) -> Variant {
     Variant::Content(Content::Uri(format!("rbxassetid://{id}")))
 }
 
+/// Sized the way a place file stores it: `size`, not `Size`.
 fn mesh_part(dom: &mut WeakDom, name: &str, parent: Ref, mesh: u64) -> Ref {
     let part = dom.new_instance("MeshPart", name, Some(parent));
     set(dom, part, "MeshId", uri(mesh));
     set(
         dom,
         part,
-        "Size",
+        "size",
         Variant::Vector3(Vector3Data {
             x: 2.0,
             y: 2.0,
@@ -168,9 +169,13 @@ fn an_unreadable_texture_becomes_a_note() {
         Variant::String("rbxassetid://9".into()),
     );
     let got = resolve(&plan(&dom, part, ItemKind::default()).unwrap(), &fetch);
-    assert_eq!(got.notes.len(), 1);
-    assert_eq!(got.notes[0].rule, Rule::Unreadable);
-    assert_eq!(got.notes[0].subject, "Rock.TextureID");
+    let unreadable: Vec<_> = got
+        .notes
+        .iter()
+        .filter(|n| n.rule == Rule::Unreadable)
+        .collect();
+    assert_eq!(unreadable.len(), 1);
+    assert_eq!(unreadable[0].subject, "Rock.TextureID");
     assert!(got.item.parts[0].geometry.is_none());
 }
 
