@@ -281,6 +281,7 @@ pub(crate) struct Shell {
     data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Check Avatar Item and Upload Avatar Item, while open, see `ugc`.
     ugc_validator: Option<WindowHandle<gpui_kit::component::Root>>,
+    ugc_face: Option<WindowHandle<gpui_kit::component::Root>>,
     ugc_upload: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
@@ -848,6 +849,7 @@ impl Shell {
             game_settings: None,
             data_stores: None,
             ugc_validator: None,
+            ugc_face: None,
             ugc_upload: None,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,

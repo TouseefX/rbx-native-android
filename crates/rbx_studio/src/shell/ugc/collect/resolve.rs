@@ -142,6 +142,7 @@ pub(in crate::shell::ugc) fn resolve(
         emissive: plan.emissive,
         notes,
         from_file: false,
+        head: None,
     }
 }
 

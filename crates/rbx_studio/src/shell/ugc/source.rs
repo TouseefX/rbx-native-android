@@ -92,6 +92,7 @@ pub(super) fn item_from_file(path: &Path, kind: ItemKind) -> Result<Collected, S
         emissive: false,
         notes,
         from_file: true,
+        head: None,
     })
 }
 
