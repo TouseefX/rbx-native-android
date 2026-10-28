@@ -3117,9 +3117,10 @@ both the plain fetch failure and the silent fall back to a default
 - [ ] 📋 **UGC creator workflow**: build, test and finish avatar items
   (rigid accessories, layered clothing, bodies, dynamic heads) from
   rbx-native. The auto-rigger, body cages, 3D import, Player / My Avatar,
-  the validator and the Model upload are there already. Missing: an
+  the validator, the Model upload and the dynamic head side (FACS
+  checks, landmarks, Avatar › Face Preview) are there already. Missing: an
   Accessory Fitting Tool, cage authoring for items, a closer
-  layered-clothing deformer, the head side, and a live check that the
+  layered-clothing deformer, and a live check that the
   Creator Hub can turn an API-uploaded Model into an avatar item. The
   upload fee, moderation and Marketplace publish have no documented Open
   Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
