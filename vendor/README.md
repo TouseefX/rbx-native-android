@@ -106,7 +106,9 @@ whether `open_window` drew or failed, `src/window.rs` logs each frame
 callback, the draw-and-present arm it takes, and the primitive counts
 `Window::present` hands the platform, and `src/executor.rs` and
 `src/platform_scheduler.rs` log foreground spawns and their dispatch to the
-main thread.
+main thread; `src/app/async_context.rs` numbers every `AsyncApp::update`
+poll (and logs `AsyncApp::refresh`), so a task whose poll never returns is
+visible by number.
 
 GPUI has no property transitions of its own, so this is what lets every
 `hover`/`group_hover` style in the editor — and in `gpui-base`'s widgets —

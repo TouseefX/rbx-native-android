@@ -12,6 +12,16 @@ use std::{future::Future, rc::Weak};
 
 use super::{Context, WeakEntity};
 
+// rbx-native addition: Android first-frame diagnostics — remove once the
+// mobile boot is proven on device. Numbers the `AsyncApp::update` calls so a
+// logcat shows which task's poll never returns.
+#[cfg(target_os = "android")]
+fn next_diag_task_id() -> usize {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static NEXT: AtomicUsize = AtomicUsize::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
+
 /// An async-friendly version of [App] with a static lifetime so it can be held across `await` points in async code.
 /// You're provided with an instance when calling [App::spawn], and you can also create one with [App::to_async].
 ///
@@ -144,6 +154,10 @@ impl AppContext for AsyncApp {
 impl AsyncApp {
     /// Schedules all windows in the application to be redrawn.
     pub fn refresh(&self) {
+        // rbx-native addition: Android first-frame diagnostics — remove once
+        // the mobile boot is proven on device.
+        #[cfg(target_os = "android")]
+        log::info!("gpui exec: AsyncApp::refresh");
         let app = self.app();
         let mut lock = app.borrow_mut();
         // A direct call would leave the refresh effect queued, which cannot wake
@@ -163,9 +177,18 @@ impl AsyncApp {
 
     /// Invoke the given function in the context of the app, then flush any effects produced during its invocation.
     pub fn update<R>(&self, f: impl FnOnce(&mut App) -> R) -> R {
+        // rbx-native addition: Android first-frame diagnostics — remove once
+        // the mobile boot is proven on device.
+        #[cfg(target_os = "android")]
+        let task = next_diag_task_id();
+        #[cfg(target_os = "android")]
+        log::info!("gpui exec: task #{task} poll start");
         let app = self.app();
         let mut lock = app.borrow_mut();
-        lock.update(f)
+        let result = lock.update(f);
+        #[cfg(target_os = "android")]
+        log::info!("gpui exec: task #{task} poll done");
+        result
     }
 
     /// Arrange for the given callback to be invoked whenever the given entity emits an event of a given type.

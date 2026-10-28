@@ -49,6 +49,9 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeSur
 }
 
 fn surface_arrived(env: *mut jni::sys::JNIEnv, surface: jobject, density: jfloat) {
+    // rbx-native diagnostics (temporary): proves surface events (creation,
+    // resize, rotation) reach the host.
+    log::info!("rbx_android: surface arrived (density={density})");
     if surface.is_null() {
         log::warn!("rbx_android: null surface handed to the host");
         return;
@@ -99,6 +102,9 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeMot
     xs: jni::sys::jfloatArray,
     ys: jni::sys::jfloatArray,
 ) -> jboolean {
+    // rbx-native diagnostics (temporary): proves touches reach the host at
+    // all — GameActivity's own view could consume them first.
+    log::info!("rbx_android: touch action={action}");
     let forwarded = with_env(|env| {
         let ids = read_int_array(env, ids)?;
         let xs = read_float_array(env, xs)?;
