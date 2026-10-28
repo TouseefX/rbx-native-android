@@ -21,7 +21,7 @@
 
 // As `bridge`: the module's functions are imported directly so the `jni`
 // crate name stays free for the types the signatures below use.
-use gpui_mobile::android::jni::{get_string, install_panic_hook, set_host_activity, with_env};
+use gpui_mobile::android::jni::{get_string, install_panic_hook, set_host_activity};
 use jni::objects::JObject;
 use jni::sys::{jboolean, jlong, jobject};
 
@@ -38,7 +38,7 @@ use jni::sys::{jboolean, jlong, jobject};
 /// local references for the parameters.
 #[unsafe(no_mangle)]
 pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initializeNativeCode(
-    _env: *mut jni::sys::JNIEnv,
+    env: *mut jni::sys::JNIEnv,
     thiz: jobject,
     internal_data_path: jni::sys::jstring,
     _obb_path: jni::sys::jstring,
@@ -58,22 +58,38 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
     // platform's hooks; install them while the JVM is reachable.
     install_panic_hook();
 
-    let path = match with_env(|env| {
-        let path = unsafe { JObject::from_raw(env, internal_data_path as jobject) };
-        let path = get_string(env, &path);
-        // `thiz` is the live Activity: the platform's IME (its
-        // `gpuiShowKeyboard` & co.) and Java-side helpers find it through
-        // this registry, and a recreated Activity replaces the entry.
-        let activity = unsafe { JObject::from_raw(env, thiz as jobject) };
-        set_host_activity(env, &activity)?;
-        Ok(path)
-    }) {
-        Ok(path) => path,
-        Err(error) => {
-            log::error!("rbx_android: could not register the Activity: {error}");
-            return 0;
-        }
-    };
+    // `set_host_activity` — which records the Activity *and the JavaVM*
+    // every later `with_env` in the process reaches its `Env`s through —
+    // must run on the env JNI handed this entry point, so this first hop
+    // cannot itself be a `with_env`: that is exactly the bootstrap circle
+    // that failed the first launch on a device ("JavaVM not available",
+    // which GameActivity reports as "Unable to initialize native code").
+    // jni 0.22's currency for "the env of the native call I am" is
+    // `EnvUnowned`.
+    //
+    // SAFETY: `env` is the environment of this very call, on this thread.
+    let mut env = unsafe { jni::EnvUnowned::from_raw(env) };
+    // The registration's failure has to ride along rather than be the
+    // closure's error: `EnvOutcome`'s resolve wants the jni crate's own
+    // error type, and `set_host_activity` answers with a String.
+    let mut registered: Result<(), String> = Ok(());
+    let path: String = env
+        .with_env(|env| -> Result<String, jni::errors::Error> {
+            let path = unsafe { JObject::from_raw(env, internal_data_path as jobject) };
+            let path = get_string(env, &path);
+            // `thiz` is the live Activity: the platform's IME (its
+            // `gpuiShowKeyboard` & co.) and Java-side helpers find it
+            // through this registry, and a recreated Activity replaces
+            // the entry.
+            let activity = unsafe { JObject::from_raw(env, thiz as jobject) };
+            registered = set_host_activity(env, &activity);
+            Ok(path)
+        })
+        .resolve::<jni::errors::LogErrorAndDefault>();
+    if let Err(error) = registered {
+        log::error!("rbx_android: could not register the Activity: {error}");
+        return 0;
+    }
 
     // The render thread, the GPUI application and the editor's state: once
     // per process, on the first Activity; later calls are no-ops inside.
