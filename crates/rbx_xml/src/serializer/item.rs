@@ -7,6 +7,7 @@ use rbx_reflection::ReflectionDatabase;
 
 use super::value;
 use super::writer::Writer;
+use crate::attr_refs;
 use crate::error::XmlError;
 
 /// The binary type id of Terrain's `VoxelGridAssetContentMap`.
@@ -37,6 +38,14 @@ pub(super) fn write_item<'a>(
     value::string_property(writer, instance.name());
     let db = ReflectionDatabase::shared();
     for (name, prop_value) in instance.properties() {
+        let saved = db.saved_type(instance.class(), name);
+        if let Some((blob, refs)) = attr_refs::split(name, prop_value) {
+            value::encode(writer, name, &blob, saved)?;
+            for (name, target) in refs {
+                value::encode(writer, &name, &Variant::Ref(target), None)?;
+            }
+            continue;
+        }
         match prop_value {
             Variant::Unknown { type_id: 0x1C, raw } => {
                 let key = STANDARD.encode(Md5::digest(raw));
@@ -52,12 +61,7 @@ pub(super) fn write_item<'a>(
                 type_id: CONTENT_MAP_TYPE_ID,
                 ..
             } => {}
-            _ => value::encode(
-                writer,
-                name,
-                prop_value,
-                db.saved_type(instance.class(), name),
-            )?,
+            _ => value::encode(writer, name, prop_value, saved)?,
         }
     }
     writer.close("Properties");

@@ -1,65 +1,96 @@
-//! PCG32 (O'Neill's `pcg32_random_r`) seeded the way Luau's `Random.new`
-//! seeds it: stream increment 105, and `NextNumber` built from two draws
-//! (the second the high half). Checked against real Studio: `Random.new(7)`
-//! gives 0.873708592, 0.432157216, 0.308992220, 0.107676387 there and here.
-//! Documented (creator-docs `AnimationNodeType.yaml`, RandomSequenceNode):
-//! Seed "ensur[es] the sequence remains consistent across clients" and
-//! "defaults to `-1`, which uses a random seed". UNVERIFIED: how the engine
-//! turns a node's Seed into its draws. Studio's picks for Seed 7 match no
-//! `Random.new(seed)`-based draw tried (`NextNumber`, `NextInteger`, raw
-//! draws modulo the input count, several seed and skip variants), and the
-//! runtime lives in the engine, so here a seed simply starts this stream.
+//! The random number generator RandomSequence draws from: the standard
+//! 32-bit Mersenne Twister (C++'s `std::mt19937`) seeded with the node's
+//! Seed, one draw `u = x / 2³²` per pick. Measured in real Studio
+//! (`tests/studio_graph_probe.rs`, `docs/research/animation-graph-measured.md`):
+//! for Seeds 0, 1, 2, 3, 7, 42, 1000 and 123456, over 2, 3 and 5 inputs and
+//! weights 1:2:3, all 320 picks are the input whose share of the summed
+//! weights holds `u`. The Seed is rounded to an integer and taken modulo
+//! 2³² (7.5 picks as 8, −2 as 4294967294); −1 is a fresh seed each time
+//! (creator-docs `AnimationNodeType.yaml`), and the node's name plays no
+//! part. Luau's `Random` (PCG32) is not what the engine uses here.
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Pcg32 {
-    state: u64,
-    inc: u64,
+pub(crate) struct Mt19937 {
+    state: Box<[u32; Mt19937::N]>,
+    at: usize,
 }
 
-impl Pcg32 {
-    const MULTIPLIER: u64 = 6_364_136_223_846_793_005;
+impl Mt19937 {
+    const N: usize = 624;
+    const M: usize = 397;
 
-    pub fn new(seed: u64) -> Pcg32 {
-        let mut rng = Pcg32 { state: 0, inc: 105 };
-        rng.next_u32();
-        rng.state = rng.state.wrapping_add(seed);
-        rng.next_u32();
-        rng
+    pub fn new(seed: u32) -> Mt19937 {
+        let mut state = Box::new([0u32; Self::N]);
+        state[0] = seed;
+        for i in 1..Self::N {
+            let prev = state[i - 1];
+            state[i] = 1_812_433_253u32
+                .wrapping_mul(prev ^ (prev >> 30))
+                .wrapping_add(i as u32);
+        }
+        Mt19937 { state, at: Self::N }
+    }
+
+    /// The generator a node's Seed (anything but −1) starts.
+    pub fn from_seed(seed: f64) -> Mt19937 {
+        Mt19937::new(seed.round() as i64 as u32)
+    }
+
+    fn twist(&mut self) {
+        for i in 0..Self::N {
+            let y = (self.state[i] & 0x8000_0000) | (self.state[(i + 1) % Self::N] & 0x7fff_ffff);
+            let mag = if y & 1 == 1 { 0x9908_b0df } else { 0 };
+            self.state[i] = self.state[(i + Self::M) % Self::N] ^ (y >> 1) ^ mag;
+        }
+        self.at = 0;
     }
 
     pub fn next_u32(&mut self) -> u32 {
-        let old = self.state;
-        self.state = old.wrapping_mul(Self::MULTIPLIER).wrapping_add(self.inc);
-        let xorshifted = (((old >> 18) ^ old) >> 27) as u32;
-        xorshifted.rotate_right((old >> 59) as u32)
+        if self.at >= Self::N {
+            self.twist();
+        }
+        let mut y = self.state[self.at];
+        self.at += 1;
+        y ^= y >> 11;
+        y ^= (y << 7) & 0x9d2c_5680;
+        y ^= (y << 15) & 0xefc6_0000;
+        y ^ (y >> 18)
     }
 
-    pub fn next_u64(&mut self) -> u64 {
-        (u64::from(self.next_u32()) << 32) | u64::from(self.next_u32())
-    }
-
-    /// Uniform in [0, 1), `Random:NextNumber()`.
-    pub fn unit(&mut self) -> f32 {
-        let low = u64::from(self.next_u32());
-        let high = u64::from(self.next_u32());
-        (((high << 32 | low) >> 11) as f64 / (1u64 << 53) as f64) as f32
+    /// Uniform in [0, 1).
+    pub fn unit(&mut self) -> f64 {
+        f64::from(self.next_u32()) / 4_294_967_296.
     }
 
     /// Uniform in 0..n (n > 0).
     pub fn below(&mut self, n: usize) -> usize {
-        ((self.unit() * n as f32) as usize).min(n.saturating_sub(1))
+        ((self.unit() * n as f64) as usize).min(n.saturating_sub(1))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Pcg32;
+    use super::Mt19937;
 
     #[test]
-    fn seeds_like_luau_random() {
-        let mut rng = Pcg32::new(7);
-        for studio in [0.873_708_6_f32, 0.432_157_2, 0.308_992_2, 0.107_676_39] {
-            assert!((rng.unit() - studio).abs() < 1e-6);
-        }
+    fn matches_the_reference_mt19937() {
+        // The C++ standard's check: the 10000th draw of a default-seeded
+        // (5489) std::mt19937 is 4123659995.
+        let mut rng = Mt19937::new(5489);
+        let last = (0..10_000).map(|_| rng.next_u32()).last();
+        assert_eq!(last, Some(4_123_659_995));
+    }
+
+    #[test]
+    fn seeds_round_and_wrap_as_studio_s() {
+        let draws = |seed: f64| {
+            let mut rng = Mt19937::from_seed(seed);
+            (0..8).map(|_| rng.next_u32()).collect::<Vec<_>>()
+        };
+        assert_eq!(draws(7.5), draws(8.));
+        assert_eq!(draws(-2.), {
+            let mut rng = Mt19937::new(4_294_967_294);
+            (0..8).map(|_| rng.next_u32()).collect::<Vec<_>>()
+        });
     }
 }

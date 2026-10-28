@@ -23,8 +23,9 @@ pub(super) fn curve_named(value: Option<Value>) -> Style {
 
 impl Player {
     /// The part of the clip that plays: [TrimStart, TrimEnd] in absolute
-    /// seconds while Trim is on. UNVERIFIED: a TrimEnd at or before TrimStart
-    /// (as a node gets before a clip is imported) plays on to the clip's end.
+    /// seconds while Trim is on. A TrimEnd at or before TrimStart freezes the
+    /// clip at TrimEnd, as real Studio does (TrimStart 0.3, TrimEnd 0.1 holds
+    /// the pose at 0.1 s).
     pub(super) fn clip_span(&self, n: usize) -> (f32, f32) {
         let length = self.clip_of(n).map_or(0., |c| c.length());
         if !self.flag(n, "Trim") {
@@ -32,7 +33,11 @@ impl Player {
         }
         let start = self.number(n, "TrimStart", 0.).clamp(0., length);
         let end = self.number(n, "TrimEnd", 0.).min(length);
-        (start, if end > start { end } else { length })
+        if end > start {
+            (start, end)
+        } else {
+            (end.max(0.), end.max(0.))
+        }
     }
 
     /// The clip's rate: Speed, negative when Reverse is on.
@@ -107,6 +112,8 @@ impl Player {
                 }
             }
         }
+        // A zero span (a backwards trim) holds its one frame.
+        let t = t.clamp(0., span.max(0.));
         state.time = t;
         let heading = rate * direction;
         let left = if heading >= 0. { span - t } else { t };
@@ -165,25 +172,24 @@ impl Player {
     }
 
     /// Weights each joint by the shared mask the node names (`1 − w` when
-    /// inverted). UNVERIFIED: a joint the mask does not list passes at full
-    /// weight; the editor seeds every joint at 100 %, so that is the likely
-    /// reading of a missing one.
+    /// inverted). A joint the mask does not list counts as weight 0, as in
+    /// real Studio. UNVERIFIED: a Mask naming no shared mask passes
+    /// everything through; that case was not measured.
     pub(super) fn mask(&mut self, n: usize, dt: f32) -> (Pose, Status) {
         let invert = self.flag(n, "Invert");
         let name = self.text(n, "Mask");
-        let weights: BTreeMap<String, f32> = self
-            .graph
-            .mask(&name)
-            .map(|m| {
-                m.flatten()
-                    .into_iter()
-                    .map(|(j, w)| (j.to_owned(), w))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let weights: Option<BTreeMap<String, f32>> = self.graph.mask(&name).map(|m| {
+            m.flatten()
+                .into_iter()
+                .map(|(j, w)| (j.to_owned(), w))
+                .collect()
+        });
         let (mut pose, status) = self.child(n, 0, dt);
         for (joint, posed) in pose.iter_mut() {
-            let w = weights.get(joint).copied().unwrap_or(1.).clamp(0., 1.);
+            let w = weights
+                .as_ref()
+                .map_or(1., |m| m.get(joint).copied().unwrap_or(0.))
+                .clamp(0., 1.);
             posed.weight *= if invert { 1. - w } else { w };
         }
         (pose, status)
@@ -209,7 +215,7 @@ impl Player {
         let state = &self.states[n];
         let rising = trigger && !state.armed;
         if rising && (!state.started || interruptible) {
-            // UNVERIFIED: that a shot restarts its subtree from time 0.
+            // Restarted from time 0, as real Studio's re-triggered shot is.
             if let Some(child) = self.source(n, 1) {
                 self.restart(child);
             }

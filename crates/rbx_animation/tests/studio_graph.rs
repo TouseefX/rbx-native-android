@@ -516,9 +516,5 @@ fn studio_matches_our_graphs() {
         }
     }
     eprintln!("worst gap per graph: {worst:?}");
-    // How the engine seeds a RandomSequence is not known (see `rng.rs`), so
-    // its picks are printed above but not held to Studio's.
-    assert!(worst
-        .iter()
-        .all(|(graph, &gap)| graph == "Random" || gap <= 1e-3));
+    assert!(worst.values().all(|&gap| gap <= 1e-3));
 }

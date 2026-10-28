@@ -2562,6 +2562,20 @@ both the plain fetch failure and the silent fall back to a default
     - animation events fire, and each node reports its live weight,
       shown as "NN%" on the canvas;
     - expressions take `Vector2`/`Vector3`/`Color3`/`CFrame` values.
+- [x] **Animation Graph behaviour Roblox doesn't document, measured in
+  real Studio** (`docs/research/animation-graph-measured.md`):
+  - Blend2D's weights, Cartesian and Polar (angles count twice as much
+    as magnitudes), to 1e-5 on 57 targets;
+  - Over, Add and Subtract, to 1e-3;
+  - RandomSequence draws from `std::mt19937` seeded with the rounded
+    Seed, one draw per pick against the summed weights (all 320 measured
+    picks match);
+  - CubicV2 transitions, interrupted blends, a Select or Priority Select
+    with nothing chosen, masks, backwards trims and re-triggered One Shots;
+  - an Instance-typed attribute (`EntryState`) in both formats: a
+    referent inside `AttributesSerialize` in a binary file, a
+    `__attrRef_EntryState` Ref property in an XML one, each checked
+    against a file Studio saved.
 - [x] **A Game Settings dialog** (Home › Game Settings, File › Game
   Settings…, the command palette, and Studio Settings' own-windows list),
   with real Studio's tabs: Basic Info, Communication, Permissions,
@@ -3342,13 +3356,8 @@ not yet honoured by the engine, which each bullet notes.
   end, an ordinary instance tree written through the DOM.
 
 #### Animation
-- [ ] 📋 **What the Animation Graph still lacks**:
-  - motion matching (Early 2027) and root motion (Mid 2027);
-  - behaviour Roblox does not document, implemented as the likeliest
-    reading and marked UNVERIFIED in the code: Blend2D's exact weights,
-    the Over/Add/Subtract maths, and how random picks are seeded;
-  - the binary encoding of an Instance-typed `EntryState` attribute
-    (the state is written by name for now).
+- [ ] 📋 **What the Animation Graph still lacks**: motion matching (Early
+  2027) and root motion (Mid 2027), which Roblox has not shipped yet.
 - [ ] 📋 **Avatar Schema changes**: procedural bones (Early 2027), higher
   mesh resolution (Mid 2027), more FACS controls including individual eyes
   (Mid 2027), and silhouette-preserving fit for clothing and accessories
