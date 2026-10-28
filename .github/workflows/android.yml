@@ -1,0 +1,260 @@
+name: Android
+
+# The Android app: the `rbx_android` crate cross-compiled against the NDK
+# and packaged by xbuild into an APK (GameActivity + Kotlin host, Gradle for
+# the AAR dependencies — see crates/rbx_android/manifest.yaml). Everything
+# is built on CI because the editor's dependency tree is far beyond what a
+# laptop wants to rebuild per commit, and because the cross-compile needs an
+# Android SDK/NDK to exist at all.
+#
+# Same trigger shape as ci.yml: every push is checked, a broken branch
+# should be visible before it becomes a PR, not after.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # ── xbuild's Gradle project ──────────────────────────────────────────────
+  # xbuild's template hardcodes AGP 7.3.0 / Kotlin 1.7.20, which cannot
+  # build against compileSdk 34 or consume modern AndroidX AARs; the job
+  # below rewrites those plugin requests through a Gradle init script.
+  GRADLE_VERSION: "8.11.1"
+  AGP_VERSION: "8.7.3"
+  KOTLIN_PLUGIN_VERSION: "2.1.21"
+  # Pinned xbuild revision so builds are reproducible.
+  XBUILD_REV: e67b501cbe0e9ca5436c223aa7ec0fe5e27544d1
+  # ── the NDK xbuild compiles against ─────────────────────────────────────
+  # Must expose usr/lib/aarch64-linux-android/<target_sdk_version> (34);
+  # r27c does. xbuild's own sysroot download is a 2022-era one without
+  # API-34 stubs, so the job points ~/.cache/x/Android.ndk at this instead.
+  NDK_VERSION: r27c
+
+permissions:
+  # Only for the Cargo.lock commit-back step at the end of the job: pushing
+  # the lockfile the GPUI Kit 0.6.2 / gpui-pre 0.3.5 bump resolves to, so it
+  # does not have to be refreshed on every runner.
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The lockfile commit-back step pushes to the branch; it needs the
+          # branch's history to do that.
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: Set up Gradle ${{ env.GRADLE_VERSION }}
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Set up Android NDK ${{ env.NDK_VERSION }}
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: false
+
+      # xbuild always compiles against $XDG_CACHE_HOME/x/Android.ndk. By
+      # default it downloads a 2022-era sysroot from its own GitHub release,
+      # which has no API-34 stubs (`x` then fails with "ndk doesn't support
+      # sdk version 34"). Point it at the real NDK sysroot instead and put
+      # the NDK's clang/llvm-ar/lld first on PATH, since that is what xbuild
+      # invokes.
+      - name: Wire xbuild up to the real NDK
+        run: |
+          set -euo pipefail
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          SYSROOT="$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          test -d "$SYSROOT/usr/lib/aarch64-linux-android/34"
+          mkdir -p "$HOME/.cache/x"
+          rm -rf "$HOME/.cache/x/Android.ndk"
+          ln -s "$SYSROOT" "$HOME/.cache/x/Android.ndk"
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK" >> "$GITHUB_ENV"
+          echo "$TOOLCHAIN" >> "$GITHUB_PATH"
+
+      # xbuild's generated Gradle project hardcodes AGP 7.3.0 / Kotlin
+      # 1.7.20. An init script rewrites those plugin requests to current
+      # versions so the build can use compileSdk 34 and modern AndroidX
+      # artifacts (GameActivity 4.4.0 needs them).
+      - name: Configure Gradle (AGP/Kotlin overrides)
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.gradle/init.d"
+          cat > "$HOME/.gradle/init.d/xbuild-overrides.gradle" <<EOF
+          settingsEvaluated { settings ->
+              settings.pluginManagement.resolutionStrategy.eachPlugin { details ->
+                  def id = details.requested.id.id
+                  if (id == 'com.android.application' || id == 'com.android.library') {
+                      details.useModule("com.android.tools.build:gradle:${{ env.AGP_VERSION }}")
+                  } else if (id == 'org.jetbrains.kotlin.android') {
+                      details.useModule("org.jetbrains.kotlin:kotlin-gradle-plugin:${{ env.KOTLIN_PLUGIN_VERSION }}")
+                  }
+              }
+          }
+          EOF
+          cat > "$HOME/.gradle/gradle.properties" <<'EOF'
+          org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+          org.gradle.daemon=false
+          android.useAndroidX=true
+          # xbuild's template targets AGP 7.3; keep the compileSdk sanity check
+          # from turning into a hard error after we upgrade the plugin.
+          android.suppressUnsupportedCompileSdk=34
+          # Java/Kotlin target mismatch is not fatal here — no Java sources.
+          kotlin.jvm.target.validation.mode=warning
+          EOF
+          cat "$HOME/.gradle/init.d/xbuild-overrides.gradle"
+
+      - name: Install Rust stable and the Android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Cache xbuild binary
+        id: cache-x
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/x
+          key: xbuild-${{ env.XBUILD_REV }}-${{ runner.os }}
+
+      - name: Install xbuild
+        if: steps.cache-x.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          cargo install --locked --git https://github.com/rust-mobile/xbuild \
+            --rev "$XBUILD_REV" xbuild
+
+      - name: x doctor
+        run: x doctor || true
+
+      # `x build` is what refreshes Cargo.lock: the manifests now pin GPUI
+      # Kit 0.6.2 / gpui-pre 0.3.5 / gpui-pre-mobile at its paired revision,
+      # and resolution records those (and everything they pull in) before
+      # the first crate compiles. The commit-back step at the end persists
+      # it.
+      - name: Build APK with xbuild
+        working-directory: crates/rbx_android
+        run: |
+          set -euo pipefail
+          # --release: a debug-profile APK of this tree is enormous, and the
+          # workspace's [profile.dev.package] optimizations make it slow to
+          # link on top.
+          x build --release --platform android --arch arm64 --format apk --verbose
+
+      # xbuild builds into the workspace root's target/x (it resolves the
+      # workspace's target dir however deep the package it builds sits).
+      - name: Zipalign + sign the APK
+        run: |
+          set -euo pipefail
+          UNSIGNED="target/x/release/android/rbx_android.apk"
+          test -f "$UNSIGNED" || { echo "xbuild produced no APK"; find target/x -maxdepth 3 -name '*.apk'; exit 1; }
+
+          BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          echo "Using build-tools: $BUILD_TOOLS"
+
+          KEYSTORE="$RUNNER_TEMP/rbx-release.jks"
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" \
+              -storepass android -keypass android \
+              -alias rbx -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=rbx, O=rbx, C=US" >/dev/null 2>&1
+          fi
+
+          mkdir -p dist
+          # -P 16: 16 KB page alignment, required for Android 15+ devices.
+          "$BUILD_TOOLS/zipalign" -f -P 16 4 "$UNSIGNED" dist/aligned.apk \
+            || "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" dist/aligned.apk
+
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KEYSTORE" --ks-pass pass:android --key-pass pass:android \
+            --ks-key-alias rbx \
+            --out dist/rbx-studio.apk dist/aligned.apk
+          rm -f dist/aligned.apk dist/aligned.apk.idsig
+          "$BUILD_TOOLS/apksigner" verify --verbose dist/rbx-studio.apk
+          ls -lh dist/rbx-studio.apk
+
+      # Keep the unstripped native library so crashes can be symbolized
+      # offline with ndk-stack / addr2line.
+      - name: Collect symbols
+        if: always()
+        run: |
+          set -euo pipefail
+          SO="$(find target/x -type f -name 'librbx_android.so' | head -n 1 || true)"
+          if [ -n "$SO" ]; then
+            mkdir -p dist-symbols
+            cp "$SO" dist-symbols/librbx_android.so
+            ls -lh dist-symbols/librbx_android.so
+          else
+            echo "no .so found; skipping symbols artifact"
+          fi
+
+      - name: Dump generated Gradle project on failure
+        if: failure()
+        run: |
+          GRADLE_DIR="target/x/release/android/gradle"
+          if [ -d "$GRADLE_DIR" ]; then
+            echo "--- AndroidManifest.xml"
+            cat "$GRADLE_DIR/app/src/main/AndroidManifest.xml" || true
+            echo "--- app/build.gradle"
+            cat "$GRADLE_DIR/app/build.gradle" || true
+            echo "--- sources"
+            ls -R "$GRADLE_DIR/app/src/main" || true
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbx-studio.apk
+          path: dist/rbx-studio.apk
+          if-no-files-found: error
+
+      - name: Upload symbols
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: symbols
+          path: dist-symbols/
+          if-no-files-found: warn
+
+      # The GPUI Kit 0.6.2 / gpui-pre 0.3.5 / gpui-pre-mobile bump changed
+      # the manifests, so the committed Cargo.lock (which cannot be
+      # regenerated anywhere but a networked machine) is stale until
+      # something resolves it. `x build` just did, on this runner; commit
+      # the result back so the repository carries the lock it builds
+      # against. Runs on pushes only (never on PRs, whose HEAD may belong to
+      # a fork), and is allowed to fail: a race with a newer push just means
+      # the next run commits it instead.
+      - name: Commit the refreshed Cargo.lock
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          if git diff --cached --quiet; then
+            echo "Cargo.lock is already current"
+            exit 0
+          fi
+          git commit -m "android: refresh Cargo.lock for the GPUI Kit 0.6.2 bump [skip ci]"
+          git push

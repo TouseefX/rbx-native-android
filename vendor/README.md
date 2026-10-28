@@ -1,10 +1,10 @@
 # Vendored crates
 
-## `gpui-base` (0.6.1, Apache-2.0, `longbridge/gpui-kit`)
+## `gpui-base` (0.6.2, Apache-2.0, `longbridge/gpui-kit`)
 
-Unmodified crates.io 0.6.1 source (its `tests/` and `benches/` dropped, and
-their `[[test]]`/`[[bench]]` entries with them), patched in through the
-root `Cargo.toml`'s `[patch.crates-io]`, plus three public methods on the
+Unmodified crates.io 0.6.2 source (its `tests/`, `benches/` and `examples/`
+dropped, and their `[[test]]`/`[[bench]]` entries with them), patched in through
+the root `Cargo.toml`'s `[patch.crates-io]`, plus three public methods on the
 editor state in `src/input/base/state.rs`, each marked "rbx-native
 addition":
 
@@ -76,9 +76,9 @@ host carries `occlusion::probe()`; rbx_studio's own `deferred` popups do
 the same. During Play the editor reads `occlusion::rects` to cut those
 areas out of the embedded Roblox window (X Shape), so popups draw above it.
 
-## `gpui-pre` (0.3.4, Apache-2.0, `zed-industries/zed`'s GPUI as published)
+## `gpui-pre` (0.3.5, Apache-2.0, `zed-industries/zed`'s GPUI as published)
 
-Unmodified crates.io 0.3.4 source (its `examples/`, `tests/` and `docs/`
+Unmodified crates.io 0.3.5 source (its `examples/`, `tests/` and `docs/`
 dropped, and their `[[example]]`/`[[test]]` entries with them), patched in
 through the root `Cargo.toml`'s `[patch.crates-io]`, plus hover styles that
 ease instead of snapping, each piece marked "rbx-native addition":

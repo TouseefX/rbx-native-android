@@ -7,9 +7,9 @@ use gpui::{
 };
 use gpui::{
     HighlightStyle, Hitbox, HitboxBehavior, Hsla, InteractiveElement, IntoElement, LayoutId,
-    MouseButton, MouseMoveEvent, MouseUpEvent, ParentElement as _, Path, Pixels, Point, Position,
-    ShapedLine, SharedString, Size, Style, Styled as _, TextAlign, TextRun, TextStyle,
-    UnderlineStyle, Window, fill, point, px, relative, size,
+    LongPressEvent, MouseButton, MouseMoveEvent, MouseUpEvent, ParentElement as _, Path, Pixels,
+    Point, Position, ShapedLine, SharedString, Size, Style, Styled as _, TextAlign, TextRun,
+    TextStyle, TouchDragEvent, TouchPhase, UnderlineStyle, Window, fill, point, px, relative, size,
 };
 use ropey::Rope;
 use smallvec::SmallVec;
@@ -325,6 +325,15 @@ fn ime_marked_display_range(
     }
 }
 
+/// Viewport capacity in display rows, independent of logical buffer lines.
+///
+/// Shared by both scroll-into-view paths (`layout_cursors` and
+/// `scroll_to_with_padding`) so they agree on the visible-line count even
+/// when soft-wrapped lines make logical and display rows diverge.
+pub(super) fn viewport_visible_lines(viewport_height: Pixels, line_height: Pixels) -> usize {
+    (viewport_height / line_height) as usize
+}
+
 /// Minimum pixel padding the cursor is kept clear of the viewport's
 /// top/bottom edges before auto-scroll engages. Backs
 /// [`InputBaseState::cursor_surrounding_lines`].
@@ -333,7 +342,8 @@ fn ime_marked_display_range(
 /// heuristic ([`BOTTOM_MARGIN_ROWS`] lines, or one line on small
 /// viewports); `Some(n)` uses `n` lines. The result is saturated against
 /// half the viewport so an oversized override can't invert the
-/// top/bottom thresholds into a scroll feedback loop.
+/// top/bottom thresholds into a scroll feedback loop. `visible_lines` is the
+/// viewport capacity in display rows, independent of logical buffer lines.
 pub(super) fn cursor_surrounding_padding(
     is_auto_grow: bool,
     override_lines: Option<usize>,
@@ -406,7 +416,45 @@ impl<M: InputModeKind> TextElement<M> {
         self
     }
 
-    fn paint_mouse_listeners(&mut self, window: &mut Window, _: &mut App) {
+    fn paint_mouse_listeners(&mut self, hitbox: &Hitbox, window: &mut Window, _: &mut App) {
+        // Every touch is offered as a drag first; that is how a tap's mouse
+        // events are later told apart from a mouse's.
+        window.on_mouse_event(move |event: &TouchDragEvent, phase, _, cx| {
+            if phase.capture() && event.phase == TouchPhase::Started {
+                crate::GlobalState::note_touch(cx);
+            }
+        });
+
+        // A long press is touch's way to select: the word under the finger,
+        // then whatever the finger sweeps over. Claiming it keeps the moves
+        // out of the pan recognizer, so the input does not scroll instead.
+        window.on_mouse_event({
+            let state = self.state.clone();
+            let hitbox = hitbox.clone();
+            move |event: &LongPressEvent, phase, window, cx| {
+                if !phase.bubble() {
+                    return;
+                }
+                if event.phase == TouchPhase::Started {
+                    if window.default_prevented() || !hitbox.is_hovered(window) {
+                        return;
+                    }
+                    if !state.update(cx, |state, cx| state.on_long_press(event, window, cx)) {
+                        return;
+                    }
+                    window.capture_long_press(&state);
+                } else if !window.has_long_press_capture(&state) {
+                    return;
+                } else {
+                    state.update(cx, |state, cx| {
+                        state.on_long_press(event, window, cx);
+                    });
+                }
+                window.prevent_default();
+                cx.stop_propagation();
+            }
+        });
+
         window.on_mouse_event({
             let state = self.state.clone();
 
@@ -462,7 +510,7 @@ impl<M: InputModeKind> TextElement<M> {
         let top_bottom_margin = cursor_surrounding_padding(
             state.mode.is_auto_grow(),
             state.cursor_surrounding_lines,
-            visible_range.len(),
+            viewport_visible_lines(bounds.size.height, line_height),
             line_height,
         );
 
@@ -791,7 +839,7 @@ impl<M: InputModeKind> TextElement<M> {
         cx: &mut App,
     ) -> Vec<(Path<Pixels>, bool)> {
         let state = self.state.read(cx);
-        if !state.search_session.open {
+        if !state.search_session.is_active() {
             return vec![];
         }
         let ranges = state.search_session.matcher.matched_ranges();
@@ -1643,6 +1691,8 @@ pub(super) struct PrepaintState {
     document_color_paths: Vec<(Path<Pixels>, Hsla)>,
     hover_definition_hitbox: Option<Hitbox>,
     indent_guides_path: Option<Path<Pixels>>,
+    /// The whole input, for deciding whether a long press started in it.
+    hitbox: Hitbox,
     bounds: Bounds<Pixels>,
     /// Fold icon layout data
     fold_icon_layout: FoldIconLayout,
@@ -2167,8 +2217,10 @@ impl<M: InputModeKind> Element for TextElement<M> {
             }
             _ => Vec::new(),
         };
+        let hitbox = window.insert_hitbox(input_bounds, HitboxBehavior::Normal);
 
         PrepaintState {
+            hitbox,
             bounds,
             last_layout,
             scroll_size,
@@ -2521,7 +2573,12 @@ impl<M: InputModeKind> Element for TextElement<M> {
             state.deferred_scroll_offset = None;
             // rbx-native addition: see `InputBaseState::reveal_range`.
             if let Some(offset) = state.pending_reveal.take() {
-                state.scroll_to_with_padding(offset, None, super::state::ScrollPadding::SurroundingLines, cx);
+                state.scroll_to_with_padding(
+                    offset,
+                    None,
+                    super::state::ScrollPadding::SurroundingLines,
+                    cx,
+                );
             }
 
             // Layout consumers need changed geometry, not another notification
@@ -2559,7 +2616,7 @@ impl<M: InputModeKind> Element for TextElement<M> {
             }
         }
 
-        self.paint_mouse_listeners(window, cx);
+        self.paint_mouse_listeners(&prepaint.hitbox, window, cx);
     }
 }
 

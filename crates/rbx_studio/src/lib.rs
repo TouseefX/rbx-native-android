@@ -1,0 +1,691 @@
+//! Desktop shell of the editor: the wgpu viewer of `rbx_viewer` drawn inside a
+//! GPUI Kit window, next to the Explorer of the place, mutable through the
+//! Command Bar (see `command_bar`).
+//!
+//! A library, not a binary: the `rbxstudio` binary is the desktop launch
+//! ([`run_desktop`]), and `crates/rbx_android` builds this same library into
+//! the Android app, whose host drives the GPUI application and calls
+//! [`boot_mobile`] with it (GameActivity, through `gpui-pre-mobile`).
+//!
+//! One place per process; the command line it takes lives in [`cli`], and
+//! `--help` prints it. `--select` and `--run` are the supported spelling of
+//! the first two variables below, same behaviour, the flag winning when both
+//! are given. The rest stay variables: they are aids for scripted
+//! screenshots, not a surface worth committing to.
+//!
+//! `RBX_NO_KEYRING=1` (any non-empty value) stops every OS keyring read and
+//! write, here and in `rbxcloud`, so a test run with scratch XDG dirs cannot
+//! reach the user's real Open Cloud key.
+//!
+//! `RBX_STUDIO_SELECT=<target>[,<target>...]` pre-selects the first instance
+//! that target names, an Explorer path (`Workspace.Model.Part`) or a bare
+//! name, see `explorer::resolve`: at startup, then adds each
+//! further comma-separated target to the selection exactly as a
+//! `Shift`/`Ctrl`/`Cmd`-click would, a debugging aid for scripted
+//! screenshots of the Properties panel and the viewport's multi-selection
+//! outline/gizmo, since nothing else can click the tree or the viewport on
+//! the editor's behalf; re-applied after `RBX_STUDIO_RUN` too, so a
+//! screenshot can show what a script just created without a click.
+//! `RBX_STUDIO_RUN=<source>` runs one Luau chunk against the place right
+//! after the window opens, exactly as typing it into the Command Bar and
+//! pressing Ctrl+Enter would, the same aid, for the Command Bar itself.
+//! `RBX_STUDIO_TOOL=move[,local][,nosnap]` picks a transform tool (and its
+//! world/local orientation, and whether the move/scale snap starts switched
+//! on) at startup, the same aid for the transform toolbar and its viewport
+//! draggers (see `shell::toolbar`). `RBX_STUDIO_DRAG=<dx>,<dy>,<dz>` moves the
+//! selection by that offset through the same path a real gizmo or cursor drag
+//! ends with, the same aid for a group drag; `RBX_STUDIO_RESIZE=<dx>,<dy>,<dz>`
+//! grows the selected part by that much along its own axes through the path
+//! a Scale drag ends with, the same aid for the Scale tool (see
+//! `shell::drag::debug` for both). `RBX_STUDIO_SCROLL=<x>,<y>,<dx>,<dy>`
+//! rolls the wheel once over viewport pixel `(x, y)` by that many notches
+//! once the first frame is up, the same aid for scrolling a `ScrollingFrame`
+//! drawn in the viewport (see `workspace_view::scroll`).
+//! `RBX_STUDIO_SETTINGS=1` opens Studio Settings with the editor, on the
+//! page `RBX_STUDIO_SETTINGS_PAGE=<first word of its name>` names, with
+//! Viewport › Advanced open under `RBX_STUDIO_SETTINGS_ADVANCED=1` and the
+//! page scrolled `RBX_STUDIO_SETTINGS_SCROLL=<px>` down, the same aid, for
+//! the Settings window (see `shell::settings_window`).
+//!
+//! `RBX_STUDIO_TESTS=1|run` opens the Tests dock, and with `run` runs every
+//! spec at once (see `shell::tests_dock`).
+//!
+//! `RBX_STUDIO_OPEN_SCRIPT=<name>[,<name>...]` opens each named
+//! `Script`/`LocalScript`/`ModuleScript` in the Script Editor panel exactly as
+//! double-clicking its Explorer row would, the same aid, for the script
+//! editor and its Luau highlighting (see `shell::scripts`).
+//! `RBX_STUDIO_SCRIPT_VIEW=graph[=<file>]` then puts the front tab on its
+//! Graph side, first saving the graph JSON in `<file>` as its graph through
+//! the same path an edit on the canvas takes.
+//! `RBX_STUDIO_GRAPH_MENU=<query>` then opens the graph's add menu with
+//! `<query>` typed, as if a wire had been dropped from the first node's
+//! first value output (or as Shift+A would, on an empty graph).
+//! `RBX_STUDIO_UI_EDITOR=1|<width>x<height>` opens the UI Editor on its
+//! canvas at startup, at that simulated resolution when one is given, the
+//! same aid, for the canvas (see `shell::ui_editor`).
+//! `RBX_STUDIO_FRAME_SHEET=1|picker|picker:<query>|fit` then opens the
+//! `ViewportFrame` sheet on the selected frame, with the Workspace picker
+//! (searching for `<query>`) or the Fit menu up, the same aid, for the
+//! sheet (see `shell::ui_editor::frame_sheet`).
+//! `RBX_STUDIO_GROUP=1` wraps the current selection in a new `Model` exactly
+//! as `Ctrl+G` would; `RBX_STUDIO_UNGROUP=1` unwraps it back out exactly as
+//! `Ctrl+Shift+G` would, the same aid, for the Explorer's Group/Ungroup
+//! (see `shell::group`).
+//! Ctrl+S writes the place back to the file it was opened from, in the
+//! format it was opened in; `RBX_STUDIO_SAVE_AS=<path>` redirects one such
+//! save to a scratch path instead (see `save`).
+//! `RBX_STUDIO_ARGON_CONNECT=1|<host>:<port>` clicks Connect on the Script
+//! Editor's Argon dock at startup, the same aid, for a real connection to
+//! a running `argon serve` (see `shell::argon_sync`); the address form
+//! overrides the dock's own address field first.
+//! `RBX_STUDIO_WALLY_INSTALL=<scope>/<name>` resolves and installs that
+//! Wally package at startup exactly as clicking its search result row
+//! would, the same aid, for the Wally dock (see `shell::wally_sync`).
+//! `RBX_STUDIO_ARGON_DIFF=1` opens the Argon review prompt's Diff window on
+//! a small synthetic batch at startup, the same aid, for a window that
+//! otherwise only opens once a live `argon serve` session pushes five or
+//! more real changes at once (see `shell::argon_sync`).
+//! `RBX_STUDIO_TERRAIN=<tool>[,apply]` opens the Terrain Editor on that tool
+//! (`draw`, `sealevel`, `generate`, …) and with `apply` presses its main
+//! button, the same aid, for the Terrain Editor (see `shell::terrain`).
+//! `RBX_STUDIO_ANIMATION=<step>[,<step>...]` opens the Animation Editor and
+//! runs each step (`rig=<name>`, `demo`, `import=<path>`, `time=<seconds>`,
+//! `joint=<name>`, `save`, `graph`, `graph-demo`, `play`, …) as the matching
+//! click would, the same aid, for the Animation Editor (see
+//! `shell::animation::debug` for every step).
+//!
+//! `RBX_STUDIO_PERF=<word of a measure's name>` turns the Performance view
+//! on with that measure (see `shell::perf_view`).
+
+mod accent;
+mod align;
+mod anim_editor;
+mod argon_client;
+mod avatar_settings;
+mod beta;
+mod camera;
+mod change_class;
+mod class_icons;
+mod cli;
+mod command_bar;
+mod debugger;
+mod device_sim;
+mod discord_presence;
+mod display;
+mod dragger;
+mod explorer;
+mod figma_store;
+mod folder_colors;
+mod freeze;
+mod history;
+mod home;
+mod input_actions;
+mod key_store;
+mod launcher;
+mod layers;
+mod login_flow;
+mod luau_lsp;
+mod mcp;
+mod menu_bar;
+mod notes;
+mod pacing;
+mod packs;
+mod playtests;
+mod pointer_lock;
+#[cfg(test)]
+mod probe;
+mod properties;
+mod query;
+mod recovery;
+mod render_image;
+mod save;
+mod scale;
+mod script_editor;
+mod script_templates;
+mod sequence_editor;
+mod sequence_window;
+mod settings;
+mod settle;
+mod shell;
+mod shortcuts;
+mod splash;
+mod strip;
+mod style_editor;
+mod sun;
+mod terrain;
+mod theme;
+mod timeline;
+mod tokens;
+mod transform;
+mod ui_canvas;
+mod viewport_frame;
+mod wally_client;
+mod workspace_view;
+
+use std::borrow::Cow;
+use std::cell::RefCell;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+
+use gpui_kit::component::{Root, ThemeMode};
+use gpui_kit::*;
+use rbx_dom::{Ref, WeakDom};
+use rbx_reflection::ReflectionDatabase;
+use rbx_viewer::Headless;
+
+use camera::PlaceCamera;
+use class_icons::IconPack;
+use cli::Launch;
+use explorer::Explorer;
+use folder_colors::FolderColors;
+use properties::Properties;
+use save::Format;
+use settings::Settings;
+use shell::Shell;
+
+/// The fallback for `--select`, resolved into [`Launch`] below and read
+/// nowhere else, `shell` takes the whole comma list from there rather than
+/// reaching back into the environment for it.
+const SELECT_VARIABLE: &str = "RBX_STUDIO_SELECT";
+
+const WINDOW_SIZE: (f32, f32) = (1600.0, 900.0);
+
+/// The desktop launch: the command line, the environment aids, the splash
+/// window and the startup credential check, and then the first window (see
+/// `home::route`). Everything past this function — the editor itself — is
+/// the library this binary is a thin wrapper over, and is exactly what the
+/// Android host in `crates/rbx_android` runs through [`boot_mobile`].
+pub fn run_desktop() {
+    // The Network Simulator's elevated helper is this same executable,
+    // relaunched by `rbx_play::netsim::Shaper::start`; it needs none of the
+    // editor, so it branches off before anything else loads.
+    #[cfg(windows)]
+    if std::env::args().nth(1).as_deref() == Some(rbx_play::netsim::windivert::HELPER_FLAG) {
+        let arguments: Vec<String> = std::env::args().skip(2).collect();
+        std::process::exit(rbx_play::netsim::windivert::run_helper(&arguments));
+    }
+    // An MCP client's bridge to an editor already running (see `mcp`): no
+    // window of its own, and stdout belongs to the protocol.
+    if std::env::args().nth(1).as_deref() == Some(mcp::BRIDGE_FLAG) {
+        std::process::exit(mcp::bridge::run());
+    }
+    // `rbxstudio loren <command>`: the Loren CLI, no window.
+    if std::env::args().nth(1).as_deref() == Some("loren") {
+        let arguments: Vec<String> = std::env::args().skip(2).collect();
+        std::process::exit(rbx_loren::cli::main(
+            &arguments,
+            rbx_loren::cli::Overrides::default(),
+        ));
+    }
+    // Before anything can ask whether a beta feature is on.
+    beta::init();
+    // The downloaded-asset cache only grows otherwise. Off the main thread:
+    // walking a large cache takes a moment, and nothing waits on it.
+    std::thread::spawn(|| {
+        if let Ok(cache) = rbx_assets::AssetCache::new(None) {
+            cache.trim_to_default();
+        }
+    });
+    // Loaded once, up front: the CLI's `--quality` still wins when given (see
+    // `parse`), and the Explorer's initial visibility set comes straight from
+    // here since nothing on the command line can express it.
+    let settings = Settings::load();
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let cli::Arguments {
+        path,
+        quality,
+        select,
+        run,
+        verbose,
+        setup,
+    } = match cli::parse(&arguments, settings.quality) {
+        Ok(cli::Parsed::Open(parsed)) => parsed,
+        Ok(cli::Parsed::Usage) => {
+            println!("{}", cli::USAGE);
+            return;
+        }
+        Err(message) => {
+            eprintln!("{message}\n{}", cli::USAGE);
+            std::process::exit(2);
+        }
+    };
+    // The CLI's own `--quality` wins over the persisted one from here on;
+    // `Shell::new` takes the whole struct rather than one parameter per
+    // field, so this is the one place that resolved value has to land.
+    let settings = Settings {
+        quality,
+        ..settings
+    };
+
+    // A flag wins over the variable it supersedes: a wrapper script that
+    // exports one and then passes the other meant the one it spelled out on
+    // the line. `--run`'s file is read here, before anything expensive, so a
+    // typo in its path is an exit code rather than a line in the Output dock
+    // on the first frame.
+    let launch = Launch {
+        select: select.or_else(|| std::env::var(SELECT_VARIABLE).ok()),
+        run: match run {
+            Some(script) => Some(read_script(&script)),
+            None => std::env::var(command_bar::RUN_VARIABLE).ok(),
+        },
+        verbose,
+        configure: None,
+    };
+
+    // Everything read from the config directory beyond `settings.json`, in one
+    // pass before the window exists. The icon pack goes in before `load`: the
+    // Explorer's rows resolve their icons while the place is built.
+    let mut user = packs::UserContent::load();
+    class_icons::set_user_pack(packs::layered(
+        user.theme.icons.clone(),
+        user.icon_overlay.take(),
+    ));
+    let theme = user.theme.clone();
+    let overrides = user.appearance.overrides();
+    let settings = themed(settings, theme.palette.mode);
+
+    // The full Lucide catalog: the menu bar's icons are well outside the
+    // default bundle the components themselves use. The Explorer's own class
+    // icons are rasterized straight from `class_icons`'s embedded SVGs, not
+    // painted through this asset source at all, see its own doc comment.
+    let app = gpui_kit::application().with_assets(gpui_kit::assets::AllAssets);
+    app.run(move |cx| {
+        gpui_kit::init(cx);
+        install_fonts(cx);
+        theme::startup(&theme, &overrides, cx);
+        scale::install(cx);
+        shell::install_key_bindings(cx);
+        workspace_view::install_key_bindings(cx);
+        menu_bar::install_key_bindings(cx);
+        // Only a bare launch: opening a place blocks this thread, which
+        // would freeze the logo mid-spin.
+        let splash = path.is_none().then(|| splash::open(cx)).flatten();
+
+        cx.spawn(async move |cx| {
+            // The stored key has to be in `rbx_cloud` before `load`: the
+            // place's asset downloads authenticate with it.
+            // A store that never answered may well hold a key, so that
+            // launch goes Home, which says so, rather than to the wizard.
+            let has_key = key_store::restore_at_startup(cx).await.unwrap_or(true);
+            // Checked while the logo plays, so Roblox's answer costs no
+            // extra wait in front of the first window.
+            let check = path.is_none().then(|| {
+                cx.spawn(async move |cx| launcher::startup::credentials(has_key, cx).await)
+            });
+            if let Some(splash) = splash {
+                splash.finished(cx).await;
+            }
+            let boot = EditorBoot {
+                settings,
+                launch,
+                user,
+            };
+            let plan = match check {
+                Some(check) => {
+                    let (key, session) = check.await;
+                    launcher::setup::plan(key, session, setup)
+                }
+                None => None,
+            };
+            cx.update(|cx| match home::route(path, plan) {
+                home::Route::Editor(path) => {
+                    if let Err(failed) = open_editor(&path, boot, cx) {
+                        let (message, _) = *failed;
+                        eprintln!("rbxstudio: {message}");
+                        std::process::exit(1);
+                    }
+                    launcher::startup::check_in_background(has_key, cx);
+                }
+                home::Route::Wizard(plan) => {
+                    launcher::open_wizard(Rc::new(RefCell::new(Some(boot))), plan, None, cx);
+                }
+                home::Route::Home => launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx),
+            });
+        })
+        .detach();
+    });
+}
+
+/// The mobile boot: what [`run_desktop`] does inside its `run` callback,
+/// minus what a host-driven window cannot have — no splash window of the
+/// editor's own, no startup credential check (the Home screen offers the
+/// key wizard) and no command line — with the window itself left to the
+/// host, which already opened one over the surface it was handed.
+///
+/// Called once, from the host's launch closure on its render thread, with
+/// the GPUI application and its window already alive (see
+/// `crates/rbx_android`).
+pub fn boot_mobile(cx: &mut App) {
+    // The kit's global theme and icons — as the desktop launch's `run`
+    // callback does, and as GPUI Kit's mobile guide prescribes: mobile
+    // builds keep this and `component::Root` and lose only the desktop
+    // platform selector.
+    gpui_kit::init(cx);
+    // Before anything can ask whether a beta feature is on.
+    beta::init();
+    // The downloaded-asset cache only grows otherwise; off the render
+    // thread, exactly as the desktop launch does.
+    std::thread::spawn(|| {
+        if let Ok(cache) = rbx_assets::AssetCache::new(None) {
+            cache.trim_to_default();
+        }
+    });
+    install_fonts(cx);
+    // The icon pack goes in before the theme reads it: the Home screen's
+    // rows resolve their icons on its first paint.
+    let mut user = packs::UserContent::load();
+    class_icons::set_user_pack(packs::layered(
+        user.theme.icons.clone(),
+        user.icon_overlay.take(),
+    ));
+    let theme = user.theme.clone();
+    let overrides = user.appearance.overrides();
+    let settings = themed(Settings::load(), theme.palette.mode);
+    theme::startup(&theme, &overrides, cx);
+    scale::install(cx);
+    shell::install_key_bindings(cx);
+    workspace_view::install_key_bindings(cx);
+    menu_bar::install_key_bindings(cx);
+    let boot = EditorBoot {
+        settings,
+        launch: Launch::default(),
+        user,
+    };
+    launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx);
+}
+
+/// A light theme draws the kit's light icons, as switching to one does (see
+/// `Shell::reload_theme`), whatever an earlier session left behind.
+fn themed(settings: Settings, mode: ThemeMode) -> Settings {
+    match mode {
+        ThemeMode::Light => Settings {
+            icon_pack: IconPack::Light,
+            ..settings
+        },
+        ThemeMode::Dark => settings,
+    }
+}
+
+/// File › Close Place's way back: Home again, with a boot read from disk as
+/// `main` reads it (the session saved its settings as they changed). The
+/// launch aids (`--select`, `--run`) were for the first place only.
+pub(crate) fn open_home_again(cx: &mut App) {
+    let user = packs::UserContent::load();
+    let settings = themed(Settings::load(), user.theme.palette.mode);
+    let boot = EditorBoot {
+        settings,
+        launch: Launch::default(),
+        user,
+    };
+    launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx);
+}
+
+/// File › New / Open…: a new editor window on `path`, with the boot read
+/// from disk as [`open_home_again`] reads it. The error is the message for
+/// the Output dock; the caller keeps its own window then.
+pub(crate) fn open_place(path: &Path, cx: &mut App) -> Result<(), String> {
+    open_editor(path, fresh_boot(), cx).map_err(|failed| failed.0)
+}
+
+/// The settings and user content as they are on disk now, for an editor
+/// opened after launch.
+fn fresh_boot() -> EditorBoot {
+    let user = packs::UserContent::load();
+    let settings = themed(Settings::load(), user.theme.palette.mode);
+    EditorBoot {
+        settings,
+        launch: Launch::default(),
+        user,
+    }
+}
+
+/// Starts a fresh editor process on `place`, for settings that only take
+/// effect at launch. The child is not waited on, so it outlives this one.
+pub(crate) fn relaunch(place: &std::path::Path) {
+    let result = std::env::current_exe().and_then(|exe| {
+        std::process::Command::new(exe)
+            .arg(place)
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()
+    });
+    if let Err(err) = result {
+        eprintln!("could not restart: {err}");
+    }
+}
+
+/// What the editor window needs beyond its place: the resolved settings,
+/// the scripted-launch aids, and the user's packs. `main` builds it; the
+/// launcher holds it until a place is picked.
+pub(crate) struct EditorBoot {
+    settings: Settings,
+    launch: Launch,
+    user: packs::UserContent,
+}
+
+/// Reads `path` and opens the editor on it, recording it in Recent. Hands
+/// `boot` back with the message when the place cannot be read, so the
+/// launcher can offer another.
+///
+/// Parsing and the asset downloads both block; this runs before the editor
+/// window exists, so only the launcher (if any) waits on it.
+pub(crate) fn open_editor(
+    path: &Path,
+    boot: EditorBoot,
+    cx: &mut App,
+) -> Result<(), Box<(String, EditorBoot)>> {
+    if shell::game::manifest::is_manifest(path) {
+        return shell::game::open_game(path, boot, cx);
+    }
+    let EditorBoot {
+        settings,
+        launch,
+        user,
+    } = boot;
+    println!("loading {}…", path.display());
+    let place = match load(path, &launch, settings.icon_pack) {
+        Ok(place) => place,
+        Err(message) => {
+            return Err(Box::new((
+                message,
+                EditorBoot {
+                    settings,
+                    launch,
+                    user,
+                },
+            )))
+        }
+    };
+    if let Err(err) = home::remember(home::RecentPlace {
+        path: std::fs::canonicalize(path).unwrap_or(path.to_path_buf()),
+        universe_id: None,
+        place_id: None,
+        name: None,
+        opened: None,
+    }) {
+        eprintln!("rbxstudio: could not update the Recent list: {err}");
+    }
+    // A place linked to Roblox (opened from Home, or linked since) goes by
+    // its game's name, not the `<universe>-<place>.rbxl` local copy's.
+    let title = SharedString::from(
+        home::link_of(path)
+            .and_then(|link| link.name)
+            .unwrap_or_else(|| file_name(path)),
+    );
+    let options = window_options(&title, cx);
+    cx.open_window(options, |window, cx| {
+        let shell = cx.new(|cx| Shell::new(title, place, settings, launch, user, window, cx));
+        let closing = shell.downgrade();
+        window.on_window_should_close(cx, move |_, cx| {
+            closing
+                .update(cx, |shell, cx| shell.request_quit(cx))
+                .unwrap_or(true)
+        });
+        cx.new(|cx| Root::new(shell, window, cx))
+    })
+    .expect("failed to open the main window");
+    Ok(())
+}
+
+/// A place file, read before the window exists: the tree the Explorer lists,
+/// the properties behind it, the viewpoint it was saved at, and the viewer that
+/// draws it.
+struct Place {
+    explorer: Explorer,
+    properties: Properties,
+    /// The instance `--select` named, when it exists in the file.
+    selected: Option<Ref>,
+    camera: Option<PlaceCamera>,
+    viewer: Headless,
+    /// The canonical, mutable tree: what the Command Bar's `rbx_lua::Runtime`
+    /// takes ownership of and hands back, what the Explorer and viewport are
+    /// rebuilt from afterwards, and what `properties` reads on every render.
+    dom: WeakDom,
+    /// Cloned once per run into a fresh `rbx_lua::Runtime`, which takes
+    /// ownership of its copy.
+    database: ReflectionDatabase,
+    /// Where Ctrl+S writes back to, and in which format, see `save`.
+    /// `rbx_viewer::read_place` sniffs the same bytes internally but does not
+    /// expose its choice, so `load` sniffs them a second time here rather
+    /// than widening that crate's public surface for this.
+    path: PathBuf,
+    format: Format,
+    /// This place's `Folder` colour tags, see `folder_colors`. Loaded here
+    /// (and pruned of any entry whose folder no longer resolves) rather than
+    /// lazily on first use, since the Explorer's own tints are baked in by
+    /// `Explorer::from_dom` from the moment the window opens.
+    folder_colors: FolderColors,
+}
+
+/// The design system's own fonts, shipped with the editor (OFL, see the
+/// licence files next to them) so that no machine has to have them
+/// installed: `fc-query` names them `Manrope` (Regular, Medium, SemiBold,
+/// Bold) and `JetBrains Mono` (Regular, Medium).
+const BUNDLED_FONTS: [&[u8]; 6] = [
+    include_bytes!("../../../assets/fonts/Manrope-Regular.ttf"),
+    include_bytes!("../../../assets/fonts/Manrope-Medium.ttf"),
+    include_bytes!("../../../assets/fonts/Manrope-SemiBold.ttf"),
+    include_bytes!("../../../assets/fonts/Manrope-Bold.ttf"),
+    include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf"),
+    include_bytes!("../../../assets/fonts/JetBrainsMono-Medium.ttf"),
+];
+
+/// Registers the bundled fonts; `theme` then names them, for whichever of
+/// their families the text system ends up with. Registration failing is
+/// reported and survived: the platform UI font is a worse look, not a
+/// reason to refuse to start.
+fn install_fonts(cx: &mut App) {
+    let fonts = BUNDLED_FONTS
+        .iter()
+        .map(|bytes| Cow::Borrowed(*bytes))
+        .collect();
+    if let Err(err) = cx.text_system().add_fonts(fonts) {
+        eprintln!(
+            "rbxstudio: the bundled fonts could not be registered, using the platform font: {err}"
+        );
+    }
+}
+
+fn load(path: &Path, launch: &Launch, icon_pack: IconPack) -> Result<Place, String> {
+    // An Argon/Rojo project opens as the place it builds.
+    let imported = shell::project::place_for(path)?;
+    let path = imported.as_deref().unwrap_or(path);
+    let bytes = std::fs::read(path).map_err(|err| format!("failed to read {path:?}: {err}"))?;
+    let format = Format::sniff(&bytes);
+    launch.say(format!(
+        "read {} ({} bytes, {} place)",
+        path.display(),
+        bytes.len(),
+        match format {
+            Format::Binary => "binary",
+            Format::Xml => "XML",
+        }
+    ));
+    let dom = rbx_viewer::read_place(path)?;
+    let database = ReflectionDatabase::embedded();
+
+    let mut folder_colors = FolderColors::load();
+    if folder_colors.prune(path, &dom) {
+        let _ = folder_colors.save();
+    }
+
+    Ok(Place {
+        explorer: Explorer::from_dom(&dom, icon_pack, &folder_colors, path),
+        selected: launch
+            .select
+            .as_deref()
+            .and_then(|target| explorer::resolve(&dom, target)),
+        camera: PlaceCamera::from_dom(&dom),
+        viewer: Headless::load(path, true)?,
+        properties: Properties::new(database.clone()),
+        dom,
+        database,
+        path: path.to_path_buf(),
+        format,
+        folder_colors,
+    })
+}
+
+fn window_options(title: &SharedString, cx: &App) -> WindowOptions {
+    let bounds = Bounds::centered(None, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
+
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(bounds)),
+        // The editor draws its own title bar (see `shell::chrome::topbar`),
+        // so the window manager is asked not to. The title itself still
+        // goes through `TitlebarOptions`: that is what names the window in
+        // a taskbar, an alt-tab switcher and a screenshot tool, none of
+        // which can read the row this app paints for itself.
+        titlebar: Some(TitlebarOptions {
+            title: Some(title.clone()),
+            appears_transparent: true,
+            ..Default::default()
+        }),
+        window_decorations: Some(WindowDecorations::Client),
+        window_background: crate::theme::active().effects.window,
+        ..Default::default()
+    }
+}
+
+/// `--run`'s script, read before the window and the GPU exist so that a path
+/// typo stops the process outright instead of surfacing as an Output-dock
+/// error on the first frame.
+fn read_script(path: &Path) -> String {
+    match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(err) => {
+            eprintln!("rbxstudio: failed to read {}: {err}", path.display());
+            std::process::exit(1);
+        }
+    }
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .unwrap_or(path.as_os_str())
+        .to_string_lossy()
+        .into_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::file_name;
+    use std::path::Path;
+
+    /// Guards `BUNDLED_FONTS`: every embedded file is a TrueType font
+    /// (`sfnt` version 1.0), so a swapped or truncated asset fails here
+    /// rather than as a silent fallback to the platform font at startup.
+    #[test]
+    fn every_bundled_font_is_a_truetype_file() {
+        for font in super::BUNDLED_FONTS {
+            assert_eq!(&font[..4], &[0, 1, 0, 0]);
+        }
+    }
+
+    #[test]
+    fn the_window_is_titled_after_the_file() {
+        assert_eq!(file_name(Path::new("/places/Demo.rbxl")), "Demo.rbxl");
+        assert_eq!(file_name(Path::new("Demo.rbxl")), "Demo.rbxl");
+    }
+}

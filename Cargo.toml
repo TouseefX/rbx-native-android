@@ -23,6 +23,9 @@ gpui-kit = { opt-level = 3 }
 gpui-kit-assets = { opt-level = 3 }
 gpui-pre-macros = { opt-level = 3 }
 gpui-pre-platform = { opt-level = 3 }
+# The Android build's platform (the desktop `gpui-pre-platform`'s counterpart
+# there, renderer included); only in the tree when building for Android.
+gpui-pre-mobile = { opt-level = 3 }
 rustybuzz = { opt-level = 3 }
 # Same reason on the editor's own side: an unoptimised offscreen frame (draw,
 # read back, swap to BGRA) costs over 100 ms, which no amount of debug symbols
@@ -48,12 +51,14 @@ unicode-linebreak = { opt-level = 3 }
 
 # GPUI Kit's editor keeps its selection list private, and Ctrl+D (add the
 # next match of the selection as another selection) needs to add one from
-# outside. `vendor/gpui-base` is gpui-base 0.6.1 unchanged but for
+# outside. `vendor/gpui-base` is gpui-base 0.6.2 unchanged but for
 # `EditorState::add_selection` and a few other marked additions (see
 # `vendor/README.md`); drop this once upstream exposes an equivalent.
 [patch.crates-io]
 gpui-base = { path = "vendor/gpui-base" }
 # Hover states ease in and out instead of snapping: `vendor/gpui-pre` is
-# gpui-pre 0.3.4 unchanged but for the marked hover-transition addition (see
-# `vendor/README.md`).
+# gpui-pre 0.3.5 unchanged but for the marked hover-transition addition (see
+# `vendor/README.md`) — 0.3.5 being the snapshot GPUI Kit 0.6.2 (the release
+# that made the toolkit hostable on mobile) and `gpui-pre-mobile` are built
+# against, so the whole tree shares one GPUI.
 gpui-pre = { path = "vendor/gpui-pre" }

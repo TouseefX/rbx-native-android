@@ -1,0 +1,47 @@
+[package]
+name = "rbx_android"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+# The Android host of the editor: a `cdylib` whose JNI surface the Kotlin
+# `MainActivity` (see `kotlin/`) and the GameActivity base class it extends
+# call into, driving the same `rbx_studio` library the desktop binary runs,
+# on the GPUI platform `gpui-pre-mobile` provides (see `src/lib.rs`).
+
+# What xbuild packs into the APK as `librbx_android.so` and GameActivity
+# `System.loadLibrary`s; `rlib` so `cargo check` on a desktop host still
+# typechecks the crate's non-Android remainder.
+[lib]
+name = "rbx_android"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rbx_studio = { path = "../rbx_studio" }
+
+[target.'cfg(target_os = "android")'.dependencies]
+# The mobile GPUI platform (Vulkan/GLES through `gpui-pre-wgpu`,
+# cosmic-text, the NDK event plumbing) plus its host-driven entry point in
+# `android::host`, which the GameActivity glue below drives. Pinned to the
+# revision that pairs gpui-pre 0.3.5 — the snapshot GPUI Kit 0.6.2 (the
+# release that made the toolkit hostable on mobile) is built against, and
+# the one `vendor/gpui-pre` carries. Bump all three together.
+gpui-mobile = { package = "gpui-pre-mobile", git = "https://github.com/longbridge/gpui-mobile", rev = "f70603903854751a5589242d4eadcd031823a75a" }
+# For `gpui_kit::assets::AllAssets`, registered as the host application's
+# asset source the same way the desktop launch does. Same exact pin as
+# `rbx_studio`'s, so the whole tree shares one GPUI Kit.
+gpui-kit = { version = "=0.6.2", default-features = false, features = [
+    "component",
+    "assets",
+] }
+# Turning a `Surface` jobject into the `ANativeWindow` the platform renders
+# through. Same version `gpui-pre-mobile` pins.
+ndk = { version = "0.9", default-features = false, features = [
+    "nativewindow",
+] }
+# The JNI types and calls of the GameActivity glue. Same version
+# `gpui-pre-mobile` pins (0.22 is the `Env` API rework its code is written
+# against).
+jni = "0.22"
+# Rust `log` → logcat, so the host's render thread is observable.
+android_logger = "0.15"
+log = "0.4"

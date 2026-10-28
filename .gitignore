@@ -1,4 +1,7 @@
 /target
+# The Android CI's signed APK and its unstripped .so, before upload.
+/dist/
+/dist-symbols/
 shots/
 /gpui-ref
 

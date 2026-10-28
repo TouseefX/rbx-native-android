@@ -1,0 +1,95 @@
+# ============================================================================
+# xbuild (https://github.com/rust-mobile/xbuild) project manifest.
+# ----------------------------------------------------------------------------
+# Build the Android app (run from THIS directory, so xbuild picks the
+# rbx_android package of the workspace):
+#
+#   cd crates/rbx_android
+#   x build --release --platform android --arch arm64 --format apk
+#
+# or, from the repository root (xbuild then picks the rbx_android package
+# either way; the manifest and kotlin/ dir resolve from the package it
+# builds):
+#
+#   x build --release --platform android --arch arm64 --format apk \
+#     --manifest-path crates/rbx_android/Cargo.toml
+#
+# Gradle mode is required because the app includes a Kotlin GameActivity and
+# Maven AAR dependencies. Keep the package name, the activity and these
+# dependencies in sync with `kotlin/MainActivity.kt`, `src/bridge.rs` (whose
+# JNI entry points embed the package) and `.github/workflows/android.yml`.
+# ============================================================================
+
+android:
+  # Generate + run a real Gradle (AGP) project instead of the hand-rolled
+  # APK writer. Required for anything with Java/Kotlin sources or AAR deps.
+  gradle: true
+
+  # Resolved by Gradle (xbuild's generated settings.gradle declares both
+  # google() and mavenCentral()) and packaged into the APK.
+  #   * games-activity 4.4.0 is the GameActivity base class MainActivity
+  #     extends; its native methods are implemented in src/game_activity.rs.
+  #     (It is also the version android-activity 0.6.x — already in the tree
+  #     under gpui-pre-mobile and winit — is written against, so the AAR and
+  #     the Rust side stay compatible.)
+  #   * appcompat because GameActivity is an AppCompatActivity: without an
+  #     AppCompat theme the app crashes on start with "You need to use a
+  #     Theme.AppCompat theme (or descendant)".
+  #   * core for androidx.core (WindowCompat and friends).
+  dependencies:
+    - "androidx.games:games-activity:4.4.0"
+    - "androidx.appcompat:appcompat:1.7.0"
+    - "androidx.core:core:1.13.1"
+
+  manifest:
+    # Also the Java package of kotlin/MainActivity.kt and the JNI names in
+    # src/bridge.rs (`Java_com_touseefx_rbxnative_MainActivity_*`).
+    package: "com.touseefx.rbxnative"
+    version_name: "0.1.0"
+    version_code: 1
+
+    sdk:
+      # NOTE: target_sdk_version is also used by xbuild as
+      #   * the Gradle `compileSdk` / `targetSdk`, and
+      #   * the Android API level the native lib is compiled against
+      #     (`--target=aarch64-linux-android<version>`),
+      # so the NDK sysroot must contain `usr/lib/aarch64-linux-android/<version>`.
+      # 26 is gpui-pre-mobile's floor too: Vulkan 1.0 is mandatory from
+      # API 26+, and the renderer needs it.
+      min_sdk_version: 26
+      target_sdk_version: 34
+
+    uses_permission:
+      # The editor's asset downloads and its Roblox Open Cloud calls.
+      - name: "android.permission.INTERNET"
+      - name: "android.permission.ACCESS_NETWORK_STATE"
+
+    application:
+      label: "rbx Studio"
+      # Our Kotlin MainActivity lives in the APK's dex, so this must be true
+      # (xbuild defaults it to false for pure-NativeActivity apps).
+      has_code: true
+      # GameActivity extends AppCompatActivity -> AppCompat theme required.
+      theme: "@style/Theme.AppCompat.NoActionBar"
+
+      activities:
+        - name: ".MainActivity"
+          # GameActivity hosts one SurfaceView for the process's lifetime;
+          # the editor's render thread survives recreation, and the new
+          # surface re-attaches to it, so nothing needs recreating here.
+          config_changes: "orientation|keyboardHidden|keyboard|screenSize|screenLayout|smallestScreenSize|locale|layoutDirection|fontScale|density|uiMode"
+          launch_mode: "singleTask"
+          # The IME proxy is resized through GameActivity's own
+          # SOFT_INPUT_ADJUST_RESIZE; adjustNothing keeps the surface from
+          # being relaid out under the keyboard.
+          window_soft_input_mode: "adjustNothing"
+          hardware_accelerated: true
+          exported: true
+          # xbuild automatically appends:
+          #   * <meta-data android:name="android.app.lib_name"
+          #                value="rbx_android"/>  (the cargo package name,
+          #     '_' for '-') — what GameActivity loads and what the JNI
+          #     entry points live in;
+          #   * the MAIN/LAUNCHER intent-filter,
+          # so neither is declared here (declaring them would duplicate
+          # them).

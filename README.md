@@ -51,6 +51,7 @@ something's broken anyway, open an issue.
 | Linux (X11) | Main target. I use it on this every day. |
 | Windows | **Supported, the editor runs.** CI runs clippy, the build and the tests on `windows-latest` for every change. Known gaps are listed under [Platform](ROADMAP.md#platform) in the roadmap. If something breaks on your machine, please open an issue. |
 | macOS | Not supported. CI builds it and runs the tests on `macos-latest` so it keeps compiling, but nobody actually runs the editor there. |
+| Android | **Builds, pre-alpha on device.** The editor runs as a GameActivity app through GPUI Kit 0.6.2's mobile support and `gpui-pre-mobile` (see [`crates/rbx_android`](crates/rbx_android/README.md)); CI cross-compiles and packages the APK for every change. Nobody runs it on a phone daily yet. |
 | Wayland | Works, but without pointer lock (the cursor isn't captured). |
 
 ## Building
@@ -110,6 +111,32 @@ compiled at `opt-level = 3` even in debug (see the workspace `Cargo.toml`).
 GPUI Kit's text and layout code and the offscreen frame are way too slow
 otherwise. So yes, `cargo build` still takes a while for those two crates.
 
+### The editor on Android
+
+The same editor as an Android app, packaged by
+[xbuild](https://github.com/rust-mobile/xbuild) as a
+[GameActivity](https://developer.android.com/games/sdk/game-activity) app:
+the Kotlin host and the manifest live in
+[`crates/rbx_android`](crates/rbx_android/README.md), which explains the
+whole architecture — the JNI surface, the host-driven GPUI entry point and
+the version pairing behind it.
+
+```sh
+rustup target add aarch64-linux-android
+cargo install --locked --git https://github.com/rust-mobile/xbuild xbuild
+cd crates/rbx_android
+x build --release --platform android --arch arm64 --format apk
+```
+
+That needs an Android SDK/NDK (`sdkmanager "platform-tools"
+"platforms;android-34" "build-tools;34.0.0" "ndk;27.2.12479018"`), Gradle
+on `PATH` (for the Kotlin Activity and its AAR dependencies — xbuild
+generates the Gradle project), and `JAVA_HOME` on JDK 17. The result is
+`target/x/release/android/rbx_android.apk` at the **repository root** (the
+workspace's `target/`), unsigned — zipalign and sign it with
+`apksigner`, or take the signed APK CI uploads as an artifact for every
+change (`.github/workflows/android.yml`).
+
 ### Workspace crates
 
 | Crate | What it does |
@@ -127,6 +154,7 @@ otherwise. So yes, `cargo build` still takes a while for those two crates.
 | `rbx_loren` | Loren, the optional built-in game framework by fabi: the `rbxstudio loren` CLI, its vendored Luau runtime, and the project graph, place and spec runs the editor reads. |
 | `rbx_viewer` | The wgpu renderer and `rbxview` (desktop and WebGPU). |
 | `rbx_studio` | The editor (`rbxstudio`), built on GPUI Kit. |
+| `rbx_android` | The Android app: the editor hosted by a GameActivity through `gpui-pre-mobile` (see [`crates/rbx_android`](crates/rbx_android/README.md)). |
 | `rbx_audit` | A security audit of every script in a place: unchecked remote arguments, missing remotes, bad requires and so on. |
 | `rbx_parser_cli` | The `rbxdump`, `rbxlua`, `rbxmerge` and `rbxaudit` tools. |
 
