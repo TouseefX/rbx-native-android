@@ -2908,6 +2908,19 @@ both the plain fetch failure and the silent fall back to a default
   through the back button opens Roblox's menu, and the cover follows a
   focused TextBox. Research, verdicts and measurements:
   `docs/research/play-sandbox/device-simulator.md`.
+- [x] **Device Simulator: the keyboard cover and the preferred input,
+  told to game scripts**: during Play on a simulated phone or tablet, game
+  scripts read the editor's keyboard cover through the touch stand-in's
+  `UserInputService`: `OnScreenKeyboardVisible`, `OnScreenKeyboardPosition`
+  and `OnScreenKeyboardSize`, in the client's pixels (the cover's height
+  across the bottom of the screen, zero while it is down), with `Changed`
+  and `GetPropertyChangedSignal` firing as it moves. On a simulated console
+  `PreferredInput` reads `Gamepad`; touch devices already read `Touch`,
+  with `TouchEnabled` true and `MouseEnabled` and `KeyboardEnabled` false.
+  Roblox's own CoreGui reads the real service, so it still picks its UI by
+  the real values. Checked in Roblox's engine (a Studio playtest with the
+  stand-in switched on); not yet run end to end through Sober, since Play
+  had no working Open Cloud key that day.
 - [x] **Controller Emulator** (`rbx_play::gamepad`,
   `shell/controller_emulator`; Test › Controller): Studio's widget,
   Generic Gamepad, PS4, PS5, Xbox and Generic Handheld, drawn with the
@@ -3164,19 +3177,21 @@ both the plain fetch failure and the silent fall back to a default
 - [ ] 📋 **Device Simulator: what is still open**, known caveats of Play
   through Sober, measured live: a click reaches the game as `MouseButton1`,
   never a touch (no multi-touch), and Roblox's own UI chosen by
-  `PreferredInput` (which stays `KeyboardAndMouse`) is not simulated; a
-  virtual uinput touchscreen does not help, Sober drops X11 touch input
-  (tried live). Roblox's thumbstick and jump button are stood in for by
-  the probe's own, mouse-driven copies, and game scripts see the mouse as
-  a finger (gestures included, on the service and on GuiObjects) and the
-  wheel as a pinch or rotation, and a drag over the world turns the
-  camera. A second Play in one editor
-  session crashed GNOME Shell on X11 when the second client was reparented
-  (mutter 46.2 assertion), untested whether withdrawing it first avoids
-  that. The
-  keyboard cover is not reported to the game (`OnScreenKeyboardVisible`
-  false, `OnScreenKeyboardSize` 0), and the Android back button arrives as
-  `KeyCode.Escape`. Also open: input modes on
+  `PreferredInput` (which stays `KeyboardAndMouse` on the real service) is
+  not simulated; a virtual uinput touchscreen does not help, Sober drops
+  X11 touch input (tried live). Roblox's thumbstick and jump button are
+  stood in for by the probe's own, mouse-driven copies, and game scripts
+  see the mouse as a finger (gestures included, on the service and on
+  GuiObjects) and the wheel as a pinch or rotation, and a drag over the
+  world turns the camera. A second Play in one editor session crashed
+  GNOME Shell on X11 once, on the real desktop, when the second client was
+  reparented (mutter 46.2 assertion), although the window was already
+  withdrawn from the window manager first. It did not happen again in GNOME
+  Shell 46 (mutter 46.2) nested in Xephyr: three Sober windows in a row,
+  on its home screen and in a game, embedded into the editor and dropped
+  again, no crash. That desktop session also had a uinput touchscreen
+  attached; whether that matters is untested. The Android back button
+  arrives as `KeyCode.Escape`. Also open: input modes on
   Windows, where RobloxPlayerBeta has no switch and no allowlisted FFlag
   gives one (whether injected synthetic touch makes `TouchEnabled` true is
   untested); a headset in Play (Sober has no VR; on Windows an OpenXR

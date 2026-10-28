@@ -16,8 +16,8 @@ impl Shell {
             .checked(has_keyboard && self.device_sim.keyboard)
             .hint(
                 "Previews the system keyboard over the bottom of the screen. In Play it \
-                 rises on its own while a TextBox or the chat bar has focus. Drawn by the \
-                 editor only: the game is not told (OnScreenKeyboardSize stays 0).",
+                 rises on its own while a TextBox or the chat bar has focus, and game \
+                 scripts read it as OnScreenKeyboardSize. Roblox\u{2019}s own UI does not see it.",
             );
         let back_hint = if cfg!(target_os = "linux") {
             "Android devices, during Play: sends Escape to the client, which opens \

@@ -1,7 +1,8 @@
 //! The on-screen keyboard cover: a picture of the device's own dark system
 //! keyboard (the iPhone's, the iPad's or Gboard) drawn over the bottom of
 //! the simulated screen, so a layout can be judged against the space a real
-//! keyboard takes. The game is never told it is there.
+//! keyboard takes. During Play game scripts are told where it is
+//! (`shell::device_sim`); Roblox itself is not.
 //!
 //! The page keys (123, #+=, ABC, the emoji key), shift and the globe, which
 //! switches between QWERTY and AZERTY, work in Edit too. During Play the

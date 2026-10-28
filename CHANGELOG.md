@@ -2,6 +2,15 @@
 
 ## 2026-10-28
 
+- **Device Simulator tells game scripts about the keyboard and the
+  input**: during Play on a simulated phone or tablet, a game's scripts now
+  see the editor's on-screen keyboard: `OnScreenKeyboardVisible`,
+  `OnScreenKeyboardPosition` and `OnScreenKeyboardSize` follow the cover,
+  with their change signals, so UI that moves out of the keyboard's way
+  does. On a simulated console `PreferredInput` reads `Gamepad`. Roblox's
+  own menus still go by the real values. A second Play crashing GNOME
+  Shell could not be reproduced under the same GNOME Shell and mutter
+  nested in Xephyr, so it stays open. (@chteau)
 - **Shortcuts survive an undo**: when an undo removed the thing a field
   was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
   new Accessory selected), the first Ctrl+Y did nothing until you clicked

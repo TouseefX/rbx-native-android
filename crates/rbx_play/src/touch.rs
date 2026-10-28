@@ -34,8 +34,9 @@
 //! probe's `__rbxnative_touch_input` module (`probe/touch_input.luau`) is
 //! the other half. On a simulated touch device it turns the mouse into a
 //! finger (and the wheel into a two-finger pinch or rotate) and reports a
-//! touch device; anywhere else, and on the server, every call hands back
-//! what it was given.
+//! touch device and the editor's keyboard cover; on a simulated console it
+//! reports a gamepad preference; anywhere else, and on the server, every
+//! call hands back what it was given.
 
 use full_moon::ast::{
     Assignment, Call, CompoundAssignment, Expression, FunctionArgs, FunctionCall, Index, Prefix,

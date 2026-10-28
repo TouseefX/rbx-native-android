@@ -512,6 +512,16 @@ pub enum CommandBody {
     /// wheel wherever the pointer is, so the client sinks it while the
     /// pointer is outside (`probe/touch_input.luau`).
     Pointer { inside: bool },
+    /// The editor's on-screen keyboard cover, in the client's pixels
+    /// (`width` and `height` 0 while it is down). Reported to game scripts
+    /// as `UserInputService.OnScreenKeyboard*` through the touch stand-in
+    /// (`probe/touch_input.luau`); the real properties are read-only.
+    Keyboard {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
     /// Send `side`'s whole tree again (`Tree` with `reset`).
     Resync { side: Side },
     /// The client walks its character to the instance at `path` (a

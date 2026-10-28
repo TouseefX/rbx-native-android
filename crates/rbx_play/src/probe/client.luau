@@ -101,6 +101,13 @@ remote.OnClientEvent:Connect(function(payload)
 		if not ok then
 			warn("[rbx-native] pointer: " .. tostring(err))
 		end
+	elseif kind == "keyboard" then
+		local ok, err = pcall(function()
+			require(ReplicatedStorage:WaitForChild("__rbxnative_touch_input")).setKeyboard(cmd.x, cmd.y, cmd.width, cmd.height)
+		end)
+		if not ok then
+			warn("[rbx-native] keyboard: " .. tostring(err))
+		end
 	end
 end)
 
