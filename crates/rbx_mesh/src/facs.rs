@@ -92,10 +92,11 @@ pub struct Facs {
     /// The correctives, the columns after the controls, as indices into
     /// [`Facs::controls`].
     pub correctives: Vec<Vec<u16>>,
-    /// Position deltas per axis, `rows × cols` row-major.
-    position: [Vec<f32>; 3],
+    /// Position deltas per axis, `rows × cols` row-major (rows are bones,
+    /// columns the controls then the correctives).
+    pub position: [Vec<f32>; 3],
     /// Rotation deltas per axis in degrees, same layout.
-    rotation: [Vec<f32>; 3],
+    pub rotation: [Vec<f32>; 3],
 }
 
 /// Below these a matrix entry is quantization noise, not motion: a
