@@ -12,6 +12,16 @@
   so Loren specs failed on any other machine; Loren's runner and specs now
   ship inside the binary next to its project template. (@chteau)
 
+- **Controller Emulator reaches the game**: the virtual pad did nothing in
+  a Play, though Sober saw it. Sober drops a gamepad's input while its
+  window doesn't have the keyboard focus, and using the emulator's window
+  takes it. The emulator now tells the embedded client it still has the
+  focus before each change of the pad, so sticks, buttons and triggers
+  reach the game while the emulator keeps your keyboard bindings. On
+  Windows the pad is now a ViGEmBus Xbox 360 or DualShock 4, through a
+  `ViGEmClient.dll` you put next to the editor (not shipped, and not yet
+  tried on Windows). `examples/gamepad_demo.rs` makes a place that logs
+  what a game script sees from the pad. (@chteau)
 - **Animation Graphs play as real Studio does**: the guesses the graph
   runtime made where Roblox's docs are silent were measured in real Studio
   and fixed to match. RandomSequence now picks what Studio picks for the
