@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-28
+
+- **Auto-rig a Roblox model**: Auto-rig a mesh… takes a `.rbxm` or `.rbxmx`
+  now, not just FBX, OBJ and glTF. Every MeshPart's mesh is fetched and
+  fitted to its Size and CFrame like the viewport does it (plain Parts
+  come along as their shape), merged into one body and rigged as usual.
+  When all the parts share a texture, a SurfaceAppearance or a colour,
+  the rig keeps it. An empty model, a model that's already rigged
+  (Bones or Motor6Ds), one with unions, and meshes that won't download
+  each get a clear message in the toast and Output. (@chteau)
+
 ## 2026-10-27
 
 - **SpecialMesh shapes now match Studio**: a Head is Studio's own
