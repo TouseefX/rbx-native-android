@@ -14,7 +14,12 @@ fn note(subject: String, message: String) -> Finding {
     }
 }
 
-fn geometry(bytes: &[u8], scale_to: Option<[f32; 3]>) -> Result<Geometry, rbx_mesh::MeshError> {
+/// A mesh file's LOD 0, centred and stretched to `scale_to` (a part's
+/// `Size`) when given, else as the file holds it.
+pub(in crate::shell::ugc) fn mesh_geometry(
+    bytes: &[u8],
+    scale_to: Option<[f32; 3]>,
+) -> Result<Geometry, rbx_mesh::MeshError> {
     let sm = rbx_mesh::parse_skinned(bytes)?;
     let mesh = &sm.mesh;
     let center = mesh.bounds.center();
@@ -53,15 +58,16 @@ fn geometry(bytes: &[u8], scale_to: Option<[f32; 3]>) -> Result<Geometry, rbx_me
 /// Blocking. `fetch` downloads an asset's bytes by id.
 pub(in crate::shell::ugc) fn resolve(
     plan: &Plan,
-    fetch: &dyn Fn(u64) -> Result<Vec<u8>, String>,
+    fetch: &dyn Fn(&Key) -> Result<Vec<u8>, String>,
 ) -> Collected {
     let mut notes = plan.notes.clone();
     let parts = plan
         .parts
         .iter()
         .map(|p| {
-            let geometry = p.mesh.and_then(|id| {
-                match fetch(id).and_then(|b| geometry(&b, Some(p.size)).map_err(|e| e.to_string()))
+            let geometry = p.mesh.as_ref().and_then(|id| {
+                match fetch(id)
+                    .and_then(|b| mesh_geometry(&b, Some(p.size)).map_err(|e| e.to_string()))
                 {
                     Ok(g) => Some(g),
                     Err(e) => {
@@ -83,7 +89,7 @@ pub(in crate::shell::ugc) fn resolve(
         .collect();
     let mut textures = Vec::new();
     for t in &plan.textures {
-        let dims = fetch(t.id).and_then(|bytes| {
+        let dims = fetch(&Key::Id(t.id)).and_then(|bytes| {
             image::ImageReader::new(std::io::Cursor::new(bytes))
                 .with_guessed_format()
                 .map_err(|e| e.to_string())?
@@ -108,7 +114,7 @@ pub(in crate::shell::ugc) fn resolve(
     let mut ordered: Vec<&CagePlan> = plan.cages.iter().collect();
     ordered.sort_by_key(|c| c.kind == CageKind::Outer);
     for c in ordered {
-        match fetch(c.mesh).and_then(|b| geometry(&b, None).map_err(|e| e.to_string())) {
+        match fetch(&c.mesh).and_then(|b| mesh_geometry(&b, None).map_err(|e| e.to_string())) {
             Ok(g) => {
                 let template = match c.kind {
                     CageKind::Inner => {
@@ -146,9 +152,17 @@ pub(in crate::shell::ugc) fn resolve(
 }
 
 /// An asset's bytes through the editor's asset cache, downloading what it
-/// lacks. Blocking.
-pub(in crate::shell::ugc) fn fetch_cached(id: u64) -> Result<Vec<u8>, String> {
+/// lacks; a local file is only ever in the cache. Blocking.
+pub(in crate::shell::ugc) fn fetch_cached(key: &Key) -> Result<Vec<u8>, String> {
     let cache = rbx_assets::AssetCache::new(None).map_err(|e| e.to_string())?;
+    let id = match key {
+        Key::Id(id) => *id,
+        Key::Local(path) => {
+            return cache
+                .get_native(path)
+                .ok_or_else(|| format!("{path} is no longer in the local asset cache"))
+        }
+    };
     if let Some(bytes) = cache.get_id(id) {
         return Ok(bytes);
     }

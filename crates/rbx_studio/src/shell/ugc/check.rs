@@ -3,7 +3,7 @@
 
 use gpui_kit::*;
 use rbx_dom::Variant;
-use rbx_ugc::{AssetType, BodyScale, Finding};
+use rbx_ugc::{AssetType, BodyScale, Finding, Geometry};
 
 use super::super::Shell;
 use super::{collect, source, Collected, ItemKind, ItemSource};
@@ -24,6 +24,9 @@ pub(super) struct Check {
     pub(super) source: Option<ItemSource>,
     pub(super) kind: ItemKind,
     pub(super) run: Run,
+    /// The body cage a layered item's cages were made from, when this
+    /// editor made them: both must keep its vertices and UVs.
+    pub(super) template: Option<Geometry>,
     /// Bumped by every start, so an older run finishing late is dropped.
     generation: u64,
 }
@@ -41,6 +44,7 @@ impl Check {
             source,
             kind,
             run: Run::Idle,
+            template: None,
             generation: 0,
         }
     }
@@ -119,7 +123,14 @@ impl Check {
             ItemSource::Instance { root, .. } => {
                 match collect::plan(&shell.read(cx).dom, root, kind) {
                     Ok(plan) => {
-                        Box::new(move || Ok(collect::resolve(&plan, &collect::fetch_cached)))
+                        let template = self.template.clone();
+                        Box::new(move || {
+                            let mut collected = collect::resolve(&plan, &collect::fetch_cached);
+                            for cage in &mut collected.item.cages {
+                                cage.template = cage.template.take().or(template.clone());
+                            }
+                            Ok(collected)
+                        })
                     }
                     Err(msg) => {
                         self.run = Run::Failed(msg);
