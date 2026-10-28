@@ -3126,11 +3126,12 @@ both the plain fetch failure and the silent fall back to a default
 - [x] **Cage-to-cage layered clothing fit**: garments pair their inner cage
   with the body cage by template UV and keep their clearance over it, layer
   over layer. Same jacket and pants on the same blocky bodies as real
-  Studio: silhouette XOR 0.78 down to 0.12.
+  Studio: silhouette XOR 0.78 down to 0.12. `BindOffset` moves the fitted
+  garment about the root part, like Studio; `Puffiness` and
+  `ShrinkFactor` change nothing in Studio, so they change nothing here.
 - [ ] 📋 **UGC creator workflow, the rest**: the head side (landmarks, FACS
-  check, face preview), Puffiness / ShrinkFactor / BindOffset in the fit,
-  and a live check that the Creator Hub can turn an API-uploaded Model into
-  an avatar item. The upload fee, moderation and Marketplace publish have
+  check, face preview), and a live check that the Creator Hub can turn an
+  API-uploaded Model into an avatar item. The upload fee, moderation and Marketplace publish have
   no documented Open Cloud endpoint, so the last step stays a handoff to
   the Creator Hub. Gap analysis, staged plan and what each stage was
   checked against in real Studio: `docs/research/ugc-creators/README.md`.

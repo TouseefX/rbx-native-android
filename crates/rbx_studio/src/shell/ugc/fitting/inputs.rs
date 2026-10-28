@@ -59,8 +59,8 @@ impl Field {
             Field::TurnX | Field::TurnY | Field::TurnZ => (v + 180.0).rem_euclid(360.0) - 180.0,
             Field::Scale => v.clamp(0.1, 10.0),
             Field::Order => v.round().clamp(0.0, 99.0),
-            Field::Puffiness => v.clamp(0.0, 2.0),
-            Field::Shrink => v.clamp(0.0, 1.0),
+            // Studio clamps both to -1..1 on write.
+            Field::Puffiness | Field::Shrink => v.clamp(-1.0, 1.0),
             Field::NudgeAmount => v.clamp(-1.0, 1.0),
             Field::NudgeRadius => v.clamp(0.1, 4.0),
         }
@@ -271,6 +271,8 @@ mod tests {
         assert_eq!(Field::Scale.bound(0.0), 0.1);
         assert_eq!(Field::Order.bound(2.6), 3.0);
         assert_eq!(Field::Shrink.bound(3.0), 1.0);
+        assert_eq!(Field::Puffiness.bound(2.0), 1.0);
+        assert_eq!(Field::Shrink.bound(-3.0), -1.0);
         assert_eq!(Field::Order.format(3.0), "3");
         assert_eq!(Field::MoveX.format(0.783), "0.78");
     }

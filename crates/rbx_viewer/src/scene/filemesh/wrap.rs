@@ -23,8 +23,18 @@
 //! ([`register`]); matching vertices across that gap would pick the wrong
 //! surface and tear the garment.
 //!
-//! `Puffiness`, `ShrinkFactor` and `BindOffset` are not applied: Roblox
-//! publishes no formula for them.
+//! `BindOffset` moves the fitted garment as a whole, a `CFrame` about the
+//! character's `HumanoidRootPart`: Studio, given `(0, 0.5, 0)`, wears the
+//! catalog Denim Jacket (8516609675) half a stud higher, unchanged in shape,
+//! and given `CFrame.Angles(0, 0, 0.3)` turns it 0.3 radians about the root
+//! part, not the handle. The cages stay where they are, so the layer above
+//! is worn over the same outer cage.
+//!
+//! `Puffiness` and `ShrinkFactor` are not applied, as Studio applies neither:
+//! <https://create.roblox.com/docs/reference/engine/classes/WrapLayer> marks
+//! both deprecated, and in Studio the same jacket draws pixel for pixel the
+//! same at `Puffiness` -1, 0.5 and 1 and `ShrinkFactor` -1, 0.5 and 1, alone
+//! on the body or over a second layer. Studio clamps both to -1..1.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -63,6 +73,9 @@ pub(super) struct Wrap {
     /// worn over.
     outer: Option<(AssetRef, Mat4)>,
     order: f32,
+    /// `BindOffset` as a world transform about the character's root part,
+    /// `None` when it is the identity.
+    bind: Option<Mat4>,
     targets: Vec<Target>,
     /// The character the garment is worn on: the handle's accessory's parent,
     /// whose parts the wrapped garment is skinned to.
@@ -107,6 +120,24 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
         });
     let order = crate::scene::number(layer.properties().get("Order"));
     let rig = dom.parent(dom.parent(handle)?)?;
+    let bind = match layer.properties().get("BindOffset") {
+        Some(Variant::CFrame(c)) if cframe_matrix(c) != Mat4::IDENTITY => {
+            let root = dom
+                .get(rig)?
+                .children()
+                .iter()
+                .filter_map(|&c| dom.get(c))
+                .find(|c| c.name() == "HumanoidRootPart")
+                .or_else(|| dom.get(handle))
+                .and_then(|p| match p.properties().get("CFrame") {
+                    Some(Variant::CFrame(c)) => Some(cframe_matrix(c)),
+                    _ => None,
+                })
+                .unwrap_or(Mat4::IDENTITY);
+            Some(root * cframe_matrix(c) * root.inverse())
+        }
+        _ => None,
+    };
     let targets: Vec<Target> = dom
         .get(rig)?
         .children()
@@ -137,6 +168,7 @@ pub(super) fn of(dom: &WeakDom, database: &ReflectionDatabase, handle: Ref) -> O
         origin,
         outer,
         order,
+        bind,
         targets,
         character: rig,
     })
@@ -186,9 +218,12 @@ pub(super) fn derive(
                 slot.insert(body_surface(wrap, meshes))
             }
         };
-        let Some(deformed) = deform_over(wrap, model, garment, meshes, surface) else {
+        let Some(mut deformed) = deform_over(wrap, model, garment, meshes, surface) else {
             continue;
         };
+        if let Some(bind) = wrap.bind {
+            deformed = rebound(&deformed, model.inverse() * bind * model);
+        }
         let skin = match &garment.skin {
             Some(own) if names_the_body(wrap, own) => Some(own.clone()),
             _ => lent_skin(wrap, model, &deformed, meshes),
@@ -203,6 +238,20 @@ pub(super) fn derive(
                 }),
             ),
         );
+    }
+    out
+}
+
+/// `garment` moved by `by`, in its own mesh space: the fitted garment as
+/// `BindOffset` moves it.
+fn rebound(garment: &rbx_mesh::Mesh, by: Mat4) -> rbx_mesh::Mesh {
+    let mut out = garment.clone();
+    for vertex in &mut out.vertices {
+        vertex.position = by.transform_point3(Vec3::from(vertex.position)).to_array();
+        vertex.normal = by
+            .transform_vector3(Vec3::from(vertex.normal))
+            .normalize_or_zero()
+            .to_array();
     }
     out
 }

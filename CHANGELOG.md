@@ -17,7 +17,10 @@
   Accessory the same way Studio's tool does. Clothing gets inner and outer
   cages made for it, with an overlay and a nudge. Layered clothing
   now fits cage to cage everywhere it shows, a lot closer to what Studio
-  draws. (@chteau)
+  draws, and follows `BindOffset` like Studio does. Eyebrows and eyelashes
+  sit in the Accessory list like in Studio but get cages, since Studio
+  won't save them rigid. Undo and redo never bring the preview back, and
+  undoing Generate puts the item back the way it was. (@chteau)
 
 ## 2026-10-27
 

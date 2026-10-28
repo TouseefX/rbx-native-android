@@ -192,8 +192,27 @@ loading, instance editing for all the avatar classes, skinned rendering.
      0.13 / 0.12 (whole frame 0.78 to 0.12). What's left is a few spots
      between the legs where Studio hides the body under the cloth (its HSR
      data) and we don't.
-   - Not applied: `Puffiness`, `ShrinkFactor` and `BindOffset`, which
-     Roblox gives no formula for. Not checked: whether Roblox's own
+   - `WrapLayer` tuning, measured in Studio on the same jacket (Normal
+     body, one camera per setting): `BindOffset` moves the fitted garment
+     as a whole, about the character's `HumanoidRootPart`. `(0, 0.5, 0)`
+     raises it half a stud (21 px in Studio, 20 px in ours, same camera),
+     `CFrame.Angles(0, 0, 0.3)` turns it about the root part, not the
+     handle (checked on a 1.5x tall body where the two sit 0.58 studs
+     apart). Ours does the same. `Puffiness` (-1, 0, 0.5, 1,
+     and 2, which Studio clamps to 1) and `ShrinkFactor` (-1, 0.5, 1) draw
+     pixel for pixel the same as the defaults in Studio, alone or over a
+     second layer; the API page marks both deprecated. So they're written
+     but not applied, and the tool clamps them to -1..1 like Studio. On
+     the Mannequin our jacket is still slimmer than Studio's (garment
+     XOR/union 0.31 at the defaults on that body, the same before and
+     after this change).
+   - Eyebrows and eyelashes: Studio's AFT lists them with the rigid types,
+     but Save to Roblox on a rigid eyebrow says "Could not find required
+     WrapLayer" and "Asset type 'EyebrowAccessory' is not a rigid
+     accessory category. It can only be used with layered clothing." The
+     tool keeps them in the Accessory list and fits them layered on the
+     Head, and Check Item keeps asking for their cages.
+   - Not checked: whether Roblox's own
      validator accepts cages built from the Mannequin template once
      uploaded, since that takes a paid upload.
 4. **Heads** (stage 4). Landmarks, FACS check, face preview.
