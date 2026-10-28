@@ -77,7 +77,7 @@ the badge, with the sandbox place published by Play:
 | Pixel 8, Android back button | Roblox's in-game menu opens; pressed again, it closes |
 | iPhone 15 Pro, chat focused, "Sa😂🙏€" tapped on the cover, then return | the message arrives as typed, emoji and € included |
 | iPhone 15 Pro, a click on the client | `GetLastInputType` MouseButton1: a click reaches the game as a mouse click, not a touch, though `TouchEnabled` is true |
-| Controller Emulator open at Play, A held (Xbox, then Generic Gamepad) | the pad sends `BTN_SOUTH` on its `/dev/input` node and `GamepadEnabled` is true, but `GetLastInputType` stays Touch and the character does not jump, Sober focused or not, with `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1` or without: Sober sees the pad but passes none of its input on |
+| Controller Emulator open at Play, A held (Xbox, then Generic Gamepad) | the pad sends `BTN_SOUTH` on its `/dev/input` node and `GamepadEnabled` is true, but `GetLastInputType` stays Touch and the character does not jump. Cause (found 2026-10-28, below): Sober drops a pad's input while its window lacks the keyboard focus, and the Controller Emulator's window held it |
 
 Two notes from the run:
 
@@ -237,8 +237,26 @@ from outside, not of the probe.
   - the first wheel notch after the pointer comes back from the editor's
     panels can be lost, since the `pointer` command takes a round trip
     through the tunnel.
-- **The Controller Emulator's pad does nothing in game.** Sober sees it
-  (`GamepadEnabled` true) but passes none of its input on (row above).
+- **A pad only reaches the game while Sober holds the keyboard focus.**
+  Sober's SDL drops a gamepad's presses, and its sticks leaving rest,
+  while the client window lacks the X focus, and Sober does not honour
+  `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS` (passed with `--env=`, still
+  dropped). That is why the Controller Emulator's pad did nothing: using
+  its window takes the focus. Measured 2026-10-28 on Xephyr with a uinput
+  Xbox pad, Sober joined straight into the sandbox place: focused, the
+  stick walks the character and A jumps it (touch mode on or off); with the
+  focus on another window, nothing moves; the same, after one synthetic
+  `FocusIn` sent to the client's window, moves again. So the emulator sends
+  the embedded client a synthetic `FocusIn` before each change of the pad
+  (`Embedded::lend_focus`), verified with the same embedding, pad and call
+  the editor uses. The pad itself was never the problem: SDL3 inside the
+  Sober sandbox (the runtime's own libSDL3, no udev, `--device=input`)
+  reads it as an Xbox 360 Controller with every press, and Roblox's app
+  screen navigates with its D-pad. A client left in its own window (when
+  embedding fails) still loses the pad while the emulator is used.
+  Screenshot: `controller-emulator/play-focus-lend.png` (top: focus
+  elsewhere, before and after the presses; bottom: the same with
+  `lend_focus`).
 - **The keyboard cover is ours, not the device's.** The real
   `OnScreenKeyboardVisible` stays false and `OnScreenKeyboardSize` 0, so
   Roblox's own UI does not move out of its way. **Built:** game scripts are
