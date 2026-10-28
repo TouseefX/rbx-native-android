@@ -51,6 +51,18 @@ class MainActivity : GameActivity() {
     /** The software keyboard's proxy, non-null once shown the first time. */
     private var input: InputProxy? = null
 
+    /**
+     * How much of a desktop the screen shows, emulator-style: the window's
+     * logical size is the physical surface divided by the scale passed with
+     * it, so dividing the density by this zoom widens the logical viewport
+     * from the phone-native ~415px to ~1025px — the whole desktop layout
+     * fits on screen at once, smaller, exactly like an emulator showing a
+     * full desktop. Touches divide by the same scale, so input stays
+     * aligned. 1f restores phone-native sizing; larger values zoom out
+     * further.
+     */
+    private val desktopZoom = 2.5f
+
     /** Hands surfaces to the editor's render thread, beside GameActivity's
      *  own callback (whose Rust side is inert). */
     private val surfaceCallback = object : SurfaceHolder.Callback {
@@ -73,10 +85,11 @@ class MainActivity : GameActivity() {
         private fun forward(holder: SurfaceHolder) {
             val surface: Surface? = holder.surface
             if (surface == null || !surface.isValid) return
-            // The density the surface's logical pixels scale by: the host
-            // opens GPUI's window scaled by it and expects touches in
-            // physical pixels, which onTouchEvent scales below.
-            nativeSurfaceCreated(surface, resources.displayMetrics.density)
+            // The density the surface's logical pixels scale by, divided by
+            // the desktop zoom above: the host opens GPUI's window scaled by
+            // it and expects touches in physical pixels, which onTouchEvent
+            // forwards unscaled.
+            nativeSurfaceCreated(surface, resources.displayMetrics.density / desktopZoom)
         }
     }
 
