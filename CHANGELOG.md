@@ -11,7 +11,8 @@
   Windows the pad is now a ViGEmBus Xbox 360 or DualShock 4, through a
   `ViGEmClient.dll` you put next to the editor (not shipped, and not yet
   tried on Windows). `examples/gamepad_demo.rs` makes a place that logs
-  what a game script sees from the pad. (@chteau)- **Animation Graphs play as real Studio does**: the guesses the graph
+  what a game script sees from the pad. (@chteau)
+- **Animation Graphs play as real Studio does**: the guesses the graph
   runtime made where Roblox's docs are silent were measured in real Studio
   and fixed to match. RandomSequence now picks what Studio picks for the
   same Seed (it's a Mersenne Twister, not Luau's `Random`), Blend2D's
