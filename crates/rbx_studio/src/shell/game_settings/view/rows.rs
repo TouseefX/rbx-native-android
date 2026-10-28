@@ -261,7 +261,7 @@ impl GameSettingsWindow {
     }
 }
 
-fn plain_row() -> Div {
+pub(super) fn plain_row() -> Div {
     h_flex()
         .px(px(14.))
         .py(px(10.))
@@ -269,7 +269,7 @@ fn plain_row() -> Div {
         .border_color(tokens::border())
 }
 
-fn row(
+pub(super) fn row(
     label: &'static str,
     description: &'static str,
     scope: Option<&'static str>,

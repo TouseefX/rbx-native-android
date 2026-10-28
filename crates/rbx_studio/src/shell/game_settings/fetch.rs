@@ -132,7 +132,7 @@ fn describe(err: &CloudError, scope: &str) -> String {
     format!("{base} ({err})")
 }
 
-fn mock_mode() -> Option<String> {
+pub(super) fn mock_mode() -> Option<String> {
     std::env::var(MOCK_VARIABLE).ok()
 }
 
