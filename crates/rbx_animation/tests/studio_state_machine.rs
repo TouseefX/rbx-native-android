@@ -1,21 +1,42 @@
 //! A state machine saved by Roblox Studio (`AnimationGraphDefinition` "Graph":
 //! a `StateMachineNode` with states State and State1 (the entry is State),
 //! feeding the output). The writer must produce the bytes Studio did for
-//! `EntryState` and `InputPinData`.
+//! `EntryState` and `InputPinData`. The `.rbxmx` is the same graph saved by
+//! Studio into an XML place, where `EntryState` is a `__attrRef_EntryState`
+//! Ref property rather than part of `AttributesSerialize`.
 
 use rbx_animation::graph::dom::{read, write};
 use rbx_animation::graph::model::{NodeKind, Prop, Value};
 use rbx_dom::{Ref, Variant, WeakDom};
 
+fn fixture(extension: &str) -> Vec<u8> {
+    let manifest = env!("CARGO_MANIFEST_DIR");
+    std::fs::read(format!(
+        "{manifest}/tests/fixtures/studio_state_machine.{extension}"
+    ))
+    .unwrap()
+}
+
 fn load() -> (WeakDom, Ref) {
-    let path = format!(
-        "{}/tests/fixtures/studio_state_machine.rbxm",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    let bytes = std::fs::read(path).unwrap();
-    let dom = rbx_binary::deserialize(&bytes).unwrap();
+    let dom = rbx_binary::deserialize(&fixture("rbxm")).unwrap();
     let def = dom.root_refs()[0];
     (dom, def)
+}
+
+fn load_xml() -> (WeakDom, Ref) {
+    let text = String::from_utf8(fixture("rbxmx")).unwrap();
+    let dom = rbx_xml::deserialize(&text).unwrap();
+    let def = dom.root_refs()[0];
+    (dom, def)
+}
+
+fn entry(dom: &WeakDom, sm: Ref) -> Ref {
+    let attributes =
+        rbx_dom::attributes::decode(dom.get(sm).unwrap().properties().get("AttributesSerialize"));
+    let Some(Variant::Ref(target)) = attributes.get("EntryState") else {
+        panic!("no entry: {attributes:?}");
+    };
+    *target
 }
 
 fn machine(dom: &WeakDom, def: Ref) -> Ref {
@@ -94,4 +115,36 @@ fn the_writer_makes_studio_s_entry_state_and_pin_data_bytes() {
         raw(&back, sm, "InputPinData"),
         raw(&studio, a, "InputPinData")
     );
+}
+
+#[test]
+fn studio_s_xml_entry_state_reads_as_the_binary_one_does() {
+    let (xml, def) = load_xml();
+    let sm = machine(&xml, def);
+    assert_eq!(entry(&xml, sm), child(&xml, sm, "State"));
+    let (binary, bdef) = load();
+    assert_eq!(read(&xml, def), read(&binary, bdef));
+}
+
+#[test]
+fn an_xml_save_writes_entry_state_as_studio_does() {
+    let (xml, def) = load_xml();
+    let text = rbx_xml::serialize(&xml).unwrap();
+    let sm = machine(&xml, def);
+    let state = child(&xml, sm, "State");
+    // Studio's own lines for the node: an empty blob, then the Ref.
+    let blob = r#"<BinaryString name="AttributesSerialize">AAAAAA==</BinaryString>"#;
+    let reference = format!(
+        r#"<Ref name="__attrRef_EntryState">RBX{}</Ref>"#,
+        state.value()
+    );
+    let lines: Vec<&str> = text.lines().map(str::trim).collect();
+    let at = lines.iter().position(|l| *l == reference).expect("no Ref");
+    assert_eq!(lines[at - 1], blob);
+
+    let back = rbx_xml::deserialize(&text).unwrap();
+    let back_def = back.root_refs()[0];
+    let sm = machine(&back, back_def);
+    assert_eq!(back.get(entry(&back, sm)).unwrap().name(), "State");
+    assert_eq!(read(&back, back_def), read(&xml, def));
 }
