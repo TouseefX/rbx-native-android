@@ -7,8 +7,8 @@
 //! body as it is now. Roblox fits the garment cage to cage: the inner cage
 //! goes onto the body cage vertex for vertex, and a layer above goes onto the
 //! outer cage of the layer below. [`cage_map`] does that pairing by template
-//! UV and carries each garment vertex with its nearest inner cage vertices;
-//! layers are fitted lowest `Order` first, each one's outer cage laid over
+//! UV and binds each garment vertex to the closest spot on its inner cage,
+//! rebuilt at the same spot of the body with the same clearance; layers are fitted lowest `Order` first, each one's outer cage laid over
 //! the surface the next one is worn on. Then each vertex rises a little
 //! along its normal by the layer's `Order`, so stacked layers do not fight
 //! over one surface.
@@ -183,10 +183,7 @@ pub(super) fn derive(
         let surface = match surfaces.entry(wrap.character) {
             std::collections::hash_map::Entry::Occupied(found) => found.into_mut(),
             std::collections::hash_map::Entry::Vacant(slot) => {
-                let Some(surface) = body_surface(wrap, meshes) else {
-                    continue;
-                };
-                slot.insert(surface)
+                slot.insert(body_surface(wrap, meshes))
             }
         };
         let Some(deformed) = deform_over(wrap, model, garment, meshes, surface) else {
@@ -211,17 +208,18 @@ pub(super) fn derive(
 }
 
 /// The body's cages as the surface the first layer is worn over.
-fn body_surface(
-    wrap: &Wrap,
-    meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
-) -> Option<Surface> {
+fn body_surface(wrap: &Wrap, meshes: &HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>) -> Surface {
     let mut surface = Surface::default();
     for target in &wrap.targets {
-        let (cage, part) = (meshes.get(&target.cage)?, meshes.get(&target.mesh)?);
+        // A part whose mesh or cage didn't load (a head behind
+        // authentication) leaves a hole, not a bare body.
+        let (Some(cage), Some(part)) = (meshes.get(&target.cage), meshes.get(&target.mesh)) else {
+            continue;
+        };
         let to_world = target.fit.transform(part) * target.origin;
         surface.lay(&world_cage(cage, to_world));
     }
-    Some(surface)
+    surface
 }
 
 fn world_cage(cage: &rbx_mesh::Mesh, to_world: Mat4) -> WorldCage<'_> {
@@ -326,7 +324,11 @@ fn body(
 ) -> Option<(Vec<Vec3>, Vec<u16>)> {
     let (mut points, mut owners) = (Vec::new(), Vec::new());
     for (index, target) in wrap.targets.iter().enumerate() {
-        let (cage, part) = (meshes.get(&target.cage)?, meshes.get(&target.mesh)?);
+        // A part whose mesh or cage didn't load (a head behind
+        // authentication) leaves a hole, not a bare body.
+        let (Some(cage), Some(part)) = (meshes.get(&target.cage), meshes.get(&target.mesh)) else {
+            continue;
+        };
         let to_world = target.fit.transform(part) * target.origin;
         points.extend(
             cage.vertices

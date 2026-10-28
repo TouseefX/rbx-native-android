@@ -115,3 +115,34 @@ fn a_layer_laid_over_the_body_answers_for_its_uvs() {
     let (moved, _) = map.carry(Vec3::new(1.0, 1.0, 0.05), Vec3::Z);
     assert!((moved.z - 0.25).abs() < 1e-4, "{moved}");
 }
+
+#[test]
+fn a_garment_keeps_its_clearance_round_a_square_corner() {
+    // The right half of the body turns back at a right angle, like the edge
+    // of a blocky torso. The cloth rounds the corner (the cage normal turns
+    // there) but no point of it sinks in.
+    let inner = sheet(|p| p);
+    let fold = |p: Vec3| {
+        if p.x > 1.0 {
+            Vec3::new(1.0, p.y, -(p.x - 1.0))
+        } else {
+            p
+        }
+    };
+    let body = sheet(fold);
+    let map = CageMap::pair(&world(&inner), &surface_of(&body)).unwrap();
+    for step in 0..=35 {
+        let at = Vec3::new(step as f32 * 0.05, 0.8, 0.1);
+        let (moved, _) = map.carry(at, Vec3::Z);
+        // Clearance from the folded body: the front face below x = 1, the
+        // side face behind z = 0.
+        let clearance = if moved.x <= 1.0 {
+            moved.z
+        } else if moved.z >= 0.0 {
+            Vec3::new(moved.x - 1.0, 0.0, moved.z).length()
+        } else {
+            moved.x - 1.0
+        };
+        assert!(clearance > 0.08, "{at} -> {moved}");
+    }
+}
