@@ -171,7 +171,7 @@ fn upload(plan: &Plan, gltf: Vec<u8>) -> Result<(u64, Vec3), String> {
         .create_model_asset(
             &format!("{} (frozen)", plan.name),
             "Rotation applied by rbx-native's Freeze Rotation.",
-            user,
+            rbx_cloud::Owner::User(user),
             &file,
         )
         .map_err(|err| describe(&err))?;
