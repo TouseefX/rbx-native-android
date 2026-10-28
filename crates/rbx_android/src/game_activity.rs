@@ -38,7 +38,7 @@ use jni::sys::{jboolean, jlong, jobject};
 /// local references for the parameters.
 #[unsafe(no_mangle)]
 pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initializeNativeCode(
-    env: *mut jni::sys::JNIEnv,
+    _env: *mut jni::sys::JNIEnv,
     thiz: jobject,
     internal_data_path: jni::sys::jstring,
     _obb_path: jni::sys::jstring,
@@ -305,7 +305,7 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_onTouc
     _precision_x: jni::sys::jfloat,
     _precision_y: jni::sys::jfloat,
 ) -> jboolean {
-    0
+    false
 }
 
 /// `onKeyDownNative(long, KeyEvent) -> boolean`. Keys reach the host from
@@ -321,7 +321,7 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_onKeyD
     _handle: jlong,
     _key_event: jobject,
 ) -> jboolean {
-    0
+    false
 }
 
 /// `onKeyUpNative(long, KeyEvent) -> boolean`. As above.
@@ -335,7 +335,7 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_onKeyU
     _handle: jlong,
     _key_event: jobject,
 ) -> jboolean {
-    0
+    false
 }
 
 /// `onTextInputEventNative(long, State)`. Text input is the EditText proxy
