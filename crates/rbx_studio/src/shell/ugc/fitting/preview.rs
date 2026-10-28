@@ -3,11 +3,12 @@
 //! cage overlays. Every function here edits a `WeakDom` and nothing else;
 //! the window commits the edits outside the undo history.
 
-use rbx_dom::{Content, Ref, Variant, Vector3Data, WeakDom};
+use rbx_dom::{Change, Content, Ref, Variant, Vector3Data, WeakDom};
 use rbx_ugc::spec::item_bounds;
 
 use super::generate::{self, CageUris, Kind, Output};
 use super::state::{layered_part, Settings};
+use super::workspace;
 use crate::shell::clipboard;
 use crate::shell::rig::{build_rig, Cf, RigOptions};
 
@@ -26,8 +27,7 @@ fn v3(v: [f32; 3]) -> Variant {
     })
 }
 
-/// Removes every preview under `workspace`, a stale one an undo brought
-/// back included.
+/// Removes every preview under `workspace`.
 pub(super) fn clear(dom: &mut WeakDom, workspace: Ref) {
     let stale: Vec<Ref> = dom
         .get(workspace)
@@ -39,6 +39,17 @@ pub(super) fn clear(dom: &mut WeakDom, workspace: Ref) {
     for c in stale {
         dom.remove(c);
     }
+}
+
+/// Takes every preview out of `dom`, a copy on its way into or out of the
+/// undo history, and returns the removals. The preview is never history, so
+/// no undo or redo can bring one back.
+pub(super) fn strip(dom: &mut WeakDom) -> Vec<Change> {
+    dom.take_changes();
+    if let Some(ws) = workspace(dom) {
+        clear(dom, ws);
+    }
+    dom.take_changes()
 }
 
 /// The preview's body, built fresh in a new preview `Model`.

@@ -161,6 +161,7 @@ impl FittingWindow {
         match made {
             Ok(accessory) => {
                 self.live = None;
+                self.undone = None;
                 self.generated = Some(Generated {
                     accessory,
                     name: source.name,

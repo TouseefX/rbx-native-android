@@ -284,6 +284,9 @@ pub(crate) struct Shell {
     ugc_upload: Option<WindowHandle<gpui_kit::component::Root>>,
     /// The Accessory Fitting Tool, while open, see `ugc::fitting`.
     ugc_fitting: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// Undo and redo steps installed so far, for windows that keep instances
+    /// of their own in the place and must rebuild them after one.
+    history_installs: u64,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
     /// The Explorer's type-ahead buffer, see `shell::tree_keys`.
@@ -852,6 +855,7 @@ impl Shell {
             ugc_validator: None,
             ugc_upload: None,
             ugc_fitting: None,
+            history_installs: 0,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,
             typeahead: tree_keys::Typeahead::default(),

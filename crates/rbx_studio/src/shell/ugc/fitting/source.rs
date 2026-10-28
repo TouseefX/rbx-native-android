@@ -126,6 +126,7 @@ impl FittingWindow {
                 self.source = Some(source);
                 self.source_error = None;
                 self.generated = None;
+                self.undone = None;
                 self.cages = Job::Idle;
                 self.inputs.show_settings(&self.settings, window, cx);
             }

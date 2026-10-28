@@ -2,8 +2,10 @@
 //! steps (pick the item, fit it, test it, generate it) over a preview in the
 //! place: a test body in `Workspace.AccessoryFittingPreview` wearing a
 //! working copy of the item, shown in the main 3D view. The preview is not
-//! undo history and goes when the window closes or the item is generated;
-//! Generate writes the real `Accessory` as one undo step.
+//! undo history: no step keeps it, every undo or redo takes it out and the
+//! window builds it again. It goes when the window closes or the item is
+//! generated; Generate writes the real `Accessory` as one undo step, and
+//! undoing that brings the preview back in its place.
 //!
 //! The item is checked against `rbx_ugc` after every change, through the
 //! same check as Check Item. Layered items get inner and outer cages made
@@ -152,6 +154,12 @@ struct FittingWindow {
     /// otherwise.
     box_over: bool,
     generated: Option<Generated>,
+    /// A generated item an undo took out, for the redo that brings it back.
+    undone: Option<Generated>,
+    /// `Shell::history_installs` as last followed.
+    installs: u64,
+    /// The next preview rebuild leaves the camera where it is.
+    keep_camera: bool,
     inputs: Inputs,
     scroll: ScrollHandle,
     ticker: Option<Task<()>>,
@@ -200,6 +208,11 @@ impl Shell {
         self.reflect_changes(&changes, cx);
         cx.notify();
     }
+}
+
+/// [`preview::strip`], for the undo history.
+pub(crate) fn strip_preview(dom: &mut WeakDom) -> Vec<rbx_dom::Change> {
+    preview::strip(dom)
 }
 
 fn workspace(dom: &WeakDom) -> Option<Ref> {
@@ -257,6 +270,8 @@ impl FittingWindow {
             });
         }));
         subscriptions.push(cx.observe_self(|view, cx| view.recolour_box(cx)));
+        subscriptions.push(cx.observe(&shell, |view, _, cx| view.follow_history(cx)));
+        let installs = shell.read(cx).history_installs;
         let mut view = FittingWindow {
             shell,
             step: Step::Item,
@@ -284,6 +299,9 @@ impl FittingWindow {
             check: Check::new(None, super::ItemKind::default()),
             box_over: false,
             generated: None,
+            undone: None,
+            installs,
+            keep_camera: false,
             inputs,
             scroll: ScrollHandle::new(),
             ticker: None,
@@ -321,6 +339,30 @@ impl FittingWindow {
             self.make_cages(cx);
         }
         self.sync(cx);
+    }
+
+    /// After an undo or redo: the step took the preview out (see
+    /// `Shell::history_copy`), so it is built again where the camera is,
+    /// unless the step brought a generated item back.
+    fn follow_history(&mut self, cx: &mut Context<Self>) {
+        let installs = self.shell.read(cx).history_installs;
+        if installs == self.installs {
+            return;
+        }
+        self.installs = installs;
+        let dom = &self.shell.read(cx).dom;
+        state::follow_generated(&mut self.generated, &mut self.undone, |g| {
+            dom.get(g.accessory).is_some()
+        });
+        self.live = None;
+        self.anim_rig = None;
+        self.keep_camera = true;
+        if self.generated.is_some() {
+            self.restart_check(cx);
+        } else {
+            self.sync(cx);
+        }
+        cx.notify();
     }
 
     fn close(window: &mut Window, cx: &mut App) {
