@@ -31,9 +31,9 @@ const MIN_MATCHED: f32 = 0.6;
 /// UV-less mesh puts every vertex on a handful of keys).
 const MIN_KEYS: usize = 32;
 
-type Key = (i32, i32);
+pub(super) type Key = (i32, i32);
 
-fn key(uv: [f32; 2]) -> Key {
+pub(super) fn key(uv: [f32; 2]) -> Key {
     (
         (uv[0] / UV_STEP).round() as i32,
         (uv[1] / UV_STEP).round() as i32,
