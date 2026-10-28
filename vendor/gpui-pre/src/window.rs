@@ -3332,8 +3332,11 @@ impl Window {
         self.invalidator.replace_views(views);
     }
 
+    /// rbx-native addition: `pub(crate)` so `App::open_window` can present the
+    /// initial scene on Android, where the host loop presents only frames GPUI
+    /// asks for and nothing asks for the first one.
     #[profiling::function]
-    fn present(&mut self) {
+    pub(crate) fn present(&mut self) {
         // rbx-native addition: Android first-frame diagnostics — remove once
         // the mobile boot is proven on device.
         #[cfg(target_os = "android")]

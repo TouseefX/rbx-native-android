@@ -107,6 +107,10 @@ impl Scheduler for PlatformScheduler {
     }
 
     fn schedule_local(&self, _session_id: SessionId, runnable: Runnable<RunnableMeta>) {
+        // rbx-native addition: Android first-frame diagnostics — remove once
+        // the mobile boot is proven on device.
+        #[cfg(target_os = "android")]
+        log::info!("gpui exec: schedule_local → main thread");
         #[cfg(feature = "profiler")]
         self.foreground_runnables.queued();
         self.dispatcher
