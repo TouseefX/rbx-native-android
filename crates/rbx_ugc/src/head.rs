@@ -19,6 +19,7 @@ pub use landmarks::{find as find_landmarks, Hit, Landmark, LandmarkPoints};
 
 const SPEC: &str = "https://create.roblox.com/docs/avatar/dynamic-heads/specifications";
 const VALIDATE: &str = "https://create.roblox.com/docs/avatar/dynamic-heads/validate";
+const CAGING: &str = "https://create.roblox.com/docs/avatar/dynamic-heads/caging-best-practices";
 
 /// The 17 FACS poses every dynamic head needs, in the page's order.
 pub const REQUIRED_POSES: [&str; 17] = [
@@ -138,6 +139,10 @@ pub struct Head {
     pub vertex_color: [f32; 3],
     /// Scripts and plain parts in the head's model, by name.
     pub extraneous: Vec<String>,
+    /// The part's `CollisionFidelity` name.
+    pub collision_fidelity: String,
+    /// Whether an `AvatarPartScaleType` `StringValue` sits under the part.
+    pub scale_type: bool,
 }
 
 /// The dynamic head checks, each its own row in a report.
@@ -150,6 +155,13 @@ pub enum HeadRule {
     EmoteBounds,
     PartSettings,
     Extraneous,
+    /// What Studio's Save to Roblox wants under and on the head part that
+    /// no page states: an `AvatarPartScaleType` value and the default
+    /// `CollisionFidelity`.
+    Schema,
+    /// The outer cage keeps Roblox's head template: Studio counts its
+    /// unique UVs.
+    CageTemplate,
 }
 
 impl HeadRule {
@@ -162,12 +174,15 @@ impl HeadRule {
             HeadRule::EmoteBounds => "Head size while emoting",
             HeadRule::PartSettings => "Head part settings",
             HeadRule::Extraneous => "Extra objects",
+            HeadRule::Schema => "Head schema",
+            HeadRule::CageTemplate => "Head cage template",
         }
     }
 
     pub fn source(self) -> &'static str {
         match self {
             HeadRule::Landmarks | HeadRule::FacialAction => VALIDATE,
+            HeadRule::CageTemplate => CAGING,
             _ => SPEC,
         }
     }
@@ -196,6 +211,7 @@ pub fn check(head: &Head) -> Vec<Finding> {
     rules::face_controls(head, &mut out);
     rules::poses(head, &mut out);
     rules::part_settings(head, &mut out);
+    rules::schema(head, &mut out);
     rules::emote_bounds(head, &mut out);
     landmarks::check(head, &mut out);
     out

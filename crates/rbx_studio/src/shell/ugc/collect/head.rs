@@ -23,6 +23,8 @@ pub(in crate::shell::ugc) struct HeadPlan {
     transparency: f32,
     vertex_color: [f32; 3],
     extraneous: Vec<String>,
+    collision_fidelity: String,
+    scale_type: bool,
 }
 
 /// The head mesh as the face preview and the checks use it.
@@ -102,6 +104,30 @@ pub(in crate::shell::ugc) fn head_plan(
         Some(Variant::Enum(v)) => database.enum_name("Material", *v).unwrap_or("Plastic"),
         _ => "Plastic",
     };
+    // A place file Studio saved has no `CollisionFidelity`: a Box part
+    // keeps a `BLOCK` marker in `PhysicalConfigData` instead, which is
+    // how Roblox's own head ships, and the value read back is the
+    // reflection default. Hull and Precise can't be told from Default
+    // that way, so only Box is caught there.
+    let named = match props.get("CollisionFidelity") {
+        Some(Variant::Enum(v)) => database.enum_name("CollisionFidelity", *v),
+        _ => None,
+    };
+    let boxed = match props.get("PhysicalConfigData") {
+        Some(Variant::Unknown { raw, .. }) => raw.windows(5).any(|w| w == b"BLOCK"),
+        Some(Variant::String(data)) => data.contains("BLOCK"),
+        _ => false,
+    };
+    let collision_fidelity = match named {
+        Some(name) if name != "Default" => name,
+        _ if boxed => "Box",
+        _ => "Default",
+    };
+    let scale_type = inst
+        .children()
+        .iter()
+        .filter_map(|c| dom.get(*c))
+        .any(|c| c.class() == "StringValue" && c.name() == "AvatarPartScaleType");
     let vertex_color = match props.get("VertexColor") {
         Some(Variant::Vector3(v)) => [v.x, v.y, v.z],
         _ => [1.0; 3],
@@ -131,6 +157,8 @@ pub(in crate::shell::ugc) fn head_plan(
         transparency: float(props, "Transparency", 0.0),
         vertex_color,
         extraneous,
+        collision_fidelity: collision_fidelity.to_string(),
+        scale_type,
     })
 }
 
@@ -221,6 +249,8 @@ pub(in crate::shell::ugc) fn resolve_head(
         transparency: plan.transparency,
         vertex_color: plan.vertex_color,
         extraneous: plan.extraneous.clone(),
+        collision_fidelity: plan.collision_fidelity.clone(),
+        scale_type: plan.scale_type,
     };
     (head, mesh)
 }

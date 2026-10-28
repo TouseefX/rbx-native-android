@@ -102,6 +102,29 @@ fn a_head_without_facs_fails_the_pose_rule() {
         .collect();
     assert!(rules.contains(&Rule::Head(HeadRule::FaceControls)));
     assert!(rules.contains(&Rule::Head(HeadRule::FacsPoses)));
+    assert!(
+        rules.contains(&Rule::Head(HeadRule::Schema)),
+        "no AvatarPartScaleType"
+    );
+}
+
+#[test]
+fn a_box_head_saved_by_studio_reads_as_box() {
+    let (mut dom, model, head) = character(1, true);
+    // The binary reader keeps this BinaryString as raw bytes.
+    let marker = Variant::Unknown {
+        type_id: 28,
+        raw: b"CSGPHS\0\0\0\0BLOCK".to_vec(),
+    };
+    dom.set_property(head, "PhysicalConfigData", marker)
+        .unwrap();
+    // What the editor reads back for the unsaved enum: its default.
+    dom.set_property(head, "CollisionFidelity", Variant::Enum(0))
+        .unwrap();
+    let plan = head_plan(&dom, &ReflectionDatabase::embedded(), model).unwrap();
+    let (resolved, _) = resolve_head(&plan, &fetch);
+    assert_eq!(resolved.collision_fidelity, "Box");
+    assert!(!resolved.scale_type);
 }
 
 #[test]

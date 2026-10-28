@@ -1118,6 +1118,12 @@ impl Shell {
             }
         }
 
+        // `RBX_STUDIO_FACE=1` opens Face Preview on the selection, for a
+        // screenshot.
+        if std::env::var_os("RBX_STUDIO_FACE").is_some() {
+            shell.open_face_preview(cx);
+        }
+
         // `--run` / `RBX_STUDIO_RUN`: runs exactly the pipeline Enter would,
         // once, before the first frame, the way a scripted launch changes a
         // place without synthetic input.
