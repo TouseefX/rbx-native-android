@@ -105,3 +105,73 @@ fn the_size_box_stands_on_the_attachment_and_rebuilding_clears_the_old_preview()
     clear(&mut dom, workspace);
     assert!(dom.get(again).is_none());
 }
+
+fn has_preview(dom: &WeakDom, workspace: Ref) -> bool {
+    dom.get(workspace)
+        .unwrap()
+        .children()
+        .iter()
+        .any(|&c| dom.get(c).unwrap().name() == FOLDER)
+}
+
+/// What `Shell::push_history` and `Shell::undo`/`redo` hand the history: a
+/// copy of the place with the preview stripped.
+fn step(dom: &WeakDom) -> (WeakDom, Vec<Change>) {
+    let mut copy = dom.clone();
+    let gone = strip(&mut copy);
+    (copy, gone)
+}
+
+#[test]
+fn no_undo_or_redo_brings_the_preview_back() {
+    let (mut dom, workspace, bow) = place();
+    let (folder, rig) = build(&mut dom, workspace, &options());
+    wear(&mut dom, folder, rig, bow, &Settings::default(), None).unwrap();
+    // An edit made while the preview is up is one step.
+    let mut history = crate::history::History::new(crate::history::DEFAULT_CAP);
+    history.push(step(&dom).0);
+    dom.set_property(bow, "Transparency", Variant::Float32(0.5))
+        .unwrap();
+
+    let (current, gone) = step(&dom);
+    assert!(gone.contains(&Change::Removed(folder)));
+    let (undone, _) = history.undo(current).unwrap();
+    assert!(!has_preview(&undone, workspace));
+    assert!(undone
+        .get(bow)
+        .unwrap()
+        .properties()
+        .get("Transparency")
+        .is_none());
+
+    let (redone, _) = history.redo(step(&undone).0).unwrap();
+    assert!(!has_preview(&redone, workspace));
+    assert_eq!(
+        redone.get(bow).unwrap().properties().get("Transparency"),
+        Some(&Variant::Float32(0.5))
+    );
+}
+
+#[test]
+fn undoing_generate_takes_the_accessory_out_and_redo_puts_it_back() {
+    let (mut dom, workspace, bow) = place();
+    let (folder, rig) = build(&mut dom, workspace, &options());
+    let settings = Settings::default();
+    wear(&mut dom, folder, rig, bow, &settings, None).unwrap();
+    let (out, _) = output(&dom, rig, &settings, None).unwrap();
+    // `FittingWindow::generate`: the preview goes, then one step.
+    clear(&mut dom, workspace);
+    let mut history = crate::history::History::new(crate::history::DEFAULT_CAP);
+    history.push(step(&dom).0);
+    let accessory = generate::generate(&mut dom, bow, workspace, &out);
+    assert_eq!(dom.parent(bow), Some(accessory));
+
+    let (undone, _) = history.undo(step(&dom).0).unwrap();
+    assert!(undone.get(accessory).is_none());
+    assert_eq!(undone.parent(bow), Some(workspace));
+    assert!(!has_preview(&undone, workspace));
+
+    let (redone, _) = history.redo(step(&undone).0).unwrap();
+    assert_eq!(redone.parent(bow), Some(accessory));
+    assert!(!has_preview(&redone, workspace));
+}

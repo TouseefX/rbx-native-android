@@ -56,7 +56,9 @@ impl Shell {
     /// (`Shell::apply_edit`), which can be refused or change nothing. A
     /// snapshot pushed for a write that never happened is a Ctrl+Z that
     /// reverts nothing, having cleared the redo stack to offer it.
-    pub(super) fn push_history_snapshot(&mut self, before: WeakDom) {
+    pub(super) fn push_history_snapshot(&mut self, mut before: WeakDom) {
+        // The fitting preview is never a step (see `ugc::fitting`).
+        super::ugc::strip_preview(&mut before);
         // Plugin edits made before this one are a step of their own, below.
         self.commit_plugin_step();
         // Every recorded edit lands here, including the ones (a script
@@ -109,8 +111,9 @@ impl Shell {
         // the pending write would then land on top of the undone DOM.
         self.commit_plugin_step();
         self.flush_script_edits(cx);
-        if let Some((previous, changes)) = self.history.undo(self.dom.clone()) {
-            self.install(previous, &changes, cx);
+        let (current, gone) = self.history_copy();
+        if let Some((previous, changes)) = self.history.undo(current) {
+            self.install(previous, &[changes, gone].concat(), cx);
             self.autorig_follow_history(cx);
         }
     }
@@ -123,10 +126,21 @@ impl Shell {
         }
         self.commit_plugin_step();
         self.flush_script_edits(cx);
-        if let Some((next, changes)) = self.history.redo(self.dom.clone()) {
-            self.install(next, &changes, cx);
+        let (current, gone) = self.history_copy();
+        if let Some((next, changes)) = self.history.redo(current) {
+            self.install(next, &[changes, gone].concat(), cx);
             self.autorig_follow_history(cx);
         }
+    }
+
+    /// `self.dom` as the redo (or undo) stack keeps it, without the fitting
+    /// preview, and the preview's removals: installing any step takes the
+    /// preview out, and the viewport has to be told. The Fitting Tool builds
+    /// it again (see `history_installs`).
+    fn history_copy(&self) -> (WeakDom, Vec<Change>) {
+        let mut dom = self.dom.clone();
+        let gone = super::ugc::strip_preview(&mut dom);
+        (dom, gone)
     }
 
     /// Installs `dom` as the canonical tree and reflects it in the viewport
@@ -145,6 +159,7 @@ impl Shell {
         let floor = self.dom.next_ref();
         self.dom = dom;
         self.dom.raise_next_ref(floor);
+        self.history_installs += 1;
         self.rebuild_explorer(cx);
         let kept: Vec<rbx_dom::Ref> = self
             .selected_all()

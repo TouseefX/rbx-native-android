@@ -301,6 +301,20 @@ impl Settings {
     }
 }
 
+/// Follows an undo or redo: a generated item it took out of the place is
+/// set aside in `undone`, and one it put back is the generated item again.
+pub(super) fn follow_generated<T>(
+    generated: &mut Option<T>,
+    undone: &mut Option<T>,
+    exists: impl Fn(&T) -> bool,
+) {
+    if generated.as_ref().is_some_and(|g| !exists(g)) {
+        *undone = generated.take();
+    } else if generated.is_none() && undone.as_ref().is_some_and(&exists) {
+        *generated = undone.take();
+    }
+}
+
 /// The bodies the item is tried on: a stock body, or a downloaded avatar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Body {

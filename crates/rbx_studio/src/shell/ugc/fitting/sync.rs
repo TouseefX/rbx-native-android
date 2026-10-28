@@ -291,10 +291,11 @@ impl FittingWindow {
             layers,
         };
         let live = self.live.take();
+        let frame = !std::mem::take(&mut self.keep_camera);
         let (live, framing, error) = self.shell.update(cx, |shell, cx| {
             let result = apply(&mut shell.dom, ws, live, plan);
             shell.commit_preview(true, cx);
-            if let Some((target, reach)) = result.1 {
+            if let Some((target, reach)) = result.1.filter(|_| frame) {
                 let eye = target + Vec3::new(-0.55, 0.25, -1.0).normalize() * reach * 2.4;
                 shell
                     .viewport

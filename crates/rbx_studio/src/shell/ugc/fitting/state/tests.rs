@@ -93,3 +93,16 @@ fn auto_skin_round_trips_its_enum_value() {
     }
     assert_eq!(AutoSkin::EnabledOverride.value(), 2);
 }
+
+#[test]
+fn an_undone_generate_is_set_aside_and_a_redo_brings_it_back() {
+    let (mut generated, mut undone) = (Some(7), None);
+    follow_generated(&mut generated, &mut undone, |_| true);
+    assert_eq!((generated, undone), (Some(7), None));
+    follow_generated(&mut generated, &mut undone, |_| false);
+    assert_eq!((generated, undone), (None, Some(7)));
+    follow_generated(&mut generated, &mut undone, |_| false);
+    assert_eq!((generated, undone), (None, Some(7)));
+    follow_generated(&mut generated, &mut undone, |_| true);
+    assert_eq!((generated, undone), (Some(7), None));
+}
