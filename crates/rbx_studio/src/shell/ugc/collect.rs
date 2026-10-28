@@ -8,10 +8,15 @@ use rbx_dom::{Content, Ref, Variant, WeakDom};
 use rbx_ugc::spec::R15_PARTS;
 use rbx_ugc::{
     AssetType, CFrame, Cage, CageKind, Finding, Geometry, Item, Part, Placement, Rule, Severity,
-    Texture, Value, IDENTITY,
+    Texture, IDENTITY,
 };
 
 use super::{Collected, ItemKind};
+
+mod resolve;
+mod studio;
+
+pub(super) use resolve::{fetch_cached, resolve};
 
 const SURFACE_SLOTS: [&str; 4] = ["ColorMap", "NormalMap", "MetalnessMap", "RoughnessMap"];
 
@@ -47,6 +52,8 @@ pub(super) struct Plan {
     textures: Vec<TexturePlan>,
     cages: Vec<CagePlan>,
     emissive: bool,
+    /// Findings only the tree can give, see `studio`.
+    notes: Vec<Finding>,
 }
 
 fn uri<'a>(props: &'a BTreeMap<String, Variant>, key: &str) -> Option<&'a str> {
@@ -103,7 +110,8 @@ fn descendants(dom: &WeakDom, root: Ref, out: &mut Vec<Ref>) {
 fn part_plan(dom: &WeakDom, part: Ref) -> Option<PartPlan> {
     let inst = dom.get(part)?;
     let props = inst.properties();
-    let size = match props.get("Size") {
+    // Files store a part's size as `size`; `Size` is what a new part gets.
+    let size = match props.get("size").or_else(|| props.get("Size")) {
         Some(Variant::Vector3(v)) => [v.x, v.y, v.z],
         _ => [1.0; 3],
     };
@@ -200,6 +208,7 @@ pub(super) fn plan(dom: &WeakDom, root: Ref, kind: ItemKind) -> Result<Plan, Str
         textures: Vec::new(),
         cages: Vec::new(),
         emissive: false,
+        notes: Vec::new(),
     };
     let single = match inst.class() {
         "Accessory" => {
@@ -218,6 +227,7 @@ pub(super) fn plan(dom: &WeakDom, root: Ref, kind: ItemKind) -> Result<Plan, Str
         _ => return Err("Pick an Accessory, a MeshPart or a Model".to_string()),
     };
     if let Some(part) = single {
+        studio::handle_rules(dom, part, &mut plan.kind, &plan.name, &mut plan.notes);
         plan.parts.extend(part_plan(dom, part));
         collect_textures(dom, part, &mut plan);
         let name = plan.name.clone();
@@ -263,160 +273,6 @@ fn cage_of(name: &str, props: &BTreeMap<String, Variant>) -> Option<(CageKind, u
         .find_map(|k| uri(props, k))
         .and_then(asset_id)?;
     Some((kind, mesh))
-}
-
-fn note(subject: String, message: String) -> Finding {
-    Finding {
-        rule: Rule::Unreadable,
-        severity: Severity::Note,
-        subject,
-        measured: None,
-        limit: Some(Value::Text("readable".into())),
-        message,
-    }
-}
-
-fn geometry(bytes: &[u8], scale_to: Option<[f32; 3]>) -> Result<Geometry, rbx_mesh::MeshError> {
-    let sm = rbx_mesh::parse_skinned(bytes)?;
-    let mesh = &sm.mesh;
-    let center = mesh.bounds.center();
-    let bsize = mesh.bounds.size();
-    let factor: [f32; 3] = std::array::from_fn(|a| match scale_to {
-        Some(size) if bsize[a] != 0.0 => size[a] / bsize[a],
-        _ => 1.0,
-    });
-    let positions = mesh
-        .vertices
-        .iter()
-        .map(|v| {
-            if scale_to.is_some() {
-                std::array::from_fn(|a| (v.position[a] - center[a]) * factor[a])
-            } else {
-                v.position
-            }
-        })
-        .collect();
-    let triangles = sm.lod0().as_chunks::<3>().0.to_vec();
-    let influences = sm.skin.as_ref().map_or_else(Vec::new, |skin| {
-        skin.influences
-            .iter()
-            .map(|i| i.iter().count().min(255) as u8)
-            .collect()
-    });
-    Ok(Geometry {
-        positions,
-        triangles,
-        uvs: mesh.vertices.iter().map(|v| v.uv).collect(),
-        influences,
-        in_studs: scale_to.is_some(),
-    })
-}
-
-/// Blocking. `fetch` downloads an asset's bytes by id.
-pub(super) fn resolve(plan: &Plan, fetch: &dyn Fn(u64) -> Result<Vec<u8>, String>) -> Collected {
-    let mut notes = Vec::new();
-    let parts = plan
-        .parts
-        .iter()
-        .map(|p| {
-            let geometry = p.mesh.and_then(|id| {
-                match fetch(id).and_then(|b| geometry(&b, Some(p.size)).map_err(|e| e.to_string()))
-                {
-                    Ok(g) => Some(g),
-                    Err(e) => {
-                        notes.push(note(
-                            p.name.clone(),
-                            format!("The mesh could not be read: {e}"),
-                        ));
-                        None
-                    }
-                }
-            });
-            Part {
-                name: p.name.clone(),
-                geometry,
-                cframe: p.cframe,
-                attachments: p.attachments.clone(),
-            }
-        })
-        .collect();
-    let mut textures = Vec::new();
-    for t in &plan.textures {
-        let dims = fetch(t.id).and_then(|bytes| {
-            image::ImageReader::new(std::io::Cursor::new(bytes))
-                .with_guessed_format()
-                .map_err(|e| e.to_string())?
-                .into_dimensions()
-                .map_err(|e| e.to_string())
-        });
-        match dims {
-            Ok((width, height)) => textures.push(Texture {
-                owner: t.owner.clone(),
-                slot: t.slot.clone(),
-                width,
-                height,
-            }),
-            Err(e) => notes.push(note(
-                format!("{}.{}", t.owner, t.slot),
-                format!("The texture could not be read: {e}"),
-            )),
-        }
-    }
-    let mut cages: Vec<Cage> = Vec::new();
-    let mut inner: Option<Geometry> = None;
-    let mut ordered: Vec<&CagePlan> = plan.cages.iter().collect();
-    ordered.sort_by_key(|c| c.kind == CageKind::Outer);
-    for c in ordered {
-        match fetch(c.mesh).and_then(|b| geometry(&b, None).map_err(|e| e.to_string())) {
-            Ok(g) => {
-                let template = match c.kind {
-                    CageKind::Inner => {
-                        inner.get_or_insert_with(|| g.clone());
-                        None
-                    }
-                    CageKind::Outer => inner.clone(),
-                };
-                cages.push(Cage {
-                    kind: c.kind,
-                    name: c.name.clone(),
-                    geometry: g,
-                    template,
-                });
-            }
-            Err(e) => notes.push(note(
-                c.name.clone(),
-                format!("The cage mesh could not be read: {e}"),
-            )),
-        }
-    }
-    Collected {
-        item: Item {
-            name: plan.name.clone(),
-            asset_type: plan.kind.asset,
-            scale: plan.kind.scale,
-            parts,
-            textures,
-            cages,
-        },
-        emissive: plan.emissive,
-        notes,
-    }
-}
-
-/// An asset's bytes through the editor's asset cache, downloading what it
-/// lacks. Blocking.
-pub(super) fn fetch_cached(id: u64) -> Result<Vec<u8>, String> {
-    let cache = rbx_assets::AssetCache::new(None).map_err(|e| e.to_string())?;
-    if let Some(bytes) = cache.get_id(id) {
-        return Ok(bytes);
-    }
-    let client = rbx_cloud::Client::new(rbx_cloud::ApiKey::from_env_or_config());
-    let bytes = client
-        .asset(id)
-        .map_err(|e| format!("downloading asset {id}: {e}"))?
-        .bytes;
-    let _ = cache.put_id(id, &bytes);
-    Ok(bytes)
 }
 
 #[cfg(test)]

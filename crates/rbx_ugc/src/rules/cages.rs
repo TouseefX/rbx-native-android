@@ -41,7 +41,14 @@ fn find<'a>(
     let expected = format!("{}_{}", item.name, suffix);
     let cage = item.cages.iter().find(|c| c.kind == kind);
     let message = match cage {
-        None => format!("Add the {word} cage as a mesh named {expected}."),
+        None => {
+            let field = if kind == CageKind::Inner {
+                "ReferenceMeshId"
+            } else {
+                "CageMeshId"
+            };
+            format!("Add the {word} cage: a mesh named {expected} in the source file, which the importer turns into the WrapLayer\u{2019}s {field}.")
+        }
         Some(c) if c.name != expected => {
             format!(
                 "Rename {} to {expected}; Roblox finds cages by name.",
@@ -154,7 +161,7 @@ mod tests {
         assert_eq!(f[0].subject, "Coat_InnerCage");
         assert_eq!(
             f[0].message,
-            "Add the inner cage as a mesh named Coat_InnerCage."
+            "Add the inner cage: a mesh named Coat_InnerCage in the source file, which the importer turns into the WrapLayer\u{2019}s ReferenceMeshId."
         );
     }
 

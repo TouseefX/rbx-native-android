@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-28
+
+- **Check and upload avatar items**: Avatar › Check Item checks an
+  Accessory, MeshPart, Model or a 3D file against Roblox's published
+  Marketplace limits (triangles, textures, bone influences, size per type
+  and body scale, attachments, cages, body boxes) and says what to fix.
+  Same verdicts and numbers as Studio's Save to Roblox on the same items.
+  Avatar › Upload Item uploads the item as a Model through Open Cloud for
+  free, spells out the Creator Hub fees first and opens the item there,
+  since Roblox has no API for the paid avatar item step. The checks live in
+  a new `rbx_ugc` crate the fitting tool can reuse. (@chteau)
+
 ## 2026-10-27
 
 - **SpecialMesh shapes now match Studio**: a Head is Studio's own

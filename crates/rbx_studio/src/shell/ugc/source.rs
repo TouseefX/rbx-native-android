@@ -91,17 +91,13 @@ pub(super) fn item_from_file(path: &Path, kind: ItemKind) -> Result<Collected, S
         },
         emissive: false,
         notes,
+        from_file: true,
     })
 }
 
 /// The findings for `path` checked as `kind`, for the importer.
-///
-/// A source file has no Roblox attachments yet (the Fitting Tool or the
-/// importer adds them), so attachment findings are dropped.
 pub(crate) fn check_file(path: &Path, kind: ItemKind) -> Result<Vec<rbx_ugc::Finding>, String> {
-    let mut findings = item_from_file(path, kind)?.findings();
-    findings.retain(|f| f.rule != Rule::Attachment);
-    Ok(findings)
+    Ok(item_from_file(path, kind)?.findings())
 }
 
 #[cfg(test)]

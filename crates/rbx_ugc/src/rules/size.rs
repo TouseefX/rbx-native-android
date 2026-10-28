@@ -36,6 +36,17 @@ fn accessory(item: &Item, out: &mut Vec<Finding>) {
     let Some(part) = item.parts.first() else {
         return;
     };
+    // A source file has neither studs nor attachments yet; say so whether or
+    // not the attachment is there.
+    if part.geometry.as_ref().is_some_and(|g| !g.in_studs) {
+        out.push(note(
+            Rule::ItemSize,
+            &part.name,
+            "The size of this mesh is checked once the file is imported, because its units are not known."
+                .to_string(),
+        ));
+        return;
+    }
     let allowed = item.asset_type.attachments();
     let Some(att) = part
         .attachments
@@ -56,15 +67,6 @@ fn accessory(item: &Item, out: &mut Vec<Finding>) {
     let Some(geometry) = &part.geometry else {
         return;
     };
-    if !geometry.in_studs {
-        out.push(note(
-            Rule::ItemSize,
-            &part.name,
-            "The size of this mesh is checked once the file is imported, because its units are not known."
-                .to_string(),
-        ));
-        return;
-    }
     let mut max = [0.0f32; 3];
     for p in &geometry.positions {
         let q = to_local(&att.cframe, *p);

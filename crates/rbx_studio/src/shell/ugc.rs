@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 
 use rbx_dom::Ref;
-use rbx_ugc::{AssetType, BodyScale, Finding};
+use rbx_ugc::{AssetType, BodyScale, Finding, Rule};
 
 mod check;
 mod collect;
@@ -70,12 +70,26 @@ pub(crate) struct Collected {
     /// `Rule::Unreadable` notes from reading (a texture that would not
     /// download, a mesh Studio ships rather than an uploaded one).
     pub(crate) notes: Vec<Finding>,
+    /// Read from a source file, which has no Roblox attachments yet (the
+    /// Fitting Tool or the importer adds them): attachment findings are
+    /// dropped.
+    pub(crate) from_file: bool,
 }
 
 impl Collected {
     /// The validator's findings plus the reading notes, errors first.
     pub(crate) fn findings(&self) -> Vec<Finding> {
-        let mut all = rbx_ugc::validate(&self.item);
+        // A mesh that failed to read has a note here saying why; the
+        // validator's generic one for the same part is dropped.
+        let explained = |f: &Finding| {
+            self.notes
+                .iter()
+                .any(|n| n.rule == f.rule && n.subject == f.subject)
+        };
+        let mut all: Vec<Finding> = rbx_ugc::validate(&self.item)
+            .into_iter()
+            .filter(|f| !explained(f) && !(self.from_file && f.rule == Rule::Attachment))
+            .collect();
         all.extend(self.notes.iter().cloned());
         all.sort_by_key(|f| f.severity);
         all
