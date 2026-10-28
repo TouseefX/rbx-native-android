@@ -37,6 +37,9 @@ pub fn start(internal_data_path: Option<&str>) {
         // the foreground executor, which the host loop drains the moment the
         // boot returns.
         cx.spawn(async move |cx| {
+            // rbx-native diagnostics (temporary): proves the host loop
+            // drains the main-thread queue at all.
+            log::info!("rbx_android: kick task is polling");
             cx.refresh();
             log::info!("rbx_android: first-frame refresh asked for");
         })

@@ -7075,6 +7075,10 @@ impl<V: 'static + Render> WindowHandle<V> {
     where
         C: AppContext,
     {
+        // rbx-native addition: Android first-frame diagnostics — remove once
+        // the mobile boot is proven on device.
+        #[cfg(target_os = "android")]
+        log::info!("gpui window: WindowHandle::update");
         cx.update_window(self.any_handle, |root_view, window, cx| {
             let view = root_view
                 .downcast::<V>()
