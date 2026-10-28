@@ -5703,18 +5703,18 @@ impl Window {
         // rbx-native addition: Android input diagnostics — remove once the
         // mobile input path is proven on device.
         #[cfg(target_os = "android")]
-        if event.is::<MouseDownEvent>() || event.is::<MouseUpEvent>() {
+        if event.is::<crate::MouseDownEvent>() || event.is::<crate::MouseUpEvent>() {
             let position = self.mouse_position();
             log::info!(
                 "gpui mouse: {} at ({:.0},{:.0}) hits={} listeners={}",
-                if event.is::<MouseDownEvent>() {
+                if event.is::<crate::MouseDownEvent>() {
                     "down"
                 } else {
                     "up"
                 },
                 position.x,
                 position.y,
-                hit_test.len(),
+                hit_test.ids.len(),
                 self.rendered_frame.mouse_listeners.len(),
             );
         }
