@@ -195,6 +195,14 @@ const WINDOW_SIZE: (f32, f32) = (1600.0, 900.0);
 /// `home::route`). Everything past this function — the editor itself — is
 /// the library this binary is a thin wrapper over, and is exactly what the
 /// Android host in `crates/rbx_android` runs through [`boot_mobile`].
+///
+/// Gated off on mobile targets, where `gpui_kit::application` does not
+/// exist: there the platform comes from `gpui-pre-mobile`'s host instead
+/// (see `rbx_android::boot`), so this desktop path — command line, splash
+/// window, all of it — has nothing to run on. The `rbxstudio` binary that
+/// calls it is never built for those targets; `rbx_android` builds the
+/// library only.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub fn run_desktop() {
     // The Network Simulator's elevated helper is this same executable,
     // relaunched by `rbx_play::netsim::Shaper::start`; it needs none of the
