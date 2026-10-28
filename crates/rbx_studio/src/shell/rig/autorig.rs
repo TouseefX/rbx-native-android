@@ -21,10 +21,11 @@ use crate::explorer;
 use crate::shell::Shell;
 use crate::workspace_view::JointPhase;
 
+use super::autorig_model::{self, Look};
 use super::bundle::{Family, Piece, Pieces};
 use super::cage_templates;
 use super::insert::spawn_top;
-use super::{build_rig, BodyScale, BodyShape, JointStyle, RigOptions, RigType};
+use super::{build_rig, BodyColors, BodyScale, BodyShape, JointStyle, RigOptions, RigType};
 
 const SOURCE: &str = "Auto-rig";
 /// Where the cut parts live in the local asset cache, under a folder per
@@ -38,6 +39,8 @@ pub(crate) const HEIGHT: f32 = 5.2;
 pub(crate) struct AutoRig {
     pub(crate) source: PathBuf,
     mesh: Mesh,
+    /// What the source model's parts wear, for a `.rbxm` source.
+    look: Look,
     pub(crate) fit: Fit,
     /// Mirror every joint edit to the other side.
     pub(crate) symmetric: bool,
@@ -210,7 +213,7 @@ fn v3(v: Vec3) -> [f32; 3] {
 
 /// The Rig Builder's body parts for a cut: each part's own size, its
 /// local mesh and its rig attachments. `HumanoidRootPart` stays stock.
-fn pieces(cut: &Cut, mut stock: Pieces) -> Pieces {
+fn pieces(cut: &Cut, look: &Look, mut stock: Pieces) -> Pieces {
     for (part, uri) in cut.body.parts.iter().zip(&cut.uris) {
         stock.insert(
             part.part.name().to_owned(),
@@ -219,8 +222,8 @@ fn pieces(cut: &Cut, mut stock: Pieces) -> Pieces {
                 family: Family::Classic,
                 mesh: 0,
                 local: Some(uri.clone()),
-                texture: None,
-                surface: None,
+                texture: look.texture,
+                surface: look.surface,
                 face: false,
                 init: v3(part.size),
                 original: v3(part.size),
@@ -275,17 +278,22 @@ impl Shell {
         cx.spawn(async move |this, cx| {
             let result = cx
                 .background_spawn(async move {
-                    let mesh = rbx_autorig::read(&path).map_err(|e| e.to_string())?;
+                    let (mesh, look) = if autorig_model::is_model(&path) {
+                        autorig_model::read(&path)?
+                    } else {
+                        let mesh = rbx_autorig::read(&path).map_err(|e| e.to_string())?;
+                        (mesh, Look::default())
+                    };
                     let fit = rbx_autorig::fit(&mesh, HEIGHT).map_err(|e| e.to_string())?;
                     let cut = match cage_templates::mannequin() {
                         Ok(t) => cut(&mesh, &fit, true, Some(&t), None)?,
                         Err(e) => cut(&mesh, &fit, true, None, Some(e))?,
                     };
-                    Ok::<_, String>((mesh, fit, cut))
+                    Ok::<_, String>((mesh, look, fit, cut))
                 })
                 .await;
             let _ = this.update(cx, |shell, cx| match result {
-                Ok((mesh, fit, cut)) => {
+                Ok((mesh, look, fit, cut)) => {
                     let warnings = fit.warnings.clone();
                     shell.anim_set_autorig(Some(AutoRig {
                         source,
@@ -301,6 +309,7 @@ impl Shell {
                         bounds: rbx_autorig::mesh_bounds(&mesh, &fit),
                         placed: Vec::new(),
                         mesh,
+                        look,
                         fit,
                     }));
                     shell.place_autorig(cut, cx);
@@ -456,7 +465,21 @@ impl Shell {
             joints,
         );
         options.name = name_of(&source);
-        options.pieces = pieces(&cut, std::mem::take(&mut options.pieces));
+        let look = self
+            .anim_autorig()
+            .map(|rig| rig.look.clone())
+            .unwrap_or_default();
+        options.pieces = pieces(&cut, &look, std::mem::take(&mut options.pieces));
+        if let Some(color) = look.color {
+            options.colors = BodyColors {
+                head: color,
+                torso: color,
+                left_arm: color,
+                right_arm: color,
+                left_leg: color,
+                right_leg: color,
+            };
+        }
         options.feet = spawn_top(&self.dom, workspace);
         self.push_history();
         let replacing = old.is_some_and(|m| self.dom.get(m).is_some());
@@ -997,7 +1020,7 @@ mod tests {
             BodyScale::Classic,
             JointStyle::Motor6D,
         );
-        options.pieces = pieces(cut, std::mem::take(&mut options.pieces));
+        options.pieces = pieces(cut, &Look::default(), std::mem::take(&mut options.pieces));
         let mut dom = WeakDom::new();
         let workspace = dom.new_instance("Workspace", "Workspace", None);
         let model = build_rig(&mut dom, &options, workspace);
@@ -1347,6 +1370,7 @@ mod tests {
             source: PathBuf::from("body.obj"),
             bounds: rbx_autorig::mesh_bounds(&mesh, &fit),
             mesh,
+            look: Look::default(),
             fit,
             symmetric: true,
             joint: Joint::Neck,

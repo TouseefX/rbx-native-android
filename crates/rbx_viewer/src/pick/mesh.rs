@@ -9,6 +9,7 @@ use glam::{Mat4, Vec3};
 use rbx_assets::AssetRef;
 use rbx_dom::{Ref, WeakDom};
 use rbx_mesh::Mesh;
+use rbx_reflection::ReflectionDatabase;
 
 use crate::assets::Image;
 use crate::scene::{AlphaMode, Kind, Scene, Slot};
@@ -248,6 +249,64 @@ impl Meshes {
                     .map(|isolation| isolation.hidden().clone())
                     .unwrap_or_default(),
             )
+    }
+
+    /// The meshes of every file-mesh part under `roots`, downloaded (or read
+    /// from the cache) and decoded, so an export of a model that is not
+    /// loaded in a viewport draws the same triangles the viewport would.
+    /// Blocks on the network; call it off the UI thread. Where a mesh will
+    /// not come, answers every failure instead: an export would otherwise
+    /// quietly swap the part for its fallback box.
+    pub fn fetched(
+        dom: &WeakDom,
+        database: &ReflectionDatabase,
+        roots: &[Ref],
+    ) -> Result<Meshes, Vec<String>> {
+        Self::fetched_with(dom, database, roots, |wanted| {
+            crate::assets::load_meshes(wanted)
+                .into_iter()
+                .map(|(asset, result)| (asset, result.map_err(|failure| failure.warning)))
+                .collect()
+        })
+    }
+
+    /// [`Meshes::fetched`] with `load` answering for the assets it names,
+    /// each once.
+    pub fn fetched_with(
+        dom: &WeakDom,
+        database: &ReflectionDatabase,
+        roots: &[Ref],
+        load: impl FnOnce(&[AssetRef]) -> Vec<(AssetRef, Result<rbx_mesh::SkinnedMesh, String>)>,
+    ) -> Result<Meshes, Vec<String>> {
+        let mut wanted = Vec::new();
+        for &root in roots {
+            for referent in crate::scene::descendants_of(dom, root) {
+                if !crate::scene::is_drawable(dom, database, referent) {
+                    continue;
+                }
+                if let Some((asset, _)) = crate::scene::file_mesh_fit(dom, database, referent) {
+                    if !wanted.contains(&asset) {
+                        wanted.push(asset);
+                    }
+                }
+            }
+        }
+        let mut meshes = HashMap::new();
+        let mut failures = Vec::new();
+        for (asset, result) in load(&wanted) {
+            match result {
+                Ok(mesh) => {
+                    meshes.insert(asset, Arc::new(mesh));
+                }
+                Err(warning) => failures.push(warning),
+            }
+        }
+        if failures.is_empty() {
+            Ok(Meshes::new(meshes, HashMap::new()))
+        } else {
+            failures.sort();
+            Err(failures)
+        }
     }
 
     pub fn get(&self, asset: &AssetRef) -> Option<&Arc<rbx_mesh::SkinnedMesh>> {
