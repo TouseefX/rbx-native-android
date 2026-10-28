@@ -2952,6 +2952,22 @@ both the plain fetch failure and the silent fall back to a default
   When `/dev/uinput` isn't writable the window says why and gives the
   udev rule. Linux only; live pickup by Sober not yet tested (see the
   planned item).
+- [x] **Controller Emulator: the pad drives a real Play** (2026-10-28):
+  Sober reads the uinput pad fine (SDL3 inside its sandbox, without udev,
+  sees an Xbox 360 Controller and every press), but drops a pad's input
+  while its window lacks the keyboard focus, ignoring
+  `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS`, and using the emulator window
+  takes the focus. The emulator now sends the embedded client a synthetic
+  `FocusIn` before each change of the pad (`Embedded::lend_focus`), so the
+  client keeps reading it while the emulator keeps the keyboard. Measured
+  on Xephyr with Sober joined into the sandbox place: focus elsewhere,
+  nothing moves; with the `FocusIn`, the stick walks the character, A
+  jumps it and Roblox's gamepad cursor shows (touch mode on or off)
+  (`docs/research/play-sandbox/device-simulator.md`). Windows: the pad is
+  a ViGEmBus Xbox 360 or DualShock 4 target (PS5 too, ViGEmBus has no
+  DualSense), through `ViGEmClient.dll` loaded at runtime from beside the
+  executable, never shipped. **UNTESTED**: it was compile-checked for
+  Windows, never run.
 - [x] **Server Authority, editor side (Studio Beta, announced 2026)**,
   checked against the Creator Hub's `projects/server-authority` page. It is
   a workspace mode, not an editor feature: `Workspace.AuthorityMode = Server`
@@ -3217,20 +3233,24 @@ both the plain fetch failure and the silent fall back to a default
   and resimulation are engine behaviour, the same wall as physics, listed
   under "Explicitly impossible". What remains of the item is the Network
   Simulator above, which is what would matter most for these places.
-- [ ] 📋 **Controller Emulator: make Sober take the virtual pad's input, and
-  the devices still missing**: run against a live Play (2026-10-18), Sober
-  sees the uinput pad (`GamepadEnabled` true) but passes none of its input
-  on: A held on the drawing sends `BTN_SOUTH` on the pad's `/dev/input`
-  node, yet `GetLastInputType` stays Touch and the character does not jump,
-  with Sober focused, with SDL's background-joystick switch, and as Xbox or
-  Generic Gamepad alike (`docs/research/play-sandbox/device-simulator.md`).
-  Whether a real controller works through Sober here is the next thing to
-  check. Which `Enum.GamepadType` / button images the experience gets per
-  device follows from that. Also open: Quest2/Quest3 (Sober has no VR
-  runtime), the TV Remote (the desktop client reads a remote's keys as a
-  keyboard; Roblox maps them to gamepad keycodes only on Android TV),
-  Windows (needs the ViGEmBus driver installed) and macOS (a DriverKit HID
-  extension), and lighting the picture from a real plugged-in controller.
+- [ ] 📋 **Controller Emulator: what is still open**: a real controller
+  through Sober cannot be tried on the machine it was built on (none is
+  plugged in), nor lighting the drawing from one. The editor's own Play
+  with the emulator open was not run (the test session had no API key to
+  publish with); the live run used the same embedding, pad and call from a
+  harness. `GetLastInputType` was
+  not read in the live run (the gamepad cursor showed and the stick and A
+  moved the character; `examples/gamepad_demo.rs` logs it, for the next
+  run through the editor's Play), and which `Enum.GamepadType` / button
+  images each device gets is unmeasured. A client left in its own window
+  (embedding failed) still loses the pad while the emulator window is
+  used. The Windows back end (ViGEmBus) has never run: it needs Windows,
+  the ViGEmBus driver and a `ViGEmClient.dll` built by the user, and
+  whether RobloxPlayerBeta also ignores a pad while unfocused is untested.
+  macOS (a DriverKit HID extension, which needs Apple's entitlements),
+  Quest2/Quest3 (Sober has no VR runtime) and the TV Remote (the desktop
+  client reads a remote's keys as a keyboard; Roblox maps them to gamepad
+  keycodes only on Android TV) stay unbuilt.
 
 ### From Roblox's own Creator Roadmap (2026 fall update)
 
