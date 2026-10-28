@@ -322,6 +322,13 @@ impl Scene {
         true
     }
 
+    /// Re-reads the `FaceControls` under `part`: whether the face it poses
+    /// changed, which re-poses its skinned mesh on the next
+    /// [`Scene::pose_skins`].
+    pub(crate) fn resync_face(&mut self, dom: &WeakDom, part: Ref) -> bool {
+        self.file_mesh_plan.poses.face(dom, part)
+    }
+
     /// Takes every box and resolved instance standing for `referent` out of
     /// the scene, all of them, so a deleted union goes with its pieces,
     /// and names the piece slots the renderer must now let go of too.

@@ -204,6 +204,56 @@ impl CloudDraft {
     }
 }
 
+/// Team Create's switch, read and saved with the Roblox sign-in rather
+/// than the API key, so kept beside [`CloudDraft`] instead of in it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(super) struct TeamCreateDraft {
+    /// What Roblox last said; `None` before the first read.
+    remote: Option<bool>,
+    edit: Option<bool>,
+}
+
+impl TeamCreateDraft {
+    /// Starts over from what Roblox now holds, dropping the edit.
+    pub(super) fn reset(&mut self, on: bool) {
+        *self = TeamCreateDraft {
+            remote: Some(on),
+            edit: None,
+        };
+    }
+
+    /// Takes `on` as the new baseline, keeping the edit only if it still
+    /// differs from it.
+    pub(super) fn rebase(&mut self, on: bool) {
+        let edit = self.edit.take();
+        self.remote = Some(on);
+        if let Some(edit) = edit {
+            self.set(edit);
+        }
+    }
+
+    pub(super) fn value(&self) -> Option<bool> {
+        self.edit.or(self.remote)
+    }
+
+    /// Records an edit; one equal to the remote value is forgotten instead.
+    /// Ignored before the first read.
+    pub(super) fn set(&mut self, on: bool) {
+        if let Some(remote) = self.remote {
+            self.edit = (on != remote).then_some(on);
+        }
+    }
+
+    pub(super) fn revert(&mut self) {
+        self.edit = None;
+    }
+
+    /// The value a save should send, if edited.
+    pub(super) fn pending(&self) -> Option<bool> {
+        self.edit
+    }
+}
+
 /// The place file's half: one slot per [`LOCAL_FIELDS`] entry, by index.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(super) struct LocalDraft {

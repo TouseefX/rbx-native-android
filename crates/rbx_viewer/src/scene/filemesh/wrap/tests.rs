@@ -29,7 +29,9 @@ fn wrap(order: f32) -> Wrap {
     Wrap {
         reference: id(1),
         origin: Mat4::IDENTITY,
+        outer: None,
         order,
+        bind: None,
         targets: vec![Target {
             cage: id(2),
             origin: Mat4::IDENTITY,
@@ -40,7 +42,10 @@ fn wrap(order: f32) -> Wrap {
                 initial_size: Some(Vec3::ONE),
             },
             part: "UpperTorso".into(),
+            referent: Ref::new(5),
+            hsr: None,
         }],
+        hsr: None,
         character: Ref::new(0),
     }
 }
@@ -169,4 +174,97 @@ fn a_reference_standing_off_the_body_is_slid_onto_it_first() {
         let moved = Vec3::from(after.position) - Vec3::from(before.position);
         assert!(moved.distance(Vec3::new(0.0, 0.8, 0.0)) < 0.02, "{moved}");
     }
+}
+
+#[test]
+fn bind_offset_turns_the_garment_about_the_root_part() {
+    use rbx_dom::{CFrameData, Instance, Vector3Data};
+    let cframe = |y: f32, rotation: [f32; 9]| {
+        Variant::CFrame(CFrameData {
+            position: Vector3Data { x: 0.0, y, z: 0.0 },
+            rotation,
+        })
+    };
+    let identity = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    // A quarter turn about Z: X goes to Y.
+    let quarter = [0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+    let mut dom = WeakDom::new();
+    let mut add =
+        |n: u32, class: &str, name: &str, parent: Option<Ref>, props: Vec<(&str, Variant)>| {
+            let mut instance = Instance::new(Ref::new(n), class, name);
+            for (key, value) in props {
+                instance.properties_mut().insert(key.into(), value);
+            }
+            dom.insert(instance);
+            dom.set_parent(Ref::new(n), parent);
+            Ref::new(n)
+        };
+    let content = |n: u64| Variant::String(format!("rbxassetid://{n}"));
+    let size = Variant::Vector3(Vector3Data {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0,
+    });
+    let rig = add(1, "Model", "Rig", None, vec![]);
+    add(
+        2,
+        "Part",
+        "HumanoidRootPart",
+        Some(rig),
+        vec![("CFrame", cframe(5.0, identity))],
+    );
+    let torso = add(
+        3,
+        "MeshPart",
+        "UpperTorso",
+        Some(rig),
+        vec![
+            ("MeshId", content(10)),
+            ("size", size.clone()),
+            ("CFrame", cframe(6.0, identity)),
+        ],
+    );
+    add(
+        4,
+        "WrapTarget",
+        "WrapTarget",
+        Some(torso),
+        vec![("CageMeshId", content(11))],
+    );
+    let jacket = add(5, "Accessory", "Jacket", Some(rig), vec![]);
+    let handle = add(
+        6,
+        "MeshPart",
+        "Handle",
+        Some(jacket),
+        vec![
+            ("MeshId", content(20)),
+            ("size", size),
+            ("CFrame", cframe(6.0, identity)),
+        ],
+    );
+    add(
+        7,
+        "WrapLayer",
+        "WrapLayer",
+        Some(handle),
+        vec![
+            ("ReferenceMeshId", content(21)),
+            ("BindOffset", cframe(0.0, quarter)),
+        ],
+    );
+
+    let wrap = of(&dom, &ReflectionDatabase::embedded(), handle).unwrap();
+    let bind = wrap.bind.expect("a BindOffset that is not the identity");
+    // The root part stays put; a point a stud to its side swings above it.
+    assert!(
+        bind.transform_point3(Vec3::new(0.0, 5.0, 0.0))
+            .distance(Vec3::new(0.0, 5.0, 0.0))
+            < 1e-5
+    );
+    let swung = bind.transform_point3(Vec3::new(1.0, 5.0, 0.0));
+    assert!(swung.distance(Vec3::new(0.0, 6.0, 0.0)) < 1e-5, "{swung}");
+    // The garment moves with it, in its own mesh space.
+    let moved = rebound(&mesh(&[[1.0, 5.0, 0.0]]).mesh, bind);
+    assert!(Vec3::from(moved.vertices[0].position).distance(Vec3::new(0.0, 6.0, 0.0)) < 1e-5);
 }

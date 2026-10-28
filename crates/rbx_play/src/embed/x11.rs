@@ -7,6 +7,7 @@
 //! Flatpak gives the client its own PID namespace, so windows are found by
 //! `WM_CLASS`, not `_NET_WM_PID`.
 
+mod focus;
 mod input;
 mod keys;
 

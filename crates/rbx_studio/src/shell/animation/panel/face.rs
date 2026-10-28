@@ -1,8 +1,9 @@
 //! The panel's Face section: a region picker and one slider per FACS
 //! channel in it, each showing the channel's value at the playhead and
 //! keying it there when moved, as Roblox's Face Animation Editor does. The
-//! value plays back onto the head's face only in Roblox; the viewer cannot
-//! deform a dynamic head (its FACS mapping is not exposed).
+//! value plays back onto the head's face only in Roblox: keys are not
+//! written into the head's `FaceControls`, which is what the viewer poses
+//! a dynamic head from (Avatar › Face Preview drives those directly).
 
 use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::component::{h_flex, v_flex};

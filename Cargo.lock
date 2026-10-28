@@ -6666,6 +6666,7 @@ dependencies = [
  "base64 0.22.1",
  "fbxcel",
  "gltf",
+ "imagesize 0.14.0",
  "serde_json",
  "tobj",
 ]
@@ -6820,6 +6821,7 @@ dependencies = [
  "rbx_presence",
  "rbx_reflection",
  "rbx_terrain",
+ "rbx_ugc",
  "rbx_viewer",
  "rbx_wasm",
  "rbx_xml",
@@ -6846,6 +6848,10 @@ dependencies = [
  "rbx_dom",
  "thiserror 2.0.20",
 ]
+
+[[package]]
+name = "rbx_ugc"
+version = "0.1.0"
 
 [[package]]
 name = "rbx_viewer"

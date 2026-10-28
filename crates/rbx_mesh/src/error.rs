@@ -57,6 +57,9 @@ pub enum MeshError {
     #[error("face index {index} is out of range for {vertex_count} vertices")]
     IndexOutOfRange { index: u32, vertex_count: usize },
 
+    #[error("FACS block: {0}")]
+    Facs(String),
+
     #[error("{0} bytes left over after the last declared block")]
     TrailingBytes(usize),
 }

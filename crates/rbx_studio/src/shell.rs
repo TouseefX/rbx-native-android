@@ -110,6 +110,7 @@ mod tests_dock;
 mod theme_live;
 mod toolbar;
 pub(crate) mod tooltip;
+mod ugc;
 mod ui_editor;
 mod view_snap;
 mod viewport_dock;
@@ -252,6 +253,9 @@ pub(crate) struct Shell {
     /// Explorer's place in the Tab order and hands focus on to the tree
     /// itself, whose own handle the toolkit keeps private.
     tree_focus_handle: FocusHandle,
+    /// The window's own focus target, where focus lands when whatever held
+    /// it leaves the tree (see `Shell::new`'s `focus_lost`).
+    root_focus: FocusHandle,
     /// An explicit reduce-motion choice, or `None` to follow the desktop.
     reduce_motion: Option<bool>,
     /// A numeric field being dragged, see `shell::scrub`.
@@ -278,6 +282,15 @@ pub(crate) struct Shell {
     game_settings: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Data Stores, while open, see `datastores`.
     data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// Check Avatar Item and Upload Avatar Item, while open, see `ugc`.
+    ugc_validator: Option<WindowHandle<gpui_kit::component::Root>>,
+    ugc_face: Option<WindowHandle<gpui_kit::component::Root>>,
+    ugc_upload: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// The Accessory Fitting Tool, while open, see `ugc::fitting`.
+    ugc_fitting: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// Undo and redo steps installed so far, for windows that keep instances
+    /// of their own in the place and must rebuild them after one.
+    history_installs: u64,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
     /// The Explorer's type-ahead buffer, see `shell::tree_keys`.
@@ -565,7 +578,7 @@ pub(crate) struct Shell {
     /// is raised with it once rather than fought over every frame.
     window_was_active: bool,
     /// Kept only to stay subscribed: dropping these unregisters the listeners.
-    _subscriptions: [Subscription; 17],
+    _subscriptions: [Subscription; 18],
 }
 
 impl Shell {
@@ -661,6 +674,18 @@ impl Shell {
         // `Tree` key context and makes the arrow contract reachable at all.
         // The wrapper never keeps focus for more than an instant.
         let tree_focus_handle = cx.focus_handle();
+        // An undo can remove the instance a field in Properties was open on,
+        // and a key event is dispatched from the focused element up. With
+        // that element gone nothing is on the path, so the window's shortcuts
+        // (Ctrl+Y first of all) go dead until a click. Focus goes to the
+        // nearest ancestor that survived, or the window itself.
+        let root_focus = cx.focus_handle();
+        let focus_lost = cx.on_focus_lost(window, |shell, window, cx| {
+            let target = window
+                .focus_lost_restore_target(cx)
+                .unwrap_or_else(|| shell.root_focus.clone());
+            window.focus(&target, cx);
+        });
         let tree_focused = cx.on_focus_in(&tree_focus_handle, window, |shell, window, cx| {
             let tree = shell.tree.clone();
             tree.update(cx, |tree, cx| {
@@ -843,8 +868,14 @@ impl Shell {
             version_history: None,
             game_settings: None,
             data_stores: None,
+            ugc_validator: None,
+            ugc_face: None,
+            ugc_upload: None,
+            ugc_fitting: None,
+            history_installs: 0,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,
+            root_focus,
             typeahead: tree_keys::Typeahead::default(),
             explorer_edit: explorer_edit::ExplorerEdit::default(),
             increment_names,
@@ -966,6 +997,7 @@ impl Shell {
             drag: None,
             _subscriptions: [
                 tree_focused,
+                focus_lost,
                 picked,
                 clicked,
                 filtered,
@@ -1080,6 +1112,47 @@ impl Shell {
                 _ => import3d::ImportKind::Model,
             };
             shell.import_as(vec![path.into()], kind, cx);
+        }
+
+        // `RBX_STUDIO_UGC=check|upload|fit` (`check:<file>` checks a source
+        // file, `fit:<name>` fits the first instance of that name) opens the
+        // avatar item window for a screenshot, as
+        // `RBX_STUDIO_UGC_TYPE=<asset type label without spaces>` (Hat,
+        // TShirt...) picks the type it is checked as. The Fitting Tool's own
+        // knobs are in `ugc::fitting`.
+        if let Ok(spec) = std::env::var("RBX_STUDIO_UGC") {
+            let kind = std::env::var("RBX_STUDIO_UGC_TYPE").ok().and_then(|label| {
+                rbx_ugc::AssetType::ALL
+                    .iter()
+                    .find(|t| {
+                        let plain: String =
+                            t.label().chars().filter(|c| c.is_alphanumeric()).collect();
+                        plain.eq_ignore_ascii_case(&label)
+                    })
+                    .map(|&asset| ugc::ItemKind {
+                        asset,
+                        scale: rbx_ugc::BodyScale::Normal,
+                    })
+            });
+            match spec.split_once(':') {
+                Some(("check", file)) => {
+                    let source = ugc::ItemSource::File(file.into());
+                    shell.open_ugc_validator(Some(source), kind, cx);
+                }
+                Some(("fit", name)) => {
+                    let source = crate::explorer::find_by_name(&shell.dom, name);
+                    shell.open_ugc_fitting(source, kind.map(|k| k.asset), cx);
+                }
+                _ if spec == "fit" => shell.open_ugc_fitting(None, kind.map(|k| k.asset), cx),
+                _ if spec == "upload" => shell.open_ugc_upload(None, None, cx),
+                _ => shell.open_ugc_validator(None, kind, cx),
+            }
+        }
+
+        // `RBX_STUDIO_FACE=1` opens Face Preview on the selection, for a
+        // screenshot.
+        if std::env::var_os("RBX_STUDIO_FACE").is_some() {
+            shell.open_face_preview(cx);
         }
 
         // `--run` / `RBX_STUDIO_RUN`: runs exactly the pipeline Enter would,
@@ -2008,6 +2081,7 @@ impl Render for Shell {
             .bg(tokens::black())
             .font_family(tokens::font_ui())
             .text_color(tokens::text_strong())
+            .track_focus(&self.root_focus)
             // Ctrl+S here rather than on one panel (contrast `instance_tree`'s
             // own `on_key_down`): a key event bubbles up from whatever holds
             // focus, and every panel, Explorer, Properties, viewport,

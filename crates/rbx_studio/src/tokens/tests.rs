@@ -432,3 +432,49 @@ fn the_diff_colours_are_the_green_and_the_error_red_at_their_alphas() {
     assert_eq!(diff_remove_gutter(), rgba(0xE06C6C29));
     assert_eq!(diff_remove_pill(), rgba(0xE06C6C1F));
 }
+
+/// A slider's rail is the translucent `track`, so it has to stand off both
+/// surfaces a slider can sit on, a dock and a raised card, in every
+/// built-in theme. It used to be the dock's own colour and vanished.
+#[test]
+fn a_slider_rail_stands_off_a_dock_and_a_raised_card_in_every_theme() {
+    fn colour(theme: &serde_json::Value, key: &str) -> Rgba {
+        let hex = theme["colors"][key]
+            .as_str()
+            .expect(key)
+            .trim_start_matches('#');
+        let byte = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).unwrap() as f32 / 255.;
+        Rgba {
+            r: byte(0),
+            g: byte(2),
+            b: byte(4),
+            a: if hex.len() == 8 { byte(6) } else { 1. },
+        }
+    }
+
+    for (name, source) in [
+        (
+            "default",
+            include_str!("../../../../assets/themes/default/theme.json"),
+        ),
+        (
+            "light",
+            include_str!("../../../../assets/themes/light/theme.json"),
+        ),
+        (
+            "high-contrast",
+            include_str!("../../../../assets/themes/high-contrast/theme.json"),
+        ),
+    ] {
+        let theme: serde_json::Value = serde_json::from_str(source).unwrap();
+        let rail = colour(&theme, "track");
+        for surface in ["dock", "field_select"] {
+            let under = colour(&theme, surface);
+            let step = (luminance(composite(rail, under)) - luminance(under)).abs();
+            assert!(
+                step >= 0.01,
+                "{name}: the rail over {surface} is a step of {step:.4}, it disappears"
+            );
+        }
+    }
+}

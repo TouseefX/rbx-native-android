@@ -32,6 +32,8 @@ mod toast;
 mod view;
 mod widgets;
 
+pub(in crate::shell) use pose::write_transforms;
+
 #[cfg(test)]
 mod graph_probe;
 #[cfg(test)]

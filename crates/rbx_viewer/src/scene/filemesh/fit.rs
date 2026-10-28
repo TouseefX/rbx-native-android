@@ -9,16 +9,25 @@ use rbx_assets::AssetRef;
 use rbx_dom::{Instance, Ref, Variant, WeakDom};
 use rbx_reflection::ReflectionDatabase;
 
-use super::{parsed_asset_ref, vector3, FILE_MESH, MESH_PART};
-use crate::scene::cframe_matrix;
+use super::{parsed_asset_ref, vector3, FILE_MESH, HEAD_MESH, MESH_PART};
+use crate::scene::{cframe_matrix, shape::head_extent};
+
+/// What a `SpecialMesh` of `MeshType.Head` draws: the Studio content file the
+/// engine itself names for it, fetched like any other `rbxasset://` file.
+const HEAD_MESH_PATH: &str = "avatar/heads/head.mesh";
+/// The extent Studio fits `head.mesh` by, though its vertices only span 1.2
+/// studs a side: measured against Studio, every head draws at 0.96 of its
+/// [`head_extent`], three sizes and Scales agreeing to within half a percent.
+const HEAD_MESH_EXTENT: f32 = 1.25;
 
 /// How to place a mesh asset's native geometry in the world, before the mesh
 /// itself is known.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Fit {
-    /// `MeshPart`: native geometry is scaled componentwise so its own extent
-    /// matches `size`: `InitialSize` if the file carries it (undocumented but
-    /// still round-tripped by Studio), otherwise the mesh's own bounds.
+    /// `MeshPart`, or a `SpecialMesh` Head: native geometry is scaled
+    /// componentwise so its own extent matches `size`: `InitialSize` if the
+    /// file carries it (undocumented but still round-tripped by Studio),
+    /// otherwise the mesh's own bounds.
     Part {
         cframe: Mat4,
         size: Vec3,
@@ -101,10 +110,12 @@ pub(crate) fn mesh_part(
     Some((mesh, fit))
 }
 
-/// The `SpecialMesh` FileMesh child that replaces `part`'s own geometry, with
-/// the child itself so the scene builder can read the texture and tint only
-/// it cares about. Only the FileMesh case answers: every other `MeshType`
-/// already has a procedural stand-in built in `scene::shape::resolve`.
+/// The `SpecialMesh` child that replaces `part`'s own geometry with a mesh
+/// asset, with the child itself so the scene builder can read the texture and
+/// tint only it cares about: a FileMesh draws its own `MeshId` at its native
+/// size, a Head draws Studio's `head.mesh` fitted to the part (see
+/// [`head_extent`]). Every other `MeshType` is procedural, built in
+/// `scene::shape::resolve`.
 pub(crate) fn special_mesh<'a>(
     dom: &'a WeakDom,
     part: &Instance,
@@ -117,14 +128,30 @@ pub(crate) fn special_mesh<'a>(
         (child.class() == "SpecialMesh").then_some(child)
     })?;
     let properties = child.properties();
-    if !matches!(properties.get("MeshType"), Some(&Variant::Enum(FILE_MESH))) {
-        return None;
+    let cframe = cframe_matrix(cframe);
+    let scale = vector3(properties.get("Scale"), Vec3::ONE);
+    let offset = vector3(properties.get("Offset"), Vec3::ZERO);
+    match properties.get("MeshType") {
+        Some(&Variant::Enum(FILE_MESH)) => {
+            let mesh = parsed_asset_ref(properties.get("MeshId")?)?;
+            let fit = Fit::Special {
+                cframe,
+                scale,
+                offset,
+            };
+            Some((child, mesh, fit))
+        }
+        Some(&Variant::Enum(HEAD_MESH)) => {
+            let Some(&Variant::Vector3(size)) = part.properties().get("size") else {
+                return None;
+            };
+            let fit = Fit::Part {
+                cframe: cframe * Mat4::from_translation(offset),
+                size: head_extent(Vec3::new(size.x, size.y, size.z) * scale),
+                initial_size: Some(Vec3::splat(HEAD_MESH_EXTENT)),
+            };
+            Some((child, AssetRef::Native(HEAD_MESH_PATH.to_string()), fit))
+        }
+        _ => None,
     }
-    let mesh = parsed_asset_ref(properties.get("MeshId")?)?;
-    let fit = Fit::Special {
-        cframe: cframe_matrix(cframe),
-        scale: vector3(properties.get("Scale"), Vec3::ONE),
-        offset: vector3(properties.get("Offset"), Vec3::ZERO),
-    };
-    Some((child, mesh, fit))
 }

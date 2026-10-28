@@ -19,10 +19,10 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   against real files (16k+ instance places), including the shared-string
   (`SSTR`) table.
 - [x] XML `.rbxlx`/`.rbxmx`: read **and** write, exact round-trip.
-- [x] Reflection database (682 classes, `Service`/`NotCreatable`/
+- [x] Reflection database (938 classes, `Service`/`NotCreatable`/
   `NotBrowsable`/property-category tags) parsed straight from Roblox's own
   public API dump, kept current by a daily CI sync.
-- [x] Mesh format `.mesh` v1.00–v5.00.
+- [x] Mesh format `.mesh` v1.00–v7.00 (v6 and v7 are the chunked layout).
 - [x] Mutable in-memory DOM (`set_property`/`remove`/`new_instance`/
   `take_changes`), what live editing is built on.
 - [x] `rbxdump --roundtrip`: a continuous-verification tool that found and
@@ -156,7 +156,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
   axis of the light-to-fragment direction, bloom/stars/
   `ColorCorrectionEffect`/`ColorGradingEffect`/`BlurEffect`/
   `SunRaysEffect`/`DepthOfFieldEffect`.
-- [x] 43 official Roblox materials (`rbx_materials`) with real texture
+- [x] 45 Roblox materials (`rbx_materials`, every `Enum.Material` value, `Air` and `Water` drawn as plain plastic) with real texture
   packs, `MaterialVariant`, `SurfaceAppearance` (with its emissive mask,
   `EmissiveStrength` and `EmissiveTint`: the mask's grey level times the
   tinted strength is added to the lighting before the albedo multiplies it,
@@ -282,7 +282,7 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     per element, a gradient inside a stroke not read), `UIPadding`.
   - Layout: `UIListLayout` with `HorizontalFlex`/`VerticalFlex`, `Wraps`
     and `ItemLineAlignment`, `UIFlexItem`, `UIGridLayout`, `UITableLayout`.
-    `UIPageLayout` is not read (one page at a time, animated).
+    `UIPageLayout` lays out the current page (no transition).
   - Sizing: `UIScale`, `UIAspectRatioConstraint` (both `AspectType`s, both
     `DominantAxis`), `UISizeConstraint`, `UITextSizeConstraint`,
     `AutomaticSize` (children extent, a layout's `AbsoluteContentSize`,
@@ -679,8 +679,7 @@ and, on a model, each part's own face middles and centre, as the
 ### Editor (`rbx_studio`, binary `rbxstudio`)
 - [x] Explorer: this project's own flat, from-scratch class icon kit
   (`assets/icons/default/dark`, 329 classes onto 142 of its 152 tiles,
-  Roblox's 147-tile layout plus five of its own, spec'd in
-  `assets/icons/README.md`) rasterized and painted per row
+  Roblox's 147-tile layout plus five of its own) rasterized and painted per row
   (`class_icons.rs`), with Lucide glyphs as the fallback for anything the
   kit doesn't cover, Roblox's own sprite sheet is no longer downloaded or
   drawn anywhere in the editor. Default service filter with a "show all"
@@ -1324,8 +1323,8 @@ both the plain fetch failure and the silent fall back to a default
     a list or grid child dragged to a new place in it; double-click to
     type into a text element; the Explorer's menu on right-click (Group in
     a Frame, and Ungroup, which lets a `Frame` go where its children
-    stand); Ctrl+[ / ] for paint order (Shift for all the way); Ctrl+0 to
-    fit and Ctrl+1 to zoom to the selection; Space to pan; Shift to hold a
+    stand); `[` / `]` for paint order (Shift for all the way); 0 to
+    fit and 1 to zoom to the selection; Space to pan; Shift to hold a
     move to one axis, draw a square; Alt to resize about the centre.
   - **The 3D view emulates the same screen.** The Viewport dock's Screen
     setting is the canvas's resolution: the scene letterboxes to the
@@ -1732,7 +1731,8 @@ both the plain fetch failure and the silent fall back to a default
   `appearance.json` names another one or its own files are saved. A
   widgets-only `themes/<name>.json` from before still loads. An installer
   that downloads a theme from a GitHub repository link, validates it and
-  swaps it in atomically is in place but not yet reachable from the UI.
+  swaps it in atomically is reachable from Settings › Appearance ›
+  Theme (Install from GitHub).
 - [x] **Light and High contrast, built in beside Default**
   (`assets/themes/{light,high-contrast}`, Studio Settings › Appearance ›
   Theme). Both are ordinary themes layered over Default, only the
@@ -1839,7 +1839,7 @@ both the plain fetch failure and the silent fall back to a default
   surfaces, state washes, borders, a seven-step text ramp, one radius, the
   frame's measured dimensions and its type scale, with the palette also
   expressed as a `ThemeSet`/`ThemeConfig` JSON
-  (`assets/themes/dark-soft.json`) so the toolkit's own widgets follow it
+  (`assets/themes/default/widgets.json`) so the toolkit's own widgets follow it
   without a rebuild, and a test that fails the moment the two disagree.
 
   The palette is not this bullet's original `#1a1a1a`-to-`#f0f0f0` ramp and
@@ -2391,7 +2391,7 @@ both the plain fetch failure and the silent fall back to a default
     `avatar.roblox.com/v1/users/{id}/avatar` endpoint and anonymous
     `assetdelivery` are read (My Avatar only needs the key to learn its
     user id). It applies body scales, colours, accessories welded at the
-    matching attachment (layered clothing keeps its `WrapLayer` and sits on its body part, fitted to the body cages by nearest-vertex blend; makeup is painted into the head's colour map), shirts,
+    matching attachment (layered clothing keeps its `WrapLayer` and sits on its body part, fitted cage to cage over the body cages; makeup is painted into the head's colour map), shirts,
     pants and T-shirts, the player's animation choices into the `Animate`
     states, R15 body-part packages (mesh, texture, attachments, cage; a
     package missing a rig attachment is skipped) and R6 `CharacterMesh`es.
@@ -2466,7 +2466,10 @@ both the plain fetch failure and the silent fall back to a default
   written: it no longer shows changed in Properties or has to be stripped
   out before a save.
 - [x] **An auto-rigger and a skeleton view** (`crates/rbx_autorig`).
-  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ or glTF).
+  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ, glTF, or a
+    `.rbxm`/`.rbxmx` model of MeshParts and Parts, merged the way the
+    viewport places them; a texture, `SurfaceAppearance` and colour carry
+    over when every part shares one).
     - It finds the up axis, the front (−Z, left on −X) and the height.
     - It places the 15 R15 joints from the mesh's own shape:
       voxelised, with geodesic extremities, cross-section profiles and
@@ -2505,6 +2508,20 @@ both the plain fetch failure and the silent fall back to a default
   - a live upload confirmed the cages: Roblox's importer turns the 15
     `<Part>_OuterCage` meshes into one `<Part>WrapTarget` per part, and a
     layered jacket and pants worn in Studio follow the published body.
+- [x] **Avatar item validator and upload** (`crates/rbx_ugc`,
+  `shell::ugc`). Avatar › Check Item runs the documented Marketplace rules
+  on the selected Accessory, MeshPart or Model, or on a `.fbx`/`.obj`/
+  `.gltf`/`.glb`: 4k triangles per accessory, 20k per mesh, the body
+  budgets, 2048 textures, 4 bone influences, the attachment per type, the
+  size box per type and body scale (read from `AvatarPartScaleType` like
+  Studio does), body part boxes, inner and outer cages, watertight meshes.
+  Numbers come from the creator-docs spec pages, linked from every finding.
+  Checked against Studio's Save to Roblox on the same items: same triangle,
+  texture, size and cage verdicts. Avatar › Upload Item picks type, title
+  and creator (you or a group), blocks on errors, spells out the Creator
+  Hub fees, uploads the item as a Model through Open Cloud (free) and opens
+  it on the Creator Hub. Import can check a file as an avatar item first.
+  The crate has no UI, so the fitting tool can call it.
 - [x] **The Animation Editor writes `CurveAnimation`s and fits the stage's
   shadow to the rig**:
   - `ValuesAndTimes` was decoded from catalog emotes. The writer
@@ -2545,6 +2562,20 @@ both the plain fetch failure and the silent fall back to a default
     - animation events fire, and each node reports its live weight,
       shown as "NN%" on the canvas;
     - expressions take `Vector2`/`Vector3`/`Color3`/`CFrame` values.
+- [x] **Animation Graph behaviour Roblox doesn't document, measured in
+  real Studio** (`docs/research/animation-graph-measured.md`):
+  - Blend2D's weights, Cartesian and Polar (angles count twice as much
+    as magnitudes), to 1e-5 on 57 targets;
+  - Over, Add and Subtract, to 1e-3;
+  - RandomSequence draws from `std::mt19937` seeded with the rounded
+    Seed, one draw per pick against the summed weights (all 320 measured
+    picks match);
+  - CubicV2 transitions, interrupted blends, a Select or Priority Select
+    with nothing chosen, masks, backwards trims and re-triggered One Shots;
+  - an Instance-typed attribute (`EntryState`) in both formats: a
+    referent inside `AttributesSerialize` in a binary file, a
+    `__attrRef_EntryState` Ref property in an XML one, each checked
+    against a file Studio saved.
 - [x] **A Game Settings dialog** (Home › Game Settings, File › Game
   Settings…, the command palette, and Studio Settings' own-windows list),
   with real Studio's tabs: Basic Info, Communication, Permissions,
@@ -2609,7 +2640,7 @@ both the plain fetch failure and the silent fall back to a default
     compile-checked here and have never run on those systems.
   - **Customize Shortcuts** (`File › Customize Shortcuts…`, and the
     Settings nav's Keyboard shortcuts), a window of its own as in Studio.
-    It lists every rebindable command (89, from Save to the Animation
+    It lists every rebindable command (94, from Save to the Animation
     Editor's keys) by category, with search. Click `+` or a key chip and
     press the new key. Chips remove a key, and Reset or Reset all go back
     to the defaults. A clash is shown ("Also runs: Copy (Edit)") but
@@ -2626,8 +2657,8 @@ both the plain fetch failure and the silent fall back to a default
   `beta.json` and applied after a restart: `enabled` answers from the
   choices at launch. A banner counts the pending changes and offers
   "Restart now", which asks to save unsaved work first, then relaunches
-  the editor on the same place. Nothing ships behind a switch yet, so the
-  page shows its empty state; `RBX_STUDIO_BETA_SAMPLE=1` lists a sample
+  the editor on the same place. Live co-editing and the MCP server ship behind
+  switches; `RBX_STUDIO_BETA_SAMPLE=1` also lists a sample
   feature to try the page.
 - [x] **More New templates on Home.** Home's New row now offers
   Baseplate, Classic Baseplate and Flat Terrain, each with the parts,
@@ -2891,6 +2922,19 @@ both the plain fetch failure and the silent fall back to a default
   through the back button opens Roblox's menu, and the cover follows a
   focused TextBox. Research, verdicts and measurements:
   `docs/research/play-sandbox/device-simulator.md`.
+- [x] **Device Simulator: the keyboard cover and the preferred input,
+  told to game scripts**: during Play on a simulated phone or tablet, game
+  scripts read the editor's keyboard cover through the touch stand-in's
+  `UserInputService`: `OnScreenKeyboardVisible`, `OnScreenKeyboardPosition`
+  and `OnScreenKeyboardSize`, in the client's pixels (the cover's height
+  across the bottom of the screen, zero while it is down), with `Changed`
+  and `GetPropertyChangedSignal` firing as it moves. On a simulated console
+  `PreferredInput` reads `Gamepad`; touch devices already read `Touch`,
+  with `TouchEnabled` true and `MouseEnabled` and `KeyboardEnabled` false.
+  Roblox's own CoreGui reads the real service, so it still picks its UI by
+  the real values. Checked in Roblox's engine (a Studio playtest with the
+  stand-in switched on); not yet run end to end through Sober, since Play
+  had no working Open Cloud key that day.
 - [x] **Controller Emulator** (`rbx_play::gamepad`,
   `shell/controller_emulator`; Test › Controller): Studio's widget,
   Generic Gamepad, PS4, PS5, Xbox and Generic Handheld, drawn with the
@@ -2908,6 +2952,22 @@ both the plain fetch failure and the silent fall back to a default
   When `/dev/uinput` isn't writable the window says why and gives the
   udev rule. Linux only; live pickup by Sober not yet tested (see the
   planned item).
+- [x] **Controller Emulator: the pad drives a real Play** (2026-10-28):
+  Sober reads the uinput pad fine (SDL3 inside its sandbox, without udev,
+  sees an Xbox 360 Controller and every press), but drops a pad's input
+  while its window lacks the keyboard focus, ignoring
+  `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS`, and using the emulator window
+  takes the focus. The emulator now sends the embedded client a synthetic
+  `FocusIn` before each change of the pad (`Embedded::lend_focus`), so the
+  client keeps reading it while the emulator keeps the keyboard. Measured
+  on Xephyr with Sober joined into the sandbox place: focus elsewhere,
+  nothing moves; with the `FocusIn`, the stick walks the character, A
+  jumps it and Roblox's gamepad cursor shows (touch mode on or off)
+  (`docs/research/play-sandbox/device-simulator.md`). Windows: the pad is
+  a ViGEmBus Xbox 360 or DualShock 4 target (PS5 too, ViGEmBus has no
+  DualSense), through `ViGEmClient.dll` loaded at runtime from beside the
+  executable, never shipped. **UNTESTED**: it was compile-checked for
+  Windows, never run.
 - [x] **Server Authority, editor side (Studio Beta, announced 2026)**,
   checked against the Creator Hub's `projects/server-authority` page. It is
   a workspace mode, not an editor feature: `Workspace.AuthorityMode = Server`
@@ -3132,16 +3192,37 @@ both the plain fetch failure and the silent fall back to a default
   Later, the same plan could also restart servers onto the new version and
   send an in-game announcement through MessagingService.
 
-- [ ] 📋 **UGC creator workflow**: build, check, test and upload avatar
-  items (rigid accessories, layered clothing, bodies, dynamic heads) from
-  rbx-native. The auto-rigger, body cages, 3D import and Player / My Avatar
-  are there already. Missing: an Accessory Fitting Tool, a validator with
-  the real budgets (4k triangles, 2048 textures, size per asset type, cage
-  checks), cage authoring for items, a closer layered-clothing deformer and
-  the head side. The upload fee, moderation and Marketplace publish have no
-  documented Open Cloud endpoint, so the last step is a handoff to the
-  Creator Hub. Gap analysis, staged plan and what each stage must be
-  checked against in real Studio: `docs/research/ugc-creators/README.md`.
+- [x] **Accessory Fitting Tool** (Avatar › Accessory): pick a `MeshPart` or
+  `Model`, Accessory or Clothing, the asset type and body scale, fit it on
+  the test body, try it on Normal, Slender, Classic, Player and My Avatar
+  bodies with the default animations, body scale sliders and other items
+  layered on, then Generate writes the `Accessory` the way Studio's tool
+  does (checked against its output on the same bow) and Upload Item takes
+  it from there. Clothing gets `<item>_InnerCage` / `_OuterCage` made from
+  the Mannequin's cages, an overlay with a nudge by region and the
+  `WrapLayer` settings. The live check runs on every step.
+- [x] **Cage-to-cage layered clothing fit**: garments pair their inner cage
+  with the body cage by template UV and keep their clearance over it, layer
+  over layer. Same jacket and pants on the same blocky bodies as real
+  Studio: silhouette XOR 0.78 down to 0.12. `BindOffset` moves the fitted
+  garment about the root part, like Studio; `Puffiness` and
+  `ShrinkFactor` change nothing in Studio, so they change nothing here.
+  The body and lower layers hide under the clothing by Roblox's own HSR
+  data, like Studio: XOR 0.07 on the blocky bodies, 0.05 to 0.06 on the
+  Mannequin.
+- [ ] 📋 **UGC creator workflow, the rest**: the validator, Model upload,
+  dynamic head side (FACS checks, landmarks, Avatar › Face Preview) and the
+  fitting tool above are done. Still open: a live check that the Creator
+  Hub can turn an API-uploaded Model into an avatar item, and that
+  Roblox's validator accepts cages made from the Mannequin template, and
+  that the stock bodies' HSR assets download with an API key (anonymous
+  downloads get a 401, so without a key the test body isn't hidden under
+  the clothing; Studio-saved places and packages carry the data inline and
+  work either way). The
+  upload fee, moderation and Marketplace publish have no documented Open
+  Cloud endpoint, so the last step stays a handoff to the Creator Hub. Gap
+  analysis, staged plan and what each stage was checked against in real
+  Studio: `docs/research/ugc-creators/README.md`.
 
 ### Play / Test workflow
 - [ ] Play on Windows (RobloxPlayerBeta) and macOS: never run. Windows
@@ -3158,19 +3239,21 @@ both the plain fetch failure and the silent fall back to a default
 - [ ] 📋 **Device Simulator: what is still open**, known caveats of Play
   through Sober, measured live: a click reaches the game as `MouseButton1`,
   never a touch (no multi-touch), and Roblox's own UI chosen by
-  `PreferredInput` (which stays `KeyboardAndMouse`) is not simulated; a
-  virtual uinput touchscreen does not help, Sober drops X11 touch input
-  (tried live). Roblox's thumbstick and jump button are stood in for by
-  the probe's own, mouse-driven copies, and game scripts see the mouse as
-  a finger (gestures included, on the service and on GuiObjects) and the
-  wheel as a pinch or rotation, and a drag over the world turns the
-  camera. A second Play in one editor
-  session crashed GNOME Shell on X11 when the second client was reparented
-  (mutter 46.2 assertion), untested whether withdrawing it first avoids
-  that. The
-  keyboard cover is not reported to the game (`OnScreenKeyboardVisible`
-  false, `OnScreenKeyboardSize` 0), and the Android back button arrives as
-  `KeyCode.Escape`. Also open: input modes on
+  `PreferredInput` (which stays `KeyboardAndMouse` on the real service) is
+  not simulated; a virtual uinput touchscreen does not help, Sober drops
+  X11 touch input (tried live). Roblox's thumbstick and jump button are
+  stood in for by the probe's own, mouse-driven copies, and game scripts
+  see the mouse as a finger (gestures included, on the service and on
+  GuiObjects) and the wheel as a pinch or rotation, and a drag over the
+  world turns the camera. A second Play in one editor session crashed
+  GNOME Shell on X11 once, on the real desktop, when the second client was
+  reparented (mutter 46.2 assertion), although the window was already
+  withdrawn from the window manager first. It did not happen again in GNOME
+  Shell 46 (mutter 46.2) nested in Xephyr: three Sober windows in a row,
+  on its home screen and in a game, embedded into the editor and dropped
+  again, no crash. That desktop session also had a uinput touchscreen
+  attached; whether that matters is untested. The Android back button
+  arrives as `KeyCode.Escape`. Also open: input modes on
   Windows, where RobloxPlayerBeta has no switch and no allowlisted FFlag
   gives one (whether injected synthetic touch makes `TouchEnabled` true is
   untested); a headset in Play (Sober has no VR; on Windows an OpenXR
@@ -3182,20 +3265,24 @@ both the plain fetch failure and the silent fall back to a default
   and resimulation are engine behaviour, the same wall as physics, listed
   under "Explicitly impossible". What remains of the item is the Network
   Simulator above, which is what would matter most for these places.
-- [ ] 📋 **Controller Emulator: make Sober take the virtual pad's input, and
-  the devices still missing**: run against a live Play (2026-10-18), Sober
-  sees the uinput pad (`GamepadEnabled` true) but passes none of its input
-  on: A held on the drawing sends `BTN_SOUTH` on the pad's `/dev/input`
-  node, yet `GetLastInputType` stays Touch and the character does not jump,
-  with Sober focused, with SDL's background-joystick switch, and as Xbox or
-  Generic Gamepad alike (`docs/research/play-sandbox/device-simulator.md`).
-  Whether a real controller works through Sober here is the next thing to
-  check. Which `Enum.GamepadType` / button images the experience gets per
-  device follows from that. Also open: Quest2/Quest3 (Sober has no VR
-  runtime), the TV Remote (the desktop client reads a remote's keys as a
-  keyboard; Roblox maps them to gamepad keycodes only on Android TV),
-  Windows (needs the ViGEmBus driver installed) and macOS (a DriverKit HID
-  extension), and lighting the picture from a real plugged-in controller.
+- [ ] 📋 **Controller Emulator: what is still open**: a real controller
+  through Sober cannot be tried on the machine it was built on (none is
+  plugged in), nor lighting the drawing from one. The editor's own Play
+  with the emulator open was not run (the test session had no API key to
+  publish with); the live run used the same embedding, pad and call from a
+  harness. `GetLastInputType` was
+  not read in the live run (the gamepad cursor showed and the stick and A
+  moved the character; `examples/gamepad_demo.rs` logs it, for the next
+  run through the editor's Play), and which `Enum.GamepadType` / button
+  images each device gets is unmeasured. A client left in its own window
+  (embedding failed) still loses the pad while the emulator window is
+  used. The Windows back end (ViGEmBus) has never run: it needs Windows,
+  the ViGEmBus driver and a `ViGEmClient.dll` built by the user, and
+  whether RobloxPlayerBeta also ignores a pad while unfocused is untested.
+  macOS (a DriverKit HID extension, which needs Apple's entitlements),
+  Quest2/Quest3 (Sober has no VR runtime) and the TV Remote (the desktop
+  client reads a remote's keys as a keyboard; Roblox maps them to gamepad
+  keycodes only on Android TV) stay unbuilt.
 
 ### From Roblox's own Creator Roadmap (2026 fall update)
 
@@ -3321,13 +3408,8 @@ not yet honoured by the engine, which each bullet notes.
   end, an ordinary instance tree written through the DOM.
 
 #### Animation
-- [ ] 📋 **What the Animation Graph still lacks**:
-  - motion matching (Early 2027) and root motion (Mid 2027);
-  - behaviour Roblox does not document, implemented as the likeliest
-    reading and marked UNVERIFIED in the code: Blend2D's exact weights,
-    the Over/Add/Subtract maths, and how random picks are seeded;
-  - the binary encoding of an Instance-typed `EntryState` attribute
-    (the state is written by name for now).
+- [ ] 📋 **What the Animation Graph still lacks**: motion matching (Early
+  2027) and root motion (Mid 2027), which Roblox has not shipped yet.
 - [ ] 📋 **Avatar Schema changes**: procedural bones (Early 2027), higher
   mesh resolution (Mid 2027), more FACS controls including individual eyes
   (Mid 2027), and silhouette-preserving fit for clothing and accessories

@@ -77,6 +77,24 @@ pad.Active = true
 pad.Parent = gui
 pad.TouchPan:Connect(function(ps, tr, v, s) if s ~= Enum.UserInputState.Change then log("Pad.TouchPan " .. s.Name .. " " .. p(tr)) end end)
 pad.TouchPinch:Connect(function(ps, sc, v, s) if s == Enum.UserInputState.End then log(string.format("Pad.TouchPinch End %.2f", sc)) end end)
+
+-- What the device reports to game code: its preferred input, and the
+-- keyboard cover, which a focused TextBox raises.
+local okPref, pref = pcall(function() return UIS.PreferredInput.Name end)
+log("PreferredInput=" .. (if okPref then pref else "n/a") .. " Gamepad=" .. tostring(UIS.GamepadEnabled))
+local box = Instance.new("TextBox")
+box.Name = "DemoBox"
+box.Size = UDim2.new(0, 160, 0, 40)
+box.Position = UDim2.new(0, 10, 0, 160)
+box.PlaceholderText = "Tap to type"
+box.Text = ""
+box.Parent = gui
+local function kb(how)
+	log(string.format("Keyboard %s visible=%s pos=%s size=%s", how, tostring(UIS.OnScreenKeyboardVisible), p(UIS.OnScreenKeyboardPosition), p(UIS.OnScreenKeyboardSize)))
+end
+kb("start")
+UIS:GetPropertyChangedSignal("OnScreenKeyboardVisible"):Connect(function() kb("signal") end)
+UIS.Changed:Connect(function(property) if property == "OnScreenKeyboardSize" then kb("Changed") end end)
 "#;
 
 fn main() {

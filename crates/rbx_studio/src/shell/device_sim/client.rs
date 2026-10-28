@@ -32,6 +32,28 @@ impl Shell {
         self.refresh_device_view(cx);
     }
 
+    /// Tells the running client where the keyboard cover is, `height` tall
+    /// over a `screen`-sized client (0 while it is down), when that changed.
+    pub(super) fn device_keyboard_to_client(&mut self, screen: (u32, u32), height: u32) {
+        if self.device_sim.launched.is_none() {
+            return;
+        }
+        let rect = device_sim::report::keyboard_rect(screen, height);
+        if self.device_sim.keyboard_sent == Some(rect) {
+            return;
+        }
+        let [x, y, width, height] = rect;
+        let body = rbx_play::protocol::CommandBody::Keyboard {
+            x,
+            y,
+            width,
+            height,
+        };
+        if self.play_send(body).is_some() {
+            self.device_sim.keyboard_sent = Some(rect);
+        }
+    }
+
     /// Studio's rule: an Android device, while the client view is active.
     pub(super) fn back_button_ready(&self, cx: &App) -> bool {
         let android = self

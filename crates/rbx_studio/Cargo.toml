@@ -62,6 +62,9 @@ rbx_dom = { path = "../rbx_dom" }
 rbx_presence = { path = "../rbx_presence" }
 # Import 3D Model…: the triangle budget check and the file that is uploaded.
 rbx_import = { path = "../rbx_import" }
+# The avatar item checks behind Check Avatar Item, Upload Avatar Item and the
+# importer's avatar mode.
+rbx_ugc = { path = "../rbx_ugc" }
 # The UI Editor's "Import from Figma…": sign-in, the API and the class
 # guesses. Its own dependencies are all already in the tree.
 rbx_figma = { path = "../rbx_figma" }

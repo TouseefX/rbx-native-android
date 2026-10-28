@@ -2,7 +2,8 @@
 //! file's own, on one set of pages shaped like Studio's Experience
 //! Settings, each row saying where its value lives (see `catalog`). Edits
 //! wait for Save: the cloud ones go to Roblox, the local ones land in the
-//! place as one undo step.
+//! place as one undo step. Team Create's switch and session list, on
+//! Permissions, run as the editor's Roblox sign-in instead (`team_create`).
 //!
 //! Like Version History, the window keeps no copy of the link: it reads it
 //! from `links.json` when it opens and whenever `roblox.changes` moves.
@@ -24,10 +25,13 @@ mod catalog;
 mod fetch;
 mod inputs;
 mod model;
+mod save;
+mod team_create;
 mod view;
 
 use catalog::{CloudField, Tab};
 use model::{CloudDraft, CloudValue, LocalDraft};
+use team_create::TeamCreate;
 
 const WIDTH: f32 = 860.;
 const HEIGHT: f32 = 640.;
@@ -67,6 +71,7 @@ pub(crate) struct GameSettingsWindow {
     notice: Option<Notice>,
     /// Bumped by every load and save, so a reply that lost the race is dropped.
     generation: u64,
+    team_create: TeamCreate,
     inputs: BTreeMap<InputKey, Entity<InputState>>,
     /// Inputs whose text doesn't parse, with why; Save waits for none.
     invalid: BTreeMap<InputKey, String>,
@@ -78,17 +83,6 @@ pub(crate) struct GameSettingsWindow {
     focus: FocusHandle,
     scroll: ScrollHandle,
     _subscriptions: Vec<Subscription>,
-}
-
-/// The notice for a save that sent cloud edits, composed from what happened.
-fn save_notice(wrote_local: bool, cloud: Result<(), &str>) -> Notice {
-    let (ok, text) = match (wrote_local, cloud) {
-        (false, Ok(())) => (true, "Saved to Roblox.".to_string()),
-        (true, Ok(())) => (true, "Saved to this place and to Roblox.".to_string()),
-        (false, Err(why)) => (false, why.to_string()),
-        (true, Err(why)) => (false, format!("Saved to this place; Roblox refused: {why}")),
-    };
-    Notice { ok, text }
 }
 
 impl Shell {
@@ -155,12 +149,13 @@ impl GameSettingsWindow {
 
     fn new(shell: Entity<Shell>, tab: Tab, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let mut subscriptions = vec![cx.observe(&shell, |this, shell, cx| {
-            let (changes, path, fresh) = {
+            let (changes, path, fresh, session) = {
                 let s = shell.read(cx);
                 (
                     s.roblox.changes,
                     s.path.clone(),
                     LocalDraft::read(&s.dom, &s.database),
+                    s.studio_presence.session.clone(),
                 )
             };
             // A publish bumps the counter without moving the link; only a
@@ -172,6 +167,7 @@ impl GameSettingsWindow {
                     return;
                 }
             }
+            this.follow_sign_in(session, cx);
             // Undo, redo and the Properties panel change the place under us.
             if this.local.rebase(fresh) {
                 this.reseed = true;
@@ -181,14 +177,16 @@ impl GameSettingsWindow {
         let inputs = Self::make_inputs(window, &mut subscriptions, cx);
         let focus = cx.focus_handle();
         focus.focus(window, cx);
-        let (path, seen, local) = {
+        let (path, seen, local, session) = {
             let s = shell.read(cx);
             (
                 s.path.clone(),
                 s.roblox.changes,
                 LocalDraft::read(&s.dom, &s.database),
+                s.studio_presence.session.clone(),
             )
         };
+        Self::poll_members(cx);
         let mut this = GameSettingsWindow {
             link: home::link_of(&path),
             shell,
@@ -199,6 +197,7 @@ impl GameSettingsWindow {
             saving: false,
             notice: None,
             generation: 0,
+            team_create: TeamCreate::new(session),
             inputs,
             invalid: BTreeMap::new(),
             reseed: true,
@@ -229,6 +228,7 @@ impl GameSettingsWindow {
 
     /// Fetches the remote settings for the current link (nothing unlinked).
     fn load(&mut self, cx: &mut Context<Self>) {
+        self.load_team_create(cx);
         self.generation += 1;
         let generation = self.generation;
         let Some(link) = self.link.clone() else {
@@ -276,111 +276,6 @@ impl GameSettingsWindow {
     }
 
     fn is_dirty(&self) -> bool {
-        self.cloud.is_dirty() || self.local.is_dirty()
-    }
-
-    /// Writes the local edits to the place as one undo step, then sends the
-    /// cloud ones; the notice says what landed.
-    fn save(&mut self, cx: &mut Context<Self>) {
-        if self.saving || !self.invalid.is_empty() {
-            return;
-        }
-        let mut wrote_local = false;
-        if self.local.is_dirty() {
-            let writes = self.local.writes();
-            let (wrote, reread) = self.shell.update(cx, |shell, cx| {
-                let mut targets = Vec::new();
-                for (field, value) in writes {
-                    match model::service(&shell.dom, field.class) {
-                        Some(target) => targets.push((target, field.property, value)),
-                        None => shell
-                            .output
-                            .push_warning(&format!("This place has no {}.", field.class)),
-                    }
-                }
-                let wrote = !targets.is_empty();
-                if wrote {
-                    shell.push_history();
-                    for (target, property, value) in targets {
-                        if let Err(e) = shell.dom.set_property(target, property, value) {
-                            shell
-                                .output
-                                .push_warning(&format!("Couldn\u{2019}t set {property}: {e}"));
-                        }
-                    }
-                    let changes = shell.dom.take_changes();
-                    shell.reflect_changes(&changes, cx);
-                    shell.record_history_change(changes);
-                }
-                (wrote, LocalDraft::read(&shell.dom, &shell.database))
-            });
-            self.local = reread;
-            wrote_local = wrote;
-        }
-        let pending = match (&self.link, &self.cloud.remote) {
-            (Some(link), Some(remote)) if self.cloud.is_dirty() => {
-                Some((link.clone(), remote.clone(), self.cloud.updates()))
-            }
-            _ => None,
-        };
-        self.reseed = true;
-        match pending {
-            Some((link, remote, updates)) => {
-                self.saving = true;
-                self.notice = None;
-                self.generation += 1;
-                let generation = self.generation;
-                cx.spawn(async move |this, cx| {
-                    let reply = cx
-                        .background_spawn(async move { fetch::save(&link, &remote, &updates) })
-                        .await;
-                    let _ = this.update(cx, |this, cx| {
-                        if generation != this.generation {
-                            return;
-                        }
-                        this.saving = false;
-                        // Rebased, not reset: edits typed while the request was
-                        // out stay pending, and so do parts that did not land.
-                        this.notice = Some(match reply {
-                            Ok(next) => {
-                                this.cloud.rebase(next);
-                                save_notice(wrote_local, Ok(()))
-                            }
-                            Err((landed, text)) => {
-                                this.cloud.rebase(*landed);
-                                save_notice(wrote_local, Err(&text))
-                            }
-                        });
-                        this.reseed = true;
-                        cx.notify();
-                    });
-                })
-                .detach();
-            }
-            None if wrote_local => {
-                self.notice = Some(Notice {
-                    ok: true,
-                    text: "Saved to this place.".to_string(),
-                });
-            }
-            None => {}
-        }
-        cx.notify();
-    }
-
-    /// Drops every edit and refills the inputs.
-    fn revert(&mut self, cx: &mut Context<Self>) {
-        if let Some(remote) = self.cloud.remote.clone() {
-            self.cloud.reset(remote);
-        }
-        let local = {
-            let s = self.shell.read(cx);
-            LocalDraft::read(&s.dom, &s.database)
-        };
-        self.local = local;
-        self.invalid.clear();
-        self.notice = None;
-        self.reseed = true;
-        cx.notify();
+        self.cloud.is_dirty() || self.local.is_dirty() || self.team_create.draft.pending().is_some()
     }
 }

@@ -86,6 +86,15 @@ fn animation_url(id: u64) -> Variant {
     )))
 }
 
+/// The stock R15 `Animate` script's animation id for `state` (`idle`,
+/// `walk`, ...): its first entry, the one that plays most.
+pub(crate) fn r15_animation(state: &str) -> Option<u64> {
+    R15.iter()
+        .find(|(name, _)| *name == state)
+        .and_then(|(_, entries)| entries.first())
+        .map(|(_, id, _)| *id)
+}
+
 /// Adds `Animate` under `model`.
 pub(super) fn add(dom: &mut WeakDom, model: Ref, r15: bool) {
     let states = if r15 { R15 } else { R6 };

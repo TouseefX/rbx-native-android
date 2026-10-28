@@ -1,5 +1,127 @@
 # Changelog
 
+## 2026-10-28
+
+- **Alpha test builds**: a hand-dispatched `Test build` workflow builds
+  `rbxstudio` in release for Windows, macOS (Apple Silicon) and Linux and
+  uploads one zip per OS, with a `README-ALPHA.txt` on opening an unsigned
+  build, the API key wizard and where to send feedback. No signing,
+  installer or Release, that's still the release pipeline's job. A copied
+  binary also no longer reaches back into the checkout it was built from:
+  the Tests dock's Loren runner read `vendor/loren` from the source tree,
+  so Loren specs failed on any other machine; Loren's runner and specs now
+  ship inside the binary next to its project template. (@chteau)
+
+- **Device Simulator tells game scripts about the keyboard and the
+  input**: during Play on a simulated phone or tablet, a game's scripts now
+  see the editor's on-screen keyboard: `OnScreenKeyboardVisible`,
+  `OnScreenKeyboardPosition` and `OnScreenKeyboardSize` follow the cover,
+  with their change signals, so UI that moves out of the keyboard's way
+  does. On a simulated console `PreferredInput` reads `Gamepad`. Roblox's
+  own menus still go by the real values. A second Play crashing GNOME
+  Shell could not be reproduced under the same GNOME Shell and mutter
+  nested in Xephyr, so it stays open. (@chteau)
+- **Controller Emulator reaches the game**: the virtual pad did nothing in
+  a Play, though Sober saw it. Sober drops a gamepad's input while its
+  window doesn't have the keyboard focus, and using the emulator's window
+  takes it. The emulator now tells the embedded client it still has the
+  focus before each change of the pad, so sticks, buttons and triggers
+  reach the game while the emulator keeps your keyboard bindings. On
+  Windows the pad is now a ViGEmBus Xbox 360 or DualShock 4, through a
+  `ViGEmClient.dll` you put next to the editor (not shipped, and not yet
+  tried on Windows). `examples/gamepad_demo.rs` makes a place that logs
+  what a game script sees from the pad. (@chteau)
+- **Animation Graphs play as real Studio does**: the guesses the graph
+  runtime made where Roblox's docs are silent were measured in real Studio
+  and fixed to match. RandomSequence now picks what Studio picks for the
+  same Seed (it's a Mersenne Twister, not Luau's `Random`), Blend2D's
+  weights match past the edge of a Polar fan, an interrupted blend drops
+  its source as Studio's does, a Select with no matching Selection or a
+  Priority Select with no Trigger plays nothing, a mask leaves out the
+  joints it doesn't list, and a backwards trim holds its end frame. XML
+  places now keep a state machine's entry state, which Studio saves as a
+  `__attrRef_EntryState` Ref. (@chteau)
+- **Shortcuts survive an undo**: when an undo removed the thing a field
+  was open on (Ctrl+Z after Generate in the Accessory Fitting Tool, with the
+  new Accessory selected), the first Ctrl+Y did nothing until you clicked
+  the window again. Focus now moves to the nearest surviving panel, or the
+  window, so shortcuts keep working. Slider rails use the track colour, so
+  they show on dock and raised cards in every theme (the Animation panel's
+  face sliders were invisible), and Face Preview no longer needs a raised
+  card to show its own. (@chteau)
+- **Body hidden under layered clothing**: the body no longer pokes out
+  from under layered clothing, like the grey patch between the legs of a
+  blocky body in pants. The viewport hides what Roblox's own hidden surface
+  data says is covered, read off each cage (inline or by `HSRAssetId`), on
+  the body and on lower layers. Stock bodies from the Rig dialog and the
+  fitting tool point at that data now (Roblox only hands it out with an
+  API key), and bodies built from a player's packages keep theirs. Checked against Studio on the same jacket and pants: the
+  garment outline is now within 0.07 of Studio's on the blocky bodies (was
+  0.12). (@chteau)
+- **Check and upload avatar items**: Avatar › Check Item checks an
+  Accessory, MeshPart, Model or a 3D file against Roblox's published
+  Marketplace limits (triangles, textures, bone influences, size per type
+  and body scale, attachments, cages, body boxes) and says what to fix.
+  Same verdicts and numbers as Studio's Save to Roblox on the same items.
+  Avatar › Upload Item uploads the item as a Model through Open Cloud for
+  free, spells out the Creator Hub fees first and opens the item there,
+  since Roblox has no API for the paid avatar item step. The checks live in
+  a new `rbx_ugc` crate the fitting tool can reuse. (@chteau)
+- **Accessory Fitting Tool**: Avatar › Accessory fits a mesh as a rigid
+  accessory or layered clothing, tries it on preset bodies, your own
+  avatar, animations, body scales and other items, then writes the
+  Accessory the same way Studio's tool does. Clothing gets inner and outer
+  cages made for it, with an overlay and a nudge. Layered clothing
+  now fits cage to cage everywhere it shows, a lot closer to what Studio
+  draws, and follows `BindOffset` like Studio does. Eyebrows and eyelashes
+  sit in the Accessory list like in Studio but get cages, since Studio
+  won't save them rigid. Undo and redo never bring the preview back, and
+  undoing Generate puts the item back the way it was. (@chteau)
+- **Dynamic heads**: the viewport now poses a dynamic head from its
+  `FaceControls`, like Studio. Avatar › Face Preview gets a slider per FACS
+  control, the 5 validation expressions in one click and the eye and mouth
+  landmarks drawn on the face. Check Item knows a dynamic head and checks
+  its 17 poses, facial actions, landmarks, emote size and the schema bits
+  Studio wants, with the same verdicts as Studio's Save to Roblox on
+  Roblox's own head. (@chteau)
+- **Auto-rig a Roblox model**: Auto-rig a mesh… takes a `.rbxm` or `.rbxmx`
+  now, not just FBX, OBJ and glTF. Every MeshPart's mesh is fetched and
+  fitted to its Size and CFrame like the viewport does it (plain Parts
+  come along as their shape), merged into one body and rigged as usual.
+  When all the parts share a texture, a SurfaceAppearance or a colour,
+  the rig keeps it. An empty model, a model that's already rigged
+  (Bones or Motor6Ds), one with unions, and meshes that won't download
+  each get a clear message in the toast and Output. (@chteau)
+
+## 2026-10-27
+
+- **SpecialMesh shapes now match Studio**: a Head is Studio's own
+  `head.mesh` now (pulled from the content CDN like fonts and textures),
+  sized the way Studio sizes it, instead of a ball. A Cylinder mesh stays
+  round when Y and Z differ, and Prism, Pyramid, ParallelRamp and
+  RightAngleRamp draw nothing, same as Studio. Torso was already right,
+  it's a plain box. VertexColor only tints textured meshes now. Particle
+  keypoint envelopes work too: each particle rolls once, so a bigger one
+  is also more opaque, like in Studio. Every shape was checked against
+  Studio screenshots, all within about 2% silhouette diff. (@chteau)
+- **Editor leftovers from the E2E sweep**: Studio's own BuilderSans faces
+  (ExtraBold included) now load from a Vinegar install on Linux, so the
+  "BuilderSans-ExtraBold.otf does not contain the requested file" warning
+  at startup is gone and GUI text uses the real face. Auto-rig shows why it
+  refused a file (a `.rbxm`, say) as a toast in the Animation Editor instead
+  of failing quietly. The `RBX_STUDIO_SAVE_AS` docs now say what it does, one
+  save at startup, and a test pins that `GetService("Players")` works on a
+  place without one. (@chteau)
+- **CLI and file-format hardening**: a hostile binary file can't make us
+  allocate gigabytes anymore, since chunk decompression stops at what the
+  header declares (and a 1 GiB ceiling), and a cut-off file now says which
+  chunk is short and how much is actually left. `rbxview --size` past what
+  the GPU can render is an error instead of a wgpu panic. `--help` / `-h`
+  prints usage and exits 0 in rbxdump, rbxlua, rbxcloud, rbxaudit and
+  rbxmerge. `rbxdump --roundtrip` fills gaps like the editor's save does, so
+  editor-saved files stop failing it, and `rbxlua --print-changes` only
+  lists what the script did, in the order it did it. (@chteau)
+
 ## 2026-10-26
 
 - **Sign in to Roblox right from the first-run setup**: the setup wizard
@@ -11,6 +133,14 @@
   bar offering to set it up again instead of failing quietly, and a
   refused `RBX_API_KEY` is only reported, since it'd win over a saved key
   anyway. (@chteau)
+- **Game Settings can turn Team Create on and off**: Basic Info has a
+  Team Create switch now, where studio keeps it, saved with the rest on
+  Save, plus who's in the place's live session right now (read again
+  every 15 s). Both go through your Roblox sign-in, not the API key,
+  since Open Cloud has neither, and a refusal shows Roblox's own
+  message. Signed out, the switch is greyed out with a tooltip saying
+  where to sign in, like Home's Archive. Archive and Team Create share
+  one web helper for the sign-in and the CSRF retry. (@chteau)
 
 - **Home knows which of your games are archived**: Recent and My Games
   ask Roblox (public, no sign-in needed) and tag archived ones ARCHIVED.

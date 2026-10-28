@@ -75,7 +75,8 @@ pub(crate) use resync::{Drawn, PartSync};
 pub(crate) use shape::{resolve as resolve_shape, unknown_part_types, ShapeKind};
 pub(crate) use trail::{segments as trail_segments, Recorder as TrailRecorder, Trail};
 pub(crate) use union::fit as union_fit;
-// Read by the mesh export, which leaves such a union out too.
+// Read by the mesh export, which leaves out what these say draws nothing.
+pub(crate) use shape::draws_nothing;
 pub(crate) use union::is_empty as union_is_empty;
 pub(crate) use union::triangles as union_triangles;
 pub(crate) use union::{unit_mesh, Evaluations as UnionEvaluations};
@@ -231,6 +232,9 @@ pub(crate) struct Scene {
     /// mesh/texture data has to live, `Renderer::new`'s signature has no room
     /// for a third, network-dependent argument.
     resolved_file_meshes: filemesh::Resolved,
+    /// The `HiddenSurfaceRemovalAsset`s that have arrived, read, by asset:
+    /// kept here rather than in the plan, which an edit rebuilds.
+    hidden_surfaces: HashMap<AssetRef, Arc<filemesh::Hsr>>,
     /// Every `ParticleEmitter` parented to a drawn `BasePart`; see
     /// [`Scene::particle_emitters`].
     emitters: Vec<Emitter>,
@@ -315,6 +319,7 @@ impl Scene {
             materials,
             file_mesh_plan,
             resolved_file_meshes: filemesh::Resolved::default(),
+            hidden_surfaces: HashMap::new(),
             emitters: Vec::new(),
             beams: Vec::new(),
             trails: Vec::new(),
@@ -597,6 +602,26 @@ impl Scene {
         )
     }
 
+    /// Every `HiddenSurfaceRemovalAsset` a caller still needs to download
+    /// before [`Scene::resolve_hidden_surfaces`]: the bytes are handed over
+    /// once, so one already read is not asked for again.
+    pub(crate) fn hidden_surface_assets(&self) -> Vec<AssetRef> {
+        let mut wanted = self.file_mesh_plan.hsr_refs();
+        wanted.retain(|asset| !self.hidden_surfaces.contains_key(asset));
+        wanted
+    }
+
+    /// Reads the hidden surface assets that downloaded; the next
+    /// [`Scene::resolve_file_meshes`] hides the faces they cover. One that
+    /// does not read hides nothing.
+    pub(crate) fn resolve_hidden_surfaces(&mut self, assets: HashMap<AssetRef, Vec<u8>>) {
+        for (asset, bytes) in assets {
+            if let Some(hsr) = filemesh::Hsr::from_asset(&bytes) {
+                self.hidden_surfaces.insert(asset, Arc::new(hsr));
+            }
+        }
+    }
+
     pub(crate) fn resolved_file_meshes(&self) -> &Resolved {
         &self.resolved_file_meshes
     }
@@ -615,6 +640,9 @@ impl Scene {
         meshes: HashMap<AssetRef, Arc<rbx_mesh::SkinnedMesh>>,
         images: HashMap<AssetRef, Arc<Image>>,
     ) {
+        self.file_mesh_plan
+            .surfaces
+            .clone_from(&self.hidden_surfaces);
         let (mut resolved, hidden) = filemesh::resolve(&self.file_mesh_plan, meshes, images);
         resolved.skins_on_gpu = self.resolved_file_meshes.skins_on_gpu;
         for part in &mut self.parts {
@@ -848,9 +876,11 @@ fn build_part(
         cframe_matrix(cframe),
         PartId::whole(referent),
     );
-    // A union with no geometry anywhere draws nothing in Studio; a box in
-    // its place would be invented.
-    part.suppressed = union::is_empty(dom, database, referent);
+    // A union with no geometry anywhere, or a part wearing a deprecated
+    // `SpecialMesh` type, draws nothing in Studio; a box in its place would
+    // be invented.
+    part.suppressed =
+        union::is_empty(dom, database, referent) || shape::draws_nothing(dom, instance);
     Some(part)
 }
 
