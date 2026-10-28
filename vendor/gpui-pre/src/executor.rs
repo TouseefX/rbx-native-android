@@ -349,7 +349,10 @@ impl ForegroundExecutor {
         // rbx-native addition: Android first-frame diagnostics — remove once
         // the mobile boot is proven on device.
         #[cfg(target_os = "android")]
-        log::info!("gpui exec: foreground spawn");
+        log::info!(
+            "gpui exec: foreground spawn at {}",
+            std::panic::Location::caller()
+        );
         self.inner.spawn(future.boxed_local())
     }
 

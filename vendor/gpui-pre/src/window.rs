@@ -7067,6 +7067,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     /// Updates the root view of this window.
     ///
     /// This will fail if the window has been closed or if the root view's type does not match
+    #[track_caller]
     pub fn update<C, R>(
         &self,
         cx: &mut C,
@@ -7078,7 +7079,10 @@ impl<V: 'static + Render> WindowHandle<V> {
         // rbx-native addition: Android first-frame diagnostics — remove once
         // the mobile boot is proven on device.
         #[cfg(target_os = "android")]
-        log::info!("gpui window: WindowHandle::update");
+        log::info!(
+            "gpui window: WindowHandle::update at {}",
+            std::panic::Location::caller()
+        );
         cx.update_window(self.any_handle, |root_view, window, cx| {
             let view = root_view
                 .downcast::<V>()

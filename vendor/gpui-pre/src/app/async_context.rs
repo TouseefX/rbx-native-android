@@ -176,13 +176,17 @@ impl AsyncApp {
     }
 
     /// Invoke the given function in the context of the app, then flush any effects produced during its invocation.
+    #[track_caller]
     pub fn update<R>(&self, f: impl FnOnce(&mut App) -> R) -> R {
         // rbx-native addition: Android first-frame diagnostics — remove once
         // the mobile boot is proven on device.
         #[cfg(target_os = "android")]
         let task = next_diag_task_id();
         #[cfg(target_os = "android")]
-        log::info!("gpui exec: task #{task} poll start");
+        log::info!(
+            "gpui exec: task #{task} poll start at {}",
+            std::panic::Location::caller()
+        );
         let app = self.app();
         let mut lock = app.borrow_mut();
         let result = lock.update(f);
