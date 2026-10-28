@@ -110,6 +110,7 @@ mod tests_dock;
 mod theme_live;
 mod toolbar;
 pub(crate) mod tooltip;
+mod ugc;
 mod ui_editor;
 mod view_snap;
 mod viewport_dock;
@@ -278,6 +279,9 @@ pub(crate) struct Shell {
     game_settings: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Data Stores, while open, see `datastores`.
     data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// Check Avatar Item and Upload Avatar Item, while open, see `ugc`.
+    ugc_validator: Option<WindowHandle<gpui_kit::component::Root>>,
+    ugc_upload: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Install from GitHub's progress, kept here so it outlives Settings.
     theme_install: settings_window::ThemeInstall,
     /// The Explorer's type-ahead buffer, see `shell::tree_keys`.
@@ -843,6 +847,8 @@ impl Shell {
             version_history: None,
             game_settings: None,
             data_stores: None,
+            ugc_validator: None,
+            ugc_upload: None,
             theme_install: settings_window::ThemeInstall::Idle,
             tree_focus_handle,
             typeahead: tree_keys::Typeahead::default(),
@@ -1080,6 +1086,34 @@ impl Shell {
                 _ => import3d::ImportKind::Model,
             };
             shell.import_as(vec![path.into()], kind, cx);
+        }
+
+        // `RBX_STUDIO_UGC=check|upload` (`check:<file>` checks a source file)
+        // opens the avatar item window for a screenshot, as
+        // `RBX_STUDIO_UGC_TYPE=<asset type label without spaces>` (Hat,
+        // TShirt...) picks the type it is checked as.
+        if let Ok(spec) = std::env::var("RBX_STUDIO_UGC") {
+            let kind = std::env::var("RBX_STUDIO_UGC_TYPE").ok().and_then(|label| {
+                rbx_ugc::AssetType::ALL
+                    .iter()
+                    .find(|t| {
+                        let plain: String =
+                            t.label().chars().filter(|c| c.is_alphanumeric()).collect();
+                        plain.eq_ignore_ascii_case(&label)
+                    })
+                    .map(|&asset| ugc::ItemKind {
+                        asset,
+                        scale: rbx_ugc::BodyScale::Normal,
+                    })
+            });
+            match spec.split_once(':') {
+                Some(("check", file)) => {
+                    let source = ugc::ItemSource::File(file.into());
+                    shell.open_ugc_validator(Some(source), kind, cx);
+                }
+                _ if spec == "upload" => shell.open_ugc_upload(cx),
+                _ => shell.open_ugc_validator(None, kind, cx),
+            }
         }
 
         // `--run` / `RBX_STUDIO_RUN`: runs exactly the pipeline Enter would,

@@ -36,22 +36,17 @@ pub struct ModelFile<'a> {
 }
 
 impl Client {
-    /// Uploads `file` as a new `Model` asset owned by `user_id` and waits for
-    /// Roblox to process it. Returns the new asset's id.
+    /// Uploads `file` as a new `Model` asset owned by `creator` (a user, or a
+    /// group the key may upload to) and waits for Roblox to process it.
+    /// Returns the new asset's id.
     pub fn create_model_asset(
         &self,
         display_name: &str,
         description: &str,
-        user_id: u64,
+        creator: Owner,
         file: &ModelFile,
     ) -> Result<u64, CloudError> {
-        self.create_asset(
-            "Model",
-            display_name,
-            description,
-            Owner::User(user_id),
-            file,
-        )
+        self.create_asset("Model", display_name, description, creator, file)
     }
 
     /// Uploads a PNG, JPEG or BMP (told apart by their first bytes, since a
@@ -374,6 +369,75 @@ mod tests {
             content.bytes.starts_with(b"\x89PNG"),
             "asset {id} is not the image itself"
         );
+    }
+
+    #[test]
+    fn a_model_upload_posts_then_polls_until_done() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let root = format!("http://{}", listener.local_addr().unwrap());
+        let answers = [
+            r#"{"path":"operations/op1","done":false}"#,
+            r#"{"path":"operations/op1","done":true,"response":{"assetId":"555"}}"#,
+        ];
+        let server = std::thread::spawn(move || {
+            let mut seen = Vec::new();
+            for answer in answers {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut request = Vec::new();
+                let mut buf = [0u8; 4096];
+                let head_end = loop {
+                    if let Some(at) = request.windows(4).position(|w| w == b"\r\n\r\n") {
+                        break at + 4;
+                    }
+                    let n = stream.read(&mut buf).unwrap();
+                    assert!(n > 0, "client closed before the headers ended");
+                    request.extend_from_slice(&buf[..n]);
+                };
+                let head = String::from_utf8_lossy(&request[..head_end]).to_string();
+                let length = head
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().ok())
+                            .flatten()
+                    })
+                    .unwrap_or(0);
+                while request.len() < head_end + length {
+                    let n = stream.read(&mut buf).unwrap();
+                    assert!(n > 0, "client closed before the body ended");
+                    request.extend_from_slice(&buf[..n]);
+                }
+                let body = String::from_utf8_lossy(&request[head_end..]).to_string();
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{answer}",
+                    answer.len()
+                );
+                seen.push((head, body));
+            }
+            seen
+        });
+        let file = ModelFile {
+            name: "hat.fbx",
+            content_type: "model/fbx",
+            bytes: b"fbx",
+        };
+        let client = Client::new(Some(crate::ApiKey::new("k"))).with_apis_root(root);
+        let id = client
+            .create_model_asset("Hat", "d", Owner::Group(9), &file)
+            .unwrap();
+        assert_eq!(id, 555);
+
+        let seen = server.join().unwrap();
+        let (post, multipart) = &seen[0];
+        assert!(post.starts_with("POST /assets/v1/assets "), "{post}");
+        assert!(post.to_lowercase().contains("x-api-key: k"), "{post}");
+        assert!(multipart.contains("\"assetType\":\"Model\""), "{multipart}");
+        assert!(multipart.contains("\"groupId\":\"9\""), "{multipart}");
+        let (poll, _) = &seen[1];
+        assert!(poll.starts_with("GET /assets/v1/operations/op1 "), "{poll}");
     }
 
     #[test]
