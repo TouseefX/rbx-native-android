@@ -13,9 +13,9 @@
 
 use gpui_mobile::android::host;
 use gpui_mobile::android::jni;
-use jni::Env;
 use jni::objects::{JObject, JPrimitiveArray};
 use jni::sys::{jboolean, jfloat, jint, jlong, jobject};
+use jni::Env;
 
 /// `JNI_TRUE`/`JNI_FALSE`, for the `Boolean` the Kotlin side reads back.
 const TRUE: jboolean = 1;

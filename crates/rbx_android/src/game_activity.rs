@@ -75,7 +75,11 @@ pub unsafe extern "system" fn Java_com_google_androidgamesdk_GameActivity_initia
 
     // The render thread, the GPUI application and the editor's state: once
     // per process, on the first Activity; later calls are no-ops inside.
-    super::boot::start(if path.is_empty() { None } else { Some(path.as_str()) });
+    super::boot::start(if path.is_empty() {
+        None
+    } else {
+        Some(path.as_str())
+    });
     1
 }
 
