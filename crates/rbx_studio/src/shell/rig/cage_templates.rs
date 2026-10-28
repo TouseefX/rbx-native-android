@@ -14,7 +14,7 @@ static MEMO: Mutex<Option<Arc<Vec<CageTemplate>>>> = Mutex::new(None);
 /// The cage template of every Mannequin body part. Blocking: fetches what
 /// the asset cache lacks, so call it off the UI thread. Only a success is
 /// remembered.
-pub(super) fn mannequin() -> Result<Arc<Vec<CageTemplate>>, String> {
+pub(crate) fn mannequin() -> Result<Arc<Vec<CageTemplate>>, String> {
     let mut memo = MEMO.lock().map_err(|e| e.to_string())?;
     if let Some(done) = memo.as_ref() {
         return Ok(done.clone());

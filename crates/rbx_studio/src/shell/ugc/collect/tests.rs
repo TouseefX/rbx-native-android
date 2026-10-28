@@ -1,7 +1,7 @@
 use rbx_dom::{CFrameData, Content, Ref, Variant, Vector3Data, WeakDom};
 use rbx_ugc::{AssetType, CageKind, Rule};
 
-use super::{plan, resolve};
+use super::{mesh_key, plan, resolve, Key};
 use crate::shell::ugc::ItemKind;
 
 /// A `version 2.00` mesh of one triangle spanning a 4 stud cube.
@@ -31,10 +31,10 @@ fn png_bytes(width: u32, height: u32) -> Vec<u8> {
     out
 }
 
-fn fetch(id: u64) -> Result<Vec<u8>, String> {
-    match id {
-        2 => Ok(png_bytes(64, 32)),
-        9 => Err("offline".into()),
+fn fetch(key: &Key) -> Result<Vec<u8>, String> {
+    match key {
+        Key::Id(2) => Ok(png_bytes(64, 32)),
+        Key::Id(9) => Err("offline".into()),
         _ => Ok(mesh_bytes()),
     }
 }
@@ -187,4 +187,16 @@ fn other_classes_are_refused() {
         plan(&dom, folder, ItemKind::default()).unwrap_err(),
         "Pick an Accessory, a MeshPart or a Model"
     );
+}
+
+#[test]
+fn a_local_mesh_is_read_from_the_cache_path() {
+    assert_eq!(
+        mesh_key("rbxasset://rbx-native-local/fitting/ab/Vest_InnerCage.mesh"),
+        Some(Key::Local(
+            "rbx-native-local/fitting/ab/Vest_InnerCage.mesh".into()
+        ))
+    );
+    assert_eq!(mesh_key("rbxassetid://7"), Some(Key::Id(7)));
+    assert_eq!(mesh_key("rbxasset://fonts/x.mesh"), None);
 }

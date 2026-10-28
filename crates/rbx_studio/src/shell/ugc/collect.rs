@@ -16,14 +16,23 @@ use super::{Collected, ItemKind};
 mod resolve;
 mod studio;
 
+pub(super) use resolve::mesh_geometry;
 pub(super) use resolve::{fetch_cached, resolve};
 
 const SURFACE_SLOTS: [&str; 4] = ["ColorMap", "NormalMap", "MetalnessMap", "RoughnessMap"];
 
+/// Where a mesh's bytes come from: an uploaded asset, or a file this editor
+/// made and keeps in the local asset cache (`rbxasset://rbx-native-local/...`).
+#[derive(Debug, Clone, PartialEq)]
+pub(in crate::shell::ugc) enum Key {
+    Id(u64),
+    Local(String),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct PartPlan {
     name: String,
-    mesh: Option<u64>,
+    mesh: Option<Key>,
     size: [f32; 3],
     cframe: CFrame,
     attachments: Vec<Placement>,
@@ -40,7 +49,7 @@ struct TexturePlan {
 struct CagePlan {
     kind: CageKind,
     name: String,
-    mesh: u64,
+    mesh: Key,
 }
 
 /// What [`resolve`] needs from the tree, with asset ids still unfetched.
@@ -69,6 +78,15 @@ fn asset_id(text: &str) -> Option<u64> {
     match rbx_assets::AssetRef::parse(text).ok()? {
         rbx_assets::AssetRef::Id(id) => Some(id),
         _ => None,
+    }
+}
+
+const LOCAL: &str = "rbxasset://rbx-native-local/";
+
+pub(in crate::shell::ugc) fn mesh_key(text: &str) -> Option<Key> {
+    match text.strip_prefix(LOCAL) {
+        Some(path) => Some(Key::Local(format!("rbx-native-local/{path}"))),
+        None => asset_id(text).map(Key::Id),
     }
 }
 
@@ -130,7 +148,7 @@ fn part_plan(dom: &WeakDom, part: Ref) -> Option<PartPlan> {
         mesh: ["MeshId", "MeshContent"]
             .iter()
             .find_map(|k| uri(props, k))
-            .and_then(asset_id),
+            .and_then(mesh_key),
         size,
         cframe: cframe_of(props),
         attachments,
@@ -186,7 +204,7 @@ fn wrap_cages(dom: &WeakDom, part: Ref, item: &str, plan: &mut Plan) {
             ("ReferenceMeshId", CageKind::Inner, "InnerCage"),
             ("CageMeshId", CageKind::Outer, "OuterCage"),
         ] {
-            if let Some(mesh) = uri(props, key).and_then(asset_id) {
+            if let Some(mesh) = uri(props, key).and_then(mesh_key) {
                 plan.cages.push(CagePlan {
                     kind,
                     name: format!("{item}_{suffix}"),
@@ -260,7 +278,7 @@ pub(super) fn plan(dom: &WeakDom, root: Ref, kind: ItemKind) -> Result<Plan, Str
     Ok(plan)
 }
 
-fn cage_of(name: &str, props: &BTreeMap<String, Variant>) -> Option<(CageKind, u64)> {
+fn cage_of(name: &str, props: &BTreeMap<String, Variant>) -> Option<(CageKind, Key)> {
     let kind = if name.ends_with("_InnerCage") {
         CageKind::Inner
     } else if name.ends_with("_OuterCage") {
@@ -271,7 +289,7 @@ fn cage_of(name: &str, props: &BTreeMap<String, Variant>) -> Option<(CageKind, u
     let mesh = ["MeshId", "MeshContent"]
         .iter()
         .find_map(|k| uri(props, k))
-        .and_then(asset_id)?;
+        .and_then(mesh_key)?;
     Some((kind, mesh))
 }
 

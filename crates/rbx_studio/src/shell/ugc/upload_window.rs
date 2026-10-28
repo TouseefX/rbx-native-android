@@ -43,13 +43,31 @@ fn slot(view: &mut UploadWindow) -> &mut Check {
 }
 
 impl Shell {
-    /// Brings Upload Avatar Item forward, opening it if it isn't.
-    pub(crate) fn open_ugc_upload(&mut self, cx: &mut Context<Self>) {
+    /// Brings Upload Avatar Item forward, opening it if it isn't; a given
+    /// source (and kind) replaces the one being uploaded.
+    pub(crate) fn open_ugc_upload(
+        &mut self,
+        source: Option<ItemSource>,
+        kind: Option<ItemKind>,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(existing) = self.ugc_upload {
-            if existing
-                .update(cx, |_, window, _| window.activate_window())
-                .is_ok()
-            {
+            let raised = existing.update(cx, |root, window, cx| {
+                window.activate_window();
+                let (Some(source), Ok(view)) = (
+                    source.clone(),
+                    root.view().clone().downcast::<UploadWindow>(),
+                ) else {
+                    return;
+                };
+                view.update(cx, |view, cx| {
+                    if let Some(kind) = kind {
+                        view.check.kind = kind;
+                    }
+                    view.set_source(source, window, cx);
+                });
+            });
+            if raised.is_ok() {
                 return;
             }
         }
@@ -57,14 +75,19 @@ impl Shell {
         // still being updated here.
         let shell = cx.entity();
         cx.defer(move |cx| {
-            let opened = UploadWindow::open(shell.clone(), cx);
+            let opened = UploadWindow::open(shell.clone(), source, kind, cx);
             shell.update(cx, |shell, _| shell.ugc_upload = opened);
         });
     }
 }
 
 impl UploadWindow {
-    fn open(shell: Entity<Shell>, cx: &mut App) -> Option<WindowHandle<Root>> {
+    fn open(
+        shell: Entity<Shell>,
+        source: Option<ItemSource>,
+        kind: Option<ItemKind>,
+        cx: &mut App,
+    ) -> Option<WindowHandle<Root>> {
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                 None,
@@ -84,19 +107,24 @@ impl UploadWindow {
             ..Default::default()
         };
         cx.open_window(options, move |window, cx| {
-            let view = cx.new(|cx| UploadWindow::new(shell, window, cx));
+            let view = cx.new(|cx| UploadWindow::new(shell, source, kind, window, cx));
             cx.new(|cx| Root::new(view, window, cx))
         })
         .ok()
     }
 
-    fn new(shell: Entity<Shell>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    fn new(
+        shell: Entity<Shell>,
+        source: Option<ItemSource>,
+        kind: Option<ItemKind>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let (source, kind) = {
             let s = shell.read(cx);
-            let source = Check::selection(s);
-            let kind = source
-                .as_ref()
-                .and_then(|src| Check::guess_kind(s, src))
+            let source = source.or_else(|| Check::selection(s));
+            let kind = kind
+                .or_else(|| source.as_ref().and_then(|src| Check::guess_kind(s, src)))
                 .unwrap_or_default();
             (source, kind)
         };
