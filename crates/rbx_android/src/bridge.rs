@@ -20,10 +20,6 @@ use jni::objects::{JObject, JPrimitiveArray};
 use jni::sys::{jboolean, jfloat, jint, jlong, jobject};
 use jni::Env;
 
-/// `JNI_TRUE`/`JNI_FALSE`, for the `Boolean` the Kotlin side reads back.
-const TRUE: jboolean = 1;
-const FALSE: jboolean = 0;
-
 /// Hand a `Surface` to the render thread, with the density its logical
 /// pixels scale by. Call from both `surfaceCreated` and `surfaceChanged`:
 /// the host treats a repeat of the window it already holds as a resize.
@@ -59,8 +55,13 @@ fn surface_arrived(env: *mut jni::sys::JNIEnv, surface: jobject, density: jfloat
     }
     // SAFETY: `env`/`surface` are the valid JNI arguments of the entry point
     // this was called from, and the acquired window is handed to the host,
-    // which releases it when the surface goes away.
-    match unsafe { ndk::native_window::NativeWindow::from_surface(env, surface) } {
+    // which releases it when the surface goes away. The cast is between the
+    // two `jni-sys` majors the graph carries (jni 0.22 pins 0.4, ndk 0.9 pins
+    // 0.3): both bind the same C `JNIEnv*`/`jobject` values, and
+    // `from_surface` only forwards them to `ANativeWindow_fromSurface`.
+    match unsafe {
+        ndk::native_window::NativeWindow::from_surface(env.cast(), surface.cast())
+    } {
         Some(window) => host::surface_created(window, density),
         None => log::error!("rbx_android: ANativeWindow_fromSurface failed"),
     }
@@ -92,7 +93,7 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeSur
 /// length.
 #[unsafe(no_mangle)]
 pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeMotion(
-    env: *mut jni::sys::JNIEnv,
+    _env: *mut jni::sys::JNIEnv,
     _thiz: jobject,
     action: jint,
     action_index: jint,
@@ -120,12 +121,13 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeMot
             &pointers,
         ))
     });
+    // `jboolean` is Rust's `bool` under jni-sys 0.4, so this is the
+    // `Boolean` Kotlin reads back directly.
     match forwarded {
-        Ok(handled) if handled => TRUE,
-        Ok(_) => FALSE,
+        Ok(handled) => handled,
         Err(error) => {
             log::warn!("rbx_android: motion event dropped: {error}");
-            FALSE
+            false
         }
     }
 }
@@ -155,7 +157,7 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeKey
 /// Called by JNI with a valid Java `String`.
 #[unsafe(no_mangle)]
 pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeIme(
-    env: *mut jni::sys::JNIEnv,
+    _env: *mut jni::sys::JNIEnv,
     _thiz: jobject,
     session: jlong,
     kind: jint,
