@@ -5758,7 +5758,7 @@ impl Window {
         // rbx-native addition: Android input diagnostics — remove once the
         // mobile input path is proven on device.
         #[cfg(target_os = "android")]
-        if event.is::<MouseDownEvent>() || event.is::<MouseUpEvent>() {
+        if event.is::<crate::MouseDownEvent>() || event.is::<crate::MouseUpEvent>() {
             log::info!(
                 "gpui mouse: dispatch done propagate={} prevented={}",
                 cx.propagate_event,
