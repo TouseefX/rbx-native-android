@@ -2466,7 +2466,10 @@ both the plain fetch failure and the silent fall back to a default
   written: it no longer shows changed in Properties or has to be stripped
   out before a save.
 - [x] **An auto-rigger and a skeleton view** (`crates/rbx_autorig`).
-  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ or glTF).
+  - **Auto-rig a mesh…** takes an unrigged humanoid (FBX, OBJ, glTF, or a
+    `.rbxm`/`.rbxmx` model of MeshParts and Parts, merged the way the
+    viewport places them; a texture, `SurfaceAppearance` and colour carry
+    over when every part shares one).
     - It finds the up axis, the front (−Z, left on −X) and the height.
     - It places the 15 R15 joints from the mesh's own shape:
       voxelised, with geodesic extremities, cross-section profiles and
