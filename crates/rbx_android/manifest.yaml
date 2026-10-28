@@ -76,12 +76,13 @@ android:
         - name: "dev.gpui.mobile.GpuiPathPicker"
           # GPUI's file prompts (open place/file) import SAF documents into
           # the app cache through this activity, packaged from
-          # kotlin/GpuiPathPicker.java (flat: xbuild copies only the top
-          # level of kotlin/, and the package comes from the file's own
-          # declaration). Not exported, and it survives rotation so a picker
-          # already open keeps its results. xbuild's schema has no
-          # per-activity theme, so it shows the app theme for the instant
-          # before the system picker covers it.
+          # kotlin/GpuiPathPicker.kt (a Kotlin port of the platform
+          # example's Java: xbuild only assembles Gradle's Kotlin source
+          # set, so a .java there is not compiled into the dex). Not
+          # exported, and it survives rotation so a picker already open
+          # keeps its results. xbuild's schema has no per-activity theme,
+          # so it shows the app theme for the instant before the system
+          # picker covers it.
           exported: false
           config_changes: "orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode|density"
         - name: ".MainActivity"
