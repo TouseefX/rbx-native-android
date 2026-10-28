@@ -13,9 +13,11 @@ use rbx_ugc::{
 
 use super::{Collected, ItemKind};
 
+mod head;
 mod resolve;
 mod studio;
 
+pub(super) use head::{head_part, head_plan, resolve_head, HeadMesh};
 pub(super) use resolve::{fetch_cached, resolve};
 
 const SURFACE_SLOTS: [&str; 4] = ["ColorMap", "NormalMap", "MetalnessMap", "RoughnessMap"];
@@ -73,7 +75,11 @@ fn asset_id(text: &str) -> Option<u64> {
 }
 
 fn cframe_of(props: &BTreeMap<String, Variant>) -> CFrame {
-    match props.get("CFrame") {
+    cframe_at(props, "CFrame")
+}
+
+fn cframe_at(props: &BTreeMap<String, Variant>, key: &str) -> CFrame {
+    match props.get(key) {
         Some(Variant::CFrame(c)) => {
             let r = c.rotation;
             [

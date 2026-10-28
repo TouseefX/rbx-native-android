@@ -56,6 +56,8 @@ use rbx_reflection::ReflectionDatabase;
 use super::{Entry, Fit};
 use crate::scene::cframe_matrix;
 
+mod face;
+
 /// The derived mesh `referent` draws through while skinned with `asset`.
 ///
 /// Per mesh as well as per part: a rig rebuilt for another `MeshId` gets a
@@ -122,6 +124,9 @@ pub(crate) struct Poses {
     rest: HashMap<Ref, Mat4>,
     /// `CFrame` as of the last edit `track` saw.
     current: HashMap<Ref, Mat4>,
+    /// The non-zero `FaceControls` values under each `MeshPart` that has
+    /// any (see `face`).
+    faces: HashMap<Ref, Vec<(String, f32)>>,
     /// Some tracked part moved since [`super::super::Scene::pose_skins`] ran.
     dirty: bool,
 }
@@ -140,6 +145,9 @@ impl Poses {
         }
         for entry in entries.iter().filter(|entry| entry.wrap.is_some()) {
             poses.follow(dom, entry.referent);
+        }
+        for entry in entries {
+            poses.face(dom, entry.referent);
         }
         poses.dirty = false;
         poses
@@ -495,8 +503,9 @@ pub(crate) struct Rig {
     pub(crate) asset: AssetRef,
     pub(crate) key: AssetRef,
     referent: Ref,
-    /// The model its bones were bound in.
-    model: Ref,
+    /// The model its bones were bound in; `None` for a dynamic head on its
+    /// own.
+    model: Option<Ref>,
     source: Arc<rbx_mesh::SkinnedMesh>,
     /// Per global bone, `None` for one no sibling part is named after.
     bones: Vec<Option<Bound>>,
@@ -511,14 +520,18 @@ pub(crate) struct Rig {
 
 impl Rig {
     /// The rig for `entry` drawing `mesh`, or `None` when the mesh carries no
-    /// skin, the part is not a `MeshPart` in a `Model`, or no bone names a
-    /// part there.
+    /// skin, or no FACS block and either the part is not a `MeshPart` in a
+    /// `Model` or no bone names a part there. A dynamic head is rigged
+    /// wherever it stands, for its face alone when nothing else binds.
     pub(super) fn of(
         entry: &Entry,
         mesh: &Arc<rbx_mesh::SkinnedMesh>,
         poses: &Poses,
     ) -> Option<Rig> {
-        let model = entry.model?;
+        let model = entry.model;
+        if model.is_none() && !has_face(mesh) {
+            return None;
+        }
         let key = key(entry.referent, &entry.mesh);
         Rig::build(entry, model, key, mesh, fit_scale(&entry.fit, mesh), poses)
     }
@@ -532,7 +545,7 @@ impl Rig {
         wrapped: &Arc<rbx_mesh::SkinnedMesh>,
         poses: &Poses,
     ) -> Option<Rig> {
-        let model = entry.wrap.as_ref()?.character;
+        let model = Some(entry.wrap.as_ref()?.character);
         let key = key(entry.referent, &super::wrap::key(entry.referent));
         let mut rig = Rig::build(
             entry,
@@ -548,7 +561,7 @@ impl Rig {
 
     fn build(
         entry: &Entry,
-        model: Ref,
+        model: Option<Ref>,
         key: AssetRef,
         mesh: &Arc<rbx_mesh::SkinnedMesh>,
         scale: Vec3,
@@ -558,16 +571,16 @@ impl Rig {
         let Fit::Part { .. } = entry.fit else {
             return None;
         };
-        let names = poses.models.get(&model)?;
-        let mesh_rest = *poses.rest.get(&entry.referent)?;
+        let names = model.and_then(|model| poses.models.get(&model));
+        let mesh_rest = poses.rest.get(&entry.referent).copied();
         let to_part = Mat4::from_scale(scale);
 
         let bones: Vec<Option<Bound>> = skin
             .bones
             .iter()
             .map(|bone| {
-                let part = *names.get(&bone.name)?;
-                let part_rest = *poses.rest.get(&part)?;
+                let part = *names?.get(&bone.name)?;
+                let (part_rest, mesh_rest) = (*poses.rest.get(&part)?, mesh_rest?);
                 let bind = to_part * bone_matrix(bone) * to_part.inverse();
                 // The bind position scaled into part space, its rotation kept.
                 let offset = part_rest.inverse() * mesh_rest * bind;
@@ -577,7 +590,7 @@ impl Rig {
                 })
             })
             .collect();
-        if bones.iter().all(Option::is_none) {
+        if bones.iter().all(Option::is_none) && !has_face(mesh) {
             return None;
         }
         Some(Rig {
@@ -609,7 +622,7 @@ impl Rig {
         Arc::ptr_eq(&self.source, source)
             && self.asset == entry.mesh
             && self.wrapped == entry.wrap.is_some()
-            && Some(self.model) == model
+            && self.model == model
             && self.scale.abs_diff_eq(fit_scale(&entry.fit, own), 1e-6)
     }
 
@@ -620,7 +633,22 @@ impl Rig {
 
     /// The native-space skinning matrix of every bone for the pose in
     /// `poses`.
+    /// A face posed by `FaceControls` goes first, in the rest pose, then
+    /// the body pose carries it.
     fn palette(&self, poses: &Poses) -> Vec<Mat4> {
+        let mut body = self.body_palette(poses);
+        let face = self
+            .source
+            .skin
+            .as_ref()
+            .and_then(|skin| face::palette(skin, &poses.face_of(self.referent)));
+        for (matrix, face) in body.iter_mut().zip(face.into_iter().flatten()) {
+            *matrix *= face;
+        }
+        body
+    }
+
+    fn body_palette(&self, poses: &Poses) -> Vec<Mat4> {
         let Some(mesh) = poses.current(self.referent) else {
             return vec![Mat4::IDENTITY; self.bones.len()];
         };
@@ -741,6 +769,7 @@ pub(in crate::scene) fn bind(
         return bound;
     }
     resolved.drop_rig(referent);
+    poses.face(dom, referent);
     let rig = match character {
         Some(_) => Rig::garment(entry, &own, &mesh, poses),
         None => Rig::of(entry, &mesh, poses),
@@ -761,6 +790,10 @@ pub(in crate::scene) fn bind(
     bound.key = Some(rig.key.clone());
     resolved.rigs.insert(referent, rig);
     bound
+}
+
+fn has_face(mesh: &rbx_mesh::SkinnedMesh) -> bool {
+    mesh.skin.as_ref().is_some_and(|skin| skin.facs.is_some())
 }
 
 /// `S`: how [`Fit::transform`] scales native geometry into part space.

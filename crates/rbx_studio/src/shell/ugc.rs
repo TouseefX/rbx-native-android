@@ -1,8 +1,9 @@
-//! Avatar › Check Item and Avatar › Upload Item: the avatar item validator
-//! (`rbx_ugc`) run on the selected `Accessory`/`MeshPart`/`Model` or on a
-//! source file, and the upload of the checked item as a `Model` through Open
-//! Cloud, handing over to the Creator Hub for the paid avatar item step that
-//! no public API offers.
+//! Avatar › Check Item, Upload Item and Face Preview: the avatar item
+//! validator (`rbx_ugc`) run on the selected `Accessory`/`MeshPart`/`Model`
+//! or on a source file, the upload of the checked item as a `Model` through
+//! Open Cloud, handing over to the Creator Hub for the paid avatar item step
+//! that no public API offers, and a dynamic head's FACS controls posed live
+//! with its landmarks drawn over the face.
 
 use std::path::PathBuf;
 
@@ -11,6 +12,7 @@ use rbx_ugc::{AssetType, BodyScale, Finding, Rule};
 
 mod check;
 mod collect;
+mod face_window;
 mod pickers;
 mod report;
 mod source;
@@ -74,6 +76,8 @@ pub(crate) struct Collected {
     /// Fitting Tool or the importer adds them): attachment findings are
     /// dropped.
     pub(crate) from_file: bool,
+    /// The dynamic head checked alongside, for a `DynamicHead` item.
+    pub(crate) head: Option<Box<rbx_ugc::head::Head>>,
 }
 
 impl Collected {
@@ -91,6 +95,7 @@ impl Collected {
             .filter(|f| !explained(f) && !(self.from_file && f.rule == Rule::Attachment))
             .collect();
         all.extend(self.notes.iter().cloned());
+        all.extend(self.head.iter().flat_map(|head| rbx_ugc::head::check(head)));
         all.sort_by_key(|f| f.severity);
         all
     }
