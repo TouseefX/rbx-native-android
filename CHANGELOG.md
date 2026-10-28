@@ -11,6 +11,13 @@
   free, spells out the Creator Hub fees first and opens the item there,
   since Roblox has no API for the paid avatar item step. The checks live in
   a new `rbx_ugc` crate the fitting tool can reuse. (@chteau)
+- **Dynamic heads**: the viewport now poses a dynamic head from its
+  `FaceControls`, like Studio. Avatar › Face Preview gets a slider per FACS
+  control, the 5 validation expressions in one click and the eye and mouth
+  landmarks drawn on the face. Check Item knows a dynamic head and checks
+  its 17 poses, facial actions, landmarks, emote size and the schema bits
+  Studio wants, with the same verdicts as Studio's Save to Roblox on
+  Roblox's own head. (@chteau)
 
 ## 2026-10-27
 
