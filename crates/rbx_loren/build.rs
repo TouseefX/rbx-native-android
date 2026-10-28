@@ -1,6 +1,7 @@
-//! Embeds the vendored Loren project template (`vendor/loren/project`) as a
-//! sorted `(relative path, bytes)` table, plus a content hash that names the
-//! folder [`crate::template`] unpacks it into.
+//! Embeds the vendored Loren tree the binary needs at run time (the project
+//! template under `vendor/loren/project`, the spec runner and specs under
+//! `vendor/loren/test`) as a sorted `(relative path, bytes)` table, plus a
+//! content hash that names the folder [`crate::template`] unpacks it into.
 
 use std::env;
 use std::fs;
@@ -31,12 +32,15 @@ fn walk(dir: &Path, base: &Path, out: &mut Vec<(String, PathBuf)>) {
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("set by cargo"));
     let root = manifest
-        .join("../../vendor/loren/project")
+        .join("../../vendor/loren")
         .canonicalize()
-        .expect("vendor/loren/project exists");
-    println!("cargo:rerun-if-changed={}", root.display());
+        .expect("vendor/loren exists");
     let mut files = Vec::new();
-    walk(&root, &root, &mut files);
+    for sub in ["project", "test"] {
+        let dir = root.join(sub);
+        println!("cargo:rerun-if-changed={}", dir.display());
+        walk(&dir, &root, &mut files);
+    }
 
     let mut hasher = DefaultHasher::new();
     let mut table = String::from("pub(crate) static FILES: &[(&str, &[u8])] = &[\n");

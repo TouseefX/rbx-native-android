@@ -180,10 +180,12 @@ pub(in crate::launcher) fn result(
         Status::Invalid(status) => card(
             ui::status_dot("x", ui::red(), Some(ui::red_soft()), 22.),
             "Roblox didn\u{2019}t accept this key",
-            format!(
-                "{status} {}",
-                if *status == 401 { "Unauthorized" } else { "Forbidden" }
-            ),
+            match status {
+                400 => "400 Bad Request".to_owned(),
+                401 => "401 Unauthorized".to_owned(),
+                403 => "403 Forbidden".to_owned(),
+                other => other.to_string(),
+            },
             v_flex()
                 .gap(px(10.))
                 .child(ui::text(12., 18.).text_color(tokens::text2()).child("The usual causes:"))

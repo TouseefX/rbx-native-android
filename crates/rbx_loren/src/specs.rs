@@ -6,7 +6,6 @@
 //! `rbx_lua::test_runner`.
 
 use std::cell::Cell;
-use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::LazyLock;
 use std::time::{Duration, Instant};
@@ -69,10 +68,6 @@ pub fn is_loren_module(dom: &WeakDom, module: Ref) -> bool {
     })
 }
 
-fn vendor_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vendor/loren")
-}
-
 fn service(dom: &mut WeakDom, name: &str) -> Ref {
     let found = dom
         .root_refs()
@@ -113,7 +108,7 @@ fn place_at(dom: &mut WeakDom, at: &[&str], rel: &str) -> Result<(), String> {
     let root = service(dom, svc);
     let parent = folder(dom, root, middle);
     if child(dom, parent, name).is_none() {
-        insert_path(dom, parent, name, &vendor_dir().join(rel))?;
+        insert_path(dom, parent, name, &crate::template::vendor_dir()?.join(rel))?;
     }
     Ok(())
 }
