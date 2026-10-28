@@ -82,8 +82,8 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeSur
 /// Deliver a whole `MotionEvent`'s pointers. `action` is
 /// `getActionMasked()`, `action_index` is `getActionIndex()` (significant
 /// only for `POINTER_DOWN`/`POINTER_UP`), and the three arrays are indexed
-/// by pointer index — `getPointerId(i)`, `getX(i)`/`getY(i)` in physical
-/// pixels relative to the surface, which Kotlin scales by the density.
+/// by pointer index — `getPointerId(i)`, `getX(i)`/`getY(i)` exactly as
+/// `MotionEvent` reports them, in physical pixels relative to the surface.
 ///
 /// Returns `false` when the touch lands on a platform view, so
 /// `onTouchEvent` should return `false` too and let the Java view hierarchy

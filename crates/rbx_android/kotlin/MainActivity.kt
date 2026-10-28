@@ -109,16 +109,19 @@ class MainActivity : GameActivity() {
         // should handle it instead).
         val count = event.pointerCount
         if (count == 0) return false
-        val density = resources.displayMetrics.density
         val ids = IntArray(count)
         val xs = FloatArray(count)
         val ys = FloatArray(count)
         for (i in 0 until count) {
             ids[i] = event.getPointerId(i)
-            // getX/getY are the view's logical pixels; the host wants them
-            // physical, relative to the surface.
-            xs[i] = event.getX(i) * density
-            ys[i] = event.getY(i) * density
+            // getX/getY already are physical pixels relative to this view,
+            // which is the surface's coordinate space: pass them through
+            // unchanged, the host divides by the density to get GPUI's
+            // logical pixels. (Scaling here too landed every touch at
+            // density× its logical position — off-window for most of the
+            // screen.)
+            xs[i] = event.getX(i)
+            ys[i] = event.getY(i)
         }
         return nativeMotion(event.actionMasked, event.actionIndex, ids, xs, ys)
     }
