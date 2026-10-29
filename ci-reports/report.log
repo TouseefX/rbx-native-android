@@ -23,8 +23,8 @@
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
-[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
@@ -38,100 +38,40 @@
 [1m[92m   Compiling[0m curve25519-dalek-derive v0.1.1
 [1m[92m    Checking[0m ghash v0.5.1
 [1m[92m    Checking[0m ctr v0.9.2
+[1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m aes-gcm v0.10.3
 [1m[92m    Checking[0m blake2 v0.10.6
 [1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
-[1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[91merror[E0609][0m[1m: no field `echo_server_token` on type `&client::Client`[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:680:25
+[1m[91merror[0m[1m: `match` arm body without braces[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:708:22
     [1m[94m|[0m
-[1m[94m680[0m [1m[94m|[0m                 if self.echo_server_token {
-    [1m[94m|[0m                         [1m[91m^^^^^^^^^^^^^^^^^[0m [1m[91munknown field[0m
+[1m[94m708[0m [1m[94m|[0m                 1 => return self.wrap_send(2, self.cfg.join_token, &frame);
+    [1m[94m|[0m                   [1m[94m--[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mthis statement is not surrounded by a body[0m
+    [1m[94m|[0m                   [1m[94m|[0m
+    [1m[94m|[0m                   [1m[94mwhile parsing the `match` arm starting here[0m
     [1m[94m|[0m
-[1m[96mhelp[0m: one of the expressions' fields has a field of the same name
+[1m[96mhelp[0m: replace `;` with `,` to end a `match` arm expression
     [1m[94m|[0m
-[1m[94m680[0m [1m[94m| [0m                if self.[92mcfg.[0mecho_server_token {
-    [1m[94m|[0m                         [92m++++[0m
+[1m[94m708[0m [91m- [0m                1 => return self.wrap_send(2, self.cfg.join_token, &frame)[91m;[0m
+[1m[94m708[0m [92m+ [0m                1 => return self.wrap_send(2, self.cfg.join_token, &frame)[92m,[0m
+    [1m[94m|[0m
 
-[1m[91merror[E0609][0m[1m: no field `ack_sub_1` on type `&mut client::Client`[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:704:21
+[1m[91merror[0m[1m: `match` arm body without braces[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:709:22
     [1m[94m|[0m
-[1m[94m704[0m [1m[94m|[0m             if self.ack_sub_1 {
-    [1m[94m|[0m                     [1m[91m^^^^^^^^^[0m [1m[91munknown field[0m
+[1m[94m709[0m [1m[94m|[0m                 2 => return self.wrap_send(2, self.session_token, &frame);
+    [1m[94m|[0m                   [1m[94m--[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mthis statement is not surrounded by a body[0m
+    [1m[94m|[0m                   [1m[94m|[0m
+    [1m[94m|[0m                   [1m[94mwhile parsing the `match` arm starting here[0m
     [1m[94m|[0m
-[1m[96mhelp[0m: one of the expressions' fields has a field of the same name
+[1m[96mhelp[0m: replace `;` with `,` to end a `match` arm expression
     [1m[94m|[0m
-[1m[94m704[0m [1m[94m| [0m            if self.[92mcfg.[0mack_sub_1 {
-    [1m[94m|[0m                     [92m++++[0m
+[1m[94m709[0m [91m- [0m                2 => return self.wrap_send(2, self.session_token, &frame)[91m;[0m
+[1m[94m709[0m [92m+ [0m                2 => return self.wrap_send(2, self.session_token, &frame)[92m,[0m
+    [1m[94m|[0m
 
-[1m[91merror[E0609][0m[1m: no field `ack_token_mode` on type `&mut client::Client`[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:707:24
-    [1m[94m|[0m
-[1m[94m707[0m [1m[94m|[0m             match self.ack_token_mode {
-    [1m[94m|[0m                        [1m[91m^^^^^^^^^^^^^^[0m [1m[91munknown field[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: one of the expressions' fields has a field of the same name
-    [1m[94m|[0m
-[1m[94m707[0m [1m[94m| [0m            match self.[92mcfg.[0mack_token_mode {
-    [1m[94m|[0m                        [92m++++[0m
-
-[1m[91merror[E0277][0m[1m: `[u8]` is not an iterator[0m
-    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1032:20
-     [1m[94m|[0m
-[1m[94m1032[0m [1m[94m|[0m         two.extend(frames::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
-     [1m[94m|[0m             [1m[94m------[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mthe trait `std::iter::IntoIterator` is not implemented for `[u8]`[0m
-     [1m[94m|[0m             [1m[94m|[0m
-     [1m[94m|[0m             [1m[94mrequired by a bound introduced by this call[0m
-     [1m[94m|[0m
-     [1m[94m= [0m[1mnote[0m: the trait bound `[u8]: std::iter::IntoIterator` is not satisfied
-     [1m[94m= [0m[1mnote[0m: required for `[u8]` to implement `std::iter::IntoIterator`
-[1m[92mnote[0m: required by a bound in `std::iter::Extend::extend`
-    [1m[94m--> [0m/rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/iter/traits/collect.rs:416:4
-[1m[96mhelp[0m: consider borrowing here
-     [1m[94m|[0m
-[1m[94m1032[0m [1m[94m| [0m        two.extend([92m&[0mframes::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
-     [1m[94m|[0m                    [92m+[0m
-[1m[94m1032[0m [1m[94m| [0m        two.extend([92m&mut [0mframes::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
-     [1m[94m|[0m                    [92m++++[0m
-
-[1m[91merror[E0277][0m[1m: the size for values of type `[u8]` cannot be known at compilation time[0m
-    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1032:20
-     [1m[94m|[0m
-[1m[94m1032[0m [1m[94m|[0m         two.extend(frames::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
-     [1m[94m|[0m             [1m[94m------[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mdoesn't have a size known at compile-time[0m
-     [1m[94m|[0m             [1m[94m|[0m
-     [1m[94m|[0m             [1m[94mrequired by a bound introduced by this call[0m
-     [1m[94m|[0m
-     [1m[94m= [0m[1mhelp[0m: the trait `std::marker::Sized` is not implemented for `[u8]`
-[1m[92mnote[0m: required by an implicit `Sized` bound in `std::iter::Extend::extend`
-    [1m[94m--> [0m/rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/iter/traits/collect.rs:416:4
-
-[1m[91merror[E0502][0m[1m: cannot borrow `*self` as mutable because it is also borrowed as immutable[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:353:9
-    [1m[94m|[0m
-[1m[94m353[0m [1m[94m|[0m         self.wrap_send(1, &self.cfg.join_token, &probe)
-    [1m[94m|[0m         [1m[91m^^^^^[0m[1m[94m---------[0m[1m[91m^^^^[0m[1m[94m--------------------[0m[1m[91m^^^^^^^^^[0m
-    [1m[94m|[0m         [1m[91m|[0m    [1m[94m|[0m            [1m[94m|[0m
-    [1m[94m|[0m         [1m[91m|[0m    [1m[94m|[0m            [1m[94mimmutable borrow occurs here[0m
-    [1m[94m|[0m         [1m[91m|[0m    [1m[94mimmutable borrow later used by call[0m
-    [1m[94m|[0m         [1m[91mmutable borrow occurs here[0m
-
-[1m[91merror[E0502][0m[1m: cannot borrow `*self` as mutable because it is also borrowed as immutable[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:379:9
-    [1m[94m|[0m
-[1m[94m379[0m [1m[94m|[0m         self.wrap_send(1, &self.cfg.join_token, &packet)
-    [1m[94m|[0m         [1m[91m^^^^^[0m[1m[94m---------[0m[1m[91m^^^^[0m[1m[94m--------------------[0m[1m[91m^^^^^^^^^^[0m
-    [1m[94m|[0m         [1m[91m|[0m    [1m[94m|[0m            [1m[94m|[0m
-    [1m[94m|[0m         [1m[91m|[0m    [1m[94m|[0m            [1m[94mimmutable borrow occurs here[0m
-    [1m[94m|[0m         [1m[91m|[0m    [1m[94mimmutable borrow later used by call[0m
-    [1m[94m|[0m         [1m[91mmutable borrow occurs here[0m
-
-[1mSome errors have detailed explanations: E0502, E0609.[0m
-[1mFor more information about an error, try `rustc --explain E0502`.[0m
-[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 5 previous errors
+[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1mSome errors have detailed explanations: E0277, E0502, E0609.[0m
-[1mFor more information about an error, try `rustc --explain E0277`.[0m
-[1m[91merror[0m: could not compile `rbx_transport` (lib test) due to 7 previous errors
+[1m[91merror[0m: could not compile `rbx_transport` (lib test) due to 2 previous errors
 clippy=101 test=0
