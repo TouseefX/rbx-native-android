@@ -20,7 +20,7 @@
 use std::ffi::c_int;
 
 use mlua::ffi;
-use mlua::{Lua, Table, UserData, UserDataMethods};
+use mlua::{Lua, Table, UserData, UserDataMethods, Variadic};
 
 /// The production UserSettings calibration string: 19 a's and a Q,
 /// byte-sum 1924.
@@ -47,8 +47,18 @@ impl UserData for RbxRandom {
         methods.add_method_mut("NextInteger", |_, r, (lo, hi): (f64, f64)| {
             Ok(next_integer(r, d2i32(lo), d2i32(hi)))
         });
-        methods.add_method_mut("NextNumber", |_, r, args: Option<(f64, f64)>| {
-            let (lo, hi) = args.unwrap_or((0.0, 1.0));
+        // The reference takes 0 or 2 arguments exactly (one is an
+        // error, not [0, x) the way NextInteger's cousins do).
+        methods.add_method_mut("NextNumber", |_, r, args: Variadic<f64>| {
+            let (lo, hi) = match args.as_slice() {
+                [] => (0.0, 1.0),
+                [lo, hi] => (*lo, *hi),
+                _ => {
+                    return Err(mlua::Error::runtime(
+                        "Random:NextNumber requires 0 or 2 arguments",
+                    ))
+                }
+            };
             Ok(next_number(r, lo, hi))
         });
         methods.add_method("Clone", |lua, r, ()| {
@@ -96,14 +106,14 @@ fn next_integer(r: &mut RbxRandom, a2: i32, mut a3: i32) -> i32 {
         if v8 != 0 {
             let res = (u64::from(v7.wrapping_mul(v8 as u32)) >> 32)
                 + u64::from(v7) * (v8 >> 32)
-                + u64::from(u32::from(a3))
+                + u64::from(a3 as u32)
                 + ((u64::from(v5) * (v8 >> 32)) >> 32);
             return res as u32 as i32;
         }
         (u64::from(v5) | (u64::from(v7) << 32)) as u32 as i32
     } else {
         r.state = v4;
-        u32::from(a3).wrapping_add(((u64::from(v5) * (v3 + 1)) >> 32) as u32) as i32
+        (a3 as u32).wrapping_add(((u64::from(v5) * (v3 + 1)) >> 32) as u32) as i32
     }
 }
 
@@ -125,7 +135,7 @@ fn next_number(r: &mut RbxRandom, lo: f64, hi: f64) -> f64 {
 /// +52 calibration term measures). mlua's typed userdata cannot offer
 /// that -- metatables there are per-Rust-type and full of internals --
 /// so this is the Luau C API directly.
-unsafe extern "C" fn newproxy_raw(st: *mut ffi::lua_State) -> c_int {
+unsafe extern "C-unwind" fn newproxy_raw(st: *mut ffi::lua_State) -> c_int {
     unsafe {
         let with_meta = ffi::lua_toboolean(st, 1) != 0;
         ffi::lua_newuserdata(st, std::mem::size_of::<*const u8>());
@@ -218,7 +228,7 @@ pub(crate) fn install(lua: &Lua, job: &str) -> Result<(), mlua::Error> {
     // 6. newproxy, raw.
     unsafe {
         let st = lua.state();
-        ffi::lua_pushcclosure(st, Some(newproxy_raw), c"newproxy".as_ptr(), 0);
+        ffi::lua_pushcclosure(st, Some(newproxy_raw), 0);
         ffi::lua_setglobal(st, c"newproxy".as_ptr());
     }
 
