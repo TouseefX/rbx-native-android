@@ -175,7 +175,10 @@ impl GameWorkspace {
         }
         let path = self.slots.get(index).ok_or("no such place")?.path.clone();
         let boot = crate::fresh_boot();
-        let place = crate::load(&path, &boot.launch, boot.settings.icon_pack)
+        let place = crate::parse_place(&path, &boot.launch)
+            .and_then(|parsed| {
+                crate::finish_load(parsed, &boot.launch, boot.settings.icon_pack)
+            })
             .map_err(|err| format!("{}: {err}", self.slots[index].label))?;
         let shell = self.build_shell(index, place, boot, window, cx);
         self.slots[index].shell = Some(shell.clone());
@@ -362,7 +365,10 @@ pub(crate) fn open_game(
     let mut failures = Vec::new();
     let mut opened = None;
     for (index, place_path) in places.iter().enumerate() {
-        match crate::load(place_path, &boot.launch, boot.settings.icon_pack) {
+        let parsed = crate::parse_place(place_path, &boot.launch).and_then(|parsed| {
+            crate::finish_load(parsed, &boot.launch, boot.settings.icon_pack)
+        });
+        match parsed {
             Ok(place) => {
                 opened = Some((index, place));
                 break;

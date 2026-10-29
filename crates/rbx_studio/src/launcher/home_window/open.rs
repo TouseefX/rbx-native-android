@@ -172,7 +172,10 @@ impl HomeWindow {
             cx.notify();
             return;
         };
-        self.dialog = Some(Dialog::Opening { name: file_name(path) });
+        let name = file_name(path);
+        self.dialog = Some(Dialog::Opening {
+            name: name.clone(),
+        });
         cx.notify();
         let path = path.to_path_buf();
         cx.spawn(async move |this, cx| {
@@ -208,7 +211,7 @@ impl HomeWindow {
                         *this.boot.borrow_mut() = Some(boot);
                         this.dialog = Some(Dialog::Error {
                             experience: None,
-                            title: format!("Couldn\u{2019}t open {}", file_name(&path)),
+                            title: format!("Couldn\u{2019}t open {name}"),
                             status: None,
                             reason: message,
                         });
