@@ -142,7 +142,10 @@ pub fn read_ipv4(s: &str) -> Option<[u8; 4]> {
     for slot in out.iter_mut() {
         let part = parts.next()?.trim_start();
         // sscanf's %u: leading digits, ignore whatever follows them.
-        let digits = part.split(|c: char| !c.is_ascii_digit()).next().unwrap_or("");
+        let digits = part
+            .split(|c: char| !c.is_ascii_digit())
+            .next()
+            .unwrap_or("");
         *slot = digits.parse::<u32>().ok()? as u8;
     }
     Some(out)
