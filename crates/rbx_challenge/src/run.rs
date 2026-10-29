@@ -104,11 +104,8 @@ mod tests {
         let _ = Lua::set_fflag("LuauCallFeedback", true);
         let lua = Lua::new();
         sandbox::install(&lua, "job").unwrap();
-        let f = lua
-            .load(b"local a, b = ... return a * 2 + b")
-            .set_name("=tiny")
-            .into_function()
-            .unwrap();
+        let src: &[u8] = b"local a, b = ... return a * 2 + b";
+        let f = lua.load(src).set_name("=tiny").into_function().unwrap();
         let ret: Value = f.call((f64::from(3), f64::from(5))).unwrap();
         assert_eq!(ret, Value::Number(11.0));
     }
