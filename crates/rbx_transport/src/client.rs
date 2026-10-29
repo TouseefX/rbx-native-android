@@ -705,8 +705,8 @@ impl Client {
                 return self.wrap_send(1, self.cfg.join_token, &frame);
             }
             match self.cfg.ack_token_mode {
-                1 => return self.wrap_send(2, self.cfg.join_token, &frame);
-                2 => return self.wrap_send(2, self.session_token, &frame);
+                1 => return self.wrap_send(2, self.cfg.join_token, &frame),
+                2 => return self.wrap_send(2, self.session_token, &frame),
                 _ => {}
             }
         }
