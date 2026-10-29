@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn reliable_message_roundtrips() {
-        let datagram = reliable(7, 3, true, 2, b"\x83a replication body").unwrap();
+        let datagram = reliable(7, 3, true, 0, b"\x83a replication body").unwrap();
         assert_eq!(datagram[0], 0x81);
         assert_eq!(datagram[1..4], [7, 0, 0]); // datagram id, u24 LE
         assert_eq!(datagram[4], 0x60);
@@ -197,7 +197,7 @@ mod tests {
             ((b"\x83a replication body".len() * 8) as u16).to_be_bytes()
         );
         assert_eq!(datagram[7..10], [3, 0, 0]); // message number
-        assert_eq!(datagram[10..13], [2, 0, 0]); // ordering index
+        assert_eq!(datagram[10..13], [0, 0, 0]); // ordering index
         assert_eq!(datagram[13], 0); // channel
 
         let mut stream = RxStream::default();
@@ -206,7 +206,7 @@ mod tests {
         assert_eq!(messages[0].id, 0x83);
         assert_eq!(messages[0].payload, b"\x83a replication body");
         assert!(messages[0].ordered);
-        assert_eq!(messages[0].ordering, 2);
+        assert_eq!(messages[0].ordering, 0);
         assert_eq!(messages[0].reliability, 0x60);
         assert_eq!(stream.messages, 1);
     }
@@ -235,9 +235,9 @@ mod tests {
         let count = 3u32;
 
         let fragments = [
-            split_fragment(1, 10, count, 0, 0, 4, true, &message[..1061]).unwrap(),
-            split_fragment(2, 11, count, 0, 1, 4, true, &message[1061..2122]).unwrap(),
-            split_fragment(3, 12, count, 0, 2, 4, true, &message[2122..]).unwrap(),
+            split_fragment(1, 10, count, 0, 0, 0, true, &message[..1061]).unwrap(),
+            split_fragment(2, 11, count, 0, 1, 0, true, &message[1061..2122]).unwrap(),
+            split_fragment(3, 12, count, 0, 2, 0, true, &message[2122..]).unwrap(),
         ];
 
         let mut stream = RxStream::default();
@@ -251,7 +251,7 @@ mod tests {
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].id, 0x90);
         assert_eq!(messages[0].payload, message);
-        assert_eq!(messages[0].ordering, 4);
+        assert_eq!(messages[0].ordering, 0);
         assert_eq!(stream.split_messages, 1);
         assert_eq!(stream.pending_splits(), 0);
     }

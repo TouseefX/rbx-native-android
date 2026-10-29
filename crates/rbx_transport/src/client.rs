@@ -1045,19 +1045,27 @@ pub(crate) mod tests {
         let sends = client.take_sends();
         assert_eq!(sends.len(), 1);
         let plain = server.open(&sends[0]).expect("the 0x09 opens");
-        assert_eq!(plain[0], 0x09);
-        assert_eq!(plain[1..9], [1, 2, 3, 4, 5, 6, 7, 8]);
-        assert_eq!(&plain[9..], &frames::CONNECTION_REQUEST_TAIL[..]);
+        // The 0x09 rides a reliable frame like everything else, so the
+        // assertions land on the delivered message, not the raw
+        // plaintext (which starts with the frame's flags byte).
+        let mut got = server.rx.on_datagram(&plain);
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].id, 0x09);
+        assert_eq!(got[0].payload[1..9], [1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(&got[0].payload[9..], &frames::CONNECTION_REQUEST_TAIL[..]);
+        assert!(!got[0].ordered);
 
         // The 0x13: datagram 1, ordered.
         assert!(client.new_incoming(([127, 0, 0, 1], 0)));
         let sends = client.take_sends();
         let plain = server.open(&sends[0]).expect("the 0x13 opens");
-        assert_eq!(plain[0], 0x13);
-        assert_eq!(plain.len(), 1 + 14 * 7);
-        assert_eq!(plain[1..8], [0x04, 127, 0, 0, 1, 0x00, 0x00]);
-        let mut got = server.rx.on_datagram(&plain);
-        assert_eq!(got.len(), 1);
+        got.extend(server.rx.on_datagram(&plain));
+        assert_eq!(got.len(), 2);
+        assert_eq!(got[1].id, 0x13);
+        assert_eq!(got[1].payload.len(), 1 + 14 * 7);
+        assert_eq!(got[1].payload[1..8], [0x04, 127, 0, 0, 1, 0x00, 0x00]);
+        assert!(got[1].ordered);
+        assert_eq!(got[1].ordering, 0);
 
         // A 3000-byte join message: three fragments, one split id.
         let mut body = vec![0x90];
@@ -1068,9 +1076,9 @@ pub(crate) mod tests {
             let plain = server.open(&wire).expect("fragment opens");
             got.extend(server.rx.on_datagram(&plain));
         }
-        assert_eq!(got.len(), 2);
-        assert_eq!(got[1].payload, body);
-        assert_eq!(got[1].ordering, 1); // the 0x13 took ordering 0
+        assert_eq!(got.len(), 3);
+        assert_eq!(got[2].payload, body);
+        assert_eq!(got[2].ordering, 1); // the 0x13 took ordering 0
 
         // Server -> client: two ordered messages, each ACKed immediately.
         let d1 = frames::reliable(0, 0, true, 0, b"\x93settings").unwrap();
@@ -1132,8 +1140,8 @@ pub(crate) mod tests {
 
         // The 1160-byte MTU pad: answered with one 0x03, exactly once.
         let pad = vec![0x00u8; 1160];
-        client.on_packet(&server.data(&frames::reliable(3, 3, true, 1, &pad).unwrap()));
-        client.on_packet(&server.data(&frames::reliable(4, 4, true, 1, &pad).unwrap()));
+        client.on_packet(&server.data(&frames::reliable(3, 3, true, 0, &pad).unwrap()));
+        client.on_packet(&server.data(&frames::reliable(4, 4, true, 0, &pad).unwrap()));
         assert_eq!(client.keepalive_replies(), 3);
         // The pad reply itself split (1160 > 1061).
         assert_eq!(client.split_messages_tx(), 2);

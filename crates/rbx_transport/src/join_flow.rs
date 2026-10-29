@@ -436,7 +436,8 @@ mod tests {
         for m in server.rx.on_datagram(&filler) {
             delivered.push((m.id, m.ordering));
         }
-        assert_eq!(delivered, vec![(0x13, 0), (0x90, 1), (0x8A, 3)]);
+        // The filler itself delivers at 2 as it flushes the 0x8a.
+        assert_eq!(delivered, vec![(0x13, 0), (0x90, 1), (0x00, 2), (0x8A, 3)]);
         // Slot 4 was reserved too, so the challenge answer's slot is 5.
         let answer = [0x9Bu8, 1, 2, 3, 4, 5, 6, 7, 8];
         assert_eq!(client.send_join_message(&answer, true), 1);
