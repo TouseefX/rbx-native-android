@@ -862,9 +862,7 @@ fn max_message_number(d: &[u8]) -> u32 {
             if off + 3 > d.len() {
                 break;
             }
-            let mn = u32::from(d[off])
-                | (u32::from(d[off + 1]) << 8)
-                | (u32::from(d[off + 2]) << 16);
+            let mn = u32::from(d[off]) | (u32::from(d[off + 1]) << 8) | (u32::from(d[off + 2]) << 16);
             best = best.max(mn);
             off += 3;
         }
