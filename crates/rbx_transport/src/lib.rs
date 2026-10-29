@@ -24,12 +24,17 @@
 //!
 //! What is in so far: the session crypto (keypairs, both key
 //! derivations, the datagram AEAD with its counter reconstruction, and
-//! the handshake AEAD with its in-buffer nonce layout), with the
-//! reference's constants and the public X25519/BLAKE2b test vectors as
-//! tests. Not yet ported: the RUPP wrapper, the offline handshake
-//! frames, the RakNet reliable/split/ACK data layer, and the join flow
-//! itself.
+//! the handshake AEAD with its in-buffer nonce layout), the RUPP
+//! datagram wrapper (both client header shapes, the server's short
+//! headers, and the TLV walk), and the offline handshake's byte layer —
+//! Req1's padded probe, Reply1's GUID and MTU, Req2's sealed join
+//! material, and Reply2's verified tail with the data peer key
+//! reconstructed from its two halves. Not yet ported: the socket and
+//! handshake state machine, the RakNet reliable/split/ACK data layer,
+//! and the join flow itself.
 
 #![forbid(unsafe_code)]
 
 pub mod crypto;
+pub mod offline;
+pub mod rupp;
