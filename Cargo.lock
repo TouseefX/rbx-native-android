@@ -6787,6 +6787,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rbx_replication"
+version = "0.1.0"
+
+[[package]]
 name = "rbx_studio"
 version = "0.1.0"
 dependencies = [
