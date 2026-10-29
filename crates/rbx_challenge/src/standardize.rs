@@ -215,7 +215,7 @@ mod tests {
     fn the_length_masks_match_the_decompiled_ranges() {
         // A few known entries from the reference's MASK1/MASK2 windows,
         // checked by hand against the bit positions.
-        assert_eq!(op_length(OPLEN[REMAP[0]]), 1);
+        assert_eq!(op_length(OPLEN[usize::from(REMAP[0])]), 1);
         assert!((1..=2).contains(&op_length(74)));
         assert!((1..=2).contains(&op_length(7)));
     }
