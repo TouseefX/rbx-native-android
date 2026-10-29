@@ -151,6 +151,15 @@ than crates.io), plus one marked change:
   kept an in-process `Option<String>`, so a paste could never see what
   another app had copied — the API key screen's Paste button read that empty
   store and silently did nothing.
+- `src/android/platform.rs`, same marking: `AndroidCredentialStore` keeps
+  its entries in one file under the app's private config directory
+  (`XDG_CONFIG_HOME`/`gpui-mobile/credentials.bin`, written atomically via
+  a staging rename), replacing the crate's in-memory map, which forgot
+  everything at process exit — the editor's saved Open Cloud key was gone
+  on every relaunch. The file sits inside the app sandbox and full-disk
+  encryption; sealing it with the Android Keystore is the natural hardening
+  step, and the format (length-prefixed service/username/secret entries,
+  capped in count and secret size) leaves room for it.
 
 To upgrade: re-clone the repository at the new revision, drop `.git` and
 `example/`, re-apply the marked clipboard bridge (and re-point the class name
