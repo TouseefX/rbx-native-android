@@ -104,7 +104,7 @@ impl RxStream {
         while off + 3 <= d.len() {
             let rel = d[off];
             let bits = u16::from_be_bytes([d[off + 1], d[off + 2]]);
-            let dlen = (usize::from(bits) + 7) / 8;
+            let dlen = usize::from(bits).div_ceil(8);
             let kind = rel >> 5;
             off += 3;
 

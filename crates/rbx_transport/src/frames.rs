@@ -232,9 +232,9 @@ mod tests {
         let count = 3u32;
 
         let fragments = [
-            split_fragment(1, 10 + 0, count, 0, 0, 4, true, &message[..1061]).unwrap(),
-            split_fragment(2, 10 + 1, count, 0, 1, 4, true, &message[1061..2122]).unwrap(),
-            split_fragment(3, 10 + 2, count, 0, 2, 4, true, &message[2122..]).unwrap(),
+            split_fragment(1, 10, count, 0, 0, 4, true, &message[..1061]).unwrap(),
+            split_fragment(2, 11, count, 0, 1, 4, true, &message[1061..2122]).unwrap(),
+            split_fragment(3, 12, count, 0, 2, 4, true, &message[2122..]).unwrap(),
         ];
 
         let mut stream = RxStream::default();
