@@ -45,7 +45,9 @@ pub fn decode(blob: &[u8]) -> Result<Vec<u8>, String> {
     let want = u32::from_le_bytes(key);
     let got = xxh32(&dec, 0x2A);
     if got != want {
-        return Err(format!("checksum mismatch: got 0x{got:08x} want 0x{want:08x}"));
+        return Err(format!(
+            "checksum mismatch: got 0x{got:08x} want 0x{want:08x}"
+        ));
     }
 
     let mode = u32::from_le_bytes([dec[4], dec[5], dec[6], dec[7]]);
@@ -61,8 +63,7 @@ pub fn decode(blob: &[u8]) -> Result<Vec<u8>, String> {
         return Err("zstd magic missing".into());
     }
 
-    let out = zstd::bulk::decompress(payload, mode as usize)
-        .map_err(|e| format!("zstd: {e}"))?;
+    let out = zstd::bulk::decompress(payload, mode as usize).map_err(|e| format!("zstd: {e}"))?;
     if out.len() != mode as usize {
         return Err("zstd size mismatch".into());
     }

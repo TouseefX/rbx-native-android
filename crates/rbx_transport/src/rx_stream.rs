@@ -319,7 +319,10 @@ impl RxStream {
     /// the gap fills.
     fn deliver_ordered(&mut self, msg: AppMessage, out: &mut Vec<AppMessage>) {
         let channel = msg.channel;
-        let next = *self.ord_next.entry(channel).or_insert(msg.ordering);
+        // A channel's sequence starts at 0 (the native's streams do);
+        // an arrival above the expected index waits for the gap, even
+        // when it is the first thing the channel ever carried.
+        let next = *self.ord_next.entry(channel).or_insert(0);
         if msg.ordering < next {
             self.duplicate_ordering += 1;
             return;

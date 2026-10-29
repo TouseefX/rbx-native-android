@@ -125,6 +125,33 @@ impl SessionKeys {
     }
 }
 
+/// The peer's side of the derivation, for tests: the same BLAKE2b
+/// chain with the public keys in the CLIENT's order, split into (what
+/// the peer seals with, what it opens with) from the client's side.
+/// Both peers running [`SessionKeys::install`] against each other
+/// produces two different digests -- ours-first is a client-side
+/// convention -- so the reference's server derives with the canonical
+/// order instead, and the mock servers in the tests do the same.
+#[cfg(test)]
+pub(crate) fn canonical_pair(
+    server_seed: [u8; 32],
+    client_pub: [u8; 32],
+    server_pub: [u8; 32],
+) -> ([u8; 32], [u8; 32]) {
+    let secret = StaticSecret::from(server_seed);
+    let shared = secret.diffie_hellman(&PublicKey::from(client_pub));
+    let mut hasher = blake2::Blake2b512::new();
+    hasher.update(shared.as_bytes());
+    hasher.update(client_pub);
+    hasher.update(server_pub);
+    let digest = hasher.finalize();
+    let mut seal = [0u8; 32];
+    let mut open = [0u8; 32];
+    seal.copy_from_slice(&digest[..32]);
+    open.copy_from_slice(&digest[32..]);
+    (seal, open)
+}
+
 /// The KDF both key derivations share:
 /// `BLAKE2b-512(shared || our_pub || peer_pub)`, split into an rx half and
 /// a tx half.
@@ -301,7 +328,7 @@ mod tests {
         let shared = bytes32("4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742");
 
         let mut alice = SessionKeys::from_seed(seed_a);
-        let mut bob = SessionKeys::from_seed(seed_b);
+        let bob = SessionKeys::from_seed(seed_b);
         assert_eq!(alice.public(), pub_a);
         assert_eq!(bob.public(), pub_b);
 
@@ -310,11 +337,12 @@ mod tests {
         let direct = StaticSecret::from(seed_a).diffie_hellman(&PublicKey::from(pub_b));
         assert_eq!(direct.as_bytes(), &shared);
 
-        // The derived pair is directional and symmetric between peers.
+        // The derived pair is directional on the canonical digest: our
+        // tx is the peer's open key, our rx its seal key.
         alice.install(bob.public());
-        bob.install(alice.public());
-        assert_eq!(alice.tx(), bob.rx());
-        assert_eq!(alice.rx(), bob.tx());
+        let (bob_seal, bob_open) = canonical_pair(seed_b, pub_a, pub_b);
+        assert_eq!(alice.tx(), &bob_open);
+        assert_eq!(alice.rx(), &bob_seal);
         assert_ne!(alice.tx(), alice.rx());
 
         // The datagram derivation is independent: another peer key, another

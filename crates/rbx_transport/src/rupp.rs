@@ -16,10 +16,10 @@
 //! 4 or 23), and datagrams that do not parse as RUPP are dropped.
 
 /// The client header length with the RCC TLV — the native game path.
-pub const HEADER_LEN: u32 = 31;
+pub const HEADER_LEN: u16 = 31;
 
 /// The header length without the RCC TLV.
-pub const HEADER_LEN_NO_RCC: u32 = 23;
+pub const HEADER_LEN_NO_RCC: u16 = 23;
 
 /// One RUPP header's worth of state: the token we present and the RCC we
 /// belong to.
