@@ -21,7 +21,7 @@
 //! [tag]` ([`datagram_seal`]/[`datagram_open`]). Both directions were
 //! verified byte-for-byte against a live session by the reference.
 
-use aes_gcm::aead::{Aead, Payload};
+use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use blake2::digest::Digest;
 use chacha20poly1305::ChaCha20Poly1305;
@@ -383,7 +383,8 @@ mod tests {
         assert!(aead_open(&key, &tampered, nonce_offset, aad_len).is_none());
 
         // And a layout that leaves no room for the nonce and tag.
-        assert!(!aead_seal(&key, &mut packet, packet.len(), aad_len));
+        let end = packet.len();
+        assert!(!aead_seal(&key, &mut packet, end, aad_len));
     }
 
     #[test]
