@@ -328,11 +328,17 @@ fn worked_event_attribute_changed() {
 fn unknown_items_and_values_fail_closed() {
     let schema = guide_schema();
 
-    // 0x16: the compressed batch item, not implemented at this stage.
-    let batch: &[u8] = &[0x83, 0x16, 0x00];
-    match parse_message(batch, &schema) {
+    // A `0x16` batch in the message head is an envelope stage two opens;
+    // its flag byte is still part of the walk's contract, and a flag with
+    // no established shape stops it. Flag 6 carrying one empty frame.
+    let mut batch = vec![0x83_u8, 0x16, 0x06];
+    let empty = zstd::bulk::compress(&[], 3).expect("compressing empty test data");
+    batch.extend_from_slice(&(empty.len() as u32).to_le_bytes());
+    batch.extend_from_slice(&0u32.to_le_bytes());
+    batch.extend_from_slice(&empty);
+    match parse_message(&batch, &schema) {
         Err(crate::cursor::ParseError::Unsupported(what)) => {
-            assert!(what.contains("chain item"), "{what}");
+            assert!(what.contains("batch flag"), "{what}");
         }
         other => panic!("expected an unsupported error, got {other:?}"),
     }
