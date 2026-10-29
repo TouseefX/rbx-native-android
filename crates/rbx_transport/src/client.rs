@@ -39,6 +39,11 @@ use crate::offline;
 use crate::rupp;
 use crate::rx_stream::{AppMessage, RxStream};
 
+/// The 0x9B solver: the challenge message and the JobId in, the answer
+/// out. `None` means unsolvable -- nothing is sent, the join stays
+/// gated instead of getting kicked for a wrong answer.
+pub type Solver = Box<dyn Fn(&[u8], &str) -> Option<u32>>;
+
 /// Everything the join script contributes, in the shape the reference's
 /// `RaknetConfig` carried it.
 #[derive(Clone, Debug)]
@@ -150,7 +155,7 @@ pub struct Client {
     pad_replied: bool,
     t0: Instant,
 
-    solver: Option<Box<dyn Fn(&[u8], &str) -> Option<u32>>>,
+    solver: Option<Solver>,
     job_id: String,
     join_flow_open: bool,
     deferred_challenge: Option<Vec<u8>>,
@@ -255,7 +260,7 @@ impl Client {
     /// the client keeps running when challenged — no answer is sent, the
     /// join simply stays gated (a wrong answer gets the session kicked,
     /// a missing one does not).
-    pub fn set_solver(&mut self, solver: Box<dyn Fn(&[u8], &str) -> Option<u32>>, job_id: &str) {
+    pub fn set_solver(&mut self, solver: Solver, job_id: &str) {
         self.solver = Some(solver);
         self.job_id = job_id.to_string();
     }
