@@ -311,10 +311,9 @@ mod tests {
     #[test]
     fn reply2_verifies_and_yields_the_data_peer_key() {
         let mut alice = SessionKeys::from_seed([1u8; 32]);
-        let mut server = SessionKeys::from_seed([2u8; 32]);
-        let mut server_data = SessionKeys::from_seed([3u8; 32]);
+        let server = SessionKeys::from_seed([2u8; 32]);
+        let server_data = SessionKeys::from_seed([3u8; 32]);
         alice.install(server.public());
-        server.install(alice.public());
 
         // The server builds Reply2: its fields authenticated as AAD, with
         // the data peer key spread across [21:44] and the plaintext head.
@@ -330,7 +329,12 @@ mod tests {
         payload[21..44].copy_from_slice(&server_pub[..23]);
         payload[aad_len..nonce_off].copy_from_slice(plaintext);
         payload[nonce_off..nonce_off + 12].copy_from_slice(&HANDSHAKE_NONCE);
-        assert!(aead_seal(server.tx(), &mut payload, nonce_off, aad_len));
+        // The server seals with the canonical digest's first half --
+        // the client's rx -- exactly as a server-side implementation
+        // of the same KDF with the client's key order would.
+        let (srv_seal, _) =
+            crate::crypto::canonical_pair([2u8; 32], alice.public(), server.public());
+        assert!(aead_seal(&srv_seal, &mut payload, nonce_off, aad_len));
 
         let reply = parse_reply2(alice.rx(), &payload).unwrap();
         assert_eq!(reply.plaintext, plaintext);
@@ -340,9 +344,9 @@ mod tests {
         // The datagram keys the two sides derive from the two halves
         // agree, in both directions.
         alice.install_data(peer);
-        server_data.install(alice.public());
-        assert_eq!(alice.data_rx(), server_data.tx());
-        assert_eq!(alice.data_tx(), server_data.rx());
+        let (data_seal, data_open) = crate::crypto::canonical_pair([3u8; 32], alice.public(), peer);
+        assert_eq!(alice.data_rx(), &data_seal);
+        assert_eq!(alice.data_tx(), &data_open);
 
         // A tampered tail fails the tag, and so do wrong id and magic.
         let mut tampered = payload.clone();

@@ -148,9 +148,9 @@ pub(crate) fn install(lua: &Lua, job: &str) -> Result<(), mlua::Error> {
         "new",
         lua.create_function(|lua, seed: Option<f64>| {
             let state = match seed {
-                Some(v) if v.abs() <= 9007199254740992.0 => {
-                    K_MUL.wrapping_mul(seed_from_double(v)).wrapping_add(K_SEED_ADD)
-                }
+                Some(v) if v.abs() <= 9007199254740992.0 => K_MUL
+                    .wrapping_mul(seed_from_double(v))
+                    .wrapping_add(K_SEED_ADD),
                 _ => K_SEED_ADD,
             };
             Ok(lua.create_userdata(RbxRandom { state })?)
@@ -240,7 +240,10 @@ mod tests {
 
     #[test]
     fn usersettings_string_is_the_calibration() {
-        assert_eq!(probe("return tostring(UserSettings())"), "aaaaaaaaaaaaaaaaaaaQ");
+        assert_eq!(
+            probe("return tostring(UserSettings())"),
+            "aaaaaaaaaaaaaaaaaaaQ"
+        );
         // And the byte-sum the challenge actually measures: 1924.
         let sum: u32 = probe("return tostring(UserSettings())")
             .bytes()

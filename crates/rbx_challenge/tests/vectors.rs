@@ -78,8 +78,7 @@ fn golden_vectors_extract_decode_standardize_solve() {
         assert_eq!(ch.u2, v.u2, "{}: u2", v.name);
 
         // Stage 2: RSB1 xor + xxhash32 + zstd.
-        let mut wire = blob::decode(ch.blob)
-            .unwrap_or_else(|e| panic!("{}: decode: {e}", v.name));
+        let mut wire = blob::decode(ch.blob).unwrap_or_else(|e| panic!("{}: decode: {e}", v.name));
         assert_eq!(wire.as_slice(), &wire_gold[..], "{}: wire", v.name);
 
         // Stage 3: opcode standardization, in place.
@@ -101,8 +100,8 @@ fn the_top_level_solve_agrees_with_the_stages() {
     for v in VECTORS {
         if let (Some(answer), Some(job)) = (v.answer, v.job) {
             let msg = include_bytes!(concat!("vectors/", v.name, ".msg.bin"));
-            let got = rbx_challenge::solve(msg, job)
-                .unwrap_or_else(|e| panic!("{}: solve: {e}", v.name));
+            let got =
+                rbx_challenge::solve(msg, job).unwrap_or_else(|e| panic!("{}: solve: {e}", v.name));
             assert_eq!(got, answer, "{}: answer", v.name);
         }
     }

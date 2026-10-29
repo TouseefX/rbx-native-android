@@ -650,11 +650,10 @@ mod tests {
             let plain: Vec<u8> = (0..len).map(|i| (i * 31 % 251) as u8).collect();
             let sealed = seal(&plain, &KEY_90, STATE_90);
             assert_eq!(sealed.len() % 16, 0, "len {len} must seal to whole blocks");
-            assert_eq!(
-                sealed.len(),
-                plain.len() + usize::from(sealed[5] & 0x0F) + 6
-            );
             let (back, pad) = unseal(&sealed, &KEY_90).expect("unseal must invert seal");
+            // The pad nibble lives in the PLAINTEXT header at [5]; the
+            // sealed byte there is ciphertext and carries nothing.
+            assert_eq!(sealed.len(), plain.len() + pad + 6);
             assert_eq!(back, plain, "roundtrip failed for len {len}");
             assert_eq!(pad, (!(len + 5)) & 0x0F);
             // Deterministic for (key, state, len), and the state feeds the
@@ -813,12 +812,16 @@ mod tests {
 
     #[test]
     fn build_90_keeps_template_order_and_kinds() {
-        let tmpl = template_90(r#"{"A":1,"B":"x","C":{"D":true,"E":2}}"#);
+        let tmpl = template_90(r#"{"UserId":1,"A":1,"B":"x","C":{"D":true,"E":2}}"#);
         let js: Value = serde_json::from_str(r#"{"C":{"E":9},"B":{"z":1},"F":0}"#).unwrap();
         let (_, json) = build_90(&tmpl, &js, &Value::Null).unwrap();
         // Order: template keys, nested; B (a string field) stringifies the
-        // object; F is not in the template so it never appears.
-        assert_eq!(json, r#"{"A":1,"B":"{\"z\":1}","C":{"D":true,"E":9}}"#);
+        // object; F is not in the template so it never appears; the join
+        // script has no UserId, so the template's stays.
+        assert_eq!(
+            json,
+            r#"{"UserId":1,"A":1,"B":"{\"z\":1}","C":{"D":true,"E":9}}"#
+        );
     }
 
     #[test]
