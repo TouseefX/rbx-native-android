@@ -364,7 +364,7 @@ mod tests {
 
         let original = packet.clone();
         assert!(aead_seal(&key, &mut packet, nonce_offset, aad_len));
-        assert_eq!(&packet[..aad_len], &original[..aad_len]);
+        assert_eq!(packet[..aad_len], original[..aad_len]);
         assert_eq!(packet[nonce_offset..nonce_offset + 12], HANDSHAKE_NONCE[..]);
         assert_ne!(&packet[aad_len..nonce_offset], plaintext.as_slice());
         assert_ne!(packet[nonce_offset + 12..nonce_offset + 28], [0u8; 16]);
