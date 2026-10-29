@@ -12,8 +12,8 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
+[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
@@ -23,12 +23,12 @@
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
-[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
-[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m   Compiling[0m curve25519-dalek v4.1.3
@@ -39,43 +39,38 @@
 [1m[92m    Checking[0m ghash v0.5.1
 [1m[92m    Checking[0m ctr v0.9.2
 [1m[92m    Checking[0m aes-gcm v0.10.3
-[1m[92m    Checking[0m blake2 v0.10.6
-[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m x25519-dalek v2.0.1
+[1m[92m    Checking[0m blake2 v0.10.6
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
-[1m[91merror[0m[1m: expected a literal[0m
-  [1m[94m--> [0mcrates/rbx_challenge/tests/vectors.rs:70:54
-   [1m[94m|[0m
-[1m[94m70[0m [1m[94m|[0m         let msg = include_bytes!(concat!("vectors/", v.name, ".msg.bin"));
-   [1m[94m|[0m                                                      [1m[91m^^^^^^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: only literals (like `"foo"`, `-42` and `3.14`) can be passed to `concat!()`
-
-[1m[91merror[0m[1m: expected a literal[0m
-  [1m[94m--> [0mcrates/rbx_challenge/tests/vectors.rs:71:60
-   [1m[94m|[0m
-[1m[94m71[0m [1m[94m|[0m         let wire_gold = include_bytes!(concat!("vectors/", v.name, ".wire.bin"));
-   [1m[94m|[0m                                                            [1m[91m^^^^^^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: only literals (like `"foo"`, `-42` and `3.14`) can be passed to `concat!()`
-
-[1m[91merror[0m[1m: expected a literal[0m
-  [1m[94m--> [0mcrates/rbx_challenge/tests/vectors.rs:72:59
-   [1m[94m|[0m
-[1m[94m72[0m [1m[94m|[0m         let std_gold = include_bytes!(concat!("vectors/", v.name, ".standard.bin"));
-   [1m[94m|[0m                                                           [1m[91m^^^^^^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: only literals (like `"foo"`, `-42` and `3.14`) can be passed to `concat!()`
-
-[1m[91merror[0m[1m: expected a literal[0m
-   [1m[94m--> [0mcrates/rbx_challenge/tests/vectors.rs:102:58
+[1m[91merror[E0382][0m[1m: borrow of moved value: `s`[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/join_target.rs:255:25
     [1m[94m|[0m
-[1m[94m102[0m [1m[94m|[0m             let msg = include_bytes!(concat!("vectors/", v.name, ".msg.bin"));
-    [1m[94m|[0m                                                          [1m[91m^^^^^^[0m
+[1m[94m225[0m [1m[94m|[0m     let s = percent_decode(raw);
+    [1m[94m|[0m         [1m[94m-[0m [1m[94mmove occurs because `s` has type `std::string::String`, which does not implement the `Copy` trait[0m
+[1m[94m...[0m
+[1m[94m244[0m [1m[94m|[0m         cands.push(("raw".to_string(), s));
+    [1m[94m|[0m                                        [1m[94m-[0m [1m[94mvalue moved here[0m
+[1m[94m...[0m
+[1m[94m255[0m [1m[94m|[0m         .unwrap_or_else(|| s.chars().take(120).collect());
+    [1m[94m|[0m                         [1m[91m^^[0m [1m[94m-[0m [1m[94mborrow occurs due to use in closure[0m
+    [1m[94m|[0m                         [1m[91m|[0m
+    [1m[94m|[0m                         [1m[91mvalue borrowed here after move[0m
     [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: only literals (like `"foo"`, `-42` and `3.14`) can be passed to `concat!()`
+[1m[96mhelp[0m: consider cloning the value if the performance cost is acceptable
+    [1m[94m|[0m
+[1m[94m244[0m [1m[94m| [0m        cands.push(("raw".to_string(), s[92m.clone()[0m));
+    [1m[94m|[0m                                         [92m++++++++[0m
 
-[1m[91merror[0m: could not compile `rbx_challenge` (test "vectors") due to 4 previous errors
+[1m[91merror[0m[1m: unused variable: `app`[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/join_target.rs:246:10
+    [1m[94m|[0m
+[1m[94m246[0m [1m[94m|[0m     for (app, b64) in &cands {
+    [1m[94m|[0m          [1m[91m^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_app`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `-D unused-variables` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_variables)]`
+
+[1mFor more information about this error, try `rustc --explain E0382`.[0m
+[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
 clippy=101 test=0
