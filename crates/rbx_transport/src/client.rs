@@ -32,6 +32,7 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
+use crate::challenge;
 use crate::crypto::{self, SessionKeys, DATA_COUNTER_BASE};
 use crate::frames;
 use crate::offline;
@@ -149,6 +150,14 @@ pub struct Client {
     pad_replied: bool,
     t0: Instant,
 
+    solver: Option<Box<dyn Fn(&[u8], &str) -> Option<u32>>>,
+    job_id: String,
+    join_flow_open: bool,
+    deferred_challenge: Option<Vec<u8>>,
+    saw_challenge: bool,
+    challenge_answers: u64,
+    marker_acks: u64,
+
     out: Vec<Vec<u8>>,
     messages: Vec<Vec<u8>>,
 
@@ -211,6 +220,13 @@ impl Client {
             kal_per_id: [0; 256],
             pad_replied: false,
             t0: Instant::now(),
+            solver: None,
+            job_id: String::new(),
+            join_flow_open: false,
+            deferred_challenge: None,
+            saw_challenge: false,
+            challenge_answers: 0,
+            marker_acks: 0,
             out: Vec::new(),
             messages: Vec::new(),
             pkts_rx: 0,
@@ -233,6 +249,37 @@ impl Client {
     /// datagram.
     pub fn set_logger(&mut self, log: Box<dyn FnMut(String)>) {
         self.log = Some(log);
+    }
+
+    /// Install the 0x9B solver: message + JobId -> answer. Without one
+    /// the client keeps running when challenged — no answer is sent, the
+    /// join simply stays gated (a wrong answer gets the session kicked,
+    /// a missing one does not).
+    pub fn set_solver(&mut self, solver: Box<dyn Fn(&[u8], &str) -> Option<u32>>, job_id: &str) {
+        self.solver = Some(solver);
+        self.job_id = job_id.to_string();
+    }
+
+    /// Leave ordering index `n` unused, the way the native's stream does
+    /// when a join-burst message is suppressed (its 0x92 and 0x8f slots).
+    pub fn reserve_ordering(&mut self) {
+        self.ord_idx += 1;
+    }
+
+    /// Mark the join burst open: a challenge that lands now is held until
+    /// [`end_join_flow`](Self::end_join_flow), so its ordered answer
+    /// cannot push the burst's later messages past the indexes the
+    /// native leaves them at.
+    pub fn begin_join_flow(&mut self) {
+        self.join_flow_open = true;
+    }
+
+    /// Close the join burst and answer any challenge it deferred.
+    pub fn end_join_flow(&mut self) {
+        self.join_flow_open = false;
+        if let Some(p) = self.deferred_challenge.take() {
+            self.answer_challenge_now(&p);
+        }
     }
 
     fn say(&mut self, line: &str) {
@@ -269,6 +316,21 @@ impl Client {
     /// native sends its join only after that lands.
     pub fn saw_net_settings(&self) -> bool {
         self.saw_net_settings
+    }
+
+    /// True once the RCC sent a challenge (whether or not it was
+    /// answered). The join never waits on this — Team Create servers
+    /// often never send one.
+    pub fn saw_challenge(&self) -> bool {
+        self.saw_challenge
+    }
+
+    pub fn challenge_answers(&self) -> u64 {
+        self.challenge_answers
+    }
+
+    pub fn marker_acks(&self) -> u64 {
+        self.marker_acks
     }
 
     pub fn datagrams_tx(&self) -> u64 {
@@ -629,7 +691,57 @@ impl Client {
             if self.data_ready {
                 self.mirror_keepalive(&m);
             }
+            if challenge::is_challenge(&m.payload) {
+                self.handle_challenge(&m.payload);
+                continue;
+            }
+            if m.payload.len() == 5 && m.id == 0x84 {
+                self.ack_marker(&m.payload);
+                continue;
+            }
             self.messages.push(m.payload);
+        }
+    }
+
+    /// The 0x9B exchange. Answered the moment one lands — unless the
+    /// join burst is mid-flight, in which case the answer waits for its
+    /// end (`begin_join_flow`/`end_join_flow`).
+    fn handle_challenge(&mut self, p: &[u8]) {
+        self.saw_challenge = true;
+        if self.join_flow_open {
+            self.deferred_challenge = Some(p.to_vec());
+            self.say("0x9B challenge during the join burst - answering after it");
+            return;
+        }
+        self.answer_challenge_now(p);
+    }
+
+    fn answer_challenge_now(&mut self, p: &[u8]) {
+        let u2 = u32::from_le_bytes([p[5], p[6], p[7], p[8]]);
+        let Some(solver) = self.solver.as_ref() else {
+            self.say("0x9B challenge with no solver - continuing without an answer");
+            return;
+        };
+        let Some(answer) = solver(p, &self.job_id) else {
+            self.say("0x9B solve failed - nothing sent (a wrong answer gets the session kicked)");
+            return;
+        };
+        let resp = challenge::build_response(u2, answer);
+        if self.send_join_message(&resp, true) {
+            self.challenge_answers += 1;
+        }
+    }
+
+    /// The 0x84 snapshot-done marker: acked with `[04][same u32]`,
+    /// ordered. The RCC's marker processing gates join progress on this
+    /// ack — without it the server keeps our Player out of the
+    /// replicated world.
+    fn ack_marker(&mut self, p: &[u8]) {
+        let mut ack = [0u8; 5];
+        ack[0] = 0x04;
+        ack[1..5].copy_from_slice(&p[1..5]);
+        if self.send_join_message(&ack, true) {
+            self.marker_acks += 1;
         }
     }
 
@@ -1033,3 +1145,89 @@ mod tests {
         assert_eq!(max_message_number(&two), 9);
     }
 }
+
+    #[test]
+    fn challenges_are_answered_but_never_waited_for() {
+        let mut client = Client::new(config());
+        let mut server = Server::new(client.public());
+        handshake(&mut client, &mut server);
+        client.set_solver(Box::new(|_p, _job| Some(0x0BAD_F00D)), "job-1");
+
+        // The server's form: 13-byte header promising an 8-byte blob.
+        let mut ch = vec![0x9Bu8, 1, 0, 0, 0, 2, 0, 0, 0, 8, 0, 0, 0];
+        ch.extend([0xAB; 8]);
+        let d = frames::reliable(0, 0, true, 0, &ch).unwrap();
+        client.on_packet(&server.data(&d));
+
+        // Answered at once, and the challenge is not handed to the app.
+        assert!(client.saw_challenge());
+        assert!(client.take_messages().is_empty());
+        let sends = client.take_sends();
+        assert_eq!(sends.len(), 2); // the ACK, then the answer
+        let ans = server.open(&sends[1]).expect("answer opens");
+        assert_eq!(ans[0], 0x81);
+        assert_eq!(ans[4], 0x60); // reliable ordered
+        assert_eq!(ans[14..19], [0x9B, 2, 0, 0, 0]); // [9b][u2]
+        assert_eq!(ans[19..23], [0x0D, 0xF0, 0xAD, 0x0B]); // answer LE
+        assert_eq!(client.challenge_answers(), 1);
+
+        // Mid-burst: held, then answered when the burst closes.
+        let mut ch2 = ch.clone();
+        ch2[5] = 3; // a different u2
+        let d = frames::reliable(1, 1, true, 1, &ch2).unwrap();
+        client.begin_join_flow();
+        client.on_packet(&server.data(&d));
+        assert_eq!(client.challenge_answers(), 1);
+        client.end_join_flow();
+        assert_eq!(client.challenge_answers(), 2);
+        let sends = client.take_sends();
+        let ans = server.open(&sends[1]).expect("deferred answer opens");
+        assert_eq!(ans[14..19], [0x9B, 3, 0, 0, 0]);
+
+        // An unsolvable challenge: nothing sent, the session continues.
+        let mut ch3 = ch;
+        ch3[5] = 4;
+        client.set_solver(Box::new(|_p, _job| None), "job-1");
+        let d = frames::reliable(2, 2, true, 2, &ch3).unwrap();
+        client.on_packet(&server.data(&d));
+        assert_eq!(client.challenge_answers(), 2);
+        assert!(client.data_ready());
+        // Only the datagram's ACK came back.
+        assert_eq!(client.take_sends().len(), 1);
+    }
+
+    #[test]
+    fn a_client_without_a_solver_just_continues() {
+        let mut client = Client::new(config());
+        let mut server = Server::new(client.public());
+        handshake(&mut client, &mut server);
+
+        let mut ch = vec![0x9Bu8, 1, 0, 0, 0, 2, 0, 0, 0, 8, 0, 0, 0];
+        ch.extend([0xAB; 8]);
+        let d = frames::reliable(0, 0, true, 0, &ch).unwrap();
+        client.on_packet(&server.data(&d));
+
+        assert!(client.saw_challenge());
+        assert!(client.take_messages().is_empty());
+        assert_eq!(client.challenge_answers(), 0);
+        assert_eq!(client.take_sends().len(), 1); // just the ACK
+        assert!(client.data_ready());
+    }
+
+    #[test]
+    fn snapshot_markers_are_acked() {
+        let mut client = Client::new(config());
+        let mut server = Server::new(client.public());
+        handshake(&mut client, &mut server);
+
+        let marker = [0x84u8, 0x01, 0x02, 0x03, 0x04];
+        let d = frames::reliable(0, 0, true, 0, &marker).unwrap();
+        client.on_packet(&server.data(&d));
+
+        assert!(client.take_messages().is_empty());
+        let sends = client.take_sends();
+        assert_eq!(sends.len(), 2);
+        let ack = server.open(&sends[1]).expect("marker ack opens");
+        assert_eq!(ack[14..19], [0x04, 0x01, 0x02, 0x03, 0x04]);
+        assert_eq!(client.marker_acks(), 1);
+    }
