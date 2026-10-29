@@ -749,9 +749,9 @@ impl Client {
     /// MTU pad gets exactly one 0x03 answer — mirroring every pad builds
     /// the echo loop that drowns the join.
     fn mirror_keepalive(&mut self, m: &AppMessage) {
-        let out_id = if m.payload.len() == 9 && matches!(m.id, 0x00 | 0x51..=0x53) {
-            m.id
-        } else if m.payload.len() == 25 && matches!(m.id, 0x03 | 0x54..=0x56) {
+        let ping9 = m.payload.len() == 9 && matches!(m.id, 0x00 | 0x51..=0x53);
+        let ping25 = m.payload.len() == 25 && matches!(m.id, 0x03 | 0x54..=0x56);
+        let out_id = if ping9 || ping25 {
             m.id
         } else if m.payload.len() > 64 && m.id == 0x00 {
             if self.pad_replied {
@@ -922,8 +922,8 @@ mod tests {
             let shared = secret.diffie_hellman(&PublicKey::from(client_pub));
             let mut hasher = Blake2b512::new();
             hasher.update(shared.as_bytes());
-            hasher.update(&client_pub);
-            hasher.update(&server_pub);
+            hasher.update(client_pub);
+            hasher.update(server_pub);
             let digest = hasher.finalize();
             let mut seal = [0u8; 32];
             let mut open = [0u8; 32];
