@@ -12,24 +12,24 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
+[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
+[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
+[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
-[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
-[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
+[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
-[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
-[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
-[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
-[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
+[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
+[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m   Compiling[0m curve25519-dalek v4.1.3
 [1m[92m    Checking[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
@@ -39,77 +39,126 @@
 [1m[92m    Checking[0m ghash v0.5.1
 [1m[92m    Checking[0m ctr v0.9.2
 [1m[92m    Checking[0m aes-gcm v0.10.3
-[1m[92m    Checking[0m blake2 v0.10.6
-[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m x25519-dalek v2.0.1
+[1m[92m    Checking[0m blake2 v0.10.6
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
 [1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
+[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
 [1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
-[1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-pre-linux v0.3.5
+[1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[E0277][0m[1m: the `?` operator can only be used on `Result`s, not `Option`s, in an async function that returns `Result`[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/key_store.rs:42:50
-   [1m[94m|[0m
-[1m[94m40[0m [1m[94m|[0m   ) -> anyhow::Result<Option<(String, Vec<u8>)>> {
-   [1m[94m|[0m [1m[94m ________________________________________________-[0m
-[1m[94m41[0m [1m[94m|[0m [1m[94m|[0m     if rbx_cloud::keyring_disabled() {
-[1m[94m42[0m [1m[94m|[0m [1m[94m|[0m         return Ok(file_read_at(&file_store_path()?, url));
-   [1m[94m|[0m [1m[94m|[0m                                                  [1m[91m^[0m [1m[91muse `.ok_or(...)?` to provide an error compatible with `Result<Option<(String, Vec<u8>)>, Error>`[0m
-[1m[94m...[0m  [1m[94m|[0m
-[1m[94m45[0m [1m[94m|[0m [1m[94m|[0m }
-   [1m[94m|[0m [1m[94m|_-[0m [1m[94mthis function returns a `Result`[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: the full name for the type has been written to '/home/runner/work/rbx-native-android/rbx-native-android/target/debug/deps/rbx_studio-6006f5ff054f3e94.long-type-8443780638677847769.txt'
-   [1m[94m= [0m[1mnote[0m: consider using `--verbose` to print the full type name to the console
+[1m[91merror[E0425][0m[1m: cannot find function `load` in the crate root[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/shell/game/workspace.rs:178:28
+    [1m[94m|[0m
+[1m[94m178[0m [1m[94m|[0m         let place = crate::load(&path, &boot.launch, boot.settings.icon_pack)
+    [1m[94m|[0m                            [1m[91m^^^^[0m [1m[91mnot found in the crate root[0m
+    [1m[94m|[0m
+[1m[92mnote[0m: these functions exist but are inaccessible
+   [1m[94m--> [0mcrates/rbx_studio/src/shell/plugins/wasm.rs:23:1
+    [1m[94m|[0m
+[1m[94m 23[0m [1m[94m|[0m   pub(crate) fn load(folder: &Path) -> Result<Entry, String> {
+    [1m[94m|[0m   [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92m`crate::shell::plugins::wasm::load`: not accessible[0m
+    [1m[94m|[0m
+   [1m[94m::: [0mcrates/rbx_studio/src/shell/game_settings/fetch.rs:17:1
+    [1m[94m|[0m
+[1m[94m 17[0m [1m[94m|[0m   pub(super) fn load(link: &Link) -> Result<Remote, String> {
+    [1m[94m|[0m   [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92m`crate::shell::game_settings::fetch::load`: not accessible[0m
+    [1m[94m|[0m
+   [1m[94m::: [0mcrates/rbx_studio/src/shell/roblox_publish/history/fetch.rs:61:1
+    [1m[94m|[0m
+[1m[94m 61[0m [1m[94m|[0m [1m[92m/[0m pub(super) fn load(
+[1m[94m 62[0m [1m[94m|[0m [1m[92m|[0m     place_id: u64,
+[1m[94m 63[0m [1m[94m|[0m [1m[92m|[0m     cursor: Option<String>,
+[1m[94m 64[0m [1m[94m|[0m [1m[92m|[0m     filter: Option<u64>,
+[1m[94m...[0m   [1m[92m|[0m
+[1m[94m 88[0m [1m[94m|[0m [1m[92m|[0m     })
+[1m[94m 89[0m [1m[94m|[0m [1m[92m|[0m }
+    [1m[94m|[0m [1m[92m|_^[0m [1m[92m`crate::shell::roblox_publish::history::fetch::load`: not accessible[0m
+    [1m[94m|[0m
+   [1m[94m::: [0mcrates/rbx_studio/src/shell/ugc/fitting/file.rs:51:1
+    [1m[94m|[0m
+[1m[94m 51[0m [1m[94m|[0m   fn load(path: &std::path::Path) -> Result<Loaded, String> {
+    [1m[94m|[0m   [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92m`crate::shell::ugc::fitting::file::load`: not accessible[0m
+[1m[96mhelp[0m: consider importing one of these functions
+    [1m[94m|[0m
+[1m[94m 14[0m [92m+ use crate::figma_store::load;[0m
+    [1m[94m|[0m
+[1m[94m 14[0m [92m+ use crate::playtests::store::load;[0m
+    [1m[94m|[0m
+[1m[94m 14[0m [92m+ use crate::script_editor::graph::saved::load;[0m
+    [1m[94m|[0m
+[1m[96mhelp[0m: if you import `load`, refer to it directly
+    [1m[94m|[0m
+[1m[94m178[0m [91m- [0m        let place = [91mcrate::[0mload(&path, &boot.launch, boot.settings.icon_pack)
+[1m[94m178[0m [92m+ [0m        let place = load(&path, &boot.launch, boot.settings.icon_pack)
+    [1m[94m|[0m
 
-[1m[91merror[E0277][0m[1m: the `?` operator can only be used on `Result`s, not `Option`s, in an async function that returns `Result`[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/key_store.rs:54:41
-   [1m[94m|[0m
-[1m[94m52[0m [1m[94m|[0m   ) -> anyhow::Result<()> {
-   [1m[94m|[0m [1m[94m _________________________-[0m
-[1m[94m53[0m [1m[94m|[0m [1m[94m|[0m     if rbx_cloud::keyring_disabled() {
-[1m[94m54[0m [1m[94m|[0m [1m[94m|[0m         file_write_at(&file_store_path()?, url, account, secret);
-   [1m[94m|[0m [1m[94m|[0m                                         [1m[91m^[0m [1m[91muse `.ok_or(...)?` to provide an error compatible with `std::result::Result<(), anyhow::Error>`[0m
-[1m[94m55[0m [1m[94m|[0m [1m[94m|[0m         return Ok(());
-[1m[94m...[0m  [1m[94m|[0m
-[1m[94m58[0m [1m[94m|[0m [1m[94m|[0m         .await
-[1m[94m59[0m [1m[94m|[0m [1m[94m|[0m }
-   [1m[94m|[0m [1m[94m|_-[0m [1m[94mthis function returns a `Result`[0m
+[1m[91merror[E0425][0m[1m: cannot find function `load` in the crate root[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/shell/game/workspace.rs:365:22
+    [1m[94m|[0m
+[1m[94m365[0m [1m[94m|[0m         match crate::load(place_path, &boot.launch, boot.settings.icon_pack) {
+    [1m[94m|[0m                      [1m[91m^^^^[0m [1m[91mnot found in the crate root[0m
+    [1m[94m|[0m
+[1m[92mnote[0m: these functions exist but are inaccessible
+   [1m[94m--> [0mcrates/rbx_studio/src/shell/plugins/wasm.rs:23:1
+    [1m[94m|[0m
+[1m[94m 23[0m [1m[94m|[0m   pub(crate) fn load(folder: &Path) -> Result<Entry, String> {
+    [1m[94m|[0m   [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92m`crate::shell::plugins::wasm::load`: not accessible[0m
+    [1m[94m|[0m
+   [1m[94m::: [0mcrates/rbx_studio/src/shell/game_settings/fetch.rs:17:1
+    [1m[94m|[0m
+[1m[94m 17[0m [1m[94m|[0m   pub(super) fn load(link: &Link) -> Result<Remote, String> {
+    [1m[94m|[0m   [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92m`crate::shell::game_settings::fetch::load`: not accessible[0m
+    [1m[94m|[0m
+   [1m[94m::: [0mcrates/rbx_studio/src/shell/roblox_publish/history/fetch.rs:61:1
+    [1m[94m|[0m
+[1m[94m 61[0m [1m[94m|[0m [1m[92m/[0m pub(super) fn load(
+[1m[94m 62[0m [1m[94m|[0m [1m[92m|[0m     place_id: u64,
+[1m[94m 63[0m [1m[94m|[0m [1m[92m|[0m     cursor: Option<String>,
+[1m[94m 64[0m [1m[94m|[0m [1m[92m|[0m     filter: Option<u64>,
+[1m[94m...[0m   [1m[92m|[0m
+[1m[94m 88[0m [1m[94m|[0m [1m[92m|[0m     })
+[1m[94m 89[0m [1m[94m|[0m [1m[92m|[0m }
+    [1m[94m|[0m [1m[92m|_^[0m [1m[92m`crate::shell::roblox_publish::history::fetch::load`: not accessible[0m
+    [1m[94m|[0m
+   [1m[94m::: [0mcrates/rbx_studio/src/shell/ugc/fitting/file.rs:51:1
+    [1m[94m|[0m
+[1m[94m 51[0m [1m[94m|[0m   fn load(path: &std::path::Path) -> Result<Loaded, String> {
+    [1m[94m|[0m   [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92m`crate::shell::ugc::fitting::file::load`: not accessible[0m
+[1m[96mhelp[0m: consider importing one of these functions
+    [1m[94m|[0m
+[1m[94m 14[0m [92m+ use crate::figma_store::load;[0m
+    [1m[94m|[0m
+[1m[94m 14[0m [92m+ use crate::playtests::store::load;[0m
+    [1m[94m|[0m
+[1m[94m 14[0m [92m+ use crate::script_editor::graph::saved::load;[0m
+    [1m[94m|[0m
+[1m[96mhelp[0m: if you import `load`, refer to it directly
+    [1m[94m|[0m
+[1m[94m365[0m [91m- [0m        match [91mcrate::[0mload(place_path, &boot.launch, boot.settings.icon_pack) {
+[1m[94m365[0m [92m+ [0m        match load(place_path, &boot.launch, boot.settings.icon_pack) {
+    [1m[94m|[0m
 
-[1m[91merror[E0277][0m[1m: the `?` operator can only be used on `Result`s, not `Option`s, in an async function that returns `Result`[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/key_store.rs:63:42
-   [1m[94m|[0m
-[1m[94m61[0m [1m[94m|[0m   pub(crate) async fn delete_credentials(url: &str, cx: &mut AsyncApp) -> anyhow::Result<()> {
-   [1m[94m|[0m [1m[94m ____________________________________________________________________________________________-[0m
-[1m[94m62[0m [1m[94m|[0m [1m[94m|[0m     if rbx_cloud::keyring_disabled() {
-[1m[94m63[0m [1m[94m|[0m [1m[94m|[0m         file_delete_at(&file_store_path()?, url);
-   [1m[94m|[0m [1m[94m|[0m                                          [1m[91m^[0m [1m[91muse `.ok_or(...)?` to provide an error compatible with `std::result::Result<(), anyhow::Error>`[0m
-[1m[94m64[0m [1m[94m|[0m [1m[94m|[0m         return Ok(());
-[1m[94m65[0m [1m[94m|[0m [1m[94m|[0m     }
-[1m[94m66[0m [1m[94m|[0m [1m[94m|[0m     cx.update(|cx| cx.delete_credentials(url)).await
-[1m[94m67[0m [1m[94m|[0m [1m[94m|[0m }
-   [1m[94m|[0m [1m[94m|_-[0m [1m[94mthis function returns a `Result`[0m
+[1m[91merror[E0382][0m[1m: borrow of moved value: `path`[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/open.rs:182:37
+    [1m[94m|[0m
+[1m[94m180[0m [1m[94m|[0m                 .background_spawn(async move { crate::parse_place(&path, &launch) })
+    [1m[94m|[0m                                   [1m[94m----------[0m [1m[94mvalue moved here[0m      [1m[94m----[0m [1m[94mvariable moved due to use in coroutine[0m
+[1m[94m181[0m [1m[94m|[0m                 .await;
+[1m[94m182[0m [1m[94m|[0m             let _ = this.update(cx, |this, cx| {
+    [1m[94m|[0m                                     [1m[91m^^^^^^^^^^[0m [1m[91mvalue borrowed here after move[0m
+[1m[94m...[0m
+[1m[94m211[0m [1m[94m|[0m                             title: format!("Couldn\u{2019}t open {}", file_name(&path)),
+    [1m[94m|[0m                                                                                  [1m[94m----[0m [1m[94mborrow occurs due to use in closure[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: move occurs because `path` has type `std::path::PathBuf`, which does not implement the `Copy` trait
 
-[1m[91merror[E0277][0m[1m: the `?` operator can only be used on `Result`s, not `Option`s, in an async function that returns `Result`[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/key_store.rs:42:50
-   [1m[94m|[0m
-[1m[94m40[0m [1m[94m|[0m   ) -> anyhow::Result<Option<(String, Vec<u8>)>> {
-   [1m[94m|[0m [1m[94m ________________________________________________-[0m
-[1m[94m41[0m [1m[94m|[0m [1m[94m|[0m     if rbx_cloud::keyring_disabled() {
-[1m[94m42[0m [1m[94m|[0m [1m[94m|[0m         return Ok(file_read_at(&file_store_path()?, url));
-   [1m[94m|[0m [1m[94m|[0m                                                  [1m[91m^[0m [1m[91muse `.ok_or(...)?` to provide an error compatible with `Result<Option<(String, Vec<u8>)>, Error>`[0m
-[1m[94m...[0m  [1m[94m|[0m
-[1m[94m45[0m [1m[94m|[0m [1m[94m|[0m }
-   [1m[94m|[0m [1m[94m|_-[0m [1m[94mthis function returns a `Result`[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: the full name for the type has been written to '/home/runner/work/rbx-native-android/rbx-native-android/target/debug/deps/rbx_studio-bb13f0c9660f2321.long-type-11089097170451248933.txt'
-   [1m[94m= [0m[1mnote[0m: consider using `--verbose` to print the full type name to the console
-
-[1mFor more information about this error, try `rustc --explain E0277`.[0m
+[1mSome errors have detailed explanations: E0382, E0425.[0m
+[1mFor more information about an error, try `rustc --explain E0382`.[0m
 [1m[91merror[0m: could not compile `rbx_studio` (lib) due to 3 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
 [1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 3 previous errors
