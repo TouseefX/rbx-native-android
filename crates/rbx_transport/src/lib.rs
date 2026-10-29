@@ -44,6 +44,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod challenge;
 pub mod client;
 pub mod crypto;
 pub mod frames;
