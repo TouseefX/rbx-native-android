@@ -1,0 +1,17 @@
+[package]
+name = "rbx_challenge"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# The Luau VM. mlua vendors and builds upstream Luau itself (luau0-src,
+# pinned by the workspace lock) and exposes Luau's own `luau_load` for
+# bytecode chunks plus the FFlag the production bytecode needs.
+mlua = { version = "0.12", features = ["luau"] }
+# The 0x9B blob's second layer.
+zstd = "0.13"
+# The challenge arrives as a transport message; the parse and xxh32 live
+# there already.
+rbx_transport = { path = "../rbx_transport" }
