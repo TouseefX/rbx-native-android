@@ -727,7 +727,7 @@ impl Client {
             return;
         };
         let resp = challenge::build_response(u2, answer);
-        if self.send_join_message(&resp, true) {
+        if self.send_join_message(&resp, true) > 0 {
             self.challenge_answers += 1;
         }
     }
@@ -740,7 +740,7 @@ impl Client {
         let mut ack = [0u8; 5];
         ack[0] = 0x04;
         ack[1..5].copy_from_slice(&p[1..5]);
-        if self.send_join_message(&ack, true) {
+        if self.send_join_message(&ack, true) > 0 {
             self.marker_acks += 1;
         }
     }
@@ -1144,7 +1144,6 @@ mod tests {
         two.extend(&frames::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
         assert_eq!(max_message_number(&two), 9);
     }
-}
 
     #[test]
     fn challenges_are_answered_but_never_waited_for() {
@@ -1231,3 +1230,4 @@ mod tests {
         assert_eq!(ack[14..19], [0x04, 0x01, 0x02, 0x03, 0x04]);
         assert_eq!(client.marker_acks(), 1);
     }
+}
