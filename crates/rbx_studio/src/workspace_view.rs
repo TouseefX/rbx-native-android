@@ -1311,7 +1311,7 @@ impl Render for WorkspaceView {
             // Two fingers pinching: `PinchEvent`'s delta is the fractional
             // zoom step (0.1 = 10% in), the camera's wheel takes notches,
             // so three notches per full spread matches the wheel's feel.
-            .on_pinch(cx.listener(|view, event: &PinchEvent, _, cx| {
+            .on_pinch(cx.listener(|view, event: &PinchEvent, _, _| {
                 view.note_input();
                 let notches = event.delta * PINCH_ZOOM_NOTCHES;
                 if notches != 0. {
