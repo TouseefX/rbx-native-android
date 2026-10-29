@@ -6695,6 +6695,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rbx_challenge"
+version = "0.1.0"
+dependencies = [
+ "mlua",
+ "rbx_transport",
+ "zstd",
+]
+
+[[package]]
 name = "rbx_cloud"
 version = "0.1.0"
 dependencies = [
