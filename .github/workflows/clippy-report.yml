@@ -1,0 +1,51 @@
+name: Clippy report
+
+# Temporary companion to ci.yml: the desktop jobs fail their clippy step, and
+# the Actions log hosts are unreachable from the agent working on this branch,
+# so this writes the same command's output into the job summary and an issue
+# the API can read. Delete once the lints it names are fixed.
+
+on:
+  push:
+    branches: [arena/a3cda33e-rbx-native-android]
+
+permissions:
+  issues: write
+
+jobs:
+  clippy:
+    name: Clippy (report)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo clippy and cargo test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          cargo clippy --workspace --all-targets -- -D warnings > /tmp/report.log 2>&1
+          clippy_status=$?
+          if [ "$clippy_status" -eq 0 ]; then
+            echo '## cargo test' >> /tmp/report.log
+            cargo test --workspace >> /tmp/report.log 2>&1
+            test_status=$?
+          else
+            test_status=0
+          fi
+          cat /tmp/report.log
+          {
+            echo '```'
+            grep -B 2 -A 12 '^error' /tmp/report.log | head -300
+            echo '```'
+          } > "$GITHUB_STEP_SUMMARY"
+          if [ "$clippy_status" -ne 0 ] || [ "$test_status" -ne 0 ]; then
+            gh issue create \
+              --title "Gate failures on $(echo ${{ github.sha }} | cut -c1-7)" \
+              --body-file /tmp/report.log \
+              --repo "$GITHUB_REPOSITORY" || true
+            exit 1
+          fi
