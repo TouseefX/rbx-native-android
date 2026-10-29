@@ -12,13 +12,11 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
-[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
@@ -26,10 +24,12 @@
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
-[1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
-[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
+[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
+[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m   Compiling[0m curve25519-dalek v4.1.3
 [1m[92m    Checking[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
@@ -43,95 +43,32 @@
 [1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
-[1m[91merror[0m[1m: expected type, found `193`[0m
-  [1m[94m--> [0mcrates/rbx_challenge/src/standardize.rs:21:5
+[1m[91merror[0m[1m: unused variable: `local`[0m
+  [1m[94m--> [0mcrates/rbx_transport/src/join_flow.rs:88:5
    [1m[94m|[0m
-[1m[94m21[0m [1m[94m|[0m     193, 218, 1, 168, 17, 214, 250, 39, 204, 130, 191, 181, 21, 33, 16, 94, 197, 134, 165, 120, 38,
-   [1m[94m|[0m     [1m[91m^^^[0m [1m[91mexpected type[0m
-
-[1m[91merror[E0277][0m[1m: the trait bound `(f64, f64): mlua::FromLua` is not satisfied[0m
-   [1m[94m--> [0mcrates/rbx_challenge/src/sandbox.rs:50:17
-    [1m[94m|[0m
-[1m[94m 50[0m [1m[94m|[0m         methods.add_method_mut("NextNumber", |_, r, args: Option<(f64, f64)>| {
-    [1m[94m|[0m                 [1m[91m^^^^^^^^^^^^^^[0m [1m[91mthe trait `mlua::FromLua` is not implemented for `(f64, f64)`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: the following other types implement trait `mlua::FromLua`:
-              [T; N]
-              bool
-              char
-              f32
-              f64
-              i128
-              i16
-              i32
-            and 39 others
-    [1m[94m= [0m[1mnote[0m: required for `std::option::Option<(f64, f64)>` to implement `mlua::FromLua`
-    [1m[94m= [0m[1mnote[0m: required for `std::option::Option<(f64, f64)>` to implement `mlua::FromLuaMulti`
-[1m[92mnote[0m: required by a bound in `mlua::UserDataMethods::add_method_mut`
-   [1m[94m--> [0m/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mlua-0.12.1/src/userdata.rs:321:12
-    [1m[94m|[0m
-[1m[94m318[0m [1m[94m|[0m     fn add_method_mut<M, A, R>(&mut self, name: impl Into<String>, method: M)
-    [1m[94m|[0m        [1m[94m--------------[0m [1m[94mrequired by a bound in this associated function[0m
-[1m[94m...[0m
-[1m[94m321[0m [1m[94m|[0m         A: FromLuaMulti,
-    [1m[94m|[0m            [1m[92m^^^^^^^^^^^^[0m [1m[92mrequired by this bound in `UserDataMethods::add_method_mut`[0m
-
-[1m[91merror[E0277][0m[1m: the trait bound `u32: std::convert::From<i32>` is not satisfied[0m
-  [1m[94m--> [0mcrates/rbx_challenge/src/sandbox.rs:99:29
+[1m[94m88[0m [1m[94m|[0m     local: ([u8; 4], u16),
+   [1m[94m|[0m     [1m[91m^^^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_local`[0m
    [1m[94m|[0m
-[1m[94m99[0m [1m[94m|[0m                 + u64::from(u32::from(a3))
-   [1m[94m|[0m                             [1m[91m^^^[0m [1m[91mthe trait `std::convert::From<i32>` is not implemented for `u32`[0m
+   [1m[94m= [0m[1mnote[0m: `-D unused-variables` implied by `-D warnings`
+   [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_variables)]`
+
+[1m[91merror[0m[1m: this function has too many arguments (9/7)[0m
+  [1m[94m--> [0mcrates/rbx_transport/src/join_flow.rs:86:1
    [1m[94m|[0m
-   [1m[94m= [0m[1mhelp[0m: `u32` implements trait `std::convert::From<T>`:
-             std::convert::From<bool>
-             std::convert::From<char>
-             std::convert::From<std::ascii::Char>
-             std::convert::From<std::net::Ipv4Addr>
-             std::convert::From<u16>
-             std::convert::From<u8>
+[1m[94m86[0m [1m[94m|[0m [1m[91m/[0m pub fn send_join_flow(
+[1m[94m87[0m [1m[94m|[0m [1m[91m|[0m     client: &mut Client,
+[1m[94m88[0m [1m[94m|[0m [1m[91m|[0m     local: ([u8; 4], u16),
+[1m[94m89[0m [1m[94m|[0m [1m[91m|[0m     js: &Value,
+[1m[94m...[0m  [1m[91m|[0m
+[1m[94m95[0m [1m[94m|[0m [1m[91m|[0m     rng32: u32,
+[1m[94m96[0m [1m[94m|[0m [1m[91m|[0m ) -> Vec<Step> {
+   [1m[94m|[0m [1m[91m|______________^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#too_many_arguments
+   [1m[94m= [0m[1mnote[0m: `-D clippy::too-many-arguments` implied by `-D warnings`
+   [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
 
-[1m[91merror[E0277][0m[1m: the trait bound `u32: std::convert::From<i32>` is not satisfied[0m
-   [1m[94m--> [0mcrates/rbx_challenge/src/sandbox.rs:106:9
-    [1m[94m|[0m
-[1m[94m106[0m [1m[94m|[0m         u32::from(a3).wrapping_add(((u64::from(v5) * (v3 + 1)) >> 32) as u32) as i32
-    [1m[94m|[0m         [1m[91m^^^[0m [1m[91mthe trait `std::convert::From<i32>` is not implemented for `u32`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: `u32` implements trait `std::convert::From<T>`:
-              std::convert::From<bool>
-              std::convert::From<char>
-              std::convert::From<std::ascii::Char>
-              std::convert::From<std::net::Ipv4Addr>
-              std::convert::From<u16>
-              std::convert::From<u8>
-
-[1m[91merror[E0061][0m[1m: this function takes 3 arguments but 4 arguments were supplied[0m
-   [1m[94m--> [0mcrates/rbx_challenge/src/sandbox.rs:221:9
-    [1m[94m|[0m
-[1m[94m221[0m [1m[94m|[0m         ffi::lua_pushcclosure(st, Some(newproxy_raw), c"newproxy".as_ptr(), 0);
-    [1m[94m|[0m         [1m[91m^^^^^^^^^^^^^^^^^^^^^[0m                         [1m[94m--------------------[0m [1m[94munexpected argument #3 of type `*const i8`[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: expected fn pointer, found `Option<_>`
-   [1m[94m--> [0mcrates/rbx_challenge/src/sandbox.rs:221:35
-    [1m[94m|[0m
-[1m[94m221[0m [1m[94m|[0m         ffi::lua_pushcclosure(st, Some(newproxy_raw), c"newproxy".as_ptr(), 0);
-    [1m[94m|[0m                                   [1m[92m^^^^^^^^^^^^^^^^^^[0m
-    [1m[94m= [0m[1mnote[0m: expected fn pointer `[1m[35munsafe extern "C-unwind" fn(*mut mlua::lua_State) -> i32[0m`
-                     found enum `[1m[35mstd::option::Option<unsafe extern "C" fn(*mut mlua::lua_State) -> i32 {sandbox::newproxy_raw}>[0m`
-[1m[92mnote[0m: function defined here
-   [1m[94m--> [0m/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mlua-sys-0.12.0/src/luau/lua.rs:483:15
-    [1m[94m|[0m
-[1m[94m483[0m [1m[94m|[0m pub unsafe fn lua_pushcclosure(L: *mut lua_State, f: lua_CFunction, nup: c_int) {
-    [1m[94m|[0m               [1m[92m^^^^^^^^^^^^^^^^[0m
-[1m[96mhelp[0m: remove the extra argument
-    [1m[94m|[0m
-[1m[94m221[0m [91m- [0m        ffi::lua_pushcclosure(st, [91mSome(newproxy_raw), c"newproxy".as_ptr()[0m, 0);
-[1m[94m221[0m [92m+ [0m        ffi::lua_pushcclosure(st, [92m/* unsafe extern "C-unwind" fn(*mut lua_State) -> i32 */[0m, 0);
-    [1m[94m|[0m
-
-[1mSome errors have detailed explanations: E0061, E0277.[0m
-[1mFor more information about an error, try `rustc --explain E0061`.[0m
-[1m[91merror[0m: could not compile `rbx_challenge` (lib test) due to 5 previous errors
+[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1m[91merror[0m: could not compile `rbx_challenge` (lib) due to 5 previous errors
+[1m[91merror[0m: could not compile `rbx_transport` (lib test) due to 2 previous errors
 clippy=101 test=0
