@@ -62,7 +62,7 @@ impl UserData for RbxRandom {
             Ok(next_number(r, lo, hi))
         });
         methods.add_method("Clone", |lua, r, ()| {
-            Ok(lua.create_userdata(RbxRandom { state: r.state })?)
+            lua.create_userdata(RbxRandom { state: r.state })
         });
     }
 }
@@ -163,7 +163,7 @@ pub(crate) fn install(lua: &Lua, job: &str) -> Result<(), mlua::Error> {
                     .wrapping_add(K_SEED_ADD),
                 _ => K_SEED_ADD,
             };
-            Ok(lua.create_userdata(RbxRandom { state })?)
+            lua.create_userdata(RbxRandom { state })
         })?,
     )?;
     globals.set("Random", random)?;
