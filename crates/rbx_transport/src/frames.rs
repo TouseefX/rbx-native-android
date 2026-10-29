@@ -192,7 +192,10 @@ mod tests {
         assert_eq!(datagram[0], 0x81);
         assert_eq!(datagram[1..4], [7, 0, 0]); // datagram id, u24 LE
         assert_eq!(datagram[4], 0x60);
-        assert_eq!(datagram[5..7], ((b"\x83a replication body".len() * 8) as u16).to_be_bytes());
+        assert_eq!(
+            datagram[5..7],
+            ((b"\x83a replication body".len() * 8) as u16).to_be_bytes()
+        );
         assert_eq!(datagram[7..10], [3, 0, 0]); // message number
         assert_eq!(datagram[10..13], [2, 0, 0]); // ordering index
         assert_eq!(datagram[13], 0); // channel

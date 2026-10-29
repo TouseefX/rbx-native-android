@@ -28,8 +28,7 @@ use serde_json::{Map, Value};
 
 /// The 0x90 envelope key (native `xmmword_77050B0`).
 pub const KEY_90: [u8; 16] = [
-    0xfe, 0xf9, 0xf0, 0xeb, 0xe2, 0xdd, 0xd4, 0xcf, 0xc6, 0xc1, 0xb8, 0xb3, 0xaa, 0xa5, 0x9c,
-    0x97,
+    0xfe, 0xf9, 0xf0, 0xeb, 0xe2, 0xdd, 0xd4, 0xcf, 0xc6, 0xc1, 0xb8, 0xb3, 0xaa, 0xa5, 0x9c, 0x97,
 ];
 /// The captured 0x90 envelope PRNG state.
 pub const STATE_90: u64 = 0xE7DD_5C9C_5148_F144;
@@ -49,8 +48,7 @@ const ITER_CONST: u32 = 0x5578_B7D7;
 const BAD_F00D: i64 = 0x0BAD_F00D;
 
 /// The 0x8a build constant: 40 hex chars, '!', 32 hex, '.'.
-const CONST_74: &str =
-    "2e427f51c4dab762fe9e3471c6cfa1650841723b!64d6a124222d374da86ce360982320f0.";
+const CONST_74: &str = "2e427f51c4dab762fe9e3471c6cfa1650841723b!64d6a124222d374da86ce360982320f0.";
 
 // --- envelope ---------------------------------------------------------------
 
@@ -89,7 +87,9 @@ pub fn seal(plain: &[u8], key: &[u8; 16], state0: u64) -> Vec<u8> {
     let mut acc = 0u32;
     for b in &out[4..] {
         let v = *b ^ (h >> 8) as u8;
-        h = K_MIX1.wrapping_mul(h.wrapping_add(u32::from(v))).wrapping_add(22719);
+        h = K_MIX1
+            .wrapping_mul(h.wrapping_add(u32::from(v)))
+            .wrapping_add(22719);
         acc = acc.wrapping_add(u32::from(v));
     }
     out[0..4].copy_from_slice(&acc.to_le_bytes());
@@ -113,7 +113,7 @@ pub fn seal(plain: &[u8], key: &[u8; 16], state0: u64) -> Vec<u8> {
 /// Inverse of [`seal`]: `(plaintext, pad)`, or `None` when the body is not
 /// a whole number of blocks or the pad runs past the end.
 pub fn unseal(body: &[u8], key: &[u8; 16]) -> Option<(Vec<u8>, usize)> {
-    if body.is_empty() || body.len() % 16 != 0 {
+    if body.is_empty() || !body.len().is_multiple_of(16) {
         return None;
     }
     let nblk = body.len() / 16;
@@ -194,11 +194,15 @@ pub fn xxh32(data: &[u8], seed: u32) -> u32 {
         while i + 16 <= data.len() {
             for lane in &mut v {
                 let k = u32::from_le_bytes(data[i..i + 4].try_into().unwrap());
-                *lane = lane.wrapping_add(k.wrapping_mul(P2)).rotate_left(13).wrapping_mul(P1);
+                *lane = lane
+                    .wrapping_add(k.wrapping_mul(P2))
+                    .rotate_left(13)
+                    .wrapping_mul(P1);
                 i += 4;
             }
         }
-        h = v[0].rotate_left(1)
+        h = v[0]
+            .rotate_left(1)
             .wrapping_add(v[1].rotate_left(7))
             .wrapping_add(v[2].rotate_left(12))
             .wrapping_add(v[3].rotate_left(18));
@@ -208,11 +212,17 @@ pub fn xxh32(data: &[u8], seed: u32) -> u32 {
     h = h.wrapping_add(data.len() as u32);
     while i + 4 <= data.len() {
         let k = u32::from_le_bytes(data[i..i + 4].try_into().unwrap());
-        h = h.wrapping_add(k.wrapping_mul(P3)).rotate_left(17).wrapping_mul(P4);
+        h = h
+            .wrapping_add(k.wrapping_mul(P3))
+            .rotate_left(17)
+            .wrapping_mul(P4);
         i += 4;
     }
     while i < data.len() {
-        h = h.wrapping_add(u32::from(data[i]).wrapping_mul(P5)).rotate_left(11).wrapping_mul(P1);
+        h = h
+            .wrapping_add(u32::from(data[i]).wrapping_mul(P5))
+            .rotate_left(11)
+            .wrapping_mul(P1);
         i += 1;
     }
     h ^= h >> 15;
@@ -232,7 +242,11 @@ pub fn ticket_hash(ticket: &str) -> u32 {
     // so the negation can happen first and stay unsigned-clean.
     let v8 = 0u32.wrapping_sub(TICKET_CONST.wrapping_mul(s)) as u16;
     let v9 = if v8 & 2 != 0 { 7 } else { 25 };
-    let v12 = if v8 & 4 != 0 { 0u32.wrapping_sub(s) } else { 0u32.wrapping_sub(ITER_CONST) };
+    let v12 = if v8 & 4 != 0 {
+        0u32.wrapping_sub(s)
+    } else {
+        0u32.wrapping_sub(ITER_CONST)
+    };
     let v13 = t.wrapping_add(ITER_CONST).rotate_left(v9).wrapping_add(v12);
     let v14 = if v8 & 8 != 0 { s } else { ITER_CONST };
     let v15 = if v8 & 0x20 != 0 { s } else { ITER_CONST };
@@ -242,14 +256,30 @@ pub fn ticket_hash(ticket: &str) -> u32 {
     let v19 = if v8 & 0x10 != 0 { 13 } else { 19 };
     let v20 = v16 ^ v15.wrapping_sub(v18.rotate_left(v19));
     let v20 = v20.rotate_left(2 * (u32::from(v8 & 0xFF) >> 7) + 15);
-    let v11 = if v8 & 0x100 != 0 { s } else { 0u32.wrapping_sub(s) };
+    let v11 = if v8 & 0x100 != 0 {
+        s
+    } else {
+        0u32.wrapping_sub(s)
+    };
     let v21 = v11.wrapping_add(ITER_CONST);
-    let v22 = if v8 & 0x200 != 0 { v21 } else { v11.wrapping_sub(ITER_CONST) };
+    let v22 = if v8 & 0x200 != 0 {
+        v21
+    } else {
+        v11.wrapping_sub(ITER_CONST)
+    };
     let v23 = v20.wrapping_add(v22);
     let v25 = v23.rotate_left(if v8 & 0x400 != 0 { 23 } else { 9 });
-    let v26 = if v8 & 0x800 != 0 { 0u32.wrapping_sub(v25) } else { v25 };
+    let v26 = if v8 & 0x800 != 0 {
+        0u32.wrapping_sub(v25)
+    } else {
+        v25
+    };
     let v27 = s.wrapping_add(v26);
-    let v28 = if v8 & 0x1000 != 0 { 0u32.wrapping_sub(v27) } else { v27 };
+    let v28 = if v8 & 0x1000 != 0 {
+        0u32.wrapping_sub(v27)
+    } else {
+        v27
+    };
     let v29 = v28.wrapping_add(ITER_CONST);
     v17 ^ v29.rotate_left(if v8 & 0x2000 != 0 { 29 } else { 3 })
 }
@@ -353,7 +383,11 @@ pub fn parse_8a_payload(p: &[u8]) -> Result<Parsed8a, String> {
     r.str().ok_or("0x8a template payload does not parse")?; // ""
     let session_json = r.str().ok_or("0x8a template payload does not parse")?;
     let user_id = ((zz >> 1) ^ 0u64.wrapping_sub(zz & 1)) as u32;
-    Ok(Parsed8a { user_id, ticket, session_json })
+    Ok(Parsed8a {
+        user_id,
+        ticket,
+        session_json,
+    })
 }
 
 struct Reader<'a> {
@@ -415,7 +449,9 @@ fn value_to_string(v: &Value) -> String {
 /// preserving the template's key order and value kinds.
 fn merge_into(dst: &mut Map<String, Value>, src: &Value) {
     for (k, dv) in dst.iter_mut() {
-        let Some(sv) = src.get(k.as_str()) else { continue };
+        let Some(sv) = src.get(k.as_str()) else {
+            continue;
+        };
         match dv {
             Value::Object(inner) => {
                 if sv.is_object() {
@@ -495,8 +531,8 @@ pub fn build_90(
             doc.insert(key.into(), Value::String(value_to_string(sv)));
         }
     }
-    match reply {
-        Value::Object(_) => match reply.get("joinTicket") {
+    if let Value::Object(_) = reply {
+        match reply.get("joinTicket") {
             Some(jt) if jt.is_object() => {
                 let mut inner = Map::new();
                 inner.insert(
@@ -512,8 +548,7 @@ pub fn build_90(
                 doc.insert("__joinTicket".into(), Value::String(dumped));
             }
             _ => return Err("join reply has no joinTicket (0x90 keeps the template's)".into()),
-        },
-        _ => {}
+        }
     }
     let json = serde_json::to_string(&Value::Object(doc)).map_err(|e| e.to_string())?;
     let mut body = Vec::with_capacity(leb_off + json.len() + 25);
@@ -556,7 +591,11 @@ pub fn build_8a(
     let zz = (u64::from(user_id) << 1) ^ ((user_id as i64) >> 63) as u64;
     let v31 = ticket_hash(client_ticket);
     let v8 = 0u32.wrapping_sub(TICKET_CONST.wrapping_mul(HASH_CONST)) as u16;
-    let v36 = if v8 & 0x8000 != 0 { i64::from(v31) } else { -i64::from(v31) };
+    let v36 = if v8 & 0x8000 != 0 {
+        i64::from(v31)
+    } else {
+        -i64::from(v31)
+    };
 
     let mut body = Vec::with_capacity(client_ticket.len() + session_json.len() + 64);
     put_leb(&mut body, zz);
@@ -611,7 +650,10 @@ mod tests {
             let plain: Vec<u8> = (0..len).map(|i| (i * 31 % 251) as u8).collect();
             let sealed = seal(&plain, &KEY_90, STATE_90);
             assert_eq!(sealed.len() % 16, 0, "len {len} must seal to whole blocks");
-            assert_eq!(sealed.len(), plain.len() + usize::from(sealed[5] & 0x0F) + 6);
+            assert_eq!(
+                sealed.len(),
+                plain.len() + usize::from(sealed[5] & 0x0F) + 6
+            );
             let (back, pad) = unseal(&sealed, &KEY_90).expect("unseal must invert seal");
             assert_eq!(back, plain, "roundtrip failed for len {len}");
             assert_eq!(pad, (!(len + 5)) & 0x0F);
@@ -685,7 +727,10 @@ mod tests {
     #[test]
     fn build_8f_is_the_id_and_one_string() {
         assert_eq!(build_8f(""), vec![0x8F, 0x00]);
-        assert_eq!(build_8f("srv-1"), vec![0x8F, 0x05, b's', b'r', b'v', b'-', b'1']);
+        assert_eq!(
+            build_8f("srv-1"),
+            vec![0x8F, 0x05, b's', b'r', b'v', b'-', b'1']
+        );
     }
 
     #[test]
@@ -730,10 +775,8 @@ mod tests {
     #[test]
     fn build_90_splices_the_session_values() {
         let tmpl = template_90(r#"{"UserId":123,"Name":"Template"}"#);
-        let js: Value = serde_json::from_str(
-            r#"{"UserId":456,"RandomSeed1":"seed%20one"}"#,
-        )
-        .unwrap();
+        let js: Value =
+            serde_json::from_str(r#"{"UserId":456,"RandomSeed1":"seed%20one"}"#).unwrap();
         let reply: Value = serde_json::from_str(
             r#"{"joinTicket":{"SerializedClientFields":"a","EncryptedServerFields":"b"}}"#,
         )
@@ -797,15 +840,17 @@ mod tests {
 
     #[test]
     fn build_8a_roundtrips_through_the_parser() {
-        let js: Value = serde_json::from_str(
-            r#"{"SessionId":"{\"SessionId\":\"uuid-1\",\"GameId\":321}"}"#,
-        )
-        .unwrap();
+        let js: Value =
+            serde_json::from_str(r#"{"SessionId":"{\"SessionId\":\"uuid-1\",\"GameId\":321}"}"#)
+                .unwrap();
         let body = build_8a(1234, "TICKET", &[], &js).expect("builds");
         let parsed = parse_8a_payload(&body).expect("parses");
         assert_eq!(parsed.user_id, 1234);
         assert_eq!(parsed.ticket, "TICKET");
-        assert_eq!(parsed.session_json, r#"{"SessionId":"uuid-1","GameId":321}"#);
+        assert_eq!(
+            parsed.session_json,
+            r#"{"SessionId":"uuid-1","GameId":321}"#
+        );
         assert_eq!(&body[body.len() - 4..], &0xC001_CAFEu32.to_le_bytes());
     }
 

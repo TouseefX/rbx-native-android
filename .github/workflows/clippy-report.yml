@@ -59,6 +59,11 @@ jobs:
         run: |
           git config user.name "clippy-report bot"
           git config user.email "actions@users.noreply.github.com"
+          # The clippy/test runs can leave tracked files modified in the
+          # checkout, which makes the pull --rebase below abort with
+          # "unstaged changes" and strands the report on the runner. Nothing
+          # they touch belongs in the report, so restore it first.
+          git checkout -- . || true
           mkdir -p ci-reports
           cp /tmp/report.log "ci-reports/report.log"
           git add ci-reports
