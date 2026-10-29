@@ -26,10 +26,7 @@ pub enum Step {
     /// The step did not send, and why. A skipped `0x90` ends the burst
     /// (the join body is the one message the RCC cannot do without);
     /// the others only leave their slot empty.
-    Skipped {
-        what: &'static str,
-        why: String,
-    },
+    Skipped { what: &'static str, why: String },
 }
 
 impl Step {
@@ -76,24 +73,31 @@ impl Default for FlowOptions {
     }
 }
 
+/// The flow's per-session inputs: everything the burst builds from.
+pub struct FlowInputs<'a> {
+    /// Our socket address, for the `0x13`.
+    pub local: ([u8; 4], u16),
+    /// The join-game script (`joinScript` out of the join-game reply).
+    pub js: &'a Value,
+    /// The join-game HTTP reply, whose fields the 0x90 builder reads.
+    pub reply: &'a Value,
+    /// The place id; 0 = take `js`'s `PlaceId`.
+    pub place: u32,
+    /// The captured 0x90 template (>=64B, or the join is held).
+    pub tmpl_90: &'a [u8],
+    /// The captured 0x8a session template.
+    pub tmpl_8a: &'a [u8],
+    /// The caller's random draw for the `0x92` (the reference mixes
+    /// the clock).
+    pub rng32: u32,
+}
+
 /// Run the whole join burst — `0x13` through the last slot — with the
 /// challenge bracketed so its answer can never land inside the run.
-/// The handshake must be done (`data_ready`); `local` is our socket
-/// address for the `0x13`, `js`/`reply` the join-game document pair,
-/// `place` the place id (0 = take `js`'s `PlaceId`), `tmpl_90`/`tmpl_8a`
-/// the captured templates, and `rng32` the caller's random draw for
-/// the `0x92`.
-pub fn send_join_flow(
-    client: &mut Client,
-    local: ([u8; 4], u16),
-    js: &Value,
-    reply: &Value,
-    place: u32,
-    tmpl_90: &[u8],
-    tmpl_8a: &[u8],
-    opts: &FlowOptions,
-    rng32: u32,
-) -> Vec<Step> {
+/// The handshake must be done (`data_ready`); the burst sends
+/// `0x13`@0, `0x90`@1, `0x92`@2, `0x8a`@3, `0x8f`@4 and leaves index
+/// 5 for the challenge answer.
+pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptions) -> Vec<Step> {
     let mut steps = Vec::new();
     if !client.data_ready() {
         steps.push(Step::Skipped {
@@ -103,6 +107,22 @@ pub fn send_join_flow(
         return steps;
     }
     client.begin_join_flow();
+
+    // The 0x13: datagram 1 straight after the 0x09, ordered index 0 —
+    // the one receipt the whole sequence hangs from.
+    if client.new_incoming(inputs.local) {
+        steps.push(Step::Sent {
+            what: "0x13",
+            datagrams: 1,
+        });
+    } else {
+        steps.push(Step::Skipped {
+            what: "0x13",
+            why: "did not send".to_string(),
+        });
+        client.end_join_flow();
+        return steps;
+    }
 
     // The optional MTU pad: sequenced, not ordered, so it takes no
     // ordering slot.
@@ -147,6 +167,7 @@ pub fn send_join_flow(
     // The 0x90 join body: built from the template, sealed with the
     // build-constant envelope key. A missing template (<64B) holds the
     // whole join — a server that never sees a join never challenges.
+    let tmpl_90 = inputs.tmpl_90;
     if tmpl_90.len() < 64 {
         steps.push(Step::Skipped {
             what: "0x90",
@@ -155,7 +176,7 @@ pub fn send_join_flow(
         client.end_join_flow();
         return steps;
     }
-    let (body90, _json) = match join_msg::build_90(tmpl_90, js, reply) {
+    let (body90, _json) = match join_msg::build_90(tmpl_90, inputs.js, inputs.reply) {
         Ok(v) => v,
         Err(e) => {
             steps.push(Step::Skipped {
@@ -172,7 +193,7 @@ pub fn send_join_flow(
     // The 0x92's v9 is a build constant living in the template's tail.
     let v9 = join_msg::v9_from_90_template(tmpl_90).unwrap_or(0);
     if opts.join_extra {
-        let msg = join_msg::build_92(rng32, v9);
+        let msg = join_msg::build_92(inputs.rng32, v9);
         steps.push(sent(client, "0x92", &msg));
     } else {
         // The native leaves ordering index 2 empty and puts its ticket
@@ -186,20 +207,24 @@ pub fn send_join_flow(
 
     // The 0x8a ticket: skipped without a UserId/ClientTicket — the
     // slot is not reserved, so whatever follows lands one index early.
-    let uid = js.get("UserId").and_then(Value::as_u64).unwrap_or(0) as u32;
-    let ticket = js.get("ClientTicket").and_then(Value::as_str).unwrap_or("");
+    let uid = inputs.js.get("UserId").and_then(Value::as_u64).unwrap_or(0) as u32;
+    let ticket = inputs
+        .js
+        .get("ClientTicket")
+        .and_then(Value::as_str)
+        .unwrap_or("");
     if uid == 0 || ticket.is_empty() {
         steps.push(Step::Skipped {
             what: "0x8a",
             why: "join script has no UserId/ClientTicket".to_string(),
         });
     } else {
-        match join_msg::build_8a(uid, ticket, tmpl_8a, js) {
+        match join_msg::build_8a(uid, ticket, inputs.tmpl_8a, inputs.js) {
             Ok(body8a) => {
-                let place_id = if place != 0 {
-                    place
+                let place_id = if inputs.place != 0 {
+                    inputs.place
                 } else {
-                    js.get("PlaceId").and_then(Value::as_u64).unwrap_or(0) as u32
+                    inputs.js.get("PlaceId").and_then(Value::as_u64).unwrap_or(0) as u32
                 };
                 let t2 = join_msg::tail2_from_90_template(tmpl_90).unwrap_or(0);
                 // The key is the string's first 16 bytes, verbatim —
@@ -295,22 +320,29 @@ mod tests {
         json!({"UserId": 5, "ClientTicket": "ticket-part-1|ticket-part-2", "PlaceId": 1818})
     }
 
+    fn inputs<'a>(js: &'a Value, tmpl_90: &'a [u8], reply: &'a Value) -> FlowInputs<'a> {
+        FlowInputs {
+            local: ([192, 168, 1, 50], 50000),
+            js,
+            reply,
+            place: 1818,
+            tmpl_90,
+            tmpl_8a: b"",
+            rng32: 0x1234_5678,
+        }
+    }
+
     /// Run the flow against a fresh mock server and hand back the
     /// steps plus everything the server delivered, as (id, ordering).
     fn run(js: &Value, tmpl_90: &[u8], opts: &FlowOptions) -> (Vec<Step>, Vec<(u8, u32)>) {
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
+        let reply = Value::Null;
         let steps = send_join_flow(
             &mut client,
-            ([192, 168, 1, 50], 50000),
-            js,
-            &Value::Null,
-            1818,
-            tmpl_90,
-            b"",
+            &inputs(js, tmpl_90, &reply),
             opts,
-            0x1234_5678,
         );
         let mut delivered = Vec::new();
         for wire in client.take_sends() {
@@ -343,16 +375,12 @@ mod tests {
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
+        let js = join_script();
+        let reply = Value::Null;
         let steps = send_join_flow(
             &mut client,
-            ([192, 168, 1, 50], 50000),
-            &join_script(),
-            &Value::Null,
-            1818,
-            &template_90(),
-            b"",
+            &inputs(&js, &template_90(), &reply),
             &FlowOptions::default(),
-            0x1234_5678,
         );
         assert!(steps.iter().all(Step::sent));
         let mut got = Vec::new();
@@ -366,12 +394,15 @@ mod tests {
     }
 
     #[test]
-    fn a_missing_90_template_holds_the_whole_join() {
+    fn a_missing_90_template_holds_the_rest_of_the_join() {
         let (steps, delivered) = run(&join_script(), b"", &FlowOptions::default());
-        assert_eq!(steps.len(), 1);
-        assert_eq!(steps[0].what(), "0x90");
-        assert!(!steps[0].sent());
-        assert!(delivered.is_empty(), "nothing may leave: {delivered:?}");
+        assert_eq!(steps.len(), 2);
+        assert_eq!(steps[0].what(), "0x13");
+        assert!(steps[0].sent());
+        assert_eq!(steps[1].what(), "0x90");
+        assert!(!steps[1].sent());
+        // The 0x13 went out before the hold; nothing after it may.
+        assert_eq!(delivered, vec![(0x13, 0)]);
     }
 
     #[test]
@@ -383,16 +414,12 @@ mod tests {
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
+        let js = join_script();
+        let reply = Value::Null;
         let steps = send_join_flow(
             &mut client,
-            ([192, 168, 1, 50], 50000),
-            &join_script(),
-            &Value::Null,
-            1818,
-            &template_90(),
-            b"",
+            &inputs(&js, &template_90(), &reply),
             &opts,
-            0x1234_5678,
         );
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
@@ -426,7 +453,10 @@ mod tests {
         assert!(got.is_empty(), "the answer waits behind empty slot 4");
         let filler = frames::reliable(101, 501, true, 4, b"\x00filler4").unwrap();
         got.extend(server.rx.on_datagram(&filler));
-        let m = got.iter().find(|m| m.id == 0x9B).expect("the answer arrives");
+        let m = got
+            .iter()
+            .find(|m| m.id == 0x9B)
+            .expect("the answer arrives");
         assert_eq!(m.ordering, 5);
     }
 
@@ -453,8 +483,8 @@ mod tests {
             ..FlowOptions::default()
         };
         let (steps, delivered) = run(&join_script(), &template_90(), &opts);
-        assert_eq!(steps[0].what(), "0xA7");
-        assert!(!steps[0].sent());
+        assert_eq!(steps[1].what(), "0xA7");
+        assert!(!steps[1].sent());
         assert_eq!(
             delivered,
             vec![(0x13, 0), (0x90, 1), (0x92, 2), (0x8a, 3), (0x8f, 4)]
@@ -477,16 +507,12 @@ mod tests {
     #[test]
     fn nothing_leaves_before_the_data_layer_is_up() {
         let mut client = Client::new(config());
+        let js = join_script();
+        let reply = Value::Null;
         let steps = send_join_flow(
             &mut client,
-            ([192, 168, 1, 50], 50000),
-            &join_script(),
-            &Value::Null,
-            1818,
-            &template_90(),
-            b"",
+            &inputs(&js, &template_90(), &reply),
             &FlowOptions::default(),
-            0x1234_5678,
         );
         assert_eq!(steps.len(), 1);
         assert_eq!(steps[0].what(), "join burst");
