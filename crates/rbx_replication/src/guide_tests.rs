@@ -54,7 +54,7 @@ fn put_filler_class(out: &mut Vec<u8>, index: usize, members: u64, events: u64) 
 }
 
 /// The synthetic schema, laid out per guide §4.3.
-fn guide_schema_bytes() -> Vec<u8> {
+pub(crate) fn guide_schema_bytes() -> Vec<u8> {
     let mut out = Vec::new();
     put_varint(&mut out, 3);
     out.extend_from_slice(&15u64.to_le_bytes());
@@ -141,7 +141,7 @@ fn guide_schema_bytes() -> Vec<u8> {
     out
 }
 
-fn guide_schema() -> Schema {
+pub(crate) fn guide_schema() -> Schema {
     let bytes = guide_schema_bytes();
     Schema::parse_prefix(&bytes).expect("the synthetic guide schema parses")
 }
@@ -188,20 +188,20 @@ fn schema_prefix_parses_with_the_guides_indices() {
 
 /// Guide §7.2 and §7.3: the `Room` folder and the `Block` part under it,
 /// verbatim.
-const ROOM_RECORD: &[u8] = &[
+pub(crate) const ROOM_RECORD: &[u8] = &[
     0x01, 0x64, 0x00, 0x00, 0x00, 0xe0, 0x00, 0x02, 0x01, 0x06, 0x04, b'R', b'o', b'o', b'm',
     0xff, 0x00,
 ];
-const BLOCK_RECORD: &[u8] = &[
+pub(crate) const BLOCK_RECORD: &[u8] = &[
     0x01, 0x65, 0x00, 0x00, 0x00, 0x66, 0x01, 0x02, 0x01, 0x3b, 0x05, b'B', b'l', b'o', b'c',
     b'k', 0xff, 0x01, 0x64, 0x00, 0x00, 0x00,
 ];
 
-fn room_ref() -> Ref {
+pub(crate) fn room_ref() -> Ref {
     Ref { lo: 1, id: 100 }
 }
 
-fn block_ref() -> Ref {
+pub(crate) fn block_ref() -> Ref {
     Ref { lo: 1, id: 101 }
 }
 

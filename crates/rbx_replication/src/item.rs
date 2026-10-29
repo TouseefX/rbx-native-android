@@ -2,6 +2,7 @@
 //! incremental changes, each walked until an unknown item must stop it.
 
 use crate::cursor::{Cursor, ParseError, ParseResult, Ref};
+use crate::message::{parse_batch, Batch};
 use crate::schema::Schema;
 use crate::value::Value;
 
@@ -24,6 +25,11 @@ pub enum Item {
     Reference(Ref),
     /// `0x23`: a `u32`-shaped clock/tick item, meaning not established.
     Clock(u32),
+    /// `0x16` as the message's first item: the whole rest of the body is
+    /// one compressed batch, the same special case the reference runtime
+    /// makes (guide §8.1). A batch anywhere else cannot be walked past —
+    /// its trailer's extent is unresolved — and fails closed.
+    Batch(Batch),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,15 +74,31 @@ pub fn parse_message(data: &[u8], schema: &Schema) -> ParseResult<Vec<Item>> {
         if kind == 0x00 {
             break;
         }
+        // A batch in the message head owns the whole rest of the body,
+        // trailer and all; the chain walk cannot resume past it (guide
+        // §8.1's special case).
+        if kind == 0x16 && items.is_empty() {
+            let body = &data[c.pos() - 1..];
+            items.push(Item::Batch(parse_batch(body, schema)?));
+            break;
+        }
+        // Anywhere else a batch cannot be walked past: its trailer's extent
+        // is unresolved, so guessing where the next item starts is exactly
+        // what the guide forbids.
+        if kind == 0x16 {
+            return Err(ParseError::Unsupported(
+                "0x16 batch item outside the message head".into(),
+            ));
+        }
         items.push(match kind {
             0x02 => Item::Spawn(parse_spawn(&mut c, schema)?),
             0x03 => Item::PropertyUpdate(parse_update(&mut c, schema)?),
             0x07 => Item::Event(parse_event(&mut c, schema)?),
             0x01 => Item::Reference(c.instance()?),
             0x23 => Item::Clock(c.u32_le()?),
-            // The compressed batch item, and every item this decoder has no
-            // established shape for: stop, keeping the offset, rather than
-            // guessing where the next item starts.
+            // Every item this decoder has no established shape for: stop,
+            // keeping the offset, rather than guessing where the next item
+            // starts.
             other => {
                 return Err(ParseError::Unsupported(format!(
                     "chain item {other:#04x}"

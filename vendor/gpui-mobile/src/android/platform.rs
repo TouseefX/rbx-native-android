@@ -138,35 +138,141 @@ impl AndroidClipboard {
     }
 }
 
-// ── stub: credential store ────────────────────────────────────────────────────
+// ── credential store ──────────────────────────────────────────────────────────
 
-/// Android credential store backed by the Android Keystore system.
+/// The app's credentials at rest on Android.
 ///
-/// Stubbed with an in-memory map; replace with a real JNI implementation.
+/// rbx-native addition: this replaces the crate's in-memory map, which
+/// forgot every entry at process exit — the editor's saved Open Cloud key
+/// was gone on the next launch. There is no OS keyring service for Android
+/// apps; the entries go to one file under the app's private config
+/// directory (`XDG_CONFIG_HOME`, which the host points at the Activity's
+/// files dir), inside the app sandbox and full-disk encryption, readable
+/// by this app alone. Sealing them with the Android Keystore is the
+/// natural hardening step. The format is a concatenation of
+/// length-prefixed `(service, username, secret)` entries, read and
+/// rewritten whole — every access already happens under the platform
+/// state's lock.
 #[derive(Default)]
-pub struct AndroidCredentialStore {
-    store: std::collections::HashMap<(String, String), Vec<u8>>,
-}
+pub struct AndroidCredentialStore;
+
+/// How many entries the file may carry, and how long one secret may be:
+/// a corrupted or hostile file must not translate into unbounded work.
+const MAX_CREDENTIALS: usize = 256;
+const MAX_SECRET_LEN: usize = 64 * 1024;
 
 impl AndroidCredentialStore {
-    pub fn write(&mut self, service: &str, username: &str, password: &[u8]) -> Result<()> {
-        self.store.insert(
-            (service.to_string(), username.to_string()),
-            password.to_vec(),
-        );
+    fn entries_path() -> Result<PathBuf> {
+        let config = std::env::var("XDG_CONFIG_HOME")
+            .map_err(|_| anyhow::anyhow!("XDG_CONFIG_HOME is not set: no config directory"))?;
+        let dir = PathBuf::from(config).join("gpui-mobile");
+        std::fs::create_dir_all(&dir)?;
+        Ok(dir.join("credentials.bin"))
+    }
+
+    fn load(&self) -> Result<Vec<(String, String, Vec<u8>)>> {
+        let bytes = match std::fs::read(Self::entries_path()?) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Vec::new());
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let mut entries = Vec::new();
+        let mut rest = &bytes[..];
+        while !rest.is_empty() {
+            let (service, left) = Self::take_field(rest)?;
+            let (username, left) = Self::take_field(left)?;
+            let (secret, left) = Self::take_field(left)?;
+            rest = left;
+            entries.push((
+                Self::text(service, "service")?,
+                Self::text(username, "username")?,
+                secret.to_vec(),
+            ));
+            if entries.len() > MAX_CREDENTIALS {
+                anyhow::bail!("more than {MAX_CREDENTIALS} credential entries");
+            }
+        }
+        Ok(entries)
+    }
+
+    fn save(entries: &[(String, String, Vec<u8>)]) -> Result<()> {
+        let path = Self::entries_path()?;
+        let mut bytes = Vec::new();
+        for (service, username, secret) in entries {
+            Self::put_field(&mut bytes, service.as_bytes());
+            Self::put_field(&mut bytes, username.as_bytes());
+            Self::put_field(&mut bytes, secret);
+        }
+        // Written beside the real file and renamed over it, so a crash
+        // mid-write cannot leave a half-written store.
+        let staging = path.with_extension("tmp");
+        std::fs::write(&staging, &bytes)?;
+        std::fs::rename(&staging, &path)?;
         Ok(())
+    }
+
+    fn take_field(mut rest: &[u8]) -> Result<(&[u8], &[u8])> {
+        if rest.len() < 4 {
+            anyhow::bail!("truncated credential entry header");
+        }
+        let len = u32::from_le_bytes([rest[0], rest[1], rest[2], rest[3]]) as usize;
+        rest = &rest[4..];
+        if rest.len() < len {
+            anyhow::bail!("truncated credential entry body");
+        }
+        Ok((&rest[..len], &rest[len..]))
+    }
+
+    fn put_field(out: &mut Vec<u8>, field: &[u8]) {
+        out.extend_from_slice(
+            &u32::try_from(field.len())
+                .expect("a credential field is far below u32 length")
+                .to_le_bytes(),
+        );
+        out.extend_from_slice(field);
+    }
+
+    fn text(field: &[u8], what: &str) -> Result<String> {
+        String::from_utf8(field.to_vec())
+            .map_err(|_| anyhow::anyhow!("credential {what} is not UTF-8"))
+    }
+
+    pub fn write(&mut self, service: &str, username: &str, password: &[u8]) -> Result<()> {
+        if password.len() > MAX_SECRET_LEN {
+            anyhow::bail!("secret longer than {MAX_SECRET_LEN} bytes");
+        }
+        let mut entries = self.load()?;
+        let slot = entries
+            .iter_mut()
+            .find(|(s, u, _)| s == service && u == username);
+        match slot {
+            Some((_, _, secret)) => *secret = password.to_vec(),
+            None => entries.push((
+                service.to_string(),
+                username.to_string(),
+                password.to_vec(),
+            )),
+        }
+        Self::save(&entries)
     }
 
     pub fn read(&self, service: &str, username: &str) -> Result<Option<Vec<u8>>> {
         Ok(self
-            .store
-            .get(&(service.to_string(), username.to_string()))
-            .cloned())
+            .load()?
+            .into_iter()
+            .find(|(s, u, _)| s == service && u == username)
+            .map(|(_, _, secret)| secret))
     }
 
     pub fn delete(&mut self, service: &str, username: &str) -> Result<()> {
-        self.store
-            .remove(&(service.to_string(), username.to_string()));
+        let mut entries = self.load()?;
+        let before = entries.len();
+        entries.retain(|(s, u, _)| !(s == service && u == username));
+        if entries.len() != before {
+            Self::save(&entries)?;
+        }
         Ok(())
     }
 }

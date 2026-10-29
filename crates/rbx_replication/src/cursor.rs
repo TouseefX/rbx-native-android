@@ -76,6 +76,11 @@ impl<'a> Cursor<'a> {
         self.pos == self.data.len()
     }
 
+    /// The bytes left unconsumed.
+    pub fn rest(&self) -> &'a [u8] {
+        &self.data[self.pos..]
+    }
+
     /// Consume exactly `len` bytes, or stop at the buffer's end.
     pub fn take(&mut self, len: usize) -> ParseResult<&'a [u8]> {
         let end = self

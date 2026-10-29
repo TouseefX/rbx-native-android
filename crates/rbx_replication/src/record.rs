@@ -95,9 +95,11 @@ impl World {
     }
 
     /// Apply one live item: a spawn appends its record, a property update
-    /// replaces (or appends) the named property on its target. Anything
-    /// else — events, references with unknown semantics, batches — is left
-    /// to the caller, per the guide's rule that an unapplied item must be
+    /// replaces (or appends) the named property on its target, and a
+    /// batch's records land in arrival order. A batch's shared strings
+    /// stay on the item for the consumer that will eventually need them;
+    /// events, references with unknown semantics and clocks are left to
+    /// the caller, per the guide's rule that an unapplied item must be
     /// reported, not guessed at.
     pub fn apply(&mut self, item: &Item) -> ParseResult<()> {
         match item {
@@ -130,6 +132,10 @@ impl World {
                         .properties
                         .push((update.property.clone(), update.value.clone())),
                 }
+                Ok(())
+            }
+            Item::Batch(batch) => {
+                self.records.extend(batch.records.iter().cloned());
                 Ok(())
             }
             Item::Event(_) | Item::Reference(_) | Item::Clock(_) => Ok(()),
