@@ -241,19 +241,18 @@ pub fn key_from_field(js: &Value, name: &str) -> Result<[u8; 32], String> {
             }
         }
     } else {
-        cands.push(("raw".to_string(), s));
+        cands.push(("raw".to_string(), s.clone()));
     }
-    for (app, b64) in &cands {
+    for (_, b64) in &cands {
         let raw = b64_decode(b64);
         if raw.len() == 32 {
             return Ok(raw[..32].try_into().unwrap());
         }
     }
-    let which = cands
-        .first()
-        .map(|(app, _)| app.clone())
-        .unwrap_or_else(|| s.chars().take(120).collect());
-    Err(format!("{name} has no 32-byte key: {which}"))
+    // The reference's failure diagnostic is the decoded string's head,
+    // whichever shape it came in.
+    let head: String = s.chars().take(120).collect();
+    Err(format!("{name} has no 32-byte key: {head}"))
 }
 
 #[cfg(test)]
