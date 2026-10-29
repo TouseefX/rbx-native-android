@@ -19,6 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        # The same list as ci.yml's Gate: rbx_studio (GPUI Kit) needs these
+        # for window/input handling on X11, and without them clippy dies in
+        # a C dependency before it ever reaches our code.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-dev libx11-xcb-dev libssl-dev libfontconfig1-dev
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
