@@ -68,11 +68,13 @@ pub(crate) async fn delete_credentials(url: &str, cx: &mut AsyncApp) -> anyhow::
 
 /// Where the file store lives: the editor's config directory, which on
 /// Android is the app's private `getFilesDir()` -- no other app can read
-/// it, and the OS keeps it across restarts and updates. `None` when no
-/// config directory is known at all, in which case the old vanishing
-/// behavior stands.
-fn file_store_path() -> Option<PathBuf> {
-    crate::settings::default_config_dir().map(|dir| dir.join("credentials.json"))
+/// it, and the OS keeps it across restarts and updates. An error when no
+/// config directory is known at all, in which case the caller reports it
+/// and the launch goes on without a stored key.
+fn file_store_path() -> anyhow::Result<PathBuf> {
+    crate::settings::default_config_dir()
+        .map(|dir| dir.join("credentials.json"))
+        .ok_or_else(|| anyhow::anyhow!("no config directory to keep credentials in"))
 }
 
 /// One stored credential: the account name and the secret, base64 so
@@ -399,7 +401,12 @@ mod tests {
 
         assert_eq!(file_read_at(&path, "https://a"), None);
 
-        file_write_at(&path, "https://a", "open-cloud-api-key", b"the-key".to_vec());
+        file_write_at(
+            &path,
+            "https://a",
+            "open-cloud-api-key",
+            b"the-key".to_vec(),
+        );
         assert_eq!(
             file_read_at(&path, "https://a"),
             Some(("open-cloud-api-key".to_string(), b"the-key".to_vec()))
