@@ -95,7 +95,7 @@ pub fn parse_batch(data: &[u8], schema: &Schema) -> ParseResult<Batch> {
     let trailer = c.rest().to_vec();
     let decoded = inflate(frame, decoded_len)?;
     match flags {
-        2 | 3 | 4 => Ok(Batch {
+        2..=4 => Ok(Batch {
             flags,
             records: parse_records(&decoded, schema)?,
             shared_strings: Vec::new(),
