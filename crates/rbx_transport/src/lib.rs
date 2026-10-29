@@ -29,17 +29,21 @@
 //! headers, and the TLV walk), the offline handshake's byte layer —
 //! Req1's padded probe, Reply1's GUID and MTU, Req2's sealed join
 //! material, and Reply2's verified tail with the data peer key
-//! reconstructed from its two halves — and the RakNet data layer:
-//! reliable, unreliable and split-fragment datagrams, the ACK encoder
-//! with its coalescing, the connection-request and new-incoming
-//! messages, and the receive stream that reassembles splits and
-//! delivers ordered messages in order. Not yet ported: the socket and
-//! handshake state machine, and the join flow itself.
+//! reconstructed from its two halves — the RakNet data layer (reliable,
+//! unreliable and split-fragment datagrams, the ACK encoder with its
+//! coalescing, the connection-request and new-incoming messages, and the
+//! receive stream that reassembles splits and delivers ordered messages
+//! in order), and the RakNet-era join messages: the AES-128 envelope the
+//! native seals them in, the 0x90 join body built from a captured
+//! template, the 0x8a ticket submit with its xxh32 hash chain, and the
+//! 0x92/0x8f/0x9b forms. Not yet ported: the socket and handshake state
+//! machine, the join sequencer, and the 0x9B solver.
 
 #![forbid(unsafe_code)]
 
 pub mod crypto;
 pub mod frames;
+pub mod join_msg;
 pub mod offline;
 pub mod rupp;
 pub mod rx_stream;
