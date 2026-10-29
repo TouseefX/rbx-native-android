@@ -49,10 +49,7 @@ pub fn parse_records(data: &[u8], schema: &Schema) -> ParseResult<Vec<Record>> {
                 break;
             }
             let member = class.member(slot).ok_or_else(|| {
-                ParseError::Malformed(format!(
-                    "slot {slot} out of range for class {}",
-                    class.name
-                ))
+                ParseError::Malformed(format!("slot {slot} out of range for class {}", class.name))
             })?;
             let value = crate::value::read_value(&mut c, member.tag, schema)?;
             properties.push((member.name.clone(), value));

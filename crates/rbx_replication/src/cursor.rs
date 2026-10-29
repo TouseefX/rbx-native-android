@@ -87,10 +87,7 @@ impl<'a> Cursor<'a> {
             .pos
             .checked_add(len)
             .ok_or(ParseError::Malformed("length overflows the cursor".into()))?;
-        let bytes = self
-            .data
-            .get(self.pos..end)
-            .ok_or(ParseError::Truncated)?;
+        let bytes = self.data.get(self.pos..end).ok_or(ParseError::Truncated)?;
         self.pos = end;
         Ok(bytes)
     }
@@ -229,13 +226,7 @@ mod tests {
 
         // lo=1, id=101: the worked `Block` reference of guide §7.3.
         let mut c = Cursor::new(&[0x01, 0x65, 0x00, 0x00, 0x00]);
-        assert_eq!(
-            c.reference(),
-            Ok(Some(Ref {
-                lo: 1,
-                id: 101
-            }))
-        );
+        assert_eq!(c.reference(), Ok(Some(Ref { lo: 1, id: 101 })));
         assert!(c.done());
     }
 

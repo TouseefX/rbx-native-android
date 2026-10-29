@@ -61,9 +61,7 @@ pub struct Event {
 pub fn parse_message(data: &[u8], schema: &Schema) -> ParseResult<Vec<Item>> {
     let mut c = Cursor::new(data);
     if c.byte()? != 0x83 {
-        return Err(ParseError::Malformed(
-            "expected a 0x83 delta chain".into(),
-        ));
+        return Err(ParseError::Malformed("expected a 0x83 delta chain".into()));
     }
     let mut items = Vec::new();
     loop {
@@ -99,11 +97,7 @@ pub fn parse_message(data: &[u8], schema: &Schema) -> ParseResult<Vec<Item>> {
             // Every item this decoder has no established shape for: stop,
             // keeping the offset, rather than guessing where the next item
             // starts.
-            other => {
-                return Err(ParseError::Unsupported(format!(
-                    "chain item {other:#04x}"
-                )))
-            }
+            other => return Err(ParseError::Unsupported(format!("chain item {other:#04x}"))),
         });
     }
     Ok(items)
@@ -124,10 +118,7 @@ fn parse_spawn(c: &mut Cursor<'_>, schema: &Schema) -> ParseResult<Spawn> {
                 break;
             }
             let member = class.member(slot).ok_or_else(|| {
-                ParseError::Malformed(format!(
-                    "slot {slot} out of range for class {}",
-                    class.name
-                ))
+                ParseError::Malformed(format!("slot {slot} out of range for class {}", class.name))
             })?;
             let value = crate::value::read_value(c, member.tag, schema)?;
             properties.push((member.name.clone(), value));
@@ -160,9 +151,9 @@ fn parse_update(c: &mut Cursor<'_>, schema: &Schema) -> ParseResult<PropertyUpda
 fn parse_event(c: &mut Cursor<'_>, schema: &Schema) -> ParseResult<Event> {
     let target = c.instance()?;
     let global = c.u16_le()?;
-    let (_, descriptor) = schema.resolve_event(global).ok_or_else(|| {
-        ParseError::Malformed(format!("global event ID {global} not in schema"))
-    })?;
+    let (_, descriptor) = schema
+        .resolve_event(global)
+        .ok_or_else(|| ParseError::Malformed(format!("global event ID {global} not in schema")))?;
     // The wire carries no per-argument tag: the event descriptor names each
     // argument's shape (guide §8.4).
     let mut arguments = Vec::with_capacity(descriptor.parameters.len());

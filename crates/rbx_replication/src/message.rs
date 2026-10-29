@@ -12,6 +12,7 @@ const MAX_DECOMPRESSED: u32 = 256 * 1024 * 1024;
 /// A parsed `0x97` schema message **[GAME]**: the two observed build/magic
 /// bytes — `50 d3` and `a3 cf` in the public samples, meaning not
 /// established (guide §4.2) — and the schema its frame carried.
+#[derive(Debug)]
 pub struct SchemaMessage {
     pub magic: [u8; 2],
     pub schema: Schema,
@@ -53,6 +54,7 @@ pub fn parse_schema_message(data: &[u8]) -> ParseResult<SchemaMessage> {
 /// Distinct from the schema's ordered shared-**name** table (guide §4.6):
 /// these are keyed blobs whose consumer is not established; keep them by
 /// their full 16-byte key.
+#[derive(Clone, Debug, PartialEq)]
 pub struct SharedStringEntry {
     pub key: [u8; 16],
     pub marker: u8,
@@ -65,6 +67,7 @@ pub struct SharedStringEntry {
 /// trailer past the frame is retained verbatim and unvalidated — eight of
 /// the nine public samples opened with the record count then zeros, and
 /// the ninth did not, so its semantics stay unresolved (guide §6.2).
+#[derive(Clone, Debug, PartialEq)]
 pub struct Batch {
     pub flags: u8,
     pub records: Vec<Record>,
@@ -119,18 +122,14 @@ pub fn parse_batch(data: &[u8], schema: &Schema) -> ParseResult<Batch> {
         5 => Err(ParseError::Unsupported(
             "flag-5 NetAsset-shaped batch".into(),
         )),
-        other => Err(ParseError::Unsupported(format!(
-            "batch flag {other}"
-        ))),
+        other => Err(ParseError::Unsupported(format!("batch flag {other}"))),
     }
 }
 
 /// Inflate one frame to exactly the claimed length, or say why not.
 fn inflate(frame: &[u8], expected: u32) -> ParseResult<Vec<u8>> {
     let decoded = zstd::bulk::decompress(frame, expected as usize)
-        .map_err(|error| {
-            ParseError::Malformed(format!("decompression failed: {error}"))
-        })?;
+        .map_err(|error| ParseError::Malformed(format!("decompression failed: {error}")))?;
     if decoded.len() != expected as usize {
         return Err(ParseError::Malformed(format!(
             "decompressed to {} bytes, the header claimed {expected}",
@@ -212,10 +211,7 @@ mod tests {
                     batch.records[1].parent,
                     Some(crate::guide_tests::room_ref())
                 );
-                assert_eq!(
-                    batch.trailer,
-                    [0x02, 0x00, 0x00, 0x00, 0x00, 0x00]
-                );
+                assert_eq!(batch.trailer, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00]);
             }
             other => panic!("expected a batch, got {other:?}"),
         }
