@@ -879,7 +879,7 @@ fn max_message_number(d: &[u8]) -> u32 {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use blake2::{Blake2b512, Digest};
     use x25519_dalek::{PublicKey, StaticSecret};
@@ -887,7 +887,7 @@ mod tests {
     const CLIENT_SEED: [u8; 32] = [1; 32];
     const SERVER_SEED: [u8; 32] = [2; 32];
 
-    fn config() -> Config {
+    pub(crate) fn config() -> Config {
         Config {
             peer_ip: [10, 190, 0, 5],
             peer_port: 50105,
@@ -909,18 +909,18 @@ mod tests {
     /// client-ordered digest and swaps the halves. This mock presents the
     /// same key for both the handshake and the data layer, which the
     /// client's double install against one peer key mirrors exactly.
-    struct Server {
+    pub(crate) struct Server {
         /// Opens what the client seals (the client's tx half).
         open: [u8; 32],
         /// Seals what the client opens (the client's rx half).
         seal: [u8; 32],
-        server_pub: [u8; 32],
+        pub(crate) server_pub: [u8; 32],
         rx_ctr: u64,
-        rx: RxStream,
+        pub(crate) rx: RxStream,
     }
 
     impl Server {
-        fn new(client_pub: [u8; 32]) -> Server {
+        pub(crate) fn new(client_pub: [u8; 32]) -> Server {
             let secret = StaticSecret::from(SERVER_SEED);
             let server_pub = *PublicKey::from(&secret).as_bytes();
             let shared = secret.diffie_hellman(&PublicKey::from(client_pub));
@@ -961,7 +961,7 @@ mod tests {
         }
 
         /// Open one client datagram.
-        fn open(&mut self, wire: &[u8]) -> Option<Vec<u8>> {
+        pub(crate) fn open(&mut self, wire: &[u8]) -> Option<Vec<u8>> {
             let v = rupp::view(wire)?;
             let (plain, used) = crypto::datagram_open(&self.open, v.payload, self.rx_ctr)?;
             self.rx_ctr = used + 1;
@@ -999,7 +999,7 @@ mod tests {
         }
     }
 
-    fn handshake(client: &mut Client, server: &mut Server) {
+    pub(crate) fn handshake(client: &mut Client, server: &mut Server) {
         assert!(client.req1());
         client.take_sends();
         client.on_packet(&Server::reply1());
