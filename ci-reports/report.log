@@ -39,38 +39,824 @@
 [1m[92m    Checking[0m ghash v0.5.1
 [1m[92m    Checking[0m ctr v0.9.2
 [1m[92m    Checking[0m aes-gcm v0.10.3
-[1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m blake2 v0.10.6
+[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
+[1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[91merror[E0382][0m[1m: borrow of moved value: `s`[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/join_target.rs:255:25
-    [1m[94m|[0m
-[1m[94m225[0m [1m[94m|[0m     let s = percent_decode(raw);
-    [1m[94m|[0m         [1m[94m-[0m [1m[94mmove occurs because `s` has type `std::string::String`, which does not implement the `Copy` trait[0m
-[1m[94m...[0m
-[1m[94m244[0m [1m[94m|[0m         cands.push(("raw".to_string(), s));
-    [1m[94m|[0m                                        [1m[94m-[0m [1m[94mvalue moved here[0m
-[1m[94m...[0m
-[1m[94m255[0m [1m[94m|[0m         .unwrap_or_else(|| s.chars().take(120).collect());
-    [1m[94m|[0m                         [1m[91m^^[0m [1m[94m-[0m [1m[94mborrow occurs due to use in closure[0m
-    [1m[94m|[0m                         [1m[91m|[0m
-    [1m[94m|[0m                         [1m[91mvalue borrowed here after move[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider cloning the value if the performance cost is acceptable
-    [1m[94m|[0m
-[1m[94m244[0m [1m[94m| [0m        cands.push(("raw".to_string(), s[92m.clone()[0m));
-    [1m[94m|[0m                                         [92m++++++++[0m
+[1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
+[1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
+[1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
+[1m[92m    Checking[0m gpui-kit-assets v0.6.4
+[1m[92m    Checking[0m gpui-pre-linux v0.3.5
+[1m[92m    Checking[0m gpui-pre-platform v0.3.5
+[1m[92m    Checking[0m gpui-component v0.6.2
+[1m[92m    Checking[0m gpui-kit v0.6.2
+[1m[92m    Checking[0m rbx_android v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_android)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 1m 06s
+## cargo test
+[1m[92m   Compiling[0m rbx_dom v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_dom)
+[1m[92m   Compiling[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
+[1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
+[1m[92m   Compiling[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
+[1m[92m   Compiling[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
+[1m[92m   Compiling[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m   Compiling[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
+[1m[92m   Compiling[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
+[1m[92m   Compiling[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
+[1m[92m   Compiling[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
+[1m[92m   Compiling[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
+[1m[92m   Compiling[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
+[1m[92m   Compiling[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m   Compiling[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
+[1m[92m   Compiling[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
+[1m[92m   Compiling[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
+[1m[92m   Compiling[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
+[1m[92m   Compiling[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
+[1m[92m   Compiling[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
+[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m   Compiling[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
+[1m[92m   Compiling[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
+[1m[92m   Compiling[0m rbx_ugc v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_ugc)
+[1m[92m   Compiling[0m curve25519-dalek v4.1.3
+[1m[92m   Compiling[0m polyval v0.6.2
+[1m[92m   Compiling[0m curve25519-dalek-derive v0.1.1
+[1m[92m   Compiling[0m ghash v0.5.1
+[1m[92m   Compiling[0m ctr v0.9.2
+[1m[92m   Compiling[0m aes-gcm v0.10.3
+[1m[92m   Compiling[0m x25519-dalek v2.0.1
+[1m[92m   Compiling[0m blake2 v0.10.6
+[1m[92m   Compiling[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
+[1m[92m   Compiling[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
+[1m[92m   Compiling[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
+[1m[92m   Compiling[0m gpui-pre-wgpu v0.3.5
+[1m[92m   Compiling[0m gpui-pre-linux v0.3.5
+[1m[92m   Compiling[0m gpui-kit-assets v0.6.4
+[1m[92m   Compiling[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
+[1m[92m   Compiling[0m gpui-pre-platform v0.3.5
+[1m[92m   Compiling[0m gpui-component v0.6.2
+[1m[92m   Compiling[0m gpui-kit v0.6.2
+[1m[92m   Compiling[0m rbx_android v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_android)
+[1m[92m    Finished[0m `test` profile [unoptimized + debuginfo] target(s) in 9m 06s
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_android-173c1c1be66fd25e)
 
-[1m[91merror[0m[1m: unused variable: `app`[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/join_target.rs:246:10
-    [1m[94m|[0m
-[1m[94m246[0m [1m[94m|[0m     for (app, b64) in &cands {
-    [1m[94m|[0m          [1m[91m^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_app`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: `-D unused-variables` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_variables)]`
+running 0 tests
 
-[1mFor more information about this error, try `rustc --explain E0382`.[0m
-[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
-[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-clippy=101 test=0
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_animation-9f8812654c118192)
+
+running 186 tests
+test animator::tests::average_of_nothing_is_none ... ok
+test animator::tests::a_clip_that_does_not_loop_ends ... ok
+test animator::tests::equal_priorities_blend_by_weight ... ok
+test animator::tests::fades_in_linearly_and_partial_weight_mixes_with_rest ... ok
+test animator::tests::markers_fire_once_and_loops_report ... ok
+test animator::tests::higher_priority_overrides_and_core_is_lowest ... ok
+test clip::tests::moving_keys_merges_into_existing_keyframes ... ok
+test animator::tests::stop_fades_out_then_reports_stopped ... ok
+test clip::tests::priority_values_match_the_enum ... ok
+test clip::tests::keyframes_stay_sorted_and_merge_by_time ... ok
+test clip::tests::removing_the_last_pose_removes_the_keyframe ... ok
+test clip::tests::track_lists_only_that_joints_keys ... ok
+test curve::convert_tests::constant_clip_samples_the_same ... ok
+test curve::convert_tests::cubic_clip_samples_the_same ... ok
+test curve::convert_tests::euler_keys_are_unwrapped ... ok
+test curve::convert_tests::every_order_converts_a_tumbling_joint ... ok
+test curve::convert_tests::linear_round_trip_keeps_the_keyframes ... ok
+test curve::convert_tests::markers_survive_both_ways ... ok
+test curve::convert_tests::multi_axis_euler_segments_are_baked_on_the_way_back ... ok
+test curve::rotation::tests::constant_holds_and_linear_slerps ... ok
+test curve::rotation::tests::cubic_segments_follow_what_studio_plays ... ok
+test curve::tests::constant_holds_and_linear_lerps ... ok
+test curve::tests::curve_clip_wraps_and_skips_empty_joints ... ok
+test curve::tests::editing_keeps_order_and_replaces_same_time_keys ... ok
+test curve::tests::empty_curve_is_none_and_ends_hold ... ok
+test curve::tests::euler_round_trips_in_every_order ... ok
+test curve::tests::generate_curve_bakes_bounce_between_two_keys ... ok
+test curve::tests::hermite_hits_the_keys_exactly ... ok
+test curve::tests::interpolation_values_match_the_enum ... ok
+test curve::tests::joint_curves_eval_and_channels ... ok
+test curve::tests::range_includes_cubic_overshoot ... ok
+test curve::tests::right_tangent_needs_a_cubic_key ... ok
+test curve::tests::rotation_order_values_and_products ... ok
+test curve::tests::tangents_are_slopes_per_second ... ok
+test curve::tests::unset_tangents_show_mirrored_and_play_as_the_slope_to_the_next_key ... ok
+test curve::tests::unwrap_avoids_turn_jumps_and_flips ... ok
+test curve::values::tests::from_curve_keeps_set_tangents ... ok
+test curve::values::tests::from_curve_of_nothing_is_empty ... ok
+test curve::values::tests::from_curve_stores_auto_slopes_and_ticks ... ok
+test curve::values::tests::reads_and_rewrites_a_face_curve_from_a_catalog_emote ... ok
+test curve::values::tests::reads_and_rewrites_a_named_keyframe_marker ... ok
+test curve::values::tests::refuses_what_it_does_not_understand ... ok
+test easing::tests::constant_holds_then_snaps ... ok
+test easing::tests::cubic_v2_follows_tweenservice_and_legacy_cubic_is_reversed ... ok
+test easing::tests::elastic_overshoots_and_bounce_stays_inside ... ok
+test easing::tests::enum_values_round_trip ... ok
+test easing::tests::every_curve_starts_and_ends_on_its_poses ... ok
+test easing::tests::linear_ignores_direction ... ok
+test curve::convert_tests::bounce_and_elastic_are_baked ... ok
+test facs::tests::fifty_channels_in_five_regions ... ok
+test frame::tests::angles_round_trip ... ok
+test frame::tests::data_round_trips ... ok
+test frame::tests::inverse_cancels ... ok
+test frame::tests::lerp_halfway_and_extrapolates ... ok
+test frame::tests::mul_applies_right_operand_in_left_space ... ok
+test frame::tests::row_major_matches_roblox_layout ... ok
+test graph::dom::tests::an_empty_definition_still_has_an_output ... ok
+test curve::convert_tests::cubic_and_constant_round_trips_play_the_same ... ok
+test graph::dom::tests::a_node_without_pins_still_carries_studios_empty_pin_list ... ok
+test graph::dom::tests::expressions_are_value_nodes_wired_by_an_object_value ... ok
+test graph::dom::tests::legacy::entry_state_may_point_at_the_state_or_its_node ... ok
+test graph::dom::tests::masks_are_shared_folders_of_joint_weights ... ok
+test graph::dom::tests::nodes_keep_their_properties_as_attributes_and_layout_in_a_configuration ... ok
+test graph::dom::tests::legacy::reads_the_earlier_layout ... ok
+test graph::dom::tests::plugin::a_mask_may_live_on_its_object_value ... ok
+test graph::dom::tests::plugin::an_entry_transition_and_object_value_ends_read_as_roblox_documents_them ... ok
+test graph::dom::tests::overwrite_keeps_the_definition ... ok
+test curve::convert_tests::linear_clip_samples_the_same ... ok
+test graph::dom::tests::plugin::reads_what_the_editor_saves ... ok
+test graph::dom::tests::state_machines_point_at_state_object_values ... ok
+test graph::dom::tests::the_definition_holds_parameter_defaults_and_rbx_attributes ... ok
+test graph::expr::tests::arithmetic_follows_luau_precedence ... ok
+test graph::dom::tests::plugin::what_the_editor_saves_survives_a_save ... ok
+test graph::expr::tests::bodies_may_branch_with_if_statements ... ok
+test graph::expr::tests::errors_are_reported ... ok
+test graph::expr::tests::colours_and_cframes_are_built_and_read ... ok
+test graph::expr::tests::if_expressions_and_bodies ... ok
+test graph::expr::tests::math_library ... ok
+test graph::expr::tests::parameters_comparisons_and_logic ... ok
+test graph::expr::tests::vectors_are_built_combined_and_read ... ok
+test graph::dom::tests::the_pin_list_names_every_pin_in_order ... ok
+test graph::model::tests::connect_refuses_cycles_and_remove_unwires ... ok
+test graph::model::tests::dynamic_pins_are_named_after_their_source ... ok
+test graph::model::tests::new_nodes_take_the_documented_defaults ... ok
+test graph::model::tests::editor_conveniences_match_the_plugin ... ok
+test graph::model::tests::new_pins_follow_the_placeholder_names ... ok
+test graph::model::tests::new_transitions_and_params_take_the_editor_defaults ... ok
+test graph::model::tests::node_type_values_match_the_enum ... ok
+test graph::model::tests::nodes_are_named_like_the_editor_names_them ... ok
+test graph::model::tests::removing_a_state_drops_its_transitions ... ok
+test graph::model::tests::values_coerce_like_luau ... ok
+test graph::pose::tests::blend_sums_quaternions_as_studio_does ... ok
+test graph::pose::tests::blend_weights ... ok
+test graph::pose::tests::mix_keeps_one_sided_joints_in_place ... ok
+test graph::pose::tests::over_add_subtract ... ok
+test graph::pose::tests::over_and_subtract_turn_as_studio_does ... ok
+test graph::pose::tests::resolve_scales_from_rest ... ok
+test graph::runtime::rng::tests::seeds_round_and_wrap_as_studio_s ... ok
+test graph::runtime::tests::a_clip_loops_and_speed_scales_time ... ok
+test graph::runtime::tests::any_state_transitions_and_finished_transitions ... ok
+test graph::runtime::tests::blend1d_interpolates_and_extrapolates ... ok
+test graph::runtime::rng::tests::matches_the_reference_mt19937 ... ok
+test graph::runtime::tests::events::a_blend_passes_only_its_heaviest_input_scaled_by_its_weight ... ok
+test graph::runtime::tests::events::a_looping_clip_raises_its_markers_each_pass ... ok
+test graph::runtime::tests::events::a_marker_at_the_start_fires_as_playback_begins ... ok
+test graph::runtime::tests::events::a_transition_passes_both_sides_by_their_share ... ok
+test graph::runtime::tests::events::parameters_read_nil_until_set_and_keep_their_defaults ... ok
+test graph::runtime::tests::events::over_scales_its_top_layer_and_weight_zero_silences_it ... ok
+test graph::runtime::tests::events::trimming_drops_the_markers_outside_the_span ... ok
+test graph::runtime::tests::one_shot_overlays_then_fades_out ... ok
+test graph::runtime::tests::select_follows_a_parameter ... ok
+test graph::runtime::tests::semantics::a_finished_transition_can_start_before_the_end ... ok
+test graph::runtime::tests::random_sequence_is_reproducible_with_a_seed ... ok
+test graph::runtime::tests::semantics::an_interrupted_blend_restarts_from_its_target ... ok
+test graph::runtime::tests::semantics::a_sequence_can_wait_for_a_trigger_and_stops_after_its_loops ... ok
+test graph::runtime::tests::semantics::an_uninterruptible_shot_ignores_new_triggers ... ok
+test graph::runtime::tests::semantics::before_finished_starts_the_blend_one_length_early ... ok
+test graph::runtime::tests::semantics::once_and_reset_snaps_back_to_the_start ... ok
+test graph::runtime::tests::semantics::parameters_coerce_non_finite_numbers_to_zero ... ok
+test graph::runtime::tests::semantics::blend2d_weighs_by_gradient_bands ... ok
+test graph::runtime::tests::semantics::one_shot_blends_in_along_its_curve ... ok
+test graph::runtime::tests::semantics::synced_blends_share_one_phase ... ok
+test graph::runtime::tests::semantics::priority_select_takes_the_first_trigger_when_interruptible ... ok
+test graph::runtime::tests::sequence_plays_inputs_in_order_and_mask_hides_joints ... ok
+test graph::runtime::tests::semantics::trim_plays_only_the_trimmed_span ... ok
+test graph::runtime::tests::studio::a_backwards_trim_freezes_at_trim_end ... ok
+test graph::runtime::tests::state_machine_crossfades_on_an_expression ... ok
+test graph::runtime::tests::studio::a_priority_select_with_no_trigger_plays_none ... ok
+test graph::runtime::tests::studio::a_retriggered_one_shot_restarts ... ok
+test graph::runtime::tests::studio::a_selection_naming_no_input_plays_none ... ok
+test graph::runtime::tests::studio::blend2d_cartesian_weights_match_studio ... ok
+test graph::runtime::tests::studio::cubic_v2_transitions_follow_studio_s_curve ... ok
+test graph::runtime::tests::studio::blend2d_polar_weights_match_studio ... ok
+test ik::tests::body_part_chains_follow_r15_limbs ... ok
+test ik::tests::body_part_chains_for_r6_are_one_joint ... ok
+test graph::runtime::tests::semantics::state_machine_ties_are_drawn_at_random_and_priority_wins ... ok
+test ik::tests::elbow_never_hyperextends ... ok
+test ik::tests::full_body_chain_runs_to_the_root_and_stops_at_pins ... ok
+test ik::tests::knees_bend_forward ... ok
+test graph::runtime::tests::studio::random_sequence_picks_match_studio ... ok
+test ik::tests::single_joints_aim_at_the_target ... ok
+test ik::tests::full_body_reaches_past_the_arm_and_leaves_pins_in_place ... ok
+test ik::tests::only_chain_rotations_change ... ok
+test ik::tests::two_bone_keeps_the_bend_plane ... ok
+test import::asset::tests::content_id_accepts_every_property_shape ... ok
+test import::asset::tests::content_id_rejects_names_and_malformed_values ... ok
+test import::asset::tests::parses_ids_in_every_shape_builders_paste ... ok
+test ik::tests::two_bone_straightens_toward_an_unreachable_target ... ok
+test ik::tests::two_bone_reaches_reachable_targets_exactly ... ok
+test import::fbx::tests::euler_orders_apply_first_letter_first ... ok
+test import::fbx::tests::reads_models_hierarchy_and_curves ... ok
+test import::fbx::tests::rejects_non_fbx ... ok
+test import::gltf::tests::cubic_splines_keep_their_values ... ok
+test import::gltf::tests::errors_are_reported ... ok
+test import::gltf::tests::reads_the_hierarchy_and_keys ... ok
+test import::rbxanims::tests::encode_round_trips ... ok
+test import::rbxanims::tests::reads_romixamo_strings_and_short_names ... ok
+test import::rbxanims::tests::reads_the_original_flat_format_and_fills_elided_identities ... ok
+test import::rbxanims::tests::reads_wrapped_poses_with_easing_and_frame_times ... ok
+test import::rbxanims::tests::rejects_garbage ... ok
+test import::retarget::tests::a_tpose_mixamo_walk_drives_an_arms_down_rig ... ok
+test import::retarget::tests::an_unmatched_skeleton_gives_an_empty_clip ... ok
+test import::retarget::tests::names_match_through_prefixes_and_aliases ... ok
+test import::skeleton::tests::fit_recovers_rotation_and_scale ... ok
+test import::skeleton::tests::local_interpolates_and_holds ... ok
+test import::skeleton::tests::optimize_drops_keys_on_the_line_and_keeps_corners ... ok
+test import::skeleton::tests::retargets_a_turned_scaled_z_up_skeleton ... ok
+test rig::tests::constraint_rig_reads_offsets_from_attachments ... ok
+test rig::tests::disconnected_joints_are_dropped_and_empty_models_are_empty ... ok
+test rig::tests::finds_joints_parents_first_either_class ... ok
+test rig::tests::rest_layout_matches_the_parts ... ok
+test rig::tests::transform_turns_about_the_joint_and_solve_inverts_it ... ok
+test sample::tests::interpolates_and_holds_the_ends ... ok
+test sample::tests::keyframes_without_the_joint_are_skipped ... ok
+test sample::tests::looped_clips_wrap_and_others_clamp ... ok
+test sample::tests::the_earlier_pose_easing_governs_the_segment ... ok
+test sample::tests::weight_interpolates_with_the_pose ... ok
+test sequence::tests::duplicate_times_and_foreign_classes ... ok
+test sequence::tests::face_channels_round_trip_under_the_head ... ok
+test sequence::tests::overwrite_keeps_the_instance ... ok
+test sequence::tests::poses_nest_along_the_rig ... ok
+test sequence::tests::round_trips_through_the_dom ... ok
+test sequence::tests::without_a_rig_poses_sit_flat ... ok
+test import::asset::tests::says_what_it_cannot_read ... ok
+test import::asset::tests::reads_the_sequence_out_of_binary_and_xml_models ... ok
+test graph::dom::tests::round_trips_through_instances_and_the_binary_format ... ok
+
+test result: ok. 186 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+[1m[92m     Running[0m tests/curve_read.rs (target/debug/deps/curve_read-c7d3b0e56d59e7f3)
+
+running 2 tests
+test markers_in_joint_folders_are_kept ... ok
+test reads_a_studio_quaternion_rotation_curve ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/curve_write.rs (target/debug/deps/curve_write-aeeee6d995869f17)
+
+running 7 tests
+test from_curve_keeps_set_tangents_and_flags_them ... ok
+test from_curve_writes_ticks_modes_and_slopes ... ok
+test rig_tree_nests_joints_faces_and_markers ... ok
+test overwrite_keeps_ref_and_parent_and_replaces_children ... ok
+test every_fixture_curve_rebuilds_its_bytes ... ok
+test rig_written_animation_survives_binary ... ok
+test emotes_survive_write_serialize_and_read ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+[1m[92m     Running[0m tests/end_to_end.rs (target/debug/deps/end_to_end-43427e2b77533a5e)
+
+running 1 test
+test a_pasted_blender_animation_survives_a_file_and_plays ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+[1m[92m     Running[0m tests/real_assets.rs (target/debug/deps/real_assets-449566817b2e2044)
+
+running 5 tests
+test catalog_emote_curves_read ... ok
+test every_values_and_times_writes_back_byte_for_byte ... ok
+test default_r15_animations_import ... ok
+test catalog_emotes_import_as_clips ... ok
+test a_later_published_walk_with_face_poses_imports ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+[1m[92m     Running[0m tests/studio_graph.rs (target/debug/deps/studio_graph-c1f91dd7c3142a64)
+
+running 2 tests
+test studio_matches_our_graphs ... ignored, needs RBX_GRAPH_OUT/graph180_studio.rbxl, saved by real Studio
+test write_graphs_for_studio ... ignored, writes a place for a real Studio comparison (RBX_GRAPH_OUT)
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/studio_graph_probe.rs (target/debug/deps/studio_graph_probe-fbb9bd7a938c2b16)
+
+running 1 test
+test write_probe_for_studio ... ignored, writes a place for a real Studio measurement (RBX_GRAPH_OUT)
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/studio_state_machine.rs (target/debug/deps/studio_state_machine-1ca49731eabe35c5)
+
+running 4 tests
+test studio_s_entry_state_reads_as_the_state_it_names ... ok
+test the_writer_makes_studio_s_entry_state_and_pin_data_bytes ... ok
+test studio_s_xml_entry_state_reads_as_the_binary_one_does ... ok
+test an_xml_save_writes_entry_state_as_studio_does ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_assets-2b01a32af9f878f2)
+
+running 106 tests
+test asset_ref::tests::empty_string_is_empty ... ok
+test asset_ref::tests::does_not_match_id_suffix_inside_other_param ... ok
+test asset_ref::tests::extracts_id_when_not_first_query_param ... ok
+test asset_ref::tests::parses_legacy_assetdelivery_url ... ok
+test asset_ref::tests::parses_legacy_double_slash_asset_url ... ok
+test asset_ref::tests::parses_rbxasset_native_paths ... ok
+test asset_ref::tests::parses_legacy_asset_url ... ok
+test asset_ref::tests::parses_rbxthumb_opaquely ... ok
+test asset_ref::tests::rejects_missing_id ... ok
+test asset_ref::tests::rejects_non_numeric_id ... ok
+test asset_ref::tests::rejects_non_roblox_host ... ok
+test asset_ref::tests::parses_rbxassetid ... ok
+test asset_ref::tests::rejects_unknown_scheme ... ok
+test asset_ref::tests::scheme_is_case_insensitive ... ok
+test asset_ref::tests::tolerates_whitespace_after_scheme ... ok
+test cache::tests::default_dir_falls_back_to_localappdata_on_windows ... ok
+test cache::tests::default_dir_honors_xdg_cache_home ... ok
+test asset_ref::tests::rejects_string_without_scheme_separator ... ok
+test cache::tests::creates_root_directory_recursively ... ok
+test cache::tests::round_trips_id_entries ... ok
+test cache::tests::overwrites_existing_entries ... ok
+test cache::tests::xdg_cache_home_wins_over_localappdata ... ok
+test dds::fixture::decodes_the_real_default_sky_panel ... ignored, needs RBX_SKY_FIXTURE pointing at an extracted sky512_*.tex
+test cache::tests::round_trips_native_entries_with_nested_paths ... ok
+test dds::tests::bc2_explicit_alpha_expands_nibbles_to_the_full_byte_range ... ok
+test dds::tests::decodes_a_solid_red_dxt1_block ... ok
+test dds::tests::dimensions_not_a_multiple_of_four_are_clipped_to_the_requested_size ... ok
+test dds::tests::dxt1_punch_through_alpha_index_is_fully_transparent ... ok
+test dds::tests::dxt5_alpha_ramp_interpolates_between_the_two_endpoints ... ok
+test dds::tests::header_round_trips_width_height_and_fourcc ... ok
+test cache::tests::trim_drops_the_least_recently_used_entries_first ... ok
+test dds::tests::rejects_missing_magic ... ok
+test dds::tests::rejects_unsupported_fourcc ... ok
+test dds::tests::truncated_top_mip_is_reported_rather_than_panicking ... ok
+test decode::tests::refuses_non_image_kind ... ok
+test decode::tests::reads_dimensions_without_decoding ... ok
+test decode::tests::decodes_a_png_asset ... ok
+test local_install::tests::a_missing_versions_directory_is_none_not_a_panic ... ok
+test local_install::tests::a_file_outside_the_content_directory_is_never_read ... ok
+test local_install::tests::a_file_in_no_version_is_none ... ok
+test local_install::tests::a_path_is_also_looked_up_directly_under_platform_content ... ok
+test local_install::tests::equal_times_are_ordered_by_name_whatever_order_they_arrive_in ... ok
+test local_install::tests::names_that_only_resemble_a_device_are_accepted ... ok
+test local_install::tests::default_sky_panels_come_from_platform_content ... ok
+test local_install::tests::content_is_preferred_over_platform_content_within_a_version ... ok
+test local_install::tests::falls_back_to_a_version_that_still_holds_the_file ... ok
+test local_install::tests::newer_installs_sort_before_older_ones_and_unknown_times_last ... ok
+test local_install::tests::ordinary_relative_paths_are_accepted ... ok
+test local_install::tests::paths_that_could_leave_the_content_directory_are_refused ... ok
+test local_install::tests::serves_real_files_from_the_machines_own_install ... ignored, reads the real %LOCALAPPDATA%\Roblox\Versions install
+test local_install::tests::only_version_directories_are_searched ... ok
+test local_install::tests::reads_a_file_from_a_versions_content_directory ... ok
+test local_install::tests::versions_live_under_local_app_data_roblox_versions ... ok
+test local_install::tests::reads_nested_paths ... ok
+test local_install::tests::windows_device_names_are_refused_however_they_are_spelled ... ok
+test local_install::tests::the_version_list_is_taken_once_and_kept ... ok
+test native::tests::cdn_and_sober_bytes_stay_cacheable ... ok
+test native::tests::content_length_over_limit_is_rejected ... ok
+test native::tests::content_length_under_limit_is_accepted ... ok
+test native::tests::a_file_read_from_a_local_install_is_not_cacheable ... ok
+test native::tests::extracts_backslash_nested_entry ... ok
+test native::tests::extracts_direct_path_entry ... ok
+test native::tests::extracts_entry_keeping_the_directory_segment_backslash_joined ... ok
+test native::tests::extracts_content_prefixed_entry ... ok
+test native::tests::extracts_package_root_entry ... ok
+test native::tests::maps_sky_fonts_sounds_models ... ok
+test native::tests::maps_textures_to_both_packages_in_order ... ok
+test native::tests::missing_content_length_is_accepted ... ok
+test native::tests::no_local_install_means_no_local_fallback ... ok
+test native::tests::unknown_top_level_directory_has_no_candidates ... ok
+test native::tests::missing_entry_is_reported ... ok
+test resolver::tests::empty_ref_is_an_error ... ok
+test resolver::tests::only_the_files_the_packages_lack_have_a_substitute ... ok
+test resolver::tests::caches_id_after_first_fetch ... ok
+test sniff::tests::extensions_map_correctly ... ok
+test sniff::tests::rejects_out_of_range_mesh_version ... ok
+test resolver::tests::missing_id_surfaces_fetch_error ... ok
+test resolver::tests::resolves_id_via_fetcher_and_sniffs_kind ... ok
+test sniff::tests::sniffs_bmp ... ok
+test sniff::tests::sniffs_dds ... ok
+test sniff::tests::sniffs_jpeg ... ok
+test sniff::tests::sniffs_mp3_frame_sync ... ok
+test sniff::tests::sniffs_mp3_id3_tag ... ok
+test sniff::tests::sniffs_ogg ... ok
+test sniff::tests::sniffs_png ... ok
+test sniff::tests::sniffs_rbxm_binary_model ... ok
+test sniff::tests::sniffs_rbxmx_xml_model ... ok
+test sniff::tests::sniffs_roblox_mesh_and_keeps_version ... ok
+test sniff::tests::sniffs_tga_by_footer ... ok
+test sniff::tests::sniffs_webm ... ok
+test sniff::tests::sniffs_webp ... ok
+test sniff::tests::unknown_for_empty ... ok
+test sniff::tests::unknown_for_garbage ... ok
+test sober::apk::tests::falls_back_to_extra_content ... ok
+test sober::apk::tests::finds_entry_under_content ... ok
+test sober::apk::tests::missing_entry_is_reported ... ok
+test sober::tests::extract_texture_against_real_sober_install ... ignored, reads the real ~/.var/app/org.vinegarhq.Sober install
+test sober::tests::absence_error_distinguishes_installed_from_missing ... ok
+test sober::apk::tests::prefers_content_over_extra_content_when_both_present ... ok
+test sober::tests::has_run_once_finds_apk_under_any_arch_dir ... ok
+test sober::tests::extract_texture_falls_back_to_extra_content_through_a_fixture_apk ... ok
+test sober::tests::has_run_once_is_false_without_packages_dir ... ok
+test sober::tests::extract_texture_reads_through_a_fixture_apk ... ok
+test sober::tests::has_run_once_ignores_arch_dirs_without_the_apk ... ok
+test sober::tests::is_installed_via_missing_binary_is_false_not_a_panic ... ok
+test sober::tests::is_installed_via_parses_a_matching_application_line ... ok
+
+test result: ok. 103 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_audit-22110c781dfc39f9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/audit.rs (target/debug/deps/audit-763c400026091cdf)
+
+running 4 tests
+test write_fixture_place ... ignored
+test an_unresolved_listener_lowers_no_listener_findings ... ok
+test place_findings_carry_their_severity ... ok
+test the_fixture_place_is_flagged_exactly_where_marked ... ok
+
+test result: ok. 3 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/holdout.rs (target/debug/deps/holdout-07df10cda729d1e1)
+
+running 1 test
+test holdout_precision_and_recall ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/loren.rs (target/debug/deps/loren-108bf06d0883e13c)
+
+running 3 tests
+test write_loren_place ... ignored
+test findings_name_the_route_and_a_gate_lowers_them ... ok
+test loren_routes_are_remote_entry_points ... ok
+
+test result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+[1m[92m     Running[0m tests/rules.rs (target/debug/deps/rules-ecfeff5d1133ea28)
+
+running 6 tests
+test one_bound_does_not_validate_a_number ... ok
+test a_lua_table_field_is_not_an_instance_property ... ok
+test taint_follows_calls_into_the_scripts_functions ... ok
+test a_type_or_nil_check_on_a_number_is_not_a_bound ... ok
+test the_slim_copy_audits_the_same ... ok
+test two_bounds_do_even_through_a_negated_exit ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_autorig-837402152e34e30f)
+
+running 62 tests
+test item_cage::tests::nudge_moves_nearest_and_spares_far ... ok
+test item_cage::tests::zero_amount_is_noop ... ok
+test skin::tests::bone_lists_put_parents_first ... ok
+test skin::tests::quantised_weights_sum_to_255 ... ok
+test tests::a_binary_fbx_reads_geometry_uvs_and_transforms ... ok
+test item_cage::tests::outer_clears_item_and_keeps_far_vertices ... ok
+test item_cage::tests::seam_copies_of_a_vertex_move_as_one ... ok
+test item_cage::tests::a_sleeve_does_not_tent_the_body_beside_it ... ok
+test tests::a_shape_without_five_limbs_is_refused ... ok
+test tests::a_multi_mesh_gltf_with_node_transforms_fits ... ok
+test tests::a_pose_z_up_facing_minus_y ... ok
+test tests::a_knee_dragged_to_the_neck_stays_on_its_leg_and_cuts_cleanly ... ok
+test tests::an_obj_reads_back_with_flipped_uvs ... ok
+test tests::an_a_pose_splits_into_fifteen_closed_parts ... ok
+test tests::an_i_pose_splits_into_fifteen_closed_parts ... ok
+test tests::a_t_pose_splits_into_fifteen_closed_parts ... ok
+test tests::budget::a_body_under_budget_is_left_alone ... ok
+test tests::budget::an_asset_its_seams_keep_over_budget_is_named ... ok
+test tests::budget::every_asset_is_simplified_to_its_budget ... ok
+test tests::arms_raised_above_the_head_fit ... ok
+test tests::budget::the_cut_seams_between_parts_are_left_as_they_were ... ok
+test tests::budget::the_shape_keeps_its_bounds ... ok
+test tests::budget::simplifying_is_deterministic ... ok
+test tests::arms_raised_above_the_head_split_into_fifteen_closed_parts ... ok
+test tests::budget::kept_vertices_keep_their_uvs_and_normals_and_take_skin_weights ... ok
+test tests::cage::fitting_onto_own_body_barely_moves ... ok
+test tests::cage::cage_hugs_body ... ok
+test tests::cage::cage_stays_outside_body ... ok
+test tests::cage::missing_template_is_an_error ... ok
+test tests::cage_write::rigid_cage_triangles_are_read_back ... ok
+test tests::cage::folded_triangles_are_rare ... ok
+test tests::cage_write::rigid_cages_sit_with_their_parts ... ok
+test tests::caps_close_a_loop_facing_away_from_its_winding ... ok
+test tests::every_part_carries_the_mannequins_accessory_attachments ... ok
+test tests::guarded_joints_keep_their_chain_order_and_the_mesh ... ok
+test tests::cage_write::skinned_cages_are_skinned_like_parts ... ok
+test tests::hands_apart_from_their_forearms_split_into_fifteen_closed_parts ... ok
+test tests::i_pose_facing_plus_z_in_centimetres ... ok
+test tests::mesh_v2_parses_back_to_the_same_geometry ... ok
+test tests::hands_apart_from_their_forearms_fit ... ok
+test tests::orientation_rotations_are_proper_and_put_the_left_on_minus_x ... ok
+test tests::mirroring_copies_one_side_onto_the_other ... ok
+test tests::real::a_gltf_requiring_a_material_extension_reads ... ok
+test tests::real::a_big_headed_chibi_keeps_its_head_hands_and_feet ... ok
+test tests::real::the_body_itself_is_never_left_out ... ok
+test tests::real::a_ground_disc_and_a_prop_on_the_floor_are_left_out ... ok
+test tests::skin::bending_the_elbow_bends_the_forearm_smoothly ... ok
+test tests::cage::keeps_template_topology ... ok
+test tests::skin::mesh_v4_round_trips_geometry_and_skin ... ok
+test tests::skin::the_skinned_glb_has_one_skin_over_the_r15_armature ... ok
+test tests::skin::twenty_thousand_triangles_skin_in_under_two_seconds ... ignored
+test tests::cage::seams_stay_welded ... ok
+test tests::skin::vertices_on_a_joint_plane_are_shared_by_both_bones ... ok
+test tests::skin::vertices_deep_inside_a_part_follow_its_own_bone ... ok
+test tests::skin::every_vertex_has_at_most_four_influences_summing_to_255 ... ok
+test tests::skin::a_limb_pressed_against_the_body_keeps_none_of_its_weight ... ok
+test tests::twenty_thousand_triangles_fit_and_split_in_under_a_second ... ignored
+test tests::unknown_extensions_are_refused_by_name ... ok
+test voxel::tests::the_envelope_is_the_exact_squared_distance ... ok
+test tests::the_joint_guard_leaves_a_fitted_skeleton_alone ... ok
+test tests::the_glb_holds_fifteen_named_parts_and_reads_back ... ok
+test tests::t_pose_in_roblox_space ... ok
+
+test result: ok. 60 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 85.32s
+
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_binary-ab30bed4192d5d1a)
+
+running 139 tests
+test chunk::tests::fps_first_chunk_is_meta ... ok
+test chunk::tests::lz4_chunk_claiming_impossible_ratio_is_rejected ... ok
+test chunk::tests::lz4_chunk_declaring_gigabytes_is_rejected_without_allocating ... ok
+test chunk::tests::test_place_sstr_chunk_is_zstd_and_decodes ... ok
+test chunk::tests::truncated_chunk_error_describes_the_file ... ok
+test chunk::tests::honest_zstd_chunk_still_decodes ... ok
+test chunk::tests::zstd_chunk_declaring_over_the_ceiling_is_rejected ... ok
+test chunks::inst::tests::parses_a_non_service_class ... ok
+test chunks::inst::tests::service_flag_consumes_the_trailing_byte_array ... ok
+test chunks::inst::tests::truncated_chunk_errors ... ok
+test chunks::prnt::tests::pairs_children_with_parents ... ok
+test chunks::prnt::tests::truncated_chunk_errors ... ok
+test chunk::tests::fps_iteration_never_panics_and_ends_on_end_marker ... ok
+test chunks::prop::cframe::tests::a_missing_inner_type_id_is_rejected ... ok
+test chunks::prop::cframe::tests::optional_cframe_reads_the_real_workspace_pivot ... ok
+test chunks::prop::cframe::tests::optional_cframe_reads_two_real_absent_pivots ... ok
+test chunks::prop::cframe::tests::raw_marker_reads_nine_untransformed_floats ... ok
+test chunks::prop::content::tests::a_null_object_referent_is_an_empty_content ... ok
+test chunks::prop::content::tests::a_studio_written_uri_column_decodes_as_uris ... ok
+test chunks::prop::content::tests::a_tag_without_a_pool_entry_is_rejected ... ok
+test chunks::prop::content::tests::all_zero_payload_is_a_single_empty_content ... ok
+test chunks::prop::content::tests::an_undefined_source_type_is_rejected ... ok
+test chunks::prop::content::tests::each_tag_consumes_its_own_pool_in_order ... ok
+test chunks::prop::font::tests::empty_cached_face_id_becomes_absent ... ok
+test chunks::prop::font::tests::font_reads_the_real_channel_tabs_face ... ok
+test chunks::prop::font::tests::two_fonts_are_read_back_to_back ... ok
+test chunks::prop::identity::tests::a_truncated_record_is_an_error ... ok
+test chunks::prop::identity::tests::an_array_interleaves_whole_sixteen_byte_records ... ok
+test chunks::prop::identity::tests::rotation_keeps_a_high_bit_random_positive ... ok
+test chunks::prop::misc::tests::axes_reads_one_byte_per_instance_in_order ... ok
+test chunks::prop::identity::tests::unique_id_reads_the_real_workspace_identifier ... ok
+test chunks::prop::misc::tests::axes_truncated_payload_is_an_error ... ok
+test chunks::prop::misc::tests::faces_reads_one_byte_per_instance_in_order ... ok
+test chunks::prop::misc::tests::faces_truncated_payload_is_an_error ... ok
+test chunks::prop::misc::tests::ray_reads_origin_then_direction_sequentially_for_each_instance ... ok
+test chunks::prop::misc::tests::ray_truncated_mid_record_is_an_error ... ok
+test chunks::prop::misc::tests::vector3int16_reads_three_i16_per_instance_sequentially ... ok
+test chunks::prop::misc::tests::vector3int16_truncated_mid_record_is_an_error ... ok
+test chunks::prop::scalar::tests::color3_uint8_reads_three_byte_planes ... ok
+test chunks::prop::scalar::tests::brick_color_is_an_untransformed_big_endian_index ... ok
+test chunks::prop::scalar::tests::non_utf8_string_keeps_raw_bytes ... ok
+test chunks::prop::scalar::tests::null_referent_yields_no_value ... ok
+test chunks::prop::scalar::tests::physical_properties_without_floats_are_default ... ok
+test chunks::prop::scalar::tests::physical_properties_custom_reads_five_floats_inline ... ok
+test chunks::prop::scalar::tests::security_capabilities_undo_the_zigzag ... ok
+test chunks::prop::scalar::tests::shared_string_out_of_range_keeps_the_index ... ok
+test chunks::prop::scalar::tests::shared_string_resolves_against_the_table ... ok
+test chunks::prop::scalar::tests::strings_read_sequential_length_prefixed_values ... ok
+test chunks::prop::sequence::tests::an_announced_keypoint_count_the_payload_cannot_back_is_an_error ... ok
+test chunks::prop::sequence::tests::color_sequence_reads_real_uigradient_color ... ok
+test chunks::prop::sequence::tests::number_range_reads_two_plain_floats ... ok
+test chunks::prop::sequence::tests::number_sequence_reads_real_uigradient_transparency ... ok
+test chunks::prop::tests::parses_header_and_keeps_payload ... ok
+test chunks::prop::tests::truncated_known_type_degrades_instead_of_failing ... ok
+test chunks::prop::tests::unknown_type_id_splits_evenly_when_it_can ... ok
+test chunks::prop::udim::tests::udim2_groups_scales_before_offsets ... ok
+test chunks::prop::udim::tests::udim_reads_scale_then_offset_blocks ... ok
+test chunks::prop::vector::tests::color3_shares_the_component_layout ... ok
+test chunks::prop::vector::tests::rect_reads_four_blocks_in_min_max_order ... ok
+test chunks::prop::vector::tests::vector2_is_two_blocks ... ok
+test chunks::prop::vector::tests::vector3_reads_one_block_per_component ... ok
+test chunks::sstr::tests::parses_entries_and_skips_hashes ... ok
+test chunks::sstr::tests::truncated_table_errors ... ok
+test codec::tests::encode_referents_round_trips_the_reader ... ok
+test codec::tests::interleave_bytes_round_trips_a_wide_record ... ok
+test codec::tests::interleave_u32_round_trips_the_reader ... ok
+test codec::tests::interleave_zigzag_round_trips_the_reader ... ok
+test chunk::tests::zstd_frame_larger_than_declared_is_rejected ... ok
+test codec::tests::interleaved_u32_transposes_columns ... ok
+test codec::tests::negative_length_is_rejected ... ok
+test codec::tests::rotated_bits_round_trip_decode ... ok
+test codec::tests::rotated_f32_decodes_one_and_zero ... ok
+test codec::tests::take_past_end_errors_instead_of_panicking ... ok
+test codec::tests::zigzag_encode_round_trips_decode ... ok
+test codec::tests::zigzag_round_trips_known_values ... ok
+test header::tests::parses_fps_rbxm_header ... ok
+test header::tests::parses_test_place_rbxl_header ... ok
+test header::tests::rejects_invalid_magic ... ok
+test header::tests::rejects_invalid_signature ... ok
+test header::tests::rejects_too_short_input ... ok
+test serialize::chunk::tests::a_written_chunk_round_trips_through_the_reader ... ok
+test serialize::chunk::tests::the_end_chunk_is_stored_uncompressed_like_roblox_writes_it ... ok
+test serialize::inst::tests::writes_a_service_class_the_reader_accepts ... ok
+test serialize::inst::tests::writes_a_non_service_class_the_reader_accepts ... ok
+test serialize::plan::tests::visit_order_is_a_preorder_walk ... ok
+test chunk::tests::test_place_iteration_never_panics_and_ends_on_end_marker ... ok
+test serialize::prop::cframe::tests::cframe_round_trips_a_compressed_and_a_raw_rotation ... ok
+test serialize::prop::cframe::tests::optional_cframe_round_trips_present_and_absent ... ok
+test serialize::prop::content::tests::a_uri_column_is_written_the_way_studio_writes_it ... ok
+test serialize::prop::content::tests::an_object_outside_the_file_is_written_as_the_null_referent ... ok
+test serialize::prop::content::tests::each_tag_consumes_its_own_pool_in_order ... ok
+test serialize::prop::content::tests::two_objects_keep_their_instances_order ... ok
+test serialize::prop::font::tests::font_round_trips_with_and_without_a_cached_face ... ok
+test serialize::prop::identity::tests::unique_id_round_trips_two_records_including_a_high_bit_random ... ok
+test serialize::prop::misc::tests::faces_and_axes_round_trip ... ok
+test serialize::prop::misc::tests::ray_round_trips_origin_then_direction ... ok
+test serialize::prop::misc::tests::unknown_blob_rejects_mismatched_lengths ... ok
+test serialize::prop::misc::tests::unknown_blob_round_trips_a_uniform_stride ... ok
+test serialize::prop::misc::tests::vector3int16_round_trips_negative_components ... ok
+test serialize::prop::scalar::tests::bools_round_trip ... ok
+test serialize::prop::scalar::tests::color3_uint8_round_trips_three_planes ... ok
+test serialize::prop::scalar::tests::int32_round_trips_negative_values ... ok
+test serialize::prop::scalar::tests::physical_properties_default_and_custom_round_trip ... ok
+test serialize::prop::scalar::tests::refs_write_minus_one_for_a_missing_key ... ok
+test serialize::prop::scalar::tests::shared_string_resolves_through_a_built_table ... ok
+test serialize::prop::scalar::tests::shared_string_round_trips_via_an_empty_table ... ok
+test serialize::prop::scalar::tests::strings_mix_utf8_and_unknown_and_round_trip ... ok
+test serialize::prop::sequence::tests::color_sequence_round_trips ... ok
+test serialize::prop::sequence::tests::number_range_round_trips ... ok
+test serialize::prop::sequence::tests::number_sequence_round_trips_two_keypoints ... ok
+test serialize::prop::tests::dispatches_bool_to_the_right_wire_type ... ok
+test serialize::prop::tests::missing_non_ref_value_is_rejected ... ok
+test serialize::prop::udim::tests::udim2_round_trips ... ok
+test serialize::prop::udim::tests::udim_round_trips ... ok
+test serialize::prop::vector::tests::color3_round_trips ... ok
+test serialize::prop::vector::tests::rect_round_trips_in_min_max_order ... ok
+test serialize::prop::vector::tests::vector2_round_trips ... ok
+test serialize::prop::vector::tests::vector3_round_trips_two_points ... ok
+test serialize::sstr::tests::collect_group_ignores_a_plain_string_only_group ... ok
+test serialize::sstr::tests::collect_group_interns_the_mix_of_string_and_unknown_shapes ... ok
+test serialize::sstr::tests::distinct_payloads_get_separate_entries ... ok
+test serialize::sstr::tests::identical_payloads_dedup_to_one_entry ... ok
+test serialize::plan::tests::groups_instances_by_class_and_assigns_ids_in_first_seen_order ... ok
+test serialize::plan::tests::is_service_is_looked_up_per_class ... ok
+test serialize::prnt::tests::writes_links_the_reader_accepts_with_roots_at_minus_one ... ok
+test serialize::tests::a_contentid_column_mixing_string_and_content_saves_as_strings ... ok
+test serialize::tests::a_kind_with_no_neutral_value_is_still_rejected_when_missing ... ok
+test serialize::tests::a_legacy_int_brick_color_is_left_out_as_studio_would ... ok
+test serialize::tests::a_property_missing_on_some_instances_is_filled_with_its_neutral_value ... ok
+test serialize::tests::a_retired_union_property_is_not_written ... ok
+test serialize::tests::an_empty_dom_serializes_and_deserializes_to_an_empty_dom ... ok
+test serialize::tests::a_value_one_instance_lacks_is_filled_with_the_given_default ... ok
+test serialize::tests::a_single_instance_round_trips_its_name_and_class ... ok
+test serialize::tests::an_all_content_contentid_column_is_written_as_strings ... ok
+test serialize::tests::header_round_trips_through_the_parser ... ok
+test serialize::tests::an_xml_only_unknown_tag_is_left_out_instead_of_written_as_type_ff ... ok
+test serialize::writer::tests::sized_name_round_trips_through_the_reader ... ok
+test serialize::writer::tests::scalar_fields_round_trip_through_the_reader ... ok
+test serialize::tests::referents_are_renumbered_below_the_instance_count_after_a_removal ... ok
+
+test result: ok. 139 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+[1m[92m     Running[0m tests/content_source_tags.rs (target/debug/deps/content_source_tags-e9f3e1a6f30ee810)
+
+running 1 test
+test a_real_files_content_tags_are_zigzagged ... ignored, needs RBX_CONTENT_FIXTURE
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/deserialize.rs (target/debug/deps/deserialize-2b85e47cb83be78e)
+
+running 14 tests
+test fps_has_a_single_root ... ok
+test fps_names_come_from_the_name_property ... ok
+test fps_referents_are_zero_to_forty_seven_without_holes ... ok
+test motor6d_joints_point_at_parts ... ok
+test part_cframes_mix_compact_and_raw_rotations ... ok
+test part_colors_are_byte_planes_and_both_arms_share_a_skin_tone ... ok
+test part_sizes_and_transparency_decode_to_studs ... ok
+test part_material_is_smooth_plastic ... ok
+test deserializes_both_files_with_the_announced_instance_count ... ok
+test the_property_names_come_back_once_per_class ... ok
+test test_place_nests_the_baseplate_and_spawn_under_workspace ... ok
+test test_place_services_sit_at_the_root ... ok
+test corrupted_bytes_never_panic ... ok
+test truncated_files_never_panic ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.99s
+
+[1m[92m     Running[0m tests/property_types.rs (target/debug/deps/property_types-1c27306defbe6aa3)
+
+running 13 tests
+test chat_configuration_font_faces_are_builder_sans ... ok
+test avatar_scale_ranges_are_the_studio_defaults ... ok
+test emissive_mask_content_is_empty_on_both_decals ... ok
+test fps_world_pivots_hold_one_real_matrix_and_two_absences ... ok
+test capabilities_decode_to_an_empty_bitfield_everywhere ... ok
+test image_label_slice_center_is_the_empty_rect ... ok
+test only_non_utf8_string_blobs_still_degrade_to_unknown ... ok
+test spawn_location_team_color_is_medium_stone_grey ... ok
+test test_place_history_ids_are_all_blank ... ok
+test test_place_unique_ids_come_from_two_save_sessions ... ok
+test ui_gradient_transparency_is_a_flat_two_keypoint_sequence ... ok
+test test_place_workspace_pivot_is_the_identity_at_the_origin ... ok
+test ui_gradient_color_is_white_at_both_ends ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+[1m[92m     Running[0m tests/serialize_round_trip.rs (target/debug/deps/serialize_round_trip-2def99ac9e7384a0)
+
+running 2 tests
+test fps_round_trips_through_serialize ... ok
+test test_place_round_trips_through_serialize ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+[1m[92m     Running[0m tests/serialize_synthetic.rs (target/debug/deps/serialize_synthetic-99e3211e0d08f32d)
+
+running 1 test
+test every_supported_variant_kind_round_trips ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+[1m[92m     Running[0m tests/shared_string_round_trip.rs (target/debug/deps/shared_string_round_trip-7bbc7cdf5c2629aa)
+
+running 6 tests
+test a_real_place_round_trips_through_serialize ... ignored, needs RBX_ROUND_TRIP_FIXTURE
+test a_shared_string_some_instances_lack_is_filled_empty ... ok
+test a_shared_string_property_mixed_with_plain_empty_strings_round_trips ... ok
+test distinct_shared_string_payloads_get_two_sstr_entries ... ok
+test an_all_empty_shared_string_group_keeps_its_wire_type ... ok
+test identical_shared_string_payloads_dedup_to_one_sstr_entry ... ok
+
+test result: ok. 5 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+[1m[92m     Running[0m tests/variant_kind_probe.rs (target/debug/deps/variant_kind_probe-34c9412e28d168b0)
+
+running 1 test
+test fixtures_only_use_the_documented_variant_kinds ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/rbx_challenge-f93c12c8e70bfe2a)
+
+running 16 tests
+test blob::tests::the_decoded_layers_match_the_reference ... ok
+test blob::tests::a_truncated_blob_is_rejected ... ok
+test blob::tests::a_wrong_checksum_is_rejected ... ok
+test run::tests::the_answer_truncates_like_the_native ... ok
+test run::tests::a_bad_program_reports_its_stage ... ok
+test run::tests::a_tiny_source_program_solves ... ok
+test sandbox::tests::isstudio_is_false_and_jobid_passes_through ... ok
+test sandbox::tests::os_exit_is_missing ... ok
+test sandbox::tests::newproxy_true_has_a_settable_metatable ... ok
+test sandbox::tests::unknown_services_are_fresh_tables ... ok
+test standardize::tests::a_program_of_ones_walks_to_a_boundary_or_fails ... ok
+test standardize::tests::an_empty_program_is_refused ... ok
+test standardize::tests::the_length_masks_match_the_decompiled_ranges ... ok
+test sandbox::tests::random_is_deterministic_per_seed ... ok
+test standardize::tests::the_tables_are_permutations_of_the_byte_range ... ok
+test sandbox::tests::usersettings_string_is_the_calibration ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/vectors.rs (target/debug/deps/vectors-9066b49fdcb0be18)
+
+running 2 tests
+test golden_vectors_extract_decode_standardize_solve ... FAILED
+test the_top_level_solve_agrees_with_the_stages ... FAILED
+
+failures:
+
+---- golden_vectors_extract_decode_standardize_solve stdout ----
+
+thread 'golden_vectors_extract_decode_standardize_solve' (8621) panicked at crates/rbx_challenge/tests/vectors.rs:105:37:
+comb1: run: load failed: syntax error: challenge:1: Expected identifier when parsing expression, got ''
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- the_top_level_solve_agrees_with_the_stages stdout ----
+
+thread 'the_top_level_solve_agrees_with_the_stages' (8622) panicked at crates/rbx_challenge/tests/vectors.rs:117:37:
+comb1: solve: load failed: syntax error: challenge:1: Expected identifier when parsing expression, got ''
+
+
+failures:
+    golden_vectors_extract_decode_standardize_solve
+    the_top_level_solve_agrees_with_the_stages
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[91merror[0m: test failed, to rerun pass `-p rbx_challenge --test vectors`
+clippy=0 test=101
