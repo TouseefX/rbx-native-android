@@ -350,7 +350,7 @@ impl Client {
         else {
             return false;
         };
-        self.wrap_send(1, &self.cfg.join_token, &probe)
+        self.wrap_send(1, self.cfg.join_token, &probe)
     }
 
     /// Req2: the sealed join material. Needs Reply1's MTU, so stage 1.
@@ -376,7 +376,7 @@ impl Client {
         let Some(packet) = offline::build_req2(self.keys.tx(), &inputs) else {
             return false;
         };
-        self.wrap_send(1, &self.cfg.join_token, &packet)
+        self.wrap_send(1, self.cfg.join_token, &packet)
     }
 
     // --- the RakNet connection ------------------------------------------
@@ -677,7 +677,7 @@ impl Client {
     fn token(&self) -> ([u8; 16], u8) {
         if self.own_token_live {
             (
-                if self.echo_server_token {
+                if self.cfg.echo_server_token {
                     self.session_token
                 } else {
                     self.own_token
@@ -701,22 +701,22 @@ impl Client {
         }
         self.dgram_tx += 1;
         if !data {
-            if self.ack_sub_1 {
-                return self.wrap_send(1, &self.cfg.join_token, &frame);
+            if self.cfg.ack_sub_1 {
+                return self.wrap_send(1, self.cfg.join_token, &frame);
             }
-            match self.ack_token_mode {
-                1 => return self.wrap_send(2, &self.cfg.join_token, &frame),
-                2 => return self.wrap_send(2, &self.session_token, &frame),
+            match self.cfg.ack_token_mode {
+                1 => return self.wrap_send(2, self.cfg.join_token, &frame);
+                2 => return self.wrap_send(2, self.session_token, &frame);
                 _ => {}
             }
         }
         let (token, sub) = self.token();
-        self.wrap_send(sub, &token, &frame)
+        self.wrap_send(sub, token, &frame)
     }
 
-    fn wrap_send(&mut self, sub: u8, token: &[u8; 16], payload: &[u8]) -> bool {
+    fn wrap_send(&mut self, sub: u8, token: [u8; 16], payload: &[u8]) -> bool {
         let header = rupp::Header {
-            token: *token,
+            token,
             subtype: sub,
             rcc: Some((self.cfg.rcc_ip, self.cfg.rcc_port)),
         };
@@ -1029,7 +1029,7 @@ mod tests {
         assert_eq!(max_message_number(&d), 7);
         // Two messages in one datagram: the highest number wins.
         let mut two = frames::reliable(4, 8, false, 0, b"\x00a").unwrap();
-        two.extend(frames::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
+        two.extend(&frames::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
         assert_eq!(max_message_number(&two), 9);
     }
 }
