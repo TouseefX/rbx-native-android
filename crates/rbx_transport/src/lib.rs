@@ -36,11 +36,15 @@
 //! in order), and the RakNet-era join messages: the AES-128 envelope the
 //! native seals them in, the 0x90 join body built from a captured
 //! template, the 0x8a ticket submit with its xxh32 hash chain, and the
-//! 0x92/0x8f/0x9b forms. Not yet ported: the socket and handshake state
-//! machine, the join sequencer, and the 0x9B solver.
+//! 0x92/0x8f/0x9b forms, and the client state machine itself — the
+//! offline handshake's sequencing, the datagram counters, the ACK
+//! policy, and the keepalive mirror, with the sockets left to the
+//! caller. Not yet ported: the join sequencer that drives it and the
+//! 0x9B solver.
 
 #![forbid(unsafe_code)]
 
+pub mod client;
 pub mod crypto;
 pub mod frames;
 pub mod join_msg;
