@@ -12,22 +12,22 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
+[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
-[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
-[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
 [1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
+[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
@@ -43,46 +43,130 @@
 [1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[91merror[0m[1m: this `if` has identical blocks[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:640:84
-    [1m[94m|[0m
-[1m[94m640[0m [1m[94m|[0m           let out_id = if m.payload.len() == 9 && matches!(m.id, 0x00 | 0x51..=0x53) {
-    [1m[94m|[0m [1m[91m ____________________________________________________________________________________^[0m
-[1m[94m641[0m [1m[94m|[0m [1m[91m|[0m             m.id
-[1m[94m642[0m [1m[94m|[0m [1m[91m|[0m         } else if m.payload.len() == 25 && matches!(m.id, 0x03 | 0x54..=0x56) {
-    [1m[94m|[0m [1m[91m|_________^[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: same as this
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:642:79
-    [1m[94m|[0m
-[1m[94m642[0m [1m[94m|[0m           } else if m.payload.len() == 25 && matches!(m.id, 0x03 | 0x54..=0x56) {
-    [1m[94m|[0m [1m[92m _______________________________________________________________________________^[0m
-[1m[94m643[0m [1m[94m|[0m [1m[92m|[0m             m.id
-[1m[94m644[0m [1m[94m|[0m [1m[92m|[0m         } else if m.payload.len() > 64 && m.id == 0x00 {
-    [1m[94m|[0m [1m[92m|_________^[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#if_same_then_else
-    [1m[94m= [0m[1mnote[0m: `-D clippy::if-same-then-else` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::if_same_then_else)]`
+[1m[91merror[E0425][0m[1m: cannot find function `config` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1151:38
+     [1m[94m|[0m
+[1m[94m1151[0m [1m[94m|[0m         let mut client = Client::new(config());
+     [1m[94m|[0m                                      [1m[91m^^^^^^[0m [1m[91mnot found in this scope[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: function `crate::client::tests::config` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:886:5
+     [1m[94m|[0m
+[1m[94m 886[0m [1m[94m|[0m     fn config() -> Config {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
 
-[1m[91merror[0m[1m: the borrowed expression implements the required traits[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:813:27
-    [1m[94m|[0m
-[1m[94m813[0m [1m[94m|[0m             hasher.update(&client_pub);
-    [1m[94m|[0m                           [1m[91m^^^^^^^^^^^[0m [1m[91mhelp: change this to: `client_pub`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borrows_for_generic_args
-    [1m[94m= [0m[1mnote[0m: `-D clippy::needless-borrows-for-generic-args` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::needless_borrows_for_generic_args)]`
+[1m[91merror[E0433][0m[1m: cannot find type `Server` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1152:26
+     [1m[94m|[0m
+[1m[94m1152[0m [1m[94m|[0m         let mut server = Server::new(client.public());
+     [1m[94m|[0m                          [1m[91m^^^^^^[0m [1m[91muse of undeclared type `Server`[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: struct `crate::client::tests::Server` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:908:5
+     [1m[94m|[0m
+[1m[94m 908[0m [1m[94m|[0m     struct Server {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
 
-[1m[91merror[0m[1m: the borrowed expression implements the required traits[0m
-   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:814:27
-    [1m[94m|[0m
-[1m[94m814[0m [1m[94m|[0m             hasher.update(&server_pub);
-    [1m[94m|[0m                           [1m[91m^^^^^^^^^^^[0m [1m[91mhelp: change this to: `server_pub`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borrows_for_generic_args
+[1m[91merror[E0425][0m[1m: cannot find function `handshake` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1153:9
+     [1m[94m|[0m
+[1m[94m1153[0m [1m[94m|[0m         handshake(&mut client, &mut server);
+     [1m[94m|[0m         [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: function `crate::client::tests::handshake` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:998:5
+     [1m[94m|[0m
+[1m[94m 998[0m [1m[94m|[0m     fn handshake(client: &mut Client, server: &mut Server) {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
 
-[1m[91merror[0m: could not compile `rbx_transport` (lib test) due to 3 previous errors
+[1m[91merror[E0425][0m[1m: cannot find function `config` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1201:38
+     [1m[94m|[0m
+[1m[94m1201[0m [1m[94m|[0m         let mut client = Client::new(config());
+     [1m[94m|[0m                                      [1m[91m^^^^^^[0m [1m[91mnot found in this scope[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: function `crate::client::tests::config` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:886:5
+     [1m[94m|[0m
+[1m[94m 886[0m [1m[94m|[0m     fn config() -> Config {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
+
+[1m[91merror[E0433][0m[1m: cannot find type `Server` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1202:26
+     [1m[94m|[0m
+[1m[94m1202[0m [1m[94m|[0m         let mut server = Server::new(client.public());
+     [1m[94m|[0m                          [1m[91m^^^^^^[0m [1m[91muse of undeclared type `Server`[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: struct `crate::client::tests::Server` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:908:5
+     [1m[94m|[0m
+[1m[94m 908[0m [1m[94m|[0m     struct Server {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
+
+[1m[91merror[E0425][0m[1m: cannot find function `handshake` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1203:9
+     [1m[94m|[0m
+[1m[94m1203[0m [1m[94m|[0m         handshake(&mut client, &mut server);
+     [1m[94m|[0m         [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: function `crate::client::tests::handshake` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:998:5
+     [1m[94m|[0m
+[1m[94m 998[0m [1m[94m|[0m     fn handshake(client: &mut Client, server: &mut Server) {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
+
+[1m[91merror[E0425][0m[1m: cannot find function `config` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1219:38
+     [1m[94m|[0m
+[1m[94m1219[0m [1m[94m|[0m         let mut client = Client::new(config());
+     [1m[94m|[0m                                      [1m[91m^^^^^^[0m [1m[91mnot found in this scope[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: function `crate::client::tests::config` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:886:5
+     [1m[94m|[0m
+[1m[94m 886[0m [1m[94m|[0m     fn config() -> Config {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
+
+[1m[91merror[E0433][0m[1m: cannot find type `Server` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1220:26
+     [1m[94m|[0m
+[1m[94m1220[0m [1m[94m|[0m         let mut server = Server::new(client.public());
+     [1m[94m|[0m                          [1m[91m^^^^^^[0m [1m[91muse of undeclared type `Server`[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: struct `crate::client::tests::Server` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:908:5
+     [1m[94m|[0m
+[1m[94m 908[0m [1m[94m|[0m     struct Server {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
+
+[1m[91merror[E0425][0m[1m: cannot find function `handshake` in this scope[0m
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:1221:9
+     [1m[94m|[0m
+[1m[94m1221[0m [1m[94m|[0m         handshake(&mut client, &mut server);
+     [1m[94m|[0m         [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
+     [1m[94m|[0m
+[1m[92mnote[0m: function `crate::client::tests::handshake` exists but is inaccessible
+    [1m[94m--> [0mcrates/rbx_transport/src/client.rs:998:5
+     [1m[94m|[0m
+[1m[94m 998[0m [1m[94m|[0m     fn handshake(client: &mut Client, server: &mut Server) {
+     [1m[94m|[0m     [1m[92m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[92mnot accessible[0m
+
+[1m[91merror[E0308][0m[1m: mismatched types[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:730:12
+    [1m[94m|[0m
+[1m[94m730[0m [1m[94m|[0m         if self.send_join_message(&resp, true) {
+    [1m[94m|[0m            [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mexpected `bool`, found `usize`[0m
+
+[1m[91merror[E0308][0m[1m: mismatched types[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:743:12
+    [1m[94m|[0m
+[1m[94m743[0m [1m[94m|[0m         if self.send_join_message(&ack, true) {
+    [1m[94m|[0m            [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mexpected `bool`, found `usize`[0m
+
+[1mFor more information about this error, try `rustc --explain E0308`.[0m
+[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 1 previous error
+[1mSome errors have detailed explanations: E0308, E0425, E0433.[0m
+[1mFor more information about an error, try `rustc --explain E0308`.[0m
+[1m[91merror[0m: could not compile `rbx_transport` (lib test) due to 11 previous errors
 clippy=101 test=0
