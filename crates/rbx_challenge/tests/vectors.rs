@@ -62,17 +62,30 @@ const VECTORS: &[Vector] = &[
     },
 ];
 
+/// The goldens live on disk next to this test; include_bytes! needs a
+/// literal path, so the per-case files are read at runtime instead.
+fn vector_file(name: &str, kind: &str) -> Vec<u8> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("vectors")
+        .join(format!("{name}.{kind}.bin"));
+    match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(e) => panic!("cannot read {}: {e}", path.display()),
+    }
+}
+
 #[test]
 fn golden_vectors_extract_decode_standardize_solve() {
     // A path mistake must not read as "all passed".
     assert!(VECTORS.len() >= 6);
     for v in VECTORS {
-        let msg = include_bytes!(concat!("vectors/", v.name, ".msg.bin"));
-        let wire_gold = include_bytes!(concat!("vectors/", v.name, ".wire.bin"));
-        let std_gold = include_bytes!(concat!("vectors/", v.name, ".standard.bin"));
+        let msg = vector_file(v.name, "msg");
+        let wire_gold = vector_file(v.name, "wire");
+        let std_gold = vector_file(v.name, "standard");
 
         // Stage 1: the header.
-        let ch = rbx_transport::challenge::extract(msg)
+        let ch = rbx_transport::challenge::extract(&msg)
             .unwrap_or_else(|| panic!("{}: extract failed", v.name));
         assert_eq!(ch.u1, v.u1, "{}: u1", v.name);
         assert_eq!(ch.u2, v.u2, "{}: u2", v.name);
@@ -99,9 +112,9 @@ fn golden_vectors_extract_decode_standardize_solve() {
 fn the_top_level_solve_agrees_with_the_stages() {
     for v in VECTORS {
         if let (Some(answer), Some(job)) = (v.answer, v.job) {
-            let msg = include_bytes!(concat!("vectors/", v.name, ".msg.bin"));
-            let got =
-                rbx_challenge::solve(msg, job).unwrap_or_else(|e| panic!("{}: solve: {e}", v.name));
+            let msg = vector_file(v.name, "msg");
+            let got = rbx_challenge::solve(&msg, job)
+                .unwrap_or_else(|e| panic!("{}: solve: {e}", v.name));
             assert_eq!(got, answer, "{}: answer", v.name);
         }
     }

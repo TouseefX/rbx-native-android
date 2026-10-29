@@ -224,7 +224,11 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
                 let place_id = if inputs.place != 0 {
                     inputs.place
                 } else {
-                    inputs.js.get("PlaceId").and_then(Value::as_u64).unwrap_or(0) as u32
+                    inputs
+                        .js
+                        .get("PlaceId")
+                        .and_then(Value::as_u64)
+                        .unwrap_or(0) as u32
                 };
                 let t2 = join_msg::tail2_from_90_template(tmpl_90).unwrap_or(0);
                 // The key is the string's first 16 bytes, verbatim —
@@ -339,11 +343,7 @@ mod tests {
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
         let reply = Value::Null;
-        let steps = send_join_flow(
-            &mut client,
-            &inputs(js, tmpl_90, &reply),
-            opts,
-        );
+        let steps = send_join_flow(&mut client, &inputs(js, tmpl_90, &reply), opts);
         let mut delivered = Vec::new();
         for wire in client.take_sends() {
             if let Some(plain) = server.open(&wire) {
@@ -416,11 +416,7 @@ mod tests {
         handshake(&mut client, &mut server);
         let js = join_script();
         let reply = Value::Null;
-        let steps = send_join_flow(
-            &mut client,
-            &inputs(&js, &template_90(), &reply),
-            &opts,
-        );
+        let steps = send_join_flow(&mut client, &inputs(&js, &template_90(), &reply), &opts);
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
             ["0x13", "0x90", "0x92", "0x8a", "0x8f"]

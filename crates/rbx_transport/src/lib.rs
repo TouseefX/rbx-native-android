@@ -50,6 +50,7 @@ pub mod crypto;
 pub mod frames;
 pub mod join_flow;
 pub mod join_msg;
+pub mod join_target;
 pub mod offline;
 pub mod rupp;
 pub mod rx_stream;
