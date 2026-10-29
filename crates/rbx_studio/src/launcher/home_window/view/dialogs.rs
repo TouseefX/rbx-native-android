@@ -199,6 +199,33 @@ impl HomeWindow {
                 )
                 .into_any_element()
             }
+            Dialog::Opening { name } => {
+                let body = v_flex()
+                    .gap(px(8.))
+                    .pt(px(18.))
+                    .pr(px(20.))
+                    .pl(px(78.))
+                    .child(indeterminate_bar())
+                    .child(
+                        h_flex()
+                            .justify_between()
+                            .font_family(tokens::font_mono())
+                            .text_size(px(11.))
+                            .line_height(px(15.))
+                            .text_color(tokens::text3())
+                            .child("Reading\u{2026}"),
+                    )
+                    .into_any_element();
+                ui::dialog(
+                    520.,
+                    ui::spinner("opening-dialog", 22.),
+                    format!("Opening {name}"),
+                    "Reading the place file. The editor opens when it\u{2019}s ready.",
+                    Some(body),
+                    vec![],
+                )
+                .into_any_element()
+            }
             Dialog::Error {
                 experience,
                 title,

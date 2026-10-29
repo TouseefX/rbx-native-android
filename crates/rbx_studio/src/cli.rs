@@ -124,7 +124,7 @@ fn value<'a>(
 /// every part of it that could still fail already resolved: `--run`'s file has
 /// been read off disk, and the flag-versus-variable precedence settled (see
 /// `main`, which is where both happen).
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(crate) struct Launch {
     /// `--select`'s comma list, or `RBX_STUDIO_SELECT` when the flag is
     /// absent.
