@@ -1,9 +1,9 @@
 [1m[92m    Updating[0m crates.io index
 [1m[92m Downloading[0m crates ...
-[1m[92m  Downloaded[0m aes-gcm v0.10.3
 [1m[92m  Downloaded[0m blake2 v0.10.6
-[1m[92m  Downloaded[0m ctr v0.9.2
+[1m[92m  Downloaded[0m aes-gcm v0.10.3
 [1m[92m  Downloaded[0m curve25519-dalek-derive v0.1.1
+[1m[92m  Downloaded[0m ctr v0.9.2
 [1m[92m  Downloaded[0m curve25519-dalek v4.1.3
 [1m[92m  Downloaded[0m ghash v0.5.1
 [1m[92m  Downloaded[0m polyval v0.6.2
@@ -16,17 +16,17 @@
 [1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
+[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
-[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
 [1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
-[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
@@ -43,32 +43,43 @@
 [1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m x25519-dalek v2.0.1
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[91merror[0m[1m: unused variable: `local`[0m
-  [1m[94m--> [0mcrates/rbx_transport/src/join_flow.rs:88:5
-   [1m[94m|[0m
-[1m[94m88[0m [1m[94m|[0m     local: ([u8; 4], u16),
-   [1m[94m|[0m     [1m[91m^^^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_local`[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: `-D unused-variables` implied by `-D warnings`
-   [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_variables)]`
+[1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
+[1m[91merror[E0308][0m[1m: mismatched types[0m
+   [1m[94m--> [0mcrates/rbx_challenge/src/sandbox.rs:231:35
+    [1m[94m|[0m
+[1m[94m231[0m [1m[94m|[0m         ffi::lua_pushcclosure(st, Some(newproxy_raw), 0);
+    [1m[94m|[0m         [1m[94m---------------------[0m     [1m[91m^^^^^^^^^^^^^^^^^^[0m [1m[91mexpected fn pointer, found `Option<_>`[0m
+    [1m[94m|[0m         [1m[94m|[0m
+    [1m[94m|[0m         [1m[94marguments to this function are incorrect[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: expected fn pointer `[1m[35munsafe extern "C-unwind" fn(*mut mlua::lua_State) -> i32[0m`
+                     found enum `[1m[35mstd::option::Option<unsafe extern "C-unwind" fn(*mut mlua::lua_State) -> i32 {sandbox::newproxy_raw}>[0m`
+[1m[92mnote[0m: function defined here
+   [1m[94m--> [0m/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mlua-sys-0.12.0/src/luau/lua.rs:483:15
+    [1m[94m|[0m
+[1m[94m483[0m [1m[94m|[0m pub unsafe fn lua_pushcclosure(L: *mut lua_State, f: lua_CFunction, nup: c_int) {
+    [1m[94m|[0m               [1m[92m^^^^^^^^^^^^^^^^[0m
 
-[1m[91merror[0m[1m: this function has too many arguments (9/7)[0m
-  [1m[94m--> [0mcrates/rbx_transport/src/join_flow.rs:86:1
-   [1m[94m|[0m
-[1m[94m86[0m [1m[94m|[0m [1m[91m/[0m pub fn send_join_flow(
-[1m[94m87[0m [1m[94m|[0m [1m[91m|[0m     client: &mut Client,
-[1m[94m88[0m [1m[94m|[0m [1m[91m|[0m     local: ([u8; 4], u16),
-[1m[94m89[0m [1m[94m|[0m [1m[91m|[0m     js: &Value,
-[1m[94m...[0m  [1m[91m|[0m
-[1m[94m95[0m [1m[94m|[0m [1m[91m|[0m     rng32: u32,
-[1m[94m96[0m [1m[94m|[0m [1m[91m|[0m ) -> Vec<Step> {
-   [1m[94m|[0m [1m[91m|______________^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#too_many_arguments
-   [1m[94m= [0m[1mnote[0m: `-D clippy::too-many-arguments` implied by `-D warnings`
-   [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+[1m[91merror[E0277][0m[1m: the type `[u8]` cannot be indexed by `u8`[0m
+   [1m[94m--> [0mcrates/rbx_challenge/src/standardize.rs:218:36
+    [1m[94m|[0m
+[1m[94m218[0m [1m[94m|[0m         assert_eq!(op_length(OPLEN[REMAP[0]]), 1);
+    [1m[94m|[0m                                    [1m[91m^^^^^^^^[0m [1m[91mslice indices are of type `usize` or ranges of `usize`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: the trait `std::slice::SliceIndex<[u8]>` is not implemented for `u8`
+[1m[96mhelp[0m: `usize` implements trait `std::slice::SliceIndex<T>`
+   [1m[94m--> [0m/rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/bstr/traits.rs:197:0
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `std::slice::SliceIndex<std::bstr::ByteStr>`
+   [1m[94m--> [0m/rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/slice/index.rs:179:0
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `std::slice::SliceIndex<[T]>`
+    [1m[94m= [0m[1mnote[0m: required for `[u8]` to implement `std::ops::Index<u8>`
 
-[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
+[1mFor more information about this error, try `rustc --explain E0308`.[0m
+[1mSome errors have detailed explanations: E0277, E0308.[0m
+[1mFor more information about an error, try `rustc --explain E0277`.[0m
+[1m[91merror[0m: could not compile `rbx_challenge` (lib test) due to 2 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1m[91merror[0m: could not compile `rbx_transport` (lib test) due to 2 previous errors
+[1m[91merror[0m: could not compile `rbx_challenge` (lib) due to 1 previous error
 clippy=101 test=0
