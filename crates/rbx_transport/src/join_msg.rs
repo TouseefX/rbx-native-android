@@ -45,7 +45,7 @@ const K_CHECKSUM_SEED: u32 = 0xD971;
 // The ticket hash's build-wide constants.
 const HASH_CONST: u32 = 0x7137_5635;
 const TICKET_CONST: u32 = 17498;
-const ITER_CONST: u32 = 1434_170_839; // 0x5578B7D7
+const ITER_CONST: u32 = 0x5578_B7D7;
 const BAD_F00D: i64 = 0x0BAD_F00D;
 
 /// The 0x8a build constant: 40 hex chars, '!', 32 hex, '.'.
@@ -424,7 +424,7 @@ fn merge_into(dst: &mut Map<String, Value>, src: &Value) {
             }
             Value::String(_) => *dv = Value::String(value_to_string(sv)),
             Value::Number(_) if sv.is_number() => *dv = sv.clone(),
-            Value::Bool(_) if sv.is_bool() => *dv = sv.clone(),
+            Value::Bool(_) if sv.is_boolean() => *dv = sv.clone(),
             Value::Null => *dv = sv.clone(),
             _ => {}
         }
