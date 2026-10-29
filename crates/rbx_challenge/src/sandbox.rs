@@ -228,7 +228,7 @@ pub(crate) fn install(lua: &Lua, job: &str) -> Result<(), mlua::Error> {
     // 6. newproxy, raw.
     unsafe {
         let st = lua.state();
-        ffi::lua_pushcclosure(st, Some(newproxy_raw), 0);
+        ffi::lua_pushcclosure(st, newproxy_raw, 0);
         ffi::lua_setglobal(st, c"newproxy".as_ptr());
     }
 
