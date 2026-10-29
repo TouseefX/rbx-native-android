@@ -48,6 +48,7 @@ pub mod challenge;
 pub mod client;
 pub mod crypto;
 pub mod frames;
+pub mod join_flow;
 pub mod join_msg;
 pub mod offline;
 pub mod rupp;
