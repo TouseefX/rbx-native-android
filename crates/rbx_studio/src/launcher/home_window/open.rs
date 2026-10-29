@@ -173,9 +173,7 @@ impl HomeWindow {
             return;
         };
         let name = file_name(path);
-        self.dialog = Some(Dialog::Opening {
-            name: name.clone(),
-        });
+        self.dialog = Some(Dialog::Opening { name: name.clone() });
         cx.notify();
         let path = path.to_path_buf();
         cx.spawn(async move |this, cx| {
