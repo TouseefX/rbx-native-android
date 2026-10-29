@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(wrapped[7..23], [0xab; 16]);
         assert_eq!(wrapped[23..25], [0x02, 0x06]);
         assert_eq!(wrapped[25..29], [10, 37, 8, 91]);
-        assert_eq!(wrapped[29..31], [0xef, 0x75]); // 61269, big-endian
+        assert_eq!(wrapped[29..31], [0xef, 0x55]); // 61269, big-endian
         assert_eq!(wrapped[31..], *b"payload");
     }
 

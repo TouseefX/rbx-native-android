@@ -17,22 +17,29 @@
 
 pub(crate) mod accounts;
 
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::time::Duration;
 
+use base64::Engine as _;
 use gpui_kit::{AsyncApp, BackgroundExecutor, FutureExt as _};
 use rbx_cloud::ApiKey;
 
-// Every credential-store access in the editor goes through these three, so
-// `RBX_NO_KEYRING` (see `rbx_cloud::keyring_disabled`) makes the store look
-// empty and writes vanish, with nothing reaching the real keyring.
+// Every credential-store access in the editor goes through these three. When
+// `RBX_NO_KEYRING` (see `rbx_cloud::keyring_disabled`) is set -- Android sets
+// it, because the platform layer has no keyring there and a read that never
+// answers would freeze the whole pump -- the credentials that would have gone
+// to the OS store land in the file store below instead of vanishing. Nothing
+// reaches the real keyring either way.
 
 pub(crate) async fn read_credentials(
     url: &str,
     cx: &mut AsyncApp,
 ) -> anyhow::Result<Option<(String, Vec<u8>)>> {
     if rbx_cloud::keyring_disabled() {
-        return Ok(None);
+        return Ok(file_read_at(&file_store_path()?, url));
     }
     cx.update(|cx| cx.read_credentials(url)).await
 }
@@ -44,6 +51,7 @@ pub(crate) async fn write_credentials(
     cx: &mut AsyncApp,
 ) -> anyhow::Result<()> {
     if rbx_cloud::keyring_disabled() {
+        file_write_at(&file_store_path()?, url, account, secret);
         return Ok(());
     }
     cx.update(|cx| cx.write_credentials(url, account, &secret))
@@ -52,9 +60,91 @@ pub(crate) async fn write_credentials(
 
 pub(crate) async fn delete_credentials(url: &str, cx: &mut AsyncApp) -> anyhow::Result<()> {
     if rbx_cloud::keyring_disabled() {
+        file_delete_at(&file_store_path()?, url);
         return Ok(());
     }
     cx.update(|cx| cx.delete_credentials(url)).await
+}
+
+/// Where the file store lives: the editor's config directory, which on
+/// Android is the app's private `getFilesDir()` -- no other app can read
+/// it, and the OS keeps it across restarts and updates. `None` when no
+/// config directory is known at all, in which case the old vanishing
+/// behavior stands.
+fn file_store_path() -> Option<PathBuf> {
+    crate::settings::default_config_dir().map(|dir| dir.join("credentials.json"))
+}
+
+/// One stored credential: the account name and the secret, base64 so
+/// bytes round-trip whatever they are.
+#[derive(serde::Deserialize, serde::Serialize)]
+struct FileEntry {
+    account: String,
+    secret: String,
+}
+
+/// Serializes the load-modify-save cycles; the calls are rare (startup,
+/// sign-in, settings) and none of them await while held.
+static FILE_STORE: Mutex<()> = Mutex::new(());
+
+fn file_read_at(path: &Path, url: &str) -> Option<(String, Vec<u8>)> {
+    let store = load_file_store_at(path);
+    let entry = store.get(url)?;
+    let secret = base64::engine::general_purpose::STANDARD
+        .decode(&entry.secret)
+        .ok()?;
+    Some((entry.account.clone(), secret))
+}
+
+fn file_write_at(path: &Path, url: &str, account: &str, secret: Vec<u8>) {
+    let _guard = FILE_STORE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut store = load_file_store_at(path);
+    store.insert(
+        url.to_string(),
+        FileEntry {
+            account: account.to_string(),
+            secret: base64::engine::general_purpose::STANDARD.encode(secret),
+        },
+    );
+    save_file_store_at(path, &store);
+}
+
+fn file_delete_at(path: &Path, url: &str) {
+    let _guard = FILE_STORE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut store = load_file_store_at(path);
+    if store.remove(url).is_some() {
+        save_file_store_at(path, &store);
+    }
+}
+
+/// A credentials file that cannot be parsed reads as empty: a corrupted
+/// document must not brick sign-in forever, and `forget` can still clear it.
+fn load_file_store_at(path: &Path) -> BTreeMap<String, FileEntry> {
+    match std::fs::read(path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|err| {
+            eprintln!("rbxstudio: the credentials file could not be parsed: {err}");
+            BTreeMap::new()
+        }),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => BTreeMap::new(),
+        Err(err) => {
+            eprintln!("rbxstudio: the credentials file could not be read: {err}");
+            BTreeMap::new()
+        }
+    }
+}
+
+fn save_file_store_at(path: &Path, store: &BTreeMap<String, FileEntry>) {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    match serde_json::to_string_pretty(store) {
+        Ok(json) => {
+            if let Err(err) = std::fs::write(path, json) {
+                eprintln!("rbxstudio: the credentials file could not be written: {err}");
+            }
+        }
+        Err(err) => eprintln!("rbxstudio: the credentials could not be serialized: {err}"),
+    }
 }
 
 /// The store's lookup key: one entry for this editor.
@@ -300,6 +390,53 @@ pub(crate) async fn forget_session(cx: &mut AsyncApp) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_file_store_roundtrips_and_deletes_every_credential() {
+        let dir = std::env::temp_dir().join(format!("rbx-keyring-test-{}", std::process::id()));
+        let path = dir.join("credentials.json");
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(file_read_at(&path, "https://a"), None);
+
+        file_write_at(&path, "https://a", "open-cloud-api-key", b"the-key".to_vec());
+        assert_eq!(
+            file_read_at(&path, "https://a"),
+            Some(("open-cloud-api-key".to_string(), b"the-key".to_vec()))
+        );
+
+        // A second entry survives beside the first, and bytes that are
+        // not UTF-8 round-trip too (the cookie and key are, the store
+        // does not get to assume).
+        file_write_at(&path, "https://b", "roblosecurity", vec![0, 255, 7]);
+        assert_eq!(
+            file_read_at(&path, "https://b").map(|(_, s)| s),
+            Some(vec![0, 255, 7])
+        );
+        assert!(file_read_at(&path, "https://a").is_some());
+
+        file_delete_at(&path, "https://a");
+        assert_eq!(file_read_at(&path, "https://a"), None);
+        assert!(file_read_at(&path, "https://b").is_some());
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn an_unparseable_credentials_file_reads_as_empty() {
+        let dir = std::env::temp_dir().join(format!("rbx-keyring-bad-{}", std::process::id()));
+        let path = dir.join("credentials.json");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&path, b"{not json").unwrap();
+        assert_eq!(file_read_at(&path, "https://a"), None);
+        // And writing over it heals the document.
+        file_write_at(&path, "https://a", "acct", b"secret".to_vec());
+        assert_eq!(
+            file_read_at(&path, "https://a"),
+            Some(("acct".to_string(), b"secret".to_vec()))
+        );
+        let _ = std::fs::remove_file(&path);
+    }
 
     #[gpui_kit::test]
     async fn a_store_that_never_answers_is_given_up_on(cx: &mut gpui_kit::TestAppContext) {
