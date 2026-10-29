@@ -476,8 +476,11 @@ pub(crate) struct EditorBoot {
 /// `boot` back with the message when the place cannot be read, so the
 /// launcher can offer another.
 ///
-/// Parsing and the asset downloads both block; this runs before the editor
-/// window exists, so only the launcher (if any) waits on it.
+/// The parse blocks for seconds on a real place, and the asset downloads
+/// block the first frames after it; Home runs the parse on a background
+/// thread first and calls [`open_parsed`] with what lands (see
+/// `HomeWindow::open_path`), so a phone's main thread keeps answering
+/// touches -- Android kills an app whose input stops for five seconds.
 pub(crate) fn open_editor(
     path: &Path,
     boot: EditorBoot,
@@ -486,13 +489,28 @@ pub(crate) fn open_editor(
     if shell::game::manifest::is_manifest(path) {
         return shell::game::open_game(path, boot, cx);
     }
+    println!("loading {}…", path.display());
+    let parsed = match parse_place(path, &boot.launch) {
+        Ok(parsed) => parsed,
+        Err(message) => return Err(Box::new((message, boot))),
+    };
+    open_parsed(parsed, boot, cx)
+}
+
+/// [`open_editor`] once the place is parsed: the main-thread half -- the
+/// Explorer tree, the viewer's GPU upload, the Recent entry, and the
+/// window itself. Only this half needs the `App`.
+pub(crate) fn open_parsed(
+    parsed: ParsedPlace,
+    boot: EditorBoot,
+    cx: &mut App,
+) -> Result<(), Box<(String, EditorBoot)>> {
     let EditorBoot {
         settings,
         launch,
         user,
     } = boot;
-    println!("loading {}…", path.display());
-    let place = match load(path, &launch, settings.icon_pack) {
+    let place = match finish_load(parsed, &launch, settings.icon_pack) {
         Ok(place) => place,
         Err(message) => {
             return Err(Box::new((
@@ -505,8 +523,9 @@ pub(crate) fn open_editor(
             )))
         }
     };
+    let path = place.path.clone();
     if let Err(err) = home::remember(home::RecentPlace {
-        path: std::fs::canonicalize(path).unwrap_or(path.to_path_buf()),
+        path: std::fs::canonicalize(&path).unwrap_or(path.clone()),
         universe_id: None,
         place_id: None,
         name: None,
@@ -517,9 +536,9 @@ pub(crate) fn open_editor(
     // A place linked to Roblox (opened from Home, or linked since) goes by
     // its game's name, not the `<universe>-<place>.rbxl` local copy's.
     let title = SharedString::from(
-        home::link_of(path)
+        home::link_of(&path)
             .and_then(|link| link.name)
-            .unwrap_or_else(|| file_name(path)),
+            .unwrap_or_else(|| file_name(&path)),
     );
     let options = window_options(&title, cx);
     cx.open_window(options, |window, cx| {
@@ -595,7 +614,19 @@ fn install_fonts(cx: &mut App) {
     }
 }
 
-fn load(path: &Path, launch: &Launch, icon_pack: IconPack) -> Result<Place, String> {
+/// The half of an open that needs no UI: the project sniff, the bytes, the
+/// format sniff and the full tree parse -- the seconds-long part for a real
+/// place, so it can run on a background thread (see `HomeWindow::open_path`)
+/// and cross back as plain data.
+pub(crate) struct ParsedPlace {
+    dom: WeakDom,
+    format: Format,
+    path: PathBuf,
+}
+
+/// Reads and parses `path`, the way [`open_editor`] did before the editor
+/// window exists. `launch` is only asked to narrate when `--verbose`.
+pub(crate) fn parse_place(path: &Path, launch: &Launch) -> Result<ParsedPlace, String> {
     // An Argon/Rojo project opens as the place it builds.
     let imported = shell::project::place_for(path)?;
     let path = imported.as_deref().unwrap_or(path);
@@ -611,25 +642,39 @@ fn load(path: &Path, launch: &Launch, icon_pack: IconPack) -> Result<Place, Stri
         }
     ));
     let dom = rbx_viewer::read_place(path)?;
+    Ok(ParsedPlace {
+        dom,
+        format,
+        path: path.to_path_buf(),
+    })
+}
+
+/// The main-thread half of an open: the folder-colour prune, the Explorer
+/// tree, the saved-at viewpoint, and the viewer, which reuses the parsed
+/// tree here rather than reading and parsing the file a second time the
+/// way `Headless::load` would.
+fn finish_load(parsed: ParsedPlace, launch: &Launch, icon_pack: IconPack) -> Result<Place, String> {
+    let ParsedPlace { dom, format, path } = parsed;
     let database = ReflectionDatabase::embedded();
 
     let mut folder_colors = FolderColors::load();
-    if folder_colors.prune(path, &dom) {
+    if folder_colors.prune(&path, &dom) {
         let _ = folder_colors.save();
     }
 
+    let viewer = Headless::from_dom(&dom, true).map_err(|err| format!("{err} in {path:?}"))?;
     Ok(Place {
-        explorer: Explorer::from_dom(&dom, icon_pack, &folder_colors, path),
+        explorer: Explorer::from_dom(&dom, icon_pack, &folder_colors, &path),
         selected: launch
             .select
             .as_deref()
             .and_then(|target| explorer::resolve(&dom, target)),
         camera: PlaceCamera::from_dom(&dom),
-        viewer: Headless::load(path, true)?,
+        viewer,
         properties: Properties::new(database.clone()),
         dom,
         database,
-        path: path.to_path_buf(),
+        path,
         format,
         folder_colors,
     })

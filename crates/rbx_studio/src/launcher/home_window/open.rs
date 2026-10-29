@@ -65,7 +65,9 @@ impl HomeWindow {
                 }
                 match result {
                     Ok(Opened::Downloaded(path) | Opened::LocalCopy(path)) => {
-                        this.dialog = None;
+                        // Not `dialog = None`: `open_path` swaps the
+                        // Downloading card straight to its Opening one, so
+                        // no frame paints an uncovered Home in between.
                         this.open_path_later(path, cx);
                     }
                     Err(OpenError { status, message }) => {
@@ -113,7 +115,8 @@ impl HomeWindow {
                 }
                 match result {
                     Ok(path) => {
-                        this.dialog = None;
+                        // As above: Downloading hands straight over to
+                        // Opening, no uncovered frame between them.
                         this.open_path_later(path, cx);
                     }
                     Err(OpenError { status, message }) => {
@@ -141,8 +144,8 @@ impl HomeWindow {
     }
 
     /// Opens `path` in the editor and closes Home, deferred a frame, so the
-    /// dialog closing paints first and the blocking load doesn't run inside
-    /// a click handler.
+    /// dialog closing paints first and the open doesn't run inside a click
+    /// handler.
     pub(super) fn open_path_later(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         cx.spawn(async move |this, cx| {
             cx.background_executor()
@@ -153,30 +156,68 @@ impl HomeWindow {
         .detach();
     }
 
+    /// Reads `path` on a background thread and opens the editor on what
+    /// lands: the parse is the seconds-long half of an open, and on a phone
+    /// it must not sit on the main thread -- Android kills an app whose
+    /// input goes unanswered for five seconds (an ANR), which is the
+    /// "downloaded, then it crashed" of a big place. The Opening card
+    /// keeps a bar moving (and input occluded) while the parse runs, and
+    /// stays up through the open itself; the boot stays here until the
+    /// parse is back, so a window that goes away mid-read takes nothing
+    /// with it.
     pub(super) fn open_path(&mut self, path: &Path, cx: &mut Context<Self>) {
-        let Some(boot) = self.boot.borrow_mut().take() else {
+        let Some(launch) = self.boot.borrow().as_ref().map(|boot| boot.launch.clone()) else {
+            // Nothing to open with; at least don't leave the modal up.
+            self.dialog = None;
+            cx.notify();
             return;
         };
-        match crate::open_editor(path, boot, cx) {
-            Ok(()) => {
-                let _ = self
-                    .handle
-                    .update(cx, |_, window, _| window.remove_window());
-            }
-            Err(failed) => {
-                let (message, mut boot) = *failed;
-                // Game Settings was for this open only.
-                boot.launch.configure = None;
-                *self.boot.borrow_mut() = Some(boot);
-                self.dialog = Some(Dialog::Error {
-                    experience: None,
-                    title: format!("Couldn\u{2019}t open {}", file_name(path)),
-                    status: None,
-                    reason: message,
-                });
-                cx.notify();
-            }
-        }
+        self.dialog = Some(Dialog::Opening { name: file_name(path) });
+        cx.notify();
+        let path = path.to_path_buf();
+        cx.spawn(async move |this, cx| {
+            let parsed = cx
+                .background_spawn(async move { crate::parse_place(&path, &launch) })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                let Some(boot) = this.boot.borrow_mut().take() else {
+                    this.dialog = None;
+                    cx.notify();
+                    return;
+                };
+                // Either the parse already failed off-thread, or the
+                // open fails here; either way the boot comes back with
+                // the message. The Opening card stays up through the
+                // open itself too -- the viewer's GPU upload is the one
+                // main-thread wait left -- and Error replaces it, or the
+                // window closes from under it.
+                let failed = match parsed {
+                    Ok(parsed) => crate::open_parsed(parsed, boot, cx).err(),
+                    Err(message) => Some(Box::new((message, boot))),
+                };
+                match failed {
+                    None => {
+                        let _ = this
+                            .handle
+                            .update(cx, |_, window, _| window.remove_window());
+                    }
+                    Some(failed) => {
+                        let (message, mut boot) = *failed;
+                        // Game Settings was for this open only.
+                        boot.launch.configure = None;
+                        *this.boot.borrow_mut() = Some(boot);
+                        this.dialog = Some(Dialog::Error {
+                            experience: None,
+                            title: format!("Couldn\u{2019}t open {}", file_name(&path)),
+                            status: None,
+                            reason: message,
+                        });
+                        cx.notify();
+                    }
+                }
+            });
+        })
+        .detach();
     }
 
     pub(super) fn open_recent(&mut self, place: &RecentPlace, cx: &mut Context<Self>) {

@@ -72,6 +72,12 @@ pub(super) enum Dialog {
     Downloading {
         experience: Experience,
     },
+    /// The place is being read and parsed, on a background thread (see
+    /// `HomeWindow::open_path`): no Cancel button, because the parse is
+    /// about to hand its result to the editor window either way.
+    Opening {
+        name: String,
+    },
     Error {
         experience: Option<Experience>,
         title: String,
