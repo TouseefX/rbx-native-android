@@ -135,11 +135,8 @@ impl Schema {
             let mut events = Vec::new();
             for _ in 0..event_count {
                 let event_name = text(&mut c, "event name")?;
-                let parameter_count = count_bounded(
-                    &mut c,
-                    "event parameter",
-                    MAX_PARAMETERS_PER_EVENT,
-                )?;
+                let parameter_count =
+                    count_bounded(&mut c, "event parameter", MAX_PARAMETERS_PER_EVENT)?;
                 let mut parameters = Vec::new();
                 for _ in 0..parameter_count {
                     parameters.push(Parameter {
@@ -194,9 +191,9 @@ impl Schema {
 
     /// The class a class index names.
     pub fn class(&self, index: u16) -> ParseResult<&Class> {
-        self.classes.get(usize::from(index)).ok_or_else(|| {
-            ParseError::Malformed(format!("class index {index} out of range"))
-        })
+        self.classes
+            .get(usize::from(index))
+            .ok_or_else(|| ParseError::Malformed(format!("class index {index} out of range")))
     }
 
     /// The member a global property ID names, with its class (guide §4.4:
@@ -238,9 +235,8 @@ fn count_bounded(c: &mut Cursor<'_>, what: &str, bound: u64) -> ParseResult<u64>
 }
 
 fn text(c: &mut Cursor<'_>, what: &str) -> ParseResult<String> {
-    String::from_utf8(c.string()?).map_err(|_| {
-        ParseError::Malformed(format!("{what} is not UTF-8; the schema is text"))
-    })
+    String::from_utf8(c.string()?)
+        .map_err(|_| ParseError::Malformed(format!("{what} is not UTF-8; the schema is text")))
 }
 
 fn names(c: &mut Cursor<'_>, what: &str) -> ParseResult<Vec<String>> {

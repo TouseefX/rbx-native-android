@@ -138,9 +138,9 @@ pub fn read_value(c: &mut Cursor<'_>, tag: u8, schema: &Schema) -> ParseResult<V
         // Context-dependent asset/content and NetAsset forms, the optional
         // CFrame, tuples and maps, and the user shape: extents that need
         // context or per-element decoding this stage does not model.
-        33 | 61 | 60 | 51 | 29 | 30 | 31 | 32 | 68 => Err(ParseError::Unsupported(format!(
-            "value tag {tag}"
-        ))),
+        33 | 61 | 60 | 51 | 29 | 30 | 31 | 32 | 68 => {
+            Err(ParseError::Unsupported(format!("value tag {tag}")))
+        }
         other => Err(ParseError::Unsupported(format!(
             "unknown value tag {other}"
         ))),
@@ -163,17 +163,13 @@ fn read_name(c: &mut Cursor<'_>, schema: &Schema) -> ParseResult<Value> {
         }
     } else {
         if selector & 0x7f == 127 {
-            return Err(ParseError::Unsupported(
-                "extended shared Name form".into(),
-            ));
+            return Err(ParseError::Unsupported("extended shared Name form".into()));
         }
         let index = usize::from(selector & 0x7f);
         schema
             .shared_names
             .get(index)
-            .ok_or_else(|| {
-                ParseError::Malformed(format!("shared name {index} out of range"))
-            })?
+            .ok_or_else(|| ParseError::Malformed(format!("shared name {index} out of range")))?
             .as_bytes()
             .to_vec()
     };
@@ -196,7 +192,7 @@ fn bounded_repeat(c: &mut Cursor<'_>, tag: u8, element: usize) -> ParseResult<Va
             "tag {tag} repeat count {n} exceeds the reference receiver's bound of 20"
         )));
     }
-    let len = usize::try_from(n)
+    let len = (n as usize)
         .checked_mul(element)
         .ok_or_else(|| ParseError::Malformed("repeat length overflows".into()))?;
     opaque(c, tag, len)

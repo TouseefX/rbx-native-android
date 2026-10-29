@@ -189,12 +189,12 @@ fn schema_prefix_parses_with_the_guides_indices() {
 /// Guide §7.2 and §7.3: the `Room` folder and the `Block` part under it,
 /// verbatim.
 pub(crate) const ROOM_RECORD: &[u8] = &[
-    0x01, 0x64, 0x00, 0x00, 0x00, 0xe0, 0x00, 0x02, 0x01, 0x06, 0x04, b'R', b'o', b'o', b'm',
-    0xff, 0x00,
+    0x01, 0x64, 0x00, 0x00, 0x00, 0xe0, 0x00, 0x02, 0x01, 0x06, 0x04, b'R', b'o', b'o', b'm', 0xff,
+    0x00,
 ];
 pub(crate) const BLOCK_RECORD: &[u8] = &[
-    0x01, 0x65, 0x00, 0x00, 0x00, 0x66, 0x01, 0x02, 0x01, 0x3b, 0x05, b'B', b'l', b'o', b'c',
-    b'k', 0xff, 0x01, 0x64, 0x00, 0x00, 0x00,
+    0x01, 0x65, 0x00, 0x00, 0x00, 0x66, 0x01, 0x02, 0x01, 0x3b, 0x05, b'B', b'l', b'o', b'c', b'k',
+    0xff, 0x01, 0x64, 0x00, 0x00, 0x00,
 ];
 
 pub(crate) fn room_ref() -> Ref {
@@ -216,20 +216,28 @@ fn worked_records_room_and_block() {
     assert_eq!(records[0].id, room_ref());
     assert_eq!(records[0].class, "Folder");
     assert_eq!(records[0].property("Archivable"), Some(&Value::Bool(true)));
-    assert_eq!(records[0].property("Name"), Some(&Value::Name("Room".into())));
+    assert_eq!(
+        records[0].property("Name"),
+        Some(&Value::Name("Room".into()))
+    );
     assert_eq!(records[0].parent, None);
 
     assert_eq!(records[1].id, block_ref());
     assert_eq!(records[1].class, "Part");
     assert_eq!(records[1].property("Anchored"), Some(&Value::Bool(true)));
-    assert_eq!(records[1].property("Name"), Some(&Value::Name("Block".into())));
+    assert_eq!(
+        records[1].property("Name"),
+        Some(&Value::Name("Block".into()))
+    );
     assert_eq!(records[1].parent, Some(room_ref()));
 
     // The guide §13 example's graph: DataModel → Room → Block.
     let world = World::from_records(records);
     let block = &world.records[1];
-    assert_eq!(world.parent_of(block).unwrap().property("Name"),
-        Some(&Value::Name("Room".into())));
+    assert_eq!(
+        world.parent_of(block).unwrap().property("Name"),
+        Some(&Value::Name("Room".into()))
+    );
 }
 
 /// Guide §7.4: one property update flipping `Block.Anchored` to false,
@@ -273,8 +281,8 @@ fn worked_spawn_two_property_loops() {
     let mut world = World::from_records(records);
 
     let message: &[u8] = &[
-        0x83, 0x02, 0x01, 0x66, 0x00, 0x00, 0x00, 0x66, 0x01, 0x02, 0x01, 0x3b, 0x05, b'C',
-        b'u', b'b', b'e', b'2', 0xff, 0xff, 0x01, 0x64, 0x00, 0x00, 0x00, 0x00,
+        0x83, 0x02, 0x01, 0x66, 0x00, 0x00, 0x00, 0x66, 0x01, 0x02, 0x01, 0x3b, 0x05, b'C', b'u',
+        b'b', b'e', b'2', 0xff, 0xff, 0x01, 0x64, 0x00, 0x00, 0x00, 0x00,
     ];
     let items = parse_message(message, &schema).unwrap();
     assert_eq!(items.len(), 1);
@@ -300,8 +308,7 @@ fn worked_spawn_two_property_loops() {
 fn worked_event_attribute_changed() {
     let schema = guide_schema();
     let message: &[u8] = &[
-        0x83, 0x07, 0x01, 0x65, 0x00, 0x00, 0x00, 0x05, 0x0f, 0x04, b'T', b'e', b's', b't',
-        0x00,
+        0x83, 0x07, 0x01, 0x65, 0x00, 0x00, 0x00, 0x05, 0x0f, 0x04, b'T', b'e', b's', b't', 0x00,
     ];
     let items = parse_message(message, &schema).unwrap();
     assert_eq!(items.len(), 1);
