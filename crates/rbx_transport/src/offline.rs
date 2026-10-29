@@ -297,7 +297,7 @@ mod tests {
         bad.ticket_auth = &[7u8; 251];
         assert!(build_req2(keys.tx(), &bad).is_none());
         // And the packet has to fit the probe.
-        let mut tight = Req2Inputs {
+        let tight = Req2Inputs {
             probe_size: nonce_off + 27,
             ..inputs
         };
