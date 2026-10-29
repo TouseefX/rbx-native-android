@@ -39,16 +39,21 @@
 //! 0x92/0x8f/0x9b forms, and the client state machine itself — the
 //! offline handshake's sequencing, the datagram counters, the ACK
 //! policy, and the keepalive mirror, with the sockets left to the
-//! caller. Not yet ported: the join sequencer that drives it and the
-//! 0x9B solver.
+//! caller — plus the join-game HTTP layer ([`join_game`]) and the
+//! sequencer that drives a whole run over one ([`drive`]). Not yet
+//! ported: the 0x9B solver lives in the `rbx_challenge` crate, and the
+//! QUIC transport the native rides for its main connection is not part
+//! of this RakNet-first port.
 
 #![forbid(unsafe_code)]
 
 pub mod challenge;
 pub mod client;
 pub mod crypto;
+pub mod drive;
 pub mod frames;
 pub mod join_flow;
+pub mod join_game;
 pub mod join_msg;
 pub mod join_target;
 pub mod offline;

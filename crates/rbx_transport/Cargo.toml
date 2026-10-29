@@ -23,3 +23,8 @@ aes = "0.8"
 # serde_json through the vendored gpui, so this only makes that visible
 # where it is relied on.
 serde_json = { version = "1", features = ["preserve_order"] }
+# The join-game HTTP layer (see `join_game`): the POST that trades a
+# .ROBLOSECURITY cookie for a join script. The same version and features
+# rbx_cloud already locks for the workspace, so this adds no new code to
+# any build.
+ureq = { version = "3", features = ["json", "gzip"] }

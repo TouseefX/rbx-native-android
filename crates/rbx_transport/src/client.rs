@@ -944,7 +944,7 @@ pub(crate) mod tests {
 
         /// Wrap a payload the way the server does: a short RUPP header
         /// riding subtype 2.
-        fn wrap(&self, payload: &[u8]) -> Vec<u8> {
+        pub(crate) fn wrap(&self, payload: &[u8]) -> Vec<u8> {
             let header = rupp::Header {
                 token: [0x99; 16],
                 subtype: 2,
@@ -969,7 +969,7 @@ pub(crate) mod tests {
         }
 
         /// The server's bare Reply1.
-        fn reply1() -> Vec<u8> {
+        pub(crate) fn reply1() -> Vec<u8> {
             let mut p = vec![0u8; 28];
             p[0] = offline::REPLY1;
             p[1..17].copy_from_slice(&offline::MAGIC);
@@ -981,7 +981,7 @@ pub(crate) mod tests {
         /// The server's Reply2: its data public key split across the AAD
         /// tail and the plaintext head, exactly where the client's parser
         /// reconstructs it.
-        fn reply2(&self) -> Vec<u8> {
+        pub(crate) fn reply2(&self) -> Vec<u8> {
             let mut p = Vec::new();
             p.push(offline::REPLY2);
             p.extend_from_slice(&offline::MAGIC);
