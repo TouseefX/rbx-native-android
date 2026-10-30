@@ -57,7 +57,7 @@ pub(super) enum Games {
 /// Who is in the place's live Team Create session, for the join dialog.
 pub(super) enum Members {
     Loading,
-    Loaded(Vec<rbx_cloud::team_create::SessionMember>),
+    Loaded(Vec<rbx_cloud::SessionMember>),
     Failed(String),
 }
 
@@ -382,12 +382,12 @@ impl HomeWindow {
                         "Couldn\u{2019}t read the session. Check your connection.".to_string(),
                     ),
                     Ok("fresh") => Members::Loaded(vec![
-                        rbx_cloud::team_create::SessionMember {
+                        rbx_cloud::SessionMember {
                             id: 156,
                             name: "builderman".into(),
                             display_name: "Builderman".into(),
                         },
-                        rbx_cloud::team_create::SessionMember {
+                        rbx_cloud::SessionMember {
                             id: 925_308_243,
                             name: "cht".into(),
                             display_name: "cht".into(),
