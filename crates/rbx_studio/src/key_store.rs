@@ -214,6 +214,36 @@ async fn restore(cx: &mut AsyncApp) -> bool {
     ApiKey::from_env_or_config().is_some()
 }
 
+/// [`restore_at_startup`] for the boots that run before any executor exists
+/// to await one — mobile's launch closure opens Home directly, with no
+/// desktop-style spawn to run the restore in first. With the keyring
+/// disabled the store is a synchronous file, so the saved key installs
+/// right there. `None` when the OS keyring is in use: only the async path
+/// can answer that. The accounts index needs no touch here — it was
+/// written when the key was saved, and Home's check relabels on demand.
+pub(crate) fn restore_synchronously() -> Option<bool> {
+    if !rbx_cloud::keyring_disabled() {
+        return None;
+    }
+    match file_store_path() {
+        Ok(path) => Some(install_file_key_at(&path)),
+        Err(_) => Some(false),
+    }
+}
+
+/// The file store's saved key, installed for this session. `false` when
+/// there is none (or it is not UTF-8 text): nothing to install.
+fn install_file_key_at(path: &Path) -> bool {
+    let key = file_read_at(path, URL)
+        .and_then(|(_, secret)| String::from_utf8(secret).ok())
+        .map(|secret| secret.trim().to_string())
+        .filter(|secret| !secret.is_empty())
+        .map(ApiKey::new);
+    let installed = key.is_some();
+    ApiKey::install(key);
+    installed
+}
+
 /// Stores `key`, replacing any key already there, and makes it the one
 /// every later `Client` uses. The wizard calls this only once
 /// `rbx_cloud::check_scopes` has passed on it.
@@ -442,6 +472,33 @@ mod tests {
             file_read_at(&path, "https://a"),
             Some(("acct".to_string(), b"secret".to_vec()))
         );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn the_synchronous_restore_installs_the_file_stored_key() {
+        let dir = std::env::temp_dir().join(format!("rbx-keyring-sync-{}", std::process::id()));
+        let path = dir.join("credentials.json");
+        let _ = std::fs::remove_file(&path);
+
+        // Nothing stored: nothing to install.
+        assert!(!install_file_key_at(&path));
+        assert!(rbx_cloud::ApiKey::from_env_or_config().is_none());
+
+        // A saved key installs for the session — the whole point of the
+        // mobile boot, which opens Home with no desktop-style restore.
+        file_write_at(&path, URL, ACCOUNT, b"  key-one  ".to_vec());
+        assert!(install_file_key_at(&path));
+        assert_eq!(
+            rbx_cloud::ApiKey::from_env_or_config().map(|k| k.expose_secret().to_string()),
+            Some("key-one".to_string())
+        );
+
+        // Whitespace-only is no key, and installing `None` withdraws it.
+        file_write_at(&path, URL, ACCOUNT, b"   ".to_vec());
+        assert!(!install_file_key_at(&path));
+        assert!(rbx_cloud::ApiKey::from_env_or_config().is_none());
+
         let _ = std::fs::remove_file(&path);
     }
 
