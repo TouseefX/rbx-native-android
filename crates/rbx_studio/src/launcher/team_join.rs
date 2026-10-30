@@ -36,6 +36,14 @@ const SESSION_MS: u64 = 24 * 60 * 60 * 1000;
 /// the second call, cold starts slower.
 const NEGOTIATION_TRIES: u32 = 30;
 
+/// How many fresh sessions a wedged RCC gets: roughly one in four never
+/// completes the offline/encrypted handshake — it stops ACKing partway
+/// through, and re-sending inside the same session cannot help,
+/// everything queues behind the same hole (measured in the reference).
+/// A fresh session with a fresh join script takes a ~75% per-attempt
+/// rate to ~99%.
+const SESSION_ATTEMPTS: u32 = 3;
+
 /// The reply the join flow takes: the negotiation document when it
 /// carries a `joinTicket`, `Null` otherwise — `build_90` keeps the
 /// template's ticket for a non-object reply.
@@ -80,6 +88,8 @@ pub(crate) enum Phase {
     Negotiating { attempt: u32 },
     /// The config arrived; the RakNet connect and the join burst follow.
     Joined,
+    /// The RCC wedged the handshake; a fresh script and socket redo it.
+    Rejoining { attempt: u32 },
     /// The session ran its course — `app_messages` in is the
     /// replication verdict.
     Ended {
@@ -184,19 +194,88 @@ pub(crate) fn start(place: u64, cookie: SessionCookie) -> Session {
 }
 
 /// The join and the session: the whole `drive` sequence on one socket,
-/// logged a handful of lines.
+/// logged a handful of lines — and a second and third socket when the
+/// RCC wedges the handshake (see `SESSION_ATTEMPTS`).
 fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Report, String> {
     let say = |line: String| {
         eprintln!("team-create: {line}");
         status.line(&line);
     };
-    // Team Create joins through its own endpoint, not join-game: for up
-    // to ~10s after the first POST the answer is JSON whose keys are
-    // null (a stray scalar can ride along) while the session's server
-    // comes up, and the real config arrives only then — so keep asking
-    // until the answer carries an actual endpoint, a fresh attempt id
-    // on every call.
-    let mut negotiated = None;
+    let mut reply = negotiate(place, cookie, status, &say)?;
+    for attempt in 1..=SESSION_ATTEMPTS {
+        if attempt > 1 {
+            status.set_phase(Phase::Rejoining { attempt });
+            // Reply2 is bound to the join ticket: replaying the previous
+            // script gets Reply1 and then silence (measured in the
+            // reference). A fresh one; the endpoint does not change.
+            say(format!(
+                "rejoining with a fresh session (attempt {attempt} of {SESSION_ATTEMPTS})"
+            ));
+            reply = negotiate(place, cookie, status, &say)?;
+        }
+        status.set_phase(Phase::Joined);
+        let mut js = match rbx_transport::join_game::script_of(&reply) {
+            Ok(js) => js,
+            // A fleet version that serializes its `joinScript` as a JSON
+            // string: the whole reply stands in, and the merge below decodes
+            // the string's keys into it.
+            Err(_) => reply.clone(),
+        };
+        carry_wrapper_fields(&mut js, &reply);
+        hydrate(&mut js, cookie);
+        let peer = peer_of(&reply)?;
+        ensure_udmux(&mut js, peer);
+        say(format!("joining {}:{}", std::net::Ipv4Addr::from(peer.0), peer.1));
+        let mut io = UdpIo::connect(peer)?;
+        let began = std::time::Instant::now();
+        let now = || began.elapsed().as_millis() as u64;
+        let live = status.clone();
+        let outcome = drive::drive(
+            DriveInputs {
+                js: &js,
+                reply: reply_for_flow(&reply),
+                place,
+                tmpl_90: TMPL_90,
+                tmpl_8a: TMPL_8A,
+                solver: rbx_challenge::solver(),
+                duration_ms: SESSION_MS,
+                key_seed: None,
+            },
+            &mut io,
+            &now,
+            move |line| {
+                eprintln!("team-create: {line}");
+                live.line(&line);
+            },
+        );
+        match outcome {
+            Ok(report) => return Ok(report),
+            // A wedged RCC: re-sending inside the same session cannot
+            // help — everything queues behind the same hole, measured.
+            // Drop the connection and redo the handshake with a fresh
+            // script.
+            Err(err) if attempt < SESSION_ATTEMPTS && drive::is_handshake_miss(&err) => {
+                say(format!("{err} — dropping the connection for a fresh session"));
+                continue;
+            }
+            Err(err) => return Err(err),
+        }
+    }
+    Err("the Team Create session never came up".to_string())
+}
+
+/// Asks the team-create endpoint until its answer carries an endpoint:
+/// for up to ~10s after the first POST the answer is JSON whose keys
+/// are null (a stray scalar can ride along) while the session's server
+/// comes up, and the real config arrives only then — so keep asking
+/// until the answer carries an actual endpoint, a fresh attempt id on
+/// every call.
+fn negotiate(
+    place: u64,
+    cookie: &SessionCookie,
+    status: &Session,
+    say: &impl Fn(String),
+) -> Result<Value, String> {
     for attempt in 1..=NEGOTIATION_TRIES {
         status.set_phase(Phase::Negotiating { attempt });
         let answered = rbx_transport::join_game::team_create_join(
@@ -205,8 +284,7 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
             false,
         )?;
         if !rbx_transport::join_game::team_create_endpoints(&answered).is_empty() {
-            negotiated = Some(answered);
-            break;
+            return Ok(answered);
         }
         if rbx_transport::join_game::all_null(&answered) {
             say(format!("session warming up (attempt {attempt}), asking again"));
@@ -215,43 +293,7 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
-    let reply = negotiated
-        .ok_or_else(|| "the Team Create session never became ready".to_string())?;
-    status.set_phase(Phase::Joined);
-    let mut js = match rbx_transport::join_game::script_of(&reply) {
-        Ok(js) => js,
-        // A fleet version that serializes its `joinScript` as a JSON
-        // string: the whole reply stands in, and the merge below decodes
-        // the string's keys into it.
-        Err(_) => reply.clone(),
-    };
-    carry_wrapper_fields(&mut js, &reply);
-    hydrate(&mut js, cookie);
-    let peer = peer_of(&reply)?;
-    ensure_udmux(&mut js, peer);
-    say(format!("joining {}:{}", std::net::Ipv4Addr::from(peer.0), peer.1));
-    let mut io = UdpIo::connect(peer)?;
-    let began = std::time::Instant::now();
-    let now = || began.elapsed().as_millis() as u64;
-    let live = status.clone();
-    drive::drive(
-        DriveInputs {
-            js: &js,
-            reply: reply_for_flow(&reply),
-            place,
-            tmpl_90: TMPL_90,
-            tmpl_8a: TMPL_8A,
-            solver: rbx_challenge::solver(),
-            duration_ms: SESSION_MS,
-            key_seed: None,
-        },
-        &mut io,
-        &now,
-        move |line| {
-            eprintln!("team-create: {line}");
-            live.line(&line);
-        },
-    )
+    Err("the Team Create session never became ready".to_string())
 }
 
 /// The account's hydration fields, merged into the join script the way
@@ -369,6 +411,10 @@ mod tests {
         let (phase, log) = session.snapshot();
         assert!(matches!(phase, Phase::Joined));
         assert_eq!(log.len(), 1);
+        // A wedged RCC: the card says which rejoin is running.
+        session.set_phase(Phase::Rejoining { attempt: 2 });
+        let (phase, _) = session.snapshot();
+        assert!(matches!(phase, Phase::Rejoining { attempt: 2 }));
         // A failure reaches both the log tail and the headline, and the
         // finished flag only follows the last write.
         session.line("join failed: endpoint answered 403");

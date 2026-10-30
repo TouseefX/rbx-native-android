@@ -94,6 +94,10 @@ impl Shell {
                 ui::accent(),
             ),
             Phase::Joined => ("Joined \u{2014} session live".to_string(), ui::green()),
+            Phase::Rejoining { attempt } => (
+                format!("Rejoining \u{2014} fresh session (attempt {attempt})\u{2026}"),
+                ui::accent(),
+            ),
             Phase::Ended {
                 datagrams_tx,
                 app_messages,
