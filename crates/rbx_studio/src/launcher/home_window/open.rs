@@ -23,6 +23,86 @@ impl HomeWindow {
             });
             return;
         }
+        // With a saved session, opening a game asks first: the live Team
+        // Create session, or the local copy. Without one there is nothing
+        // to join, so it goes straight to the copy as before.
+        if self.session.is_some() {
+            self.dialog = Some(Dialog::TeamCreate {
+                experience,
+                members: Members::Loading,
+            });
+            self.load_team_create_members(cx);
+            cx.notify();
+            return;
+        }
+        match home::local_copy(&experience) {
+            Some(path) => {
+                self.dialog = Some(Dialog::LocalCopy {
+                    experience,
+                    path,
+                    replace: false,
+                })
+            }
+            None => self.download(experience, true, cx),
+        }
+        cx.notify();
+    }
+
+    /// Who is in the place's live Team Create session, read when the
+    /// dialog opens — the same session members call Game Settings uses.
+    fn load_team_create_members(&mut self, cx: &mut Context<Self>) {
+        match std::env::var(super::TEAMCREATE_VARIABLE).as_deref() {
+            Ok("fresh") | Ok("failed") => return, // the capture fixture is already in place
+            _ => {}
+        }
+        let Some(Dialog::TeamCreate { experience, .. }) = &self.dialog else {
+            return;
+        };
+        let place = experience.root_place_id;
+        let Some(cookie) = self.session.clone() else {
+            return;
+        };
+        cx.spawn(async move |this, cx| {
+            let members = cx.background_spawn(async move {
+                rbx_cloud::team_create::team_create_members(&cookie, place)
+            })
+            .await;
+            let _ = this.update(cx, |this, cx| {
+                if let Some(Dialog::TeamCreate { members: slot, .. }) = &mut this.dialog {
+                    *slot = match members {
+                        Ok(list) => Members::Loaded(list),
+                        Err(err) => Members::Failed(err.to_string()),
+                    };
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+
+    /// Join Team Create: the live session starts on its own thread (see
+    /// `team_join`) and the place opens as a new local copy — the cloud's
+    /// current state, not whatever the copy on disk has.
+    pub(super) fn join_team_create(&mut self, cx: &mut Context<Self>) {
+        let Some(Dialog::TeamCreate { experience, .. }) = self.dialog.take() else {
+            return;
+        };
+        if let Some(cookie) = self.session.clone() {
+            crate::launcher::team_join::start(
+                experience.root_place_id,
+                Some(experience.universe_id),
+                cookie,
+            );
+        }
+        self.download(experience, true, cx);
+    }
+
+    /// Open locally, off the join dialog: the same question a card click
+    /// asks without a session — the copy on disk, or a fresh download.
+    pub(super) fn open_team_create_locally(&mut self, cx: &mut Context<Self>) {
+        let Some(Dialog::TeamCreate { experience, .. }) = self.dialog.take() else {
+            return;
+        };
         match home::local_copy(&experience) {
             Some(path) => {
                 self.dialog = Some(Dialog::LocalCopy {

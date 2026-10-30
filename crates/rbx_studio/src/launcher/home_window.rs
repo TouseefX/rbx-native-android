@@ -54,6 +54,13 @@ pub(super) enum Games {
     Failed(String),
 }
 
+/// Who is in the place's live Team Create session, for the join dialog.
+pub(super) enum Members {
+    Loading,
+    Loaded(Vec<rbx_cloud::team_create::SessionMember>),
+    Failed(String),
+}
+
 /// What Home knows about the stored Roblox session (`key_store`'s
 /// session slot): the cookie Team Create joins with.
 pub(super) enum CookieState {
@@ -114,6 +121,13 @@ pub(super) enum Dialog {
     Cookie {
         busy: bool,
         error: Option<String>,
+    },
+    /// Opening a game with a saved session: who is in the live Team
+    /// Create session right now, and the choice between joining it and
+    /// opening the local copy.
+    TeamCreate {
+        experience: Experience,
+        members: Members,
     },
 }
 
@@ -188,6 +202,9 @@ const LINK_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_LINK";
 /// `RBX_STUDIO_LAUNCHER_COOKIE=ready|expired|unchecked` for a capture; any
 /// other value is the real keyring read.
 const COOKIE_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_COOKIE";
+/// `RBX_STUDIO_LAUNCHER_TEAMCREATE=fresh|failed` for a capture of the
+/// join dialog's member list; anything else is the real read.
+const TEAMCREATE_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_TEAMCREATE";
 
 impl HomeWindow {
     pub(super) fn new(boot: Boot, window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -358,6 +375,27 @@ impl HomeWindow {
             Ok("cookie") => Some(Dialog::Cookie {
                 busy: false,
                 error: None,
+            }),
+            Ok("teamcreate") => first().map(|experience| {
+                let members = match std::env::var(TEAMCREATE_VARIABLE).as_deref() {
+                    Ok("failed") => Members::Failed(
+                        "Couldn\u{2019}t read the session. Check your connection.".to_string(),
+                    ),
+                    Ok("fresh") => Members::Loaded(vec![
+                        rbx_cloud::team_create::SessionMember {
+                            id: 156,
+                            name: "builderman".into(),
+                            display_name: "Builderman".into(),
+                        },
+                        rbx_cloud::team_create::SessionMember {
+                            id: 925_308_243,
+                            name: "cht".into(),
+                            display_name: "cht".into(),
+                        },
+                    ]),
+                    _ => Members::Loading,
+                };
+                Dialog::TeamCreate { experience, members }
             }),
             _ => None,
         };
