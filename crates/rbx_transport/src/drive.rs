@@ -109,6 +109,22 @@ pub struct Report {
     pub saw_net_settings: bool,
 }
 
+/// The RakNet endpoint never answered Req1.
+pub const NO_REPLY1: &str = "no OpenConnectionReply1 from the RakNet endpoint";
+/// Req2's reply never verified (or never came).
+pub const NO_REPLY2: &str = "no verified OpenConnectionReply2 (rx key mismatch?)";
+
+/// True for the errors a fresh join script and a fresh socket are worth:
+/// the offline/encrypted handshake never completed. The reference
+/// measured roughly one session in four wedging this way — the RCC
+/// stops ACKing partway through, and re-sending inside the *same*
+/// session cannot help, everything queues behind the same hole. A
+/// fresh session with a fresh script takes a ~75% per-attempt rate to
+/// ~99% over three attempts.
+pub fn is_handshake_miss(err: &str) -> bool {
+    err == NO_REPLY1 || err == NO_REPLY2
+}
+
 /// Runs the whole sequence on `io`, until `duration_ms` of session have
 /// passed by `now_ms`'s clock. Every step is logged through `log`, a
 /// handful of lines, for on-screen diagnostics.
@@ -148,7 +164,7 @@ pub fn drive(
         say(format!("no Reply1 yet, retrying Req1 ({attempt}/3)"));
     }
     if client.stage() < 1 {
-        return Err("no OpenConnectionReply1 from the RakNet endpoint".to_string());
+        return Err(NO_REPLY1.to_string());
     }
     say(format!(
         "Reply1 guid={} mtu={} (offline handshake accepted)",
@@ -171,7 +187,7 @@ pub fn drive(
         ));
     }
     if !client.data_ready() {
-        return Err("no verified OpenConnectionReply2 (rx key mismatch?)".to_string());
+        return Err(NO_REPLY2.to_string());
     }
     say("encrypted handshake complete (Reply2 verified)".to_string());
 
@@ -585,5 +601,16 @@ mod tests {
         assert_eq!(err, "no OpenConnectionReply1 from the RakNet endpoint");
         // All three Req1 tries went out first.
         assert_eq!(io.sent, 3);
+    }
+
+    #[test]
+    fn only_the_handshake_misses_are_worth_a_fresh_session() {
+        assert!(is_handshake_miss(NO_REPLY1));
+        assert!(is_handshake_miss(NO_REPLY2));
+        // Local failures and parse errors are not the RCC wedging.
+        assert!(!is_handshake_miss("Req1 build/send failed"));
+        assert!(!is_handshake_miss("Req2 build/send failed (ticket blobs too large?)"));
+        assert!(!is_handshake_miss("joinScript lacks NetStackPort"));
+        assert!(!is_handshake_miss(""));
     }
 }
