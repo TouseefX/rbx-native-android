@@ -486,7 +486,16 @@ mod tests {
     #[test]
     fn the_whole_run_handshake_burst_and_session() {
         let js = join_script();
-        let reply = json!({"status": 2});
+        // The join reply the real v1 endpoint sends: status plus the
+        // joinTicket build_90 splices into the 0x90 template's
+        // `__joinTicket` (an object reply without one is an error).
+        let reply = json!({
+            "status": 2,
+            "joinTicket": {
+                "SerializedClientFields": "scf",
+                "EncryptedServerFields": "esf"
+            }
+        });
         // The session keypair is pinned, so a mock server can be built
         // for the public key the driver's own client will draw.
         let mut cfg = join_target::config_from_join_script(&js).unwrap();
