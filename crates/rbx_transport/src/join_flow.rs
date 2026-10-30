@@ -81,8 +81,9 @@ pub struct FlowInputs<'a> {
     pub js: &'a Value,
     /// The join-game HTTP reply, whose fields the 0x90 builder reads.
     pub reply: &'a Value,
-    /// The place id; 0 = take `js`'s `PlaceId`.
-    pub place: u32,
+    /// The place id — a 64-bit one: live ids sit well past `u32`; 0 =
+    /// take `js`'s `PlaceId`.
+    pub place: u64,
     /// The captured 0x90 template (>=64B, or the join is held).
     pub tmpl_90: &'a [u8],
     /// The captured 0x8a session template.
@@ -224,11 +225,7 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
                 let place_id = if inputs.place != 0 {
                     inputs.place
                 } else {
-                    inputs
-                        .js
-                        .get("PlaceId")
-                        .and_then(Value::as_u64)
-                        .unwrap_or(0) as u32
+                    inputs.js.get("PlaceId").and_then(Value::as_u64).unwrap_or(0)
                 };
                 let t2 = join_msg::tail2_from_90_template(tmpl_90).unwrap_or(0);
                 // The key is the string's first 16 bytes, verbatim —

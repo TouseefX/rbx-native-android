@@ -238,7 +238,7 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
         DriveInputs {
             js: &js,
             reply: reply_for_flow(&reply),
-            place: u32::try_from(place).map_err(|_| "place id too large".to_string())?,
+            place,
             tmpl_90: TMPL_90,
             tmpl_8a: TMPL_8A,
             solver: rbx_challenge::solver(),
