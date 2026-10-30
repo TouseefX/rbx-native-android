@@ -54,6 +54,11 @@ rbx_binary = { path = "../rbx_binary" }
 # opening a place straight from Roblox. Already in the tree through
 # `rbx_viewer`'s asset fetches.
 rbx_cloud = { path = "../rbx_cloud" }
+# The live Team Create session Home's Join button starts: the join-game
+# POST and the RakNet session over UDP (`rbx_transport`), with the 0x9B
+# challenge solved in-process (`rbx_challenge`).
+rbx_transport = { path = "../rbx_transport" }
+rbx_challenge = { path = "../rbx_challenge" }
 # Play/Test without Studio: probe, channel, tunnel, launcher, embedding.
 rbx_play = { path = "../rbx_play" }
 # The Security Audit dock runs the whole-place remote/script audit.

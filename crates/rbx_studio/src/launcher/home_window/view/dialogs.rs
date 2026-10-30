@@ -6,8 +6,9 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 
 use super::*;
+use rbx_cloud::Experience;
 use crate::home::RecentPlace;
-use crate::launcher::home_window::{CookieState, Dialog, HomeWindow};
+use crate::launcher::home_window::{CookieState, Dialog, HomeWindow, Members};
 use crate::launcher::ui::{self, Weight};
 use crate::tokens;
 
@@ -25,6 +26,9 @@ impl HomeWindow {
                 .into_any_element(),
             Dialog::Cookie { busy, error } => self
                 .cookie_dialog(*busy, error.as_deref(), cx)
+                .into_any_element(),
+            Dialog::TeamCreate { experience, members } => self
+                .team_create_dialog(experience, members, cx)
                 .into_any_element(),
             Dialog::LocalCopy {
                 experience,
@@ -427,6 +431,100 @@ impl HomeWindow {
             "Team Create joins as this session\u{2019}s account. Paste the .ROBLOSECURITY cookie from a signed-in browser; it\u{2019}s kept in your device\u{2019}s credential store and only ever sent to Roblox.",
             Some(body),
             footer,
+        )
+    }
+
+    /// The join choice: who is in the live Team Create session, Join
+    /// (the live session, a fresh local copy), or Open locally (the
+    /// copy on disk, no session).
+    pub(super) fn team_create_dialog(
+        &self,
+        experience: &Experience,
+        members: &Members,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let line = match members {
+            Members::Loading => None,
+            Members::Loaded(list) if list.is_empty() => Some(
+                "Nobody\u{2019}s in the session right now \u{2014} you\u{2019}d be the first.".to_string(),
+            ),
+            Members::Loaded(list) => {
+                let names: Vec<&str> =
+                    list.iter().take(4).map(|m| m.display_name.as_str()).collect();
+                let more = list.len().saturating_sub(names.len());
+                Some(format!(
+                    "{} in the session: {}{}",
+                    list.len(),
+                    names.join(", "),
+                    if more > 0 {
+                        format!(" +{more} more")
+                    } else {
+                        String::new()
+                    }
+                ))
+            }
+            Members::Failed(_) => {
+                Some("Couldn\u{2019}t read the session. Joining still tries.".to_string())
+            }
+        };
+        let why = match members {
+            Members::Failed(why) => Some(why.clone()),
+            _ => None,
+        };
+        let body = v_flex()
+            .mt(px(12.))
+            .mx(px(20.))
+            .gap(px(6.))
+            .map(|this| match members {
+                Members::Loading => this.child(
+                    h_flex()
+                        .gap(px(6.))
+                        .text_size(px(11.5))
+                        .line_height(px(16.))
+                        .text_color(tokens::text2())
+                        .child(ui::spinner("team-create-members", 12.))
+                        .child("Reading the session\u{2026}"),
+                ),
+                _ => this,
+            })
+            .when_some(line, |this, line| {
+                this.child(
+                    ui::text(11.5, 16.)
+                        .text_color(tokens::text2())
+                        .child(line),
+                )
+            })
+            .when_some(why, |this, why| {
+                this.child(ui::text(11., 15.).text_color(tokens::text3()).child(why))
+            })
+            .into_any_element();
+        ui::dialog(
+            480.,
+            ui::dialog_glyph("users", ui::accent(), tokens::accent_soft()),
+            format!("Open {}", experience.name),
+            "Join the live Team Create session \u{2014} everyone\u{2019}s changes stream in, and yours stream out \u{2014} or open the local copy without one.",
+            Some(body),
+            vec![
+                ui::button("team-create-cancel", "Cancel", Weight::Secondary, false)
+                    .on_click(cx.listener(|this, _, _, cx| this.cancel_dialog(cx)))
+                    .into_any_element(),
+                ui::button(
+                    "team-create-local",
+                    "Open locally",
+                    Weight::Secondary,
+                    false,
+                )
+                .on_click(cx.listener(|this, _, _, cx| this.open_team_create_locally(cx)))
+                .into_any_element(),
+                ui::button(
+                    "team-create-join",
+                    "Join Team Create",
+                    Weight::Primary,
+                    false,
+                )
+                .on_click(cx.listener(|this, _, _, cx| this.join_team_create(cx)))
+                .into_any_element(),
+            ],
         )
     }
 }
