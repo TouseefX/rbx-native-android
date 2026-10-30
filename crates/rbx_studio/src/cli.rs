@@ -136,6 +136,10 @@ pub(crate) struct Launch {
     /// Home's Configure Experience / Configure Place: Game Settings opens
     /// on that page once the editor is up.
     pub(crate) configure: Option<Configure>,
+    /// Home's Join Team Create: the live session's status handle, which
+    /// the editor window this open creates paints as its card (see
+    /// `shell::team_create`).
+    pub(crate) team_create: Option<crate::launcher::team_join::Session>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
