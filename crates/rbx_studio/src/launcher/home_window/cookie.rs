@@ -41,9 +41,9 @@ impl HomeWindow {
                 return;
             };
             let who = cx
-                .background_spawn(async move {
-                    rbx_cloud::heartbeats::authenticated_user(&session)
-                })
+                .background_spawn(
+                    async move { rbx_cloud::heartbeats::authenticated_user(&session) },
+                )
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.cookie = match who {
