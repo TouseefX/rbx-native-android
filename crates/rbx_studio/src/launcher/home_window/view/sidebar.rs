@@ -187,11 +187,7 @@ impl HomeWindow {
                 tokens::text3(),
             ),
             CookieState::Ready { name, .. } => (name.clone(), "Signed in", ui::green()),
-            CookieState::Expired => (
-                "Roblox session".to_string(),
-                "Cookie expired",
-                ui::red(),
-            ),
+            CookieState::Expired => ("Roblox session".to_string(), "Cookie expired", ui::red()),
             CookieState::Unchecked => (
                 "Roblox session".to_string(),
                 "Couldn\u{2019}t check",

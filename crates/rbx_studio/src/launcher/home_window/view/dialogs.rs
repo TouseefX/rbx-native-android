@@ -369,9 +369,7 @@ impl HomeWindow {
         let body = v_flex()
             .mt(px(12.))
             .mx(px(20.))
-            .when_some(account, |this, account| {
-                this.child(account).mb(px(8.))
-            })
+            .when_some(account, |this, account| this.child(account).mb(px(8.)))
             .child(
                 ui::field_frame(None, ui::panel(), border, "shield-check")
                     .w_full()
