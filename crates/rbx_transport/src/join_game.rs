@@ -156,6 +156,79 @@ fn agent() -> ureq::Agent {
         .into()
 }
 
+/// Team Create's own negotiation, not `join-game`: a `POST` to
+/// `gamejoin.roblox.com/v1/team-create` (or `/team-create-preemptive`,
+/// which warms the session's server without joining) with just the place
+/// and a fresh attempt id, the cookie, and the CSRF retry a gamejoin
+/// POST needs. The answer is the raw document — **all nulls while the
+/// session's server is still coming up** (see [`all_null`]); re-asking
+/// with another fresh attempt id is the caller's half of the contract.
+pub fn team_create_join(place: u64, cookie: &str, preemptive: bool) -> Result<Value, String> {
+    let url = if preemptive {
+        "https://gamejoin.roblox.com/v1/team-create-preemptive"
+    } else {
+        "https://gamejoin.roblox.com/v1/team-create"
+    };
+    let body = json!({
+        "placeId": place,
+        "gameJoinAttemptId": uuid4(),
+    });
+    let bytes = serde_json::to_vec(&body).map_err(|err| format!("team-create: {err}"))?;
+    let cookie = cookie_header(cookie);
+    let send = |token: Option<&str>| -> Result<(u16, Option<String>, String), String> {
+        let mut request = agent()
+            .post(url)
+            .content_type("application/json")
+            .header("Accept", "application/json");
+        if !cookie.is_empty() {
+            request = request.header("Cookie", cookie.as_str());
+        }
+        if let Some(token) = token {
+            request = request.header("X-CSRF-TOKEN", token);
+        }
+        let mut response = request.send(&bytes).map_err(|err| format!("team-create: {err}"))?;
+        let token = response
+            .headers()
+            .get("x-csrf-token")
+            .and_then(|t| t.to_str().ok())
+            .map(str::to_string);
+        let status = response.status().as_u16();
+        let text = response.body_mut().read_to_string().unwrap_or_default();
+        Ok((status, token, text))
+    };
+    // A gamejoin POST with a cookie answers 403 carrying the CSRF token
+    // to use; one retry with it is the handshake.
+    let mut answered = send(None)?;
+    if (400..600).contains(&answered.0) {
+        if let Some(token) = answered.1.clone() {
+            answered = send(Some(&token))?;
+        }
+    }
+    let (status, _, text) = answered;
+    if !(200..300).contains(&status) {
+        let snippet: String = text.chars().take(140).collect();
+        return Err(format!("team-create: HTTP {status}: {snippet}"));
+    }
+    serde_json::from_str(&text).map_err(|_| "team-create: bad json".to_string())
+}
+
+/// True when the document holds nothing but nulls and empty containers:
+/// the team-create endpoint's "not ready yet" answer, which a 200
+/// carries while the session's server is still coming up.
+pub fn all_null(doc: &Value) -> bool {
+    !has_value(doc)
+}
+
+fn has_value(v: &Value) -> bool {
+    match v {
+        Value::Null => false,
+        Value::Array(items) => items.iter().any(has_value),
+        Value::Object(map) => map.values().any(has_value),
+        Value::String(s) => !s.trim().is_empty(),
+        Value::Bool(_) | Value::Number(_) => true,
+    }
+}
+
 /// POSTs the join-game request and follows the `joinScriptUrl` fallback,
 /// the reference's `joinGame` verbatim.
 pub fn join_game(
@@ -164,8 +237,7 @@ pub fn join_game(
     job: Option<&str>,
     follow: Option<u64>,
     universe: Option<u64>,
-) -> Result<JoinReply, String> {
-    let agent = agent();
+) -> Result<JoinReply, String> {    let agent = agent();
     let body = join_body(place, job, follow, universe, &uuid4(), &uuid4(), &uuid4());
     let bytes = serde_json::to_vec(&body).map_err(|err| format!("v1: {err}"))?;
     let cookie = cookie_header(cookie);
@@ -314,6 +386,21 @@ mod tests {
             ".ROBLOSECURITY=x; other=1"
         );
         assert_eq!(cookie_header("a=b"), "a=b");
+    }
+
+    #[test]
+    fn all_null_spots_the_warming_answer() {
+        // The team-create endpoint's "server still coming up": a 200
+        // whose every key is null, an empty container, or blank text.
+        assert!(all_null(&json!({})));
+        assert!(all_null(&json!({"status": null, "joinScript": null})));
+        assert!(all_null(&json!({"a": [], "b": {}, "c": "", "d": null})));
+        assert!(all_null(&json!([null, {}, []])));
+        // Any real value anywhere — nested, in a list, a bool — is ready.
+        assert!(!all_null(&json!({"status": 2})));
+        assert!(!all_null(&json!({"joinScript": {"isTeleport": false}})));
+        assert!(!all_null(&json!({"a": [null, {"b": "10.0.0.1"}]})));
+        assert!(!all_null(&json!("x")));
     }
 
     #[test]
