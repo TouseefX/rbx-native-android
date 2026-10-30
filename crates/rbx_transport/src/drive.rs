@@ -50,7 +50,9 @@ impl UdpIo {
     pub fn connect(peer: ([u8; 4], u16)) -> Result<UdpIo, String> {
         let addr = SocketAddr::from((IpAddr::V4(Ipv4Addr::from(peer.0)), peer.1));
         let socket = UdpSocket::bind("0.0.0.0:0").map_err(|err| format!("socket: {err}"))?;
-        socket.connect(addr).map_err(|err| format!("connect: {err}"))?;
+        socket
+            .connect(addr)
+            .map_err(|err| format!("connect: {err}"))?;
         Ok(UdpIo { socket })
     }
 }
@@ -96,6 +98,7 @@ pub struct DriveInputs<'a> {
 }
 
 /// How a run ended: what the burst sent, and what the session saw.
+#[derive(Debug)]
 pub struct Report {
     pub steps: Vec<Step>,
     pub datagrams_tx: u64,
@@ -130,7 +133,7 @@ pub fn drive(
         client.set_logger(Box::new(move |line| (*sink.borrow_mut())(line)));
     }
     client.set_solver(inputs.solver, &job_id);
-    let mut say = |line: String| (*log.borrow_mut())(line);
+    let say = |line: String| (*log.borrow_mut())(line);
 
     // 1. Req1, up to three times, two seconds per answer window.
     for attempt in 1..=3u8 {
@@ -163,7 +166,9 @@ pub fn drive(
         if client.data_ready() {
             break;
         }
-        say(format!("no verified Reply2 yet, retrying Req2 ({attempt}/3)"));
+        say(format!(
+            "no verified Reply2 yet, retrying Req2 ({attempt}/3)"
+        ));
     }
     if !client.data_ready() {
         return Err("no verified OpenConnectionReply2 (rx key mismatch?)".to_string());
@@ -185,7 +190,7 @@ pub fn drive(
 
     // 4. The join burst. The 0x92's random draw mixes the clock, as the
     //    reference does.
-    let rng32 = (now_ms() as u32) ^ 0x9E37_9B9;
+    let rng32 = (now_ms() as u32) ^ 0x9E37_79B9;
     let flow = FlowInputs {
         local: io.local(),
         js: inputs.js,
@@ -243,7 +248,10 @@ pub fn drive(
             if first_message {
                 first_message = false;
                 let id = message.first().copied().unwrap_or(0);
-                say(format!("first app message: 0x{id:02x} ({}B)", message.len()));
+                say(format!(
+                    "first app message: 0x{id:02x} ({}B)",
+                    message.len()
+                ));
             }
         }
     }
@@ -290,7 +298,10 @@ fn pump(client: &mut Client, io: &mut dyn Io, ms: u32) {
 const A6: [(&str, usize); 4] = [
     ("a601010001480100004800000000", 5),
     ("a6020100014c0100004c0100000000040400", 5),
-    ("a603010010030064d0b7e6d7ff03e050010000500100000000040400040400", 15),
+    (
+        "a603010010030064d0b7e6d7ff03e050010000500100000000040400040400",
+        15,
+    ),
     (
         "a604010010030064d0b7e6d7ff03e054010000540100000000040400040400040400",
         15,
