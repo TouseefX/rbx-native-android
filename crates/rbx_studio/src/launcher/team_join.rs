@@ -10,6 +10,10 @@
 //! download flow — the session rides beside the editor, its handful of
 //! log lines on stderr (logcat) for now.
 
+use std::collections::VecDeque;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use rbx_cloud::heartbeats::SessionCookie;
 use rbx_transport::drive::{self, DriveInputs, UdpIo};
 use serde_json::Value;
@@ -43,32 +47,155 @@ fn reply_for_flow(reply: &Value) -> &Value {
     }
 }
 
-/// Starts the session on its own thread and returns at once; the join,
-/// and whatever it has to say, belongs to the thread.
-pub(crate) fn start(place: u64, cookie: SessionCookie) {
+/// How many of the session's last lines the status keeps.
+const LOG_TAIL: usize = 6;
+
+/// The session's on-screen status: the thread writes, the editor
+/// window's card (see `shell::team_create`) reads a snapshot, and
+/// `version` ticks on every write so the card's poller only repaints
+/// when something actually changed. Without it the join is
+/// logcat-only, which a phone never shows.
+#[derive(Clone)]
+pub(crate) struct Session {
+    inner: Arc<SessionInner>,
+}
+
+struct SessionInner {
+    state: Mutex<SessionState>,
+    finished: AtomicBool,
+}
+
+struct SessionState {
+    phase: Phase,
+    log: VecDeque<String>,
+    version: u64,
+}
+
+/// Where the join stands, for the card's headline and its dot's color.
+#[derive(Clone)]
+pub(crate) enum Phase {
+    /// Asking the team-create endpoint, which answers an all-null
+    /// document while the session's server warms up.
+    Negotiating { attempt: u32 },
+    /// The config arrived; the RakNet connect and the join burst follow.
+    Joined,
+    /// The session ran its course — `app_messages` in is the
+    /// replication verdict.
+    Ended {
+        datagrams_tx: u64,
+        app_messages: u64,
+        app_bytes: u64,
+    },
+    /// The join never got there.
+    Failed(String),
+}
+
+impl Session {
+    fn new() -> Self {
+        Session {
+            inner: Arc::new(SessionInner {
+                state: Mutex::new(SessionState {
+                    phase: Phase::Negotiating { attempt: 1 },
+                    log: VecDeque::new(),
+                    version: 0,
+                }),
+                finished: AtomicBool::new(false),
+            }),
+        }
+    }
+
+    /// One log line, newest last, only the last `LOG_TAIL` kept.
+    fn line(&self, text: &str) {
+        self.edit(|state| {
+            state.log.push_back(text.to_string());
+            while state.log.len() > LOG_TAIL {
+                state.log.pop_front();
+            }
+        });
+    }
+
+    fn set_phase(&self, phase: Phase) {
+        self.edit(|state| state.phase = phase);
+    }
+
+    fn edit(&self, change: impl FnOnce(&mut SessionState)) {
+        let mut state = self
+            .inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        change(&mut state);
+        state.version += 1;
+    }
+
+    /// The thread is done: the poller stops once this and the last
+    /// write are both seen.
+    fn finished(&self) {
+        self.inner.finished.store(true, Ordering::Release);
+    }
+
+    pub(crate) fn is_finished(&self) -> bool {
+        self.inner.finished.load(Ordering::Acquire)
+    }
+
+    pub(crate) fn version(&self) -> u64 {
+        self.inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .version
+    }
+
+    /// What the card paints this frame.
+    pub(crate) fn snapshot(&self) -> (Phase, Vec<String>) {
+        let state = self
+            .inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        (state.phase.clone(), state.log.iter().cloned().collect())
+    }
+}
+
+/// Starts the session on its own thread and returns at once, with its
+/// status handle: the editor window this join opens paints it as its
+/// card, and stderr still gets every line.
+pub(crate) fn start(place: u64, cookie: SessionCookie) -> Session {
+    let session = Session::new();
+    let status = session.clone();
     let _ = std::thread::Builder::new()
         .name("team-create-session".to_string())
         .spawn(move || {
-            let say = |line: String| eprintln!("team-create: {line}");
-            match run(place, &cookie) {
-                Ok(report) => say(format!(
-                    "session ended: {} datagrams out, {} app messages in ({} bytes)",
-                    report.datagrams_tx, report.app_messages, report.app_bytes
-                )),
-                Err(err) => say(format!("join failed: {err}")),
+            match run(place, &cookie, &status) {
+                Ok(report) => status.set_phase(Phase::Ended {
+                    datagrams_tx: report.datagrams_tx,
+                    app_messages: report.app_messages,
+                    app_bytes: report.app_bytes,
+                }),
+                Err(err) => {
+                    status.line(&format!("join failed: {err}"));
+                    status.set_phase(Phase::Failed(err));
+                }
             }
+            status.finished();
         });
+    session
 }
 
 /// The join and the session: the whole `drive` sequence on one socket,
 /// logged a handful of lines.
-fn run(place: u64, cookie: &SessionCookie) -> Result<drive::Report, String> {
+fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Report, String> {
+    let say = |line: String| {
+        eprintln!("team-create: {line}");
+        status.line(&line);
+    };
     // Team Create joins through its own endpoint, not join-game: the
     // first POST warms the session's server and answers an all-null
     // document, and the join config comes once the server is up — so
     // keep asking, a fresh attempt id on every call.
     let mut negotiated = None;
     for attempt in 1..=NEGOTIATION_TRIES {
+        status.set_phase(Phase::Negotiating { attempt });
         let answered = rbx_transport::join_game::team_create_join(
             place,
             cookie.expose_secret(),
@@ -78,19 +205,19 @@ fn run(place: u64, cookie: &SessionCookie) -> Result<drive::Report, String> {
             negotiated = Some(answered);
             break;
         }
-        eprintln!(
-            "team-create: session warming up (attempt {attempt}), asking again"
-        );
+        say(format!("session warming up (attempt {attempt}), asking again"));
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
     let reply = negotiated
         .ok_or_else(|| "the Team Create session never became ready".to_string())?;
+    status.set_phase(Phase::Joined);
     let mut js = rbx_transport::join_game::script_of(&reply)?;
     hydrate(&mut js, cookie);
     let peer = peer_of(&js)?;
     let mut io = UdpIo::connect(peer)?;
     let began = std::time::Instant::now();
     let now = || began.elapsed().as_millis() as u64;
+    let live = status.clone();
     drive::drive(
         DriveInputs {
             js: &js,
@@ -104,7 +231,10 @@ fn run(place: u64, cookie: &SessionCookie) -> Result<drive::Report, String> {
         },
         &mut io,
         &now,
-        |line| eprintln!("team-create: {line}"),
+        move |line| {
+            eprintln!("team-create: {line}");
+            live.line(&line);
+        },
     )
 }
 
@@ -155,6 +285,40 @@ fn peer_of(js: &Value) -> Result<([u8; 4], u16), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_card_gets_the_story() {
+        let session = Session::new();
+        let (phase, log) = session.snapshot();
+        assert!(matches!(phase, Phase::Negotiating { attempt: 1 }));
+        assert!(log.is_empty());
+        session.line("Reply1 guid=17 mtu=1492 (offline handshake accepted)");
+        session.set_phase(Phase::Joined);
+        let (phase, log) = session.snapshot();
+        assert!(matches!(phase, Phase::Joined));
+        assert_eq!(log.len(), 1);
+        // A failure reaches both the log tail and the headline, and the
+        // finished flag only follows the last write.
+        session.line("join failed: endpoint answered 403");
+        session.set_phase(Phase::Failed("endpoint answered 403".to_string()));
+        assert!(!session.is_finished());
+        session.finished();
+        let (phase, log) = session.snapshot();
+        assert!(matches!(phase, Phase::Failed(ref err) if err == "endpoint answered 403"));
+        assert_eq!(log.last().map(String::as_str), Some("join failed: endpoint answered 403"));
+        assert!(session.is_finished());
+    }
+
+    #[test]
+    fn the_log_keeps_only_its_tail() {
+        let session = Session::new();
+        for n in 0..LOG_TAIL + 4 {
+            session.line(&format!("line {n}"));
+        }
+        let (_, log) = session.snapshot();
+        assert_eq!(log.len(), LOG_TAIL);
+        assert_eq!(log.first().map(String::as_str), Some("line 4"));
+    }
 
     #[test]
     fn the_flow_takes_the_reply_only_when_it_carries_a_ticket() {

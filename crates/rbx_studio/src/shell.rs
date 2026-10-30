@@ -71,6 +71,7 @@ mod roblox_login;
 mod roblox_publish;
 mod roving;
 mod studio_presence;
+mod team_create;
 mod team_presence;
 
 pub(crate) use chrome::panel_topbar;
@@ -392,6 +393,9 @@ pub(crate) struct Shell {
     command_run: command_run::CommandRun,
     /// Every Command Bar run, success or failure; see `shell::output`.
     output: output::OutputLog,
+    /// The Team Create session riding beside this window (Home's Join),
+    /// painted as the status card; see `shell::team_create`.
+    team_create: Option<crate::launcher::team_join::Session>,
     /// Which levels the Output panel currently shows; see `shell::output`.
     output_filter: output::OutputFilter,
     /// Whether Output rows print their `HH:MM:SS.SSS` timestamp; toggled from
@@ -918,6 +922,7 @@ impl Shell {
             command_bar,
             command_run: command_run::CommandRun::default(),
             output: output::OutputLog::default(),
+            team_create: None,
             output_filter: output::OutputFilter::default(),
             output_show_timestamps: output_timestamps,
             output_display,
@@ -1292,6 +1297,12 @@ impl Shell {
         shell.apply_debug_roblox(cx);
         if let Some(page) = launch.configure {
             shell.configure_game(page, cx);
+        }
+        // Home's Join Team Create: the session riding beside this
+        // window, painted as its card from the first frame.
+        if let Some(session) = launch.team_create.clone() {
+            shell.team_create = Some(session.clone());
+            shell.watch_team_create(session, cx);
         }
 
         shell.offer_merge_sidecar(cx);
@@ -2194,6 +2205,7 @@ impl Render for Shell {
             // a popup nested in the tree's own scrolled, virtualised list
             // is clipped by it.
             .children(self.explorer_popups(cx))
+            .children(self.team_create_card(cx))
             .children(self.roblox_dialog(cx))
             .children(self.play_dialog(cx))
             .children(self.close_place_dialog(cx))

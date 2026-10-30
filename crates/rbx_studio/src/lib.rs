@@ -278,6 +278,7 @@ pub fn run_desktop() {
         },
         verbose,
         configure: None,
+        team_create: None,
     };
 
     // Everything read from the config directory beyond `settings.json`, in one

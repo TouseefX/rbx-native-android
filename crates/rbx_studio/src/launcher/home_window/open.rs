@@ -88,7 +88,12 @@ impl HomeWindow {
             return;
         };
         if let Some(cookie) = self.session.clone() {
-            crate::launcher::team_join::start(experience.root_place_id, cookie);
+            let session = crate::launcher::team_join::start(experience.root_place_id, cookie);
+            // The editor window this download opens paints the session's
+            // status as its card: the boot carries the handle there.
+            if let Some(boot) = self.boot.borrow_mut().as_mut() {
+                boot.launch.team_create = Some(session);
+            }
         }
         self.download(experience, true, cx);
     }
