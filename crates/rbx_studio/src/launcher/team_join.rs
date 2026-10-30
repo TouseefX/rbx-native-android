@@ -1,14 +1,15 @@
-//! The live Team Create session, from Home's Join button: the v1
-//! join-game POST with the saved cookie, then the RakNet session on a
-//! UDP socket, on one background thread that lives as long as the app
-//! does. The `0x90`/`0x8a` bodies are the captured native templates
-//! (`assets/team-create`, the reference's own captures), spliced with
-//! this session's values by `rbx_transport`; the `0x9B` challenge is
-//! solved in-process by `rbx_challenge`.
+//! The live Team Create session, from Home's Join button: the
+//! team-create endpoint (asked until its all-null warming answer turns
+//! into a config with an endpoint) with the saved cookie, then the
+//! RakNet session on a UDP socket, on one background thread that lives
+//! as long as the app does. The `0x90`/`0x8a` bodies are the captured
+//! native templates (`assets/team-create`, the reference's own
+//! captures), spliced with this session's values by `rbx_transport`;
+//! the `0x9B` challenge is solved in-process by `rbx_challenge`.
 //!
 //! The place itself opens as a new local copy through Home's ordinary
 //! download flow — the session rides beside the editor, its handful of
-//! log lines on stderr (logcat) for now.
+//! log lines on the status card (see `shell::team_create`) and stderr.
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -189,10 +190,12 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
         eprintln!("team-create: {line}");
         status.line(&line);
     };
-    // Team Create joins through its own endpoint, not join-game: the
-    // first POST warms the session's server and answers an all-null
-    // document, and the join config comes once the server is up — so
-    // keep asking, a fresh attempt id on every call.
+    // Team Create joins through its own endpoint, not join-game: for up
+    // to ~10s after the first POST the answer is JSON whose keys are
+    // null (a stray scalar can ride along) while the session's server
+    // comes up, and the real config arrives only then — so keep asking
+    // until the answer carries an actual endpoint, a fresh attempt id
+    // on every call.
     let mut negotiated = None;
     for attempt in 1..=NEGOTIATION_TRIES {
         status.set_phase(Phase::Negotiating { attempt });
@@ -201,19 +204,32 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
             cookie.expose_secret(),
             false,
         )?;
-        if !rbx_transport::join_game::all_null(&answered) {
+        if !rbx_transport::join_game::team_create_endpoints(&answered).is_empty() {
             negotiated = Some(answered);
             break;
         }
-        say(format!("session warming up (attempt {attempt}), asking again"));
+        if rbx_transport::join_game::all_null(&answered) {
+            say(format!("session warming up (attempt {attempt}), asking again"));
+        } else {
+            say(format!("no endpoint in the answer yet (attempt {attempt}), asking again"));
+        }
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
     let reply = negotiated
         .ok_or_else(|| "the Team Create session never became ready".to_string())?;
     status.set_phase(Phase::Joined);
-    let mut js = rbx_transport::join_game::script_of(&reply)?;
+    let mut js = match rbx_transport::join_game::script_of(&reply) {
+        Ok(js) => js,
+        // A fleet version that serializes its `joinScript` as a JSON
+        // string: the whole reply stands in, and the merge below decodes
+        // the string's keys into it.
+        Err(_) => reply.clone(),
+    };
+    carry_wrapper_fields(&mut js, &reply);
     hydrate(&mut js, cookie);
-    let peer = peer_of(&js)?;
+    let peer = peer_of(&reply)?;
+    ensure_udmux(&mut js, peer);
+    say(format!("joining {}:{}", std::net::Ipv4Addr::from(peer.0), peer.1));
     let mut io = UdpIo::connect(peer)?;
     let began = std::time::Instant::now();
     let now = || began.elapsed().as_millis() as u64;
@@ -258,28 +274,84 @@ fn hydrate(js: &mut Value, cookie: &SessionCookie) {
     }
 }
 
-/// The RakNet endpoint: the join script's `UdmuxEndpoints[0]`, address
-/// and port (the port arrives as a number or a string).
-fn peer_of(js: &Value) -> Result<([u8; 4], u16), String> {
-    let end = js
+/// The RakNet endpoint: the reply's endpoints (see
+/// `team_create_endpoints` — UDMUX first, public preferred, every
+/// wrapper and shape) — the first one that is IPv4, which is what the
+/// socket dials.
+fn peer_of(reply: &Value) -> Result<([u8; 4], u16), String> {
+    for endpoint in rbx_transport::join_game::team_create_endpoints(reply) {
+        if let Ok(ip) = endpoint.address.parse::<std::net::Ipv4Addr>() {
+            return Ok((ip.octets(), endpoint.port));
+        }
+    }
+    Err("the Team Create answer has no IPv4 endpoint".to_string())
+}
+
+/// Different gamejoin fleet versions put the config under `joinScript`,
+/// `settings`, or a `joinTicket` serialized as a JSON string;
+/// `script_of` takes the `joinScript` branch when there is one, and the
+/// flow reads flat fields (`NetStackPort`, `ServerConnections`,
+/// `ClientTicket`, …). This merges every key the reply's other levels
+/// carry into `js` when `js` lacks it, so a field is found wherever the
+/// fleet put it. Existing keys are never overwritten.
+fn carry_wrapper_fields(js: &mut Value, reply: &Value) {
+    let Some(target) = js.as_object_mut() else {
+        return;
+    };
+    merge_level(reply, target, 0);
+}
+
+fn merge_level(v: &Value, target: &mut serde_json::Map<String, Value>, depth: usize) {
+    if depth > 12 {
+        return;
+    }
+    match v {
+        Value::Object(map) => {
+            for (key, value) in map {
+                let missing = matches!(target.get(key), None | Some(Value::Null));
+                if missing && !value.is_null() {
+                    target.insert(key.clone(), value.clone());
+                }
+            }
+            for value in map.values() {
+                merge_level(value, target, depth + 1);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                merge_level(item, target, depth + 1);
+            }
+        }
+        Value::String(text) => {
+            let text = text.trim();
+            if (text.starts_with('{') || text.starts_with('[')) && text.len() <= 2_000_000 {
+                if let Ok(decoded) = serde_json::from_str::<Value>(text) {
+                    merge_level(&decoded, target, depth + 1);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The flow's config reader takes `UdmuxEndpoints[0]`; a fleet version
+/// that answered `Address`+`Port` (or `MachineAddress`+`ServerPort`)
+/// instead gets the chosen endpoint written there.
+fn ensure_udmux(js: &mut Value, peer: ([u8; 4], u16)) {
+    let has = js
         .get("UdmuxEndpoints")
-        .and_then(|v| v.get(0))
-        .ok_or("join script has no UdmuxEndpoints[0]")?;
-    let ip = end
-        .get("Address")
-        .and_then(Value::as_str)
-        .and_then(|a| a.parse::<std::net::Ipv4Addr>().ok())
-        .ok_or("UdmuxEndpoints[0] has no IPv4 Address")?;
-    let port = end
-        .get("Port")
-        .and_then(|p| match p {
-            Value::Number(n) => n.as_u64(),
-            Value::String(s) => s.parse::<u64>().ok(),
-            _ => None,
-        })
-        .and_then(|p| u16::try_from(p).ok())
-        .ok_or("UdmuxEndpoints[0] has no Port")?;
-    Ok((ip.octets(), port))
+        .and_then(Value::as_array)
+        .is_some_and(|a| !a.is_empty());
+    if has {
+        return;
+    }
+    let address = std::net::Ipv4Addr::from(peer.0).to_string();
+    if let Some(map) = js.as_object_mut() {
+        map.insert(
+            "UdmuxEndpoints".to_string(),
+            serde_json::json!([{"Address": address, "Port": peer.1}]),
+        );
+    }
 }
 
 #[cfg(test)]
@@ -348,6 +420,89 @@ mod tests {
         assert_eq!(peer_of(&js), Ok(([10, 190, 0, 5], 50105)));
         assert!(peer_of(&serde_json::json!({})).is_err());
         assert!(peer_of(&serde_json::json!({"UdmuxEndpoints":[]})).is_err());
+    }
+
+    #[test]
+    fn a_warming_answer_with_a_stray_scalar_still_has_no_endpoint() {
+        // The ~10s warming answer is null keys — but not always only
+        // nulls: a status or message scalar rides along, which is why
+        // the gate is "carries an endpoint", not "not all-null".
+        let warming = serde_json::json!({
+            "status": 2,
+            "message": "starting",
+            "joinScript": null,
+            "joinTicket": null
+        });
+        assert!(!rbx_transport::join_game::all_null(&warming));
+        assert!(rbx_transport::join_game::team_create_endpoints(&warming).is_empty());
+        assert!(peer_of(&warming).is_err());
+    }
+
+    #[test]
+    fn the_flat_and_machine_shapes_join_too() {
+        // A fleet version answers Address+Port with no UDMUX list…
+        let flat = serde_json::json!({"Address": "52.84.150.39", "Port": 50105});
+        assert_eq!(peer_of(&flat), Ok(([52, 84, 150, 39], 50105)));
+        // …and one pairs MachineAddress with ServerPort, sometimes under
+        // a joinScript wrapper, keys not always cased the same.
+        let machine = serde_json::json!({
+            "joinScript": {"machineaddress": "52.84.150.39", "serverport": "49153"}
+        });
+        assert_eq!(peer_of(&machine), Ok(([52, 84, 150, 39], 49153)));
+
+        // The chosen endpoint is written where the flow's config reader
+        // looks for it.
+        let mut js = serde_json::json!({"Address": "52.84.150.39", "Port": 50105});
+        ensure_udmux(&mut js, ([52, 84, 150, 39], 50105));
+        assert_eq!(js["UdmuxEndpoints"][0]["Address"], "52.84.150.39");
+        assert_eq!(js["UdmuxEndpoints"][0]["Port"], 50105);
+        // An existing list is left alone.
+        let mut js = serde_json::json!({
+            "UdmuxEndpoints": [{"Address": "10.190.0.5", "Port": 50105}]
+        });
+        ensure_udmux(&mut js, ([52, 84, 150, 39], 50105));
+        assert_eq!(js["UdmuxEndpoints"][0]["Address"], "10.190.0.5");
+    }
+
+    #[test]
+    fn public_endpoints_win_over_the_rcc_private_network() {
+        let both = serde_json::json!({
+            "UdmuxEndpoints": [
+                {"Address": "10.190.0.5", "Port": 50105},
+                {"Address": "52.84.150.39", "Port": 50105}
+            ]
+        });
+        assert_eq!(peer_of(&both), Ok(([52, 84, 150, 39], 50105)));
+    }
+
+    #[test]
+    fn wrapper_fields_reach_the_flow_wherever_the_fleet_put_them() {
+        // The v1 shape: status and the ticket at the reply level, the
+        // dial fields under joinScript — the flow reads them all flat
+        // off the script.
+        let reply = serde_json::json!({
+            "status": 2,
+            "ClientTicket": "a;b;pre;auth",
+            "joinScript": {
+                "UdmuxEndpoints": [{"Address": "10.190.0.5", "Port": 50105}],
+                "NetStackPort": 49153
+            }
+        });
+        let mut js = rbx_transport::join_game::script_of(&reply).unwrap();
+        carry_wrapper_fields(&mut js, &reply);
+        assert_eq!(js["ClientTicket"], "a;b;pre;auth");
+        assert_eq!(js["NetStackPort"], 49153);
+        // A joinTicket serialized as a JSON string carries its settings
+        // in — decoded, and without overwriting what js already has.
+        let reply = serde_json::json!({
+            "joinTicket": "{\"settings\":{\"Address\":\"52.84.150.39\",\"ServerPort\":5000}}",
+            "joinScript": {"NetStackPort": 49153}
+        });
+        let mut js = rbx_transport::join_game::script_of(&reply).unwrap();
+        carry_wrapper_fields(&mut js, &reply);
+        assert_eq!(js["Address"], "52.84.150.39");
+        assert_eq!(js["ServerPort"], 5000);
+        assert_eq!(js["NetStackPort"], 49153);
     }
 
     #[test]

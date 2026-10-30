@@ -229,6 +229,163 @@ fn has_value(v: &Value) -> bool {
     }
 }
 
+/// A Team Create join endpoint: an address (IPv4, IPv6, or hostname)
+/// and the port the replication socket can dial.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct JoinEndpoint {
+    pub address: String,
+    pub port: u16,
+}
+
+/// The endpoints a team-create answer carries, wherever its fleet
+/// version put them — the shapes and wrappers the reference's own
+/// device-verified parser accepts:
+///
+/// - `UdmuxEndpoints[]` first: when present they are the addresses the
+///   client is expected to use, each `Address`+`Port` (a missing `Port`
+///   falls back to the level's `ServerPort`).
+/// - `Address` paired with `Port` or `ServerPort` at the same level —
+///   some fleet versions answer that flat shape with no UDMUX list.
+/// - `MachineAddress` paired with `ServerPort`.
+///
+/// All of these at *any* object level, through the wrappers different
+/// gamejoin versions use (`joinScript`, `settings`, `joinTicket`),
+/// including ones serialized as JSON strings, with case-insensitive
+/// keys. When both public and internal (`10.x`, `192.168.x`, …)
+/// addresses appear, only the public ones are kept: a phone on the
+/// Internet cannot route to the RCC's private network.
+pub fn team_create_endpoints(doc: &Value) -> Vec<JoinEndpoint> {
+    let mut out = Vec::new();
+    collect_endpoints(doc, &mut out, 0);
+    prefer_public(out)
+}
+
+fn collect_endpoints(v: &Value, out: &mut Vec<JoinEndpoint>, depth: usize) {
+    if depth > 12 {
+        return;
+    }
+    match v {
+        Value::Object(map) => {
+            endpoints_at_level(v, out);
+            for child in map.values() {
+                collect_endpoints(child, out, depth + 1);
+            }
+        }
+        Value::Array(items) => {
+            for child in items {
+                collect_endpoints(child, out, depth + 1);
+            }
+        }
+        Value::String(text) => {
+            let text = text.trim();
+            if (text.starts_with('{') || text.starts_with('[')) && text.len() <= 2_000_000 {
+                if let Ok(decoded) = serde_json::from_str::<Value>(text) {
+                    collect_endpoints(&decoded, out, depth + 1);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn endpoints_at_level(v: &Value, out: &mut Vec<JoinEndpoint>) {
+    let server_port = field_ci(v, "ServerPort").and_then(port_of_value);
+
+    if let Some(arr) = field_ci(v, "UdmuxEndpoints").and_then(Value::as_array) {
+        for e in arr {
+            let addr = field_ci(e, "Address").and_then(address_of_value);
+            let port = field_ci(e, "Port")
+                .and_then(port_of_value)
+                .or(server_port);
+            if let (Some(address), Some(port)) = (addr, port) {
+                push_unique(out, JoinEndpoint { address, port });
+            }
+        }
+    }
+
+    if let (Some(address), Some(port)) = (
+        field_ci(v, "Address").and_then(address_of_value),
+        field_ci(v, "Port").and_then(port_of_value).or(server_port),
+    ) {
+        push_unique(out, JoinEndpoint { address, port });
+    }
+
+    if let (Some(address), Some(port)) = (
+        field_ci(v, "MachineAddress").and_then(address_of_value),
+        server_port,
+    ) {
+        push_unique(out, JoinEndpoint { address, port });
+    }
+}
+
+/// `v[name]`, case-insensitively — the fleet's key spellings vary.
+fn field_ci<'a>(v: &'a Value, name: &str) -> Option<&'a Value> {
+    let obj = v.as_object()?;
+    if let Some(x) = obj.get(name) {
+        return Some(x);
+    }
+    obj.iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case(name))
+        .map(|(_, x)| x)
+}
+
+fn port_of_value(v: &Value) -> Option<u16> {
+    v.as_u64()
+        .or_else(|| v.as_str().and_then(|s| s.parse::<u64>().ok()))
+        .and_then(|p| u16::try_from(p).ok())
+        .filter(|p| *p != 0)
+}
+
+fn address_of_value(v: &Value) -> Option<String> {
+    v.as_str()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+fn push_unique(out: &mut Vec<JoinEndpoint>, e: JoinEndpoint) {
+    if !out.contains(&e) {
+        out.push(e);
+    }
+}
+
+fn prefer_public(all: Vec<JoinEndpoint>) -> Vec<JoinEndpoint> {
+    if all.iter().any(|e| !is_internal_address(&e.address)) {
+        all.into_iter()
+            .filter(|e| !is_internal_address(&e.address))
+            .collect()
+    } else {
+        all
+    }
+}
+
+/// True for addresses a phone on the Internet cannot route to. A
+/// hostname may be publicly routable; do not discard it.
+fn is_internal_address(address: &str) -> bool {
+    fn v4_is_internal(o: [u8; 4]) -> bool {
+        o[0] == 0
+            || o[0] == 10
+            || o[0] == 127
+            || (o[0] == 169 && o[1] == 254)
+            || (o[0] == 172 && (16..=31).contains(&o[1]))
+            || (o[0] == 192 && o[1] == 168)
+            || (o[0] == 100 && (64..=127).contains(&o[1]))
+    }
+    match address.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(ip)) => v4_is_internal(ip.octets()),
+        Ok(std::net::IpAddr::V6(ip)) => {
+            let o = ip.octets();
+            ip.is_unspecified()
+                || ip.is_loopback()
+                || (o[0] & 0xfe) == 0xfc
+                || (o[0] == 0xfe && (o[1] & 0xc0) == 0x80)
+                || (o[..12] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff]
+                    && v4_is_internal([o[12], o[13], o[14], o[15]]))
+        }
+        Err(_) => false,
+    }
+}
+
 /// POSTs the join-game request and follows the `joinScriptUrl` fallback,
 /// the reference's `joinGame` verbatim.
 pub fn join_game(
@@ -401,6 +558,77 @@ mod tests {
         assert!(!all_null(&json!({"joinScript": {"isTeleport": false}})));
         assert!(!all_null(&json!({"a": [null, {"b": "10.0.0.1"}]})));
         assert!(!all_null(&json!("x")));
+    }
+
+    #[test]
+    fn endpoints_come_from_every_shape_and_wrapper() {
+        use super::{team_create_endpoints, JoinEndpoint};
+        let endpoint = |address: &str, port: u16| JoinEndpoint {
+            address: address.to_string(),
+            port,
+        };
+        // UDMUX, the preferred shape, with a missing per-endpoint Port
+        // falling back to the level's ServerPort.
+        assert_eq!(
+            team_create_endpoints(&json!({
+                "UdmuxEndpoints": [
+                    {"Address": "10.0.0.2"},
+                    {"Address": "10.0.0.3", "Port": "53641"}
+                ],
+                "ServerPort": 53640
+            })),
+            vec![endpoint("10.0.0.2", 53640), endpoint("10.0.0.3", 53641)]
+        );
+        // The flat shape, and MachineAddress+ServerPort — the shapes
+        // some fleet versions answer with no UDMUX list at all.
+        assert_eq!(
+            team_create_endpoints(&json!({"Address": "52.84.150.39", "Port": 50105})),
+            vec![endpoint("52.84.150.39", 50105)]
+        );
+        assert_eq!(
+            team_create_endpoints(&json!({"machineaddress": "52.84.150.39", "serverport": 49153})),
+            vec![endpoint("52.84.150.39", 49153)]
+        );
+        // A joinTicket serialized as a JSON string still carries its
+        // settings in — the reference's own device answer.
+        assert_eq!(
+            team_create_endpoints(&json!({
+                "joinTicket": "{\"settings\":{\"Address\":\"127.0.0.1\",\"ServerPort\":5000}}"
+            })),
+            vec![endpoint("127.0.0.1", 5000)]
+        );
+        // The warming answer, null keys or a stray scalar, yields
+        // nothing: that is the "keep asking" gate.
+        assert!(team_create_endpoints(&json!({
+            "joinTicket": null, "settings": null, "message": null
+        }))
+        .is_empty());
+        assert!(team_create_endpoints(&json!({"status": 2, "message": "starting"})).is_empty());
+    }
+
+    #[test]
+    fn public_endpoints_are_preferred() {
+        use super::{team_create_endpoints, JoinEndpoint};
+        let both = json!({
+            "UdmuxEndpoints": [
+                {"Address": "10.190.0.5", "Port": 50105},
+                {"Address": "192.168.1.9", "Port": 50105}
+            ],
+            "ServerConnections": [{"Address": "52.84.150.39", "Port": 49153}]
+        });
+        // Every UDMUX address is internal, so the public RCC address
+        // from ServerConnections is what remains.
+        assert_eq!(
+            team_create_endpoints(&both),
+            vec![JoinEndpoint { address: "52.84.150.39".to_string(), port: 49153 }]
+        );
+        // Only-internal answers are kept: a desktop on the RCC's own
+        // network can still route to them.
+        let internal = json!({"Address": "10.190.0.5", "Port": 50105});
+        assert_eq!(team_create_endpoints(&internal).len(), 1);
+        // A hostname may be publicly routable; it is never discarded.
+        let host = json!({"Address": "cloudedit.rbx.internal", "Port": 50105});
+        assert_eq!(team_create_endpoints(&host).len(), 1);
     }
 
     #[test]
