@@ -89,7 +89,7 @@ impl Io for UdpIo {
 pub struct DriveInputs<'a> {
     pub js: &'a Value,
     pub reply: &'a Value,
-    pub place: u32,
+    pub place: u64,
     pub tmpl_90: &'a [u8],
     pub tmpl_8a: &'a [u8],
     pub solver: Solver,

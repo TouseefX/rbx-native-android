@@ -309,8 +309,9 @@ pub fn v9_from_90_template(tmpl: &[u8]) -> Option<u32> {
 }
 
 /// The 0x8a envelope key: `"<place>-1733811612<tail2>594292182"` truncated
-/// to 16 bytes.
-pub fn key_8a(place_id: u32, tail2: u32) -> String {
+/// to 16 bytes. `place` is 64-bit — live place ids sit well past `u32`,
+/// and the native's decimal formatting takes them whole.
+pub fn key_8a(place_id: u64, tail2: u32) -> String {
     let mut s = format!("{place_id}-1733811612{tail2}594292182");
     s.truncate(s.len().min(16));
     s
@@ -689,6 +690,10 @@ mod tests {
         // Pinned by the C++ suite: place 1818, tail[2] 551761825.
         assert_eq!(key_8a(1818, 551761825), "1818-17338116125");
         assert_eq!(key_8a(1818, 551761825).len(), 16);
+        // Live place ids sit past u32 — the decimal is taken whole and
+        // the truncation at 16 bytes simply lands further along.
+        assert_eq!(key_8a(8867499317, 551761825), "8867499317-17338");
+        assert_eq!(key_8a(8867499317, 551761825).len(), 16);
     }
 
     #[test]
