@@ -64,7 +64,7 @@ impl HomeWindow {
         };
         cx.spawn(async move |this, cx| {
             let members = cx.background_spawn(async move {
-                rbx_cloud::team_create::team_create_members(&cookie, place)
+                rbx_cloud::team_create_members(&cookie, place)
             })
             .await;
             let _ = this.update(cx, |this, cx| {

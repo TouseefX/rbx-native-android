@@ -130,7 +130,7 @@ fn hydrate(js: &mut Value, cookie: &SessionCookie) {
 
 /// The RakNet endpoint: the join script's `UdmuxEndpoints[0]`, address
 /// and port (the port arrives as a number or a string).
-fn peer_of(js: &Value) -> Result<(([u8; 4], u16), String)> {
+fn peer_of(js: &Value) -> Result<([u8; 4], u16), String> {
     let end = js
         .get("UdmuxEndpoints")
         .and_then(|v| v.get(0))
