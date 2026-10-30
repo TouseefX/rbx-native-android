@@ -25,14 +25,32 @@ pub(crate) const TMPL_8A: &[u8] = include_bytes!("../../../../assets/team-create
 /// thread is a daemon the process takes with it.
 const SESSION_MS: u64 = 24 * 60 * 60 * 1000;
 
+/// How many times to re-ask the team-create endpoint for its config: the
+/// first POST warms the session's server and answers an all-null
+/// document, and the real one comes once the server is up — usually on
+/// the second call, cold starts slower.
+const NEGOTIATION_TRIES: u32 = 30;
+
+/// The reply the join flow takes: the negotiation document when it
+/// carries a `joinTicket`, `Null` otherwise — `build_90` keeps the
+/// template's ticket for a non-object reply.
+fn reply_for_flow(reply: &Value) -> &Value {
+    static NULL: Value = Value::Null;
+    if reply.get("joinTicket").is_some() {
+        reply
+    } else {
+        &NULL
+    }
+}
+
 /// Starts the session on its own thread and returns at once; the join,
 /// and whatever it has to say, belongs to the thread.
-pub(crate) fn start(place: u64, universe: Option<u64>, cookie: SessionCookie) {
+pub(crate) fn start(place: u64, cookie: SessionCookie) {
     let _ = std::thread::Builder::new()
         .name("team-create-session".to_string())
         .spawn(move || {
             let say = |line: String| eprintln!("team-create: {line}");
-            match run(place, universe, &cookie) {
+            match run(place, &cookie) {
                 Ok(report) => say(format!(
                     "session ended: {} datagrams out, {} app messages in ({} bytes)",
                     report.datagrams_tx, report.app_messages, report.app_bytes
@@ -44,15 +62,30 @@ pub(crate) fn start(place: u64, universe: Option<u64>, cookie: SessionCookie) {
 
 /// The join and the session: the whole `drive` sequence on one socket,
 /// logged a handful of lines.
-fn run(place: u64, universe: Option<u64>, cookie: &SessionCookie) -> Result<drive::Report, String> {
-    let joined = rbx_transport::join_game::join_game(
-        place,
-        cookie.expose_secret(),
-        None,
-        None,
-        universe,
-    )?;
-    let mut js = joined.join_script;
+fn run(place: u64, cookie: &SessionCookie) -> Result<drive::Report, String> {
+    // Team Create joins through its own endpoint, not join-game: the
+    // first POST warms the session's server and answers an all-null
+    // document, and the join config comes once the server is up — so
+    // keep asking, a fresh attempt id on every call.
+    let mut negotiated = None;
+    for attempt in 1..=NEGOTIATION_TRIES {
+        let answered = rbx_transport::join_game::team_create_join(
+            place,
+            cookie.expose_secret(),
+            false,
+        )?;
+        if !rbx_transport::join_game::all_null(&answered) {
+            negotiated = Some(answered);
+            break;
+        }
+        eprintln!(
+            "team-create: session warming up (attempt {attempt}), asking again"
+        );
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+    let reply = negotiated
+        .ok_or_else(|| "the Team Create session never became ready".to_string())?;
+    let mut js = rbx_transport::join_game::script_of(&reply)?;
     hydrate(&mut js, cookie);
     let peer = peer_of(&js)?;
     let mut io = UdpIo::connect(peer)?;
@@ -61,7 +94,7 @@ fn run(place: u64, universe: Option<u64>, cookie: &SessionCookie) -> Result<driv
     drive::drive(
         DriveInputs {
             js: &js,
-            reply: &joined.reply,
+            reply: reply_for_flow(&reply),
             place: u32::try_from(place).map_err(|_| "place id too large".to_string())?,
             tmpl_90: TMPL_90,
             tmpl_8a: TMPL_8A,
@@ -122,6 +155,19 @@ fn peer_of(js: &Value) -> Result<(([u8; 4], u16), String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_flow_takes_the_reply_only_when_it_carries_a_ticket() {
+        let with = serde_json::json!({
+            "status": 2,
+            "joinTicket": {"SerializedClientFields": "a", "EncryptedServerFields": "b"}
+        });
+        assert!(reply_for_flow(&with).get("joinTicket").is_some());
+        // Without one, the flow takes Null: build_90 keeps the
+        // template's ticket for a non-object reply.
+        let without = serde_json::json!({"status": 2, "UdmuxEndpoints": []});
+        assert!(reply_for_flow(&without).is_null());
+    }
 
     #[test]
     fn the_peer_comes_from_the_first_endpoint() {

@@ -88,11 +88,7 @@ impl HomeWindow {
             return;
         };
         if let Some(cookie) = self.session.clone() {
-            crate::launcher::team_join::start(
-                experience.root_place_id,
-                Some(experience.universe_id),
-                cookie,
-            );
+            crate::launcher::team_join::start(experience.root_place_id, cookie);
         }
         self.download(experience, true, cx);
     }
