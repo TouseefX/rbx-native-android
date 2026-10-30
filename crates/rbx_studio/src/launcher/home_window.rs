@@ -20,6 +20,7 @@ use super::{fixtures, Boot};
 use crate::home::{self, RecentPlace};
 
 mod archived;
+mod cookie;
 mod games;
 mod open;
 mod recent_actions;
@@ -51,6 +52,21 @@ pub(super) enum Games {
     Loading,
     Loaded(Experiences),
     Failed(String),
+}
+
+/// What Home knows about the stored Roblox session (`key_store`'s
+/// session slot): the cookie Team Create joins with.
+pub(super) enum CookieState {
+    Missing,
+    Checking,
+    Ready {
+        name: String,
+        user_id: u64,
+    },
+    /// Stored, but Roblox refused it (expired or revoked).
+    Expired,
+    /// Stored, but the check could not run (network); joins can still try.
+    Unchecked,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -92,6 +108,13 @@ pub(super) enum Dialog {
         busy: bool,
         error: Option<String>,
     },
+    /// Pasting a `.ROBLOSECURITY`: `busy` while the check runs, `error`
+    /// when Roblox refused the cookie or could not be reached. The field
+    /// itself is Home's `cookie_input`.
+    Cookie {
+        busy: bool,
+        error: Option<String>,
+    },
 }
 
 pub(crate) struct HomeWindow {
@@ -106,6 +129,12 @@ pub(crate) struct HomeWindow {
     pub(super) recent_menu: Option<RecentMenu>,
     /// The editor's Roblox web sign-in, which Archive needs.
     pub(super) session: Option<rbx_cloud::heartbeats::SessionCookie>,
+    /// The same session, as the cookie card sees it: Team Create joins
+    /// need it, and the card is where it is pasted and checked.
+    pub(super) cookie: CookieState,
+    /// The paste field for `Dialog::Cookie`; masked, and cleared when the
+    /// dialog opens so a stored cookie is never echoed back.
+    pub(super) cookie_input: Entity<InputState>,
     /// Auto-Recovery copies no editor owns, read as Home opens.
     pub(super) recovered: Vec<crate::recovery::Leftover>,
     pub(super) search: Entity<InputState>,
@@ -150,18 +179,26 @@ pub(crate) struct HomeWindow {
 pub(crate) type Pick = Rc<dyn Fn(Experience, &mut App)>;
 
 /// `RBX_STUDIO_LAUNCHER_PAGE=home|recent|games` and
-/// `RBX_STUDIO_LAUNCHER_DIALOG=localcopy|downloading|error` (with
+/// `RBX_STUDIO_LAUNCHER_DIALOG=localcopy|downloading|error|cookie` (with
 /// `RBX_STUDIO_LAUNCHER_LINK=<text>|<text>@resolving|@notlink|@noplace|@noaccess`):
 /// Home's opening state for a capture.
 const PAGE_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_PAGE";
 const DIALOG_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_DIALOG";
 const LINK_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_LINK";
+/// `RBX_STUDIO_LAUNCHER_COOKIE=ready|expired|unchecked` for a capture; any
+/// other value is the real keyring read.
+const COOKIE_VARIABLE: &str = "RBX_STUDIO_LAUNCHER_COOKIE";
 
 impl HomeWindow {
     pub(super) fn new(boot: Boot, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
         let link = cx
             .new(|cx| InputState::new(window, cx).placeholder("Place ID or roblox.com/games link"));
+        let cookie_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .masked(true)
+                .placeholder(".ROBLOSECURITY")
+        });
         let owner_select = cx.new(|cx| {
             SelectState::new(
                 SearchableVec::new(vec![SharedString::from("You")]),
@@ -208,6 +245,19 @@ impl HomeWindow {
                     }
                 },
             ),
+            cx.subscribe_in(
+                &cookie_input,
+                window,
+                |this, _, event: &InputEvent, _window, cx| {
+                    // Enter in the paste field is Save, while a check is
+                    // not already running.
+                    if let InputEvent::PressEnter { .. } = event {
+                        if !matches!(this.dialog, Some(Dialog::Cookie { busy: true, .. })) {
+                            this.save_cookie(cx);
+                        }
+                    }
+                },
+            ),
         ];
         let recent_icons = boot
             .borrow()
@@ -227,6 +277,8 @@ impl HomeWindow {
             recent_icons,
             recent_menu: None,
             session: None,
+            cookie: CookieState::Checking,
+            cookie_input,
             recovered: crate::recovery::folder()
                 .map(|folder| crate::recovery::leftovers(&folder))
                 .unwrap_or_default(),
@@ -251,6 +303,7 @@ impl HomeWindow {
         };
         this.reload(cx);
         this.load_session(cx);
+        this.load_cookie(cx);
         this.apply_capture_state(window, cx);
         this.apply_recent_capture(window, cx);
         this
@@ -301,6 +354,10 @@ impl HomeWindow {
                 experience: Some(experience),
                 status: Some(403),
                 reason: "legacy-asset:manage is not granted for this experience".to_string(),
+            }),
+            Ok("cookie") => Some(Dialog::Cookie {
+                busy: false,
+                error: None,
             }),
             _ => None,
         };

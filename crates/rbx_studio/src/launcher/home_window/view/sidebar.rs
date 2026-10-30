@@ -6,7 +6,7 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 
 use super::*;
-use crate::launcher::home_window::{HomeWindow, KeyState, Page};
+use crate::launcher::home_window::{CookieState, HomeWindow, KeyState, Page};
 use crate::launcher::ui::{self};
 use crate::tokens;
 
@@ -132,7 +132,122 @@ impl HomeWindow {
             .child(nav("nav-recent", "clock", "Recent", Page::Recent, cx))
             .child(nav("nav-games", "gamepad-2", "My Games", Page::MyGames, cx))
             .child(div().flex_1())
+            .child(self.cookie_card(cx))
             .child(self.account_card(cx))
+    }
+
+    /// The Roblox session card, above the key card: Team Create joins as
+    /// this session's account. Missing, it's one paste away; stored, a
+    /// click reopens the dialog to replace it or sign out.
+    pub(super) fn cookie_card(&self, cx: &mut Context<Self>) -> AnyElement {
+        let (name, status, dot) = match &self.cookie {
+            CookieState::Missing => {
+                return v_flex()
+                    .gap(px(6.))
+                    .p(px(12.))
+                    .mb(px(8.))
+                    .rounded(px(8.))
+                    .border_1()
+                    .border_color(tokens::border())
+                    .bg(ui::panel())
+                    .child(
+                        h_flex()
+                            .items_center()
+                            .gap(px(8.))
+                            .child(ui::icon("users", 14.).text_color(tokens::text2()))
+                            .child(
+                                ui::text(12., 16.)
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .text_color(tokens::text())
+                                    .child("No cookie"),
+                            ),
+                    )
+                    .child(
+                        ui::text(11., 15.).text_color(tokens::text2()).child(
+                            "Team Create joining needs a Roblox session. Local places work without one.",
+                        ),
+                    )
+                    .child(
+                        ui::text(11.5, 16.)
+                            .id("sidebar-cookie-paste")
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(ui::accent())
+                            .cursor_pointer()
+                            .hover(|this| tokens::hover_fx(this).text_color(tokens::text()))
+                            .child("Paste cookie\u{2026}")
+                            .on_click(cx.listener(
+                                |this, _, window, cx| this.open_cookie_dialog(window, cx),
+                            )),
+                    )
+                    .into_any_element();
+            }
+            CookieState::Checking => (
+                "Roblox session".to_string(),
+                "Checking\u{2026}",
+                tokens::text3(),
+            ),
+            CookieState::Ready { name, .. } => (name.clone(), "Signed in", ui::green()),
+            CookieState::Expired => (
+                "Roblox session".to_string(),
+                "Cookie expired",
+                ui::red(),
+            ),
+            CookieState::Unchecked => (
+                "Roblox session".to_string(),
+                "Couldn\u{2019}t check",
+                tokens::text3(),
+            ),
+        };
+        h_flex()
+            .id("sidebar-cookie")
+            .items_center()
+            .gap(px(10.))
+            .py(px(10.))
+            .px(px(12.))
+            .mb(px(8.))
+            .rounded(px(8.))
+            .border_1()
+            .border_color(tokens::border())
+            .bg(ui::panel())
+            .cursor_pointer()
+            .hover(|this| tokens::hover_fx(this).bg(tokens::hover_subtle()))
+            .child(
+                h_flex()
+                    .size(px(28.))
+                    .flex_none()
+                    .rounded_full()
+                    .bg(tokens::avatar())
+                    .items_center()
+                    .justify_center()
+                    .text_color(ui::accent())
+                    .child(ui::icon("users", 13.)),
+            )
+            .child(
+                v_flex()
+                    .flex_1()
+                    .min_w_0()
+                    .gap(px(1.))
+                    .child(
+                        ui::text(12., 16.)
+                            .truncate()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(tokens::text())
+                            .child(name),
+                    )
+                    .child(
+                        h_flex()
+                            .items_center()
+                            .gap(px(5.))
+                            .text_size(px(11.))
+                            .line_height(px(15.))
+                            .text_color(tokens::text2())
+                            .child(div().size(px(6.)).rounded_full().bg(dot))
+                            .child(status),
+                    ),
+            )
+            .child(ui::icon("chevron-right", 14.).text_color(tokens::text3()))
+            .on_click(cx.listener(|this, _, window, cx| this.open_cookie_dialog(window, cx)))
+            .into_any_element()
     }
 
     pub(super) fn account_card(&self, cx: &mut Context<Self>) -> AnyElement {

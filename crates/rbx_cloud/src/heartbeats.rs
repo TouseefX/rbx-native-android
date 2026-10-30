@@ -50,9 +50,31 @@ impl std::fmt::Debug for SessionCookie {
 /// `GET users.roblox.com/v1/users/authenticated`: who a session belongs to.
 pub const AUTHENTICATED_URL: &str = "https://users.roblox.com/v1/users/authenticated";
 
+/// Who a session belongs to: the Home cookie card's line. `name` is the
+/// username, `display_name` the shown name (they are often the same).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthenticatedUser {
+    pub id: u64,
+    pub name: String,
+    pub display_name: String,
+}
+
 /// The user id behind `cookie` (a session restored from the keyring carries
 /// none). `Unauthorized` when Roblox no longer accepts the cookie.
 pub fn authenticated_user_id(cookie: &SessionCookie) -> Result<u64, PulseError> {
+    let (status, body) = authenticated_reply(cookie)?;
+    parse_authenticated(status, &body)
+}
+
+/// Who `cookie` belongs to, with the names: what Home's cookie card shows.
+/// `Unauthorized` when Roblox no longer accepts the cookie.
+pub fn authenticated_user(cookie: &SessionCookie) -> Result<AuthenticatedUser, PulseError> {
+    let (status, body) = authenticated_reply(cookie)?;
+    parse_authenticated_user(status, &body)
+}
+
+/// The authenticated call's status and body, shared by both readers.
+fn authenticated_reply(cookie: &SessionCookie) -> Result<(u16, String), PulseError> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .user_agent(concat!("rbx-native/", env!("CARGO_PKG_VERSION")))
         .http_status_as_error(false)
@@ -66,7 +88,7 @@ pub fn authenticated_user_id(cookie: &SessionCookie) -> Result<u64, PulseError> 
         .map_err(|e| PulseError::Other(e.to_string()))?;
     let status = resp.status().as_u16();
     let body = resp.body_mut().read_to_string().unwrap_or_default();
-    parse_authenticated(status, &body)
+    Ok((status, body))
 }
 
 /// `{"id": N, ...}` on 200; 401/403 is a dead session.
@@ -76,6 +98,35 @@ fn parse_authenticated(status: u16, body: &str) -> Result<u64, PulseError> {
             .ok()
             .and_then(|v| v.get("id").and_then(serde_json::Value::as_u64))
             .ok_or_else(|| PulseError::Other("users/authenticated: no id".into())),
+        401 | 403 => Err(PulseError::Unauthorized),
+        other => Err(PulseError::Other(format!(
+            "users/authenticated: HTTP {other}"
+        ))),
+    }
+}
+
+/// The full document on 200: `id` and `name`, plus `displayName` when the
+/// account has one set (otherwise the username stands in). 401/403 is a
+/// dead session.
+fn parse_authenticated_user(status: u16, body: &str) -> Result<AuthenticatedUser, PulseError> {
+    match status {
+        200 => serde_json::from_str::<serde_json::Value>(body)
+            .ok()
+            .and_then(|v| {
+                let id = v.get("id").and_then(serde_json::Value::as_u64)?;
+                let name = v.get("name")?.as_str()?.to_owned();
+                let display_name = v
+                    .get("displayName")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or(&name)
+                    .to_owned();
+                Some(AuthenticatedUser {
+                    id,
+                    name,
+                    display_name,
+                })
+            })
+            .ok_or_else(|| PulseError::Other("users/authenticated: no user".into())),
         401 | 403 => Err(PulseError::Unauthorized),
         other => Err(PulseError::Other(format!(
             "users/authenticated: HTTP {other}"
@@ -338,6 +389,37 @@ mod tests {
         ));
         assert!(matches!(
             parse_authenticated(500, ""),
+            Err(PulseError::Other(_))
+        ));
+    }
+
+    #[test]
+    fn authenticated_user_reads_the_names_too() {
+        let ok = r#"{"id":925308243,"name":"builder","displayName":"Builderman"}"#;
+        assert_eq!(
+            parse_authenticated_user(200, ok),
+            Ok(AuthenticatedUser {
+                id: 925_308_243,
+                name: "builder".into(),
+                display_name: "Builderman".into(),
+            })
+        );
+        // No displayName set: the username stands in.
+        let bare = r#"{"id":1,"name":"builder"}"#;
+        assert_eq!(
+            parse_authenticated_user(200, bare),
+            Ok(AuthenticatedUser {
+                id: 1,
+                name: "builder".into(),
+                display_name: "builder".into(),
+            })
+        );
+        assert_eq!(
+            parse_authenticated_user(403, ""),
+            Err(PulseError::Unauthorized)
+        );
+        assert!(matches!(
+            parse_authenticated_user(200, r#"{"id":1}"#),
             Err(PulseError::Other(_))
         ));
     }
