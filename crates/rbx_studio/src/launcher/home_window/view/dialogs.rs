@@ -1,12 +1,13 @@
-//! Home's dialogs: LocalCopy, Downloading, DownloadError.
+//! Home's dialogs: LocalCopy, Downloading, DownloadError, Cookie.
 
+use gpui_kit::component::input::Input;
 use gpui_kit::component::{h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 
 use super::*;
 use crate::home::RecentPlace;
-use crate::launcher::home_window::{Dialog, HomeWindow};
+use crate::launcher::home_window::{CookieState, Dialog, HomeWindow};
 use crate::launcher::ui::{self, Weight};
 use crate::tokens;
 
@@ -21,6 +22,9 @@ impl HomeWindow {
                 error,
             } => self
                 .archive_dialog(place, *restore, *busy, error.as_deref(), cx)
+                .into_any_element(),
+            Dialog::Cookie { busy, error } => self
+                .cookie_dialog(*busy, error.as_deref(), cx)
                 .into_any_element(),
             Dialog::LocalCopy {
                 experience,
@@ -315,5 +319,116 @@ impl HomeWindow {
                 .into_any_element()
             }
         })
+    }
+
+    /// Pasting (or replacing) the Roblox session cookie. The field is
+    /// masked and starts empty — a stored cookie is never echoed back —
+    /// and Save checks it against Roblox before it reaches the keyring.
+    pub(super) fn cookie_dialog(
+        &self,
+        busy: bool,
+        error: Option<&str>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let stored = matches!(self.cookie, CookieState::Ready { .. });
+        let empty = self.cookie_input.read(cx).value().trim().is_empty();
+        let focus = self.cookie_input.read(cx).focus_handle(cx);
+        // Whose session is stored, so a paste is visibly a switch.
+        let account = match &self.cookie {
+            CookieState::Ready { name, user_id } => Some(format!(
+                "Signed in as {name} (user {user_id}). Paste a different cookie to switch accounts."
+            )),
+            _ => None,
+        };
+        let account = account.map(|line| {
+            ui::text(11.5, 16.)
+                .text_color(tokens::text2())
+                .child(line)
+                .into_any_element()
+        });
+        let border = if error.is_some() {
+            ui::red_line()
+        } else {
+            tokens::border()
+        };
+        let banner = error.map(|error| {
+            div()
+                .mt(px(8.))
+                .py(px(10.))
+                .px(px(12.))
+                .rounded(px(6.))
+                .border_1()
+                .border_color(ui::red_line())
+                .bg(ui::red_soft())
+                .text_size(px(11.5))
+                .line_height(px(17.))
+                .text_color(tokens::text())
+                .child(error.to_string())
+                .into_any_element()
+        });
+        let body = v_flex()
+            .mt(px(12.))
+            .mx(px(20.))
+            .when_some(account, |this, account| {
+                this.child(account).mb(px(8.))
+            })
+            .child(
+                ui::field_frame(None, ui::panel(), border, "shield-check")
+                    .w_full()
+                    .child(
+                        div()
+                            .id("cookie-field")
+                            .relative()
+                            .flex_1()
+                            .min_w_0()
+                            .h_full()
+                            .child(
+                                Input::new(&self.cookie_input)
+                                    .appearance(false)
+                                    .disabled(busy)
+                                    .h_full()
+                                    .px(px(0.))
+                                    .font_family(tokens::font_mono())
+                                    .text_size(px(11.5))
+                                    .text_color(tokens::text()),
+                            )
+                            .on_click(move |_, window, cx| focus.focus(window, cx)),
+                    ),
+            )
+            .when_some(banner, |this, banner| this.child(banner))
+            .into_any_element();
+        let mut footer = vec![];
+        if stored && !busy {
+            footer.push(
+                ui::button("cookie-sign-out", "Sign out", Weight::Danger, false)
+                    .on_click(cx.listener(|this, _, _, cx| this.sign_out_cookie(cx)))
+                    .into_any_element(),
+            );
+        }
+        footer.push(
+            ui::button("cookie-cancel", "Cancel", Weight::Secondary, false)
+                .when(!busy, |this| {
+                    this.on_click(cx.listener(|this, _, _, cx| this.cancel_dialog(cx)))
+                })
+                .into_any_element(),
+        );
+        let save = if busy {
+            ui::disabled_button("cookie-save", "Checking\u{2026}").into_any_element()
+        } else if empty {
+            ui::disabled_button("cookie-save", "Save").into_any_element()
+        } else {
+            ui::button("cookie-save", "Save", Weight::Primary, false)
+                .on_click(cx.listener(|this, _, _, cx| this.save_cookie(cx)))
+                .into_any_element()
+        };
+        footer.push(save);
+        ui::dialog(
+            480.,
+            ui::dialog_glyph("users", ui::accent(), tokens::accent_soft()),
+            "Roblox session",
+            "Team Create joins as this session\u{2019}s account. Paste the .ROBLOSECURITY cookie from a signed-in browser; it\u{2019}s kept in your device\u{2019}s credential store and only ever sent to Roblox.",
+            Some(body),
+            footer,
+        )
     }
 }
