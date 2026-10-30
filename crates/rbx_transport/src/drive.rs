@@ -296,7 +296,7 @@ fn pump(client: &mut Client, io: &mut dyn Io, ms: u32) {
 /// then `04` at ~30Hz, `stepId` +4 per message. The `stepId` is patched
 /// into the two 4-byte LE slots each frame carries.
 const A6: [(&str, usize); 4] = [
-    ("a601010001480100004800000000", 5),
+    ("a60101000148010000480100000000", 5),
     ("a6020100014c0100004c0100000000040400", 5),
     (
         "a603010010030064d0b7e6d7ff03e050010000500100000000040400040400",
@@ -367,7 +367,10 @@ mod tests {
             "UdmuxEndpoints": [{"Address": "10.190.0.5", "Port": 50105}],
             "ServerConnections": [{"Address": "10.17.9.213", "Port": 9999}],
             "NetStackTokenValue": b64(&[0x42u8; 16]),
-            "EphemeralEarlyPubKey": b64(&[0x09u8; 32]),
+            // The mock server presents SERVER_SEED's key, so the script's
+            // EphemeralEarlyPubKey must be exactly that for Reply2 to
+            // verify (a different one is an rx key mismatch).
+            "EphemeralEarlyPubKey": b64(&crate::client::tests::peer_pub()),
         })
     }
 
