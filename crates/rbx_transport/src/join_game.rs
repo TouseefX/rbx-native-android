@@ -270,7 +270,9 @@ pub fn fetch_player_hydration(user_id: u64, cookie: &str) -> Result<Value, Strin
         "https://apis.roblox.com/player-hydration-service/v1/players/signed?userId={user_id}"
     );
     let cookie = cookie_header(cookie);
-    let mut request = agent().get(url.as_str()).header("Accept", "application/json");
+    let mut request = agent()
+        .get(url.as_str())
+        .header("Accept", "application/json");
     if !cookie.is_empty() {
         request = request.header("Cookie", cookie.as_str());
     }

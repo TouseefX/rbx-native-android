@@ -903,6 +903,14 @@ pub(crate) mod tests {
         }
     }
 
+    /// The public key the mock server's `SERVER_SEED` presents, on its
+    /// own: a join script built outside `config()` (see `drive::tests`)
+    /// must carry exactly this as its `EphemeralEarlyPubKey` for the
+    /// handshake's DH to come out the same on both sides.
+    pub(crate) fn peer_pub() -> [u8; 32] {
+        SessionKeys::from_seed(SERVER_SEED).public()
+    }
+
     /// The mock server: the client's own key math from the other side of
     /// the wire. The KDF's public-key order is canonical — client first,
     /// server second, whichever side runs it — so the mock derives the
