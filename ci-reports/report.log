@@ -3,36 +3,36 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
-[1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
+[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
-[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
+[1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
+[1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
+[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
-[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
-[1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
-[1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m    Checking[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
 [1m[92m    Checking[0m rbx_ugc v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_ugc)
+[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
+[1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-pre-linux v0.3.5
 [1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
-[1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
-[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-kit v0.6.2
 [1m[91merror[E0603][0m[1m: module `team_create` is private[0m
   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/open.rs:67:28
@@ -91,36 +91,36 @@
     [1m[94m|[0m [1m[92m^^^^^^^^^^^^^^^[0m
 
 [1m[91merror[E0107][0m[1m: enum takes 2 generic arguments but 1 generic argument was supplied[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/launcher/team_join.rs:100:27
+   [1m[94m--> [0mcrates/rbx_studio/src/launcher/team_join.rs:133:27
     [1m[94m|[0m
-[1m[94m100[0m [1m[94m|[0m fn peer_of(js: &Value) -> Result<(([u8; 4], u16), String)> {
+[1m[94m133[0m [1m[94m|[0m fn peer_of(js: &Value) -> Result<(([u8; 4], u16), String)> {
     [1m[94m|[0m                           [1m[91m^^^^^^[0m [1m[94m------------------------[0m [1m[94msupplied 1 generic argument[0m
     [1m[94m|[0m                           [1m[91m|[0m
     [1m[94m|[0m                           [1m[91mexpected 2 generic arguments[0m
     [1m[94m|[0m
 [1m[96mhelp[0m: add missing generic argument
     [1m[94m|[0m
-[1m[94m100[0m [1m[94m| [0mfn peer_of(js: &Value) -> Result<(([u8; 4], u16), String)[92m, E[0m> {
+[1m[94m133[0m [1m[94m| [0mfn peer_of(js: &Value) -> Result<(([u8; 4], u16), String)[92m, E[0m> {
     [1m[94m|[0m                                                          [92m+++[0m
 
 [1m[91merror[E0308][0m[1m: mismatched types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/launcher/team_join.rs:119:9
+   [1m[94m--> [0mcrates/rbx_studio/src/launcher/team_join.rs:152:9
     [1m[94m|[0m
-[1m[94m119[0m [1m[94m|[0m     Ok((ip.octets(), port))
+[1m[94m152[0m [1m[94m|[0m     Ok((ip.octets(), port))
     [1m[94m|[0m         [1m[91m^^^^^^^^^^^[0m [1m[91mexpected `([u8; 4], u16)`, found `[u8; 4]`[0m
     [1m[94m|[0m
     [1m[94m= [0m[1mnote[0m: expected tuple `[1m[35m([u8; 4], u16)[0m`
                found array `[1m[35m[u8; 4][0m`
 
 [1m[91merror[E0308][0m[1m: mismatched types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/launcher/team_join.rs:119:22
+   [1m[94m--> [0mcrates/rbx_studio/src/launcher/team_join.rs:152:22
     [1m[94m|[0m
-[1m[94m119[0m [1m[94m|[0m     Ok((ip.octets(), port))
+[1m[94m152[0m [1m[94m|[0m     Ok((ip.octets(), port))
     [1m[94m|[0m                      [1m[91m^^^^[0m [1m[91mexpected `String`, found `u16`[0m
     [1m[94m|[0m
 [1m[96mhelp[0m: try using a conversion method
     [1m[94m|[0m
-[1m[94m119[0m [1m[94m| [0m    Ok((ip.octets(), port[92m.to_string()[0m))
+[1m[94m152[0m [1m[94m| [0m    Ok((ip.octets(), port[92m.to_string()[0m))
     [1m[94m|[0m                          [92m++++++++++++[0m
 
 [1mSome errors have detailed explanations: E0107, E0308, E0603.[0m
