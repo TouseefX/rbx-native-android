@@ -175,15 +175,12 @@ pub fn join_game(
     if !cookie.is_empty() {
         request = request.header("Cookie", cookie.as_str());
     }
-    let mut response = request
-        .send(&bytes)
-        .map_err(|err| format!("v1: {err}"))?;
+    let mut response = request.send(&bytes).map_err(|err| format!("v1: {err}"))?;
     let text = response
         .body_mut()
         .read_to_vec()
         .map_err(|err| format!("v1: {err}"))?;
-    let reply: Value =
-        serde_json::from_slice(&text).map_err(|_| "v1: bad json".to_string())?;
+    let reply: Value = serde_json::from_slice(&text).map_err(|_| "v1: bad json".to_string())?;
     match classify(&reply) {
         Outcome::Script(join_script) => Ok(JoinReply { reply, join_script }),
         Outcome::Url(url) => {
@@ -198,8 +195,8 @@ pub fn join_game(
                 .body_mut()
                 .read_to_vec()
                 .map_err(|err| format!("joinScriptUrl: {err}"))?;
-            let doc: Value = serde_json::from_slice(&text)
-                .map_err(|_| "joinScriptUrl: bad json".to_string())?;
+            let doc: Value =
+                serde_json::from_slice(&text).map_err(|_| "joinScriptUrl: bad json".to_string())?;
             Ok(JoinReply {
                 reply,
                 join_script: script_of(&doc)?,
@@ -258,10 +255,7 @@ pub fn hydration_fields(doc: &Value) -> Value {
             .as_u64()
             .or_else(|| v.as_str().and_then(|s| s.parse::<u64>().ok()));
         if let Some(n) = as_number {
-            out.insert(
-                "OriginalAccountCreationTimestampMs".to_string(),
-                json!(n),
-            );
+            out.insert("OriginalAccountCreationTimestampMs".to_string(), json!(n));
         }
     }
     Value::Object(out)
@@ -276,9 +270,7 @@ pub fn fetch_player_hydration(user_id: u64, cookie: &str) -> Result<Value, Strin
         "https://apis.roblox.com/player-hydration-service/v1/players/signed?userId={user_id}"
     );
     let cookie = cookie_header(cookie);
-    let mut request = agent
-        .get(url.as_str())
-        .header("Accept", "application/json");
+    let mut request = agent().get(url.as_str()).header("Accept", "application/json");
     if !cookie.is_empty() {
         request = request.header("Cookie", cookie.as_str());
     }
@@ -300,10 +292,7 @@ pub fn fetch_player_hydration(user_id: u64, cookie: &str) -> Result<Value, Strin
 
 fn hydration_error(status: u16, text: &[u8]) -> String {
     let body = String::from_utf8_lossy(text);
-    let cut = body
-        .char_indices()
-        .nth(200)
-        .map_or(body.len(), |(i, _)| i);
+    let cut = body.char_indices().nth(200).map_or(body.len(), |(i, _)| i);
     format!("player hydration: HTTP {status} {}", &body[..cut])
 }
 
@@ -346,8 +335,8 @@ mod tests {
              \"launchData\":\"\",\"joinAttemptOrigin\":\"PlayButton\",\"jobId\":\"job-1\",\
              \"gameId\":777}"
         );
-        let text = serde_json::to_string(&join_body(1818, None, None, None, "a", "s", "e"))
-            .unwrap();
+        let text =
+            serde_json::to_string(&join_body(1818, None, None, None, "a", "s", "e")).unwrap();
         assert!(!text.contains("jobId"));
         assert!(!text.contains("followUserId"));
         assert!(!text.contains("gameId"));
