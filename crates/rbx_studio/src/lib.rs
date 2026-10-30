@@ -399,6 +399,17 @@ pub fn boot_mobile(cx: &mut App) {
         launch: Launch::default(),
         user,
     };
+    // The stored key has to be in `rbx_cloud` before Home reads it: the
+    // desktop launch awaits `restore_at_startup` before routing, but this
+    // boot opens Home straight from the launch closure, where no executor
+    // exists to await one. Android's store is the synchronous file store
+    // (`RBX_NO_KEYRING`, set by the platform boot), so the key installs
+    // right here — without it Home would claim there is no key on every
+    // launch even though the wizard saved one, because `from_env_or_config`
+    // only sees the key the async restore installs.
+    if key_store::restore_synchronously() == Some(true) {
+        eprintln!("rbxstudio: the stored API key was restored for this session");
+    }
     launcher::open_home(Rc::new(RefCell::new(Some(boot))), cx);
 }
 
