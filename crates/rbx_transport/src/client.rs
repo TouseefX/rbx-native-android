@@ -1374,7 +1374,8 @@ pub(crate) mod tests {
         // ACK, two pad fragments (1160 > 1061 splits), then 53/52/51.
         assert_eq!(sends.len(), 6);
         let p0 = server.open(&sends[1]).expect("pad fragment opens");
-        assert_eq!(p0[0], 0x81);
+        // Split datagrams carry 0x83 (the split flag), not plain 0x81.
+        assert_eq!(p0[0], 0x83);
         let trio = [
             server.open(&sends[3]).expect("ping opens"),
             server.open(&sends[4]).expect("ping opens"),
