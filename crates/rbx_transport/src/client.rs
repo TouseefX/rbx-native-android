@@ -1358,10 +1358,13 @@ pub(crate) mod tests {
         // Our own clock, not the server's 00 00 04 d2.
         assert_ne!(&mirror[12..16], &[0x00, 0x00, 0x04, 0xd2]);
 
-        // Same id twice more: one more mirror, then the per-id cap.
+        // Same id twice more: one more mirror, then the per-id cap. Their
+        // datagram ACKs (and the second mirror) stay queued - drain them
+        // so the pad block below starts from an empty queue.
         client.on_packet(&server.data(&frames::reliable(1, 1, false, 0, &ping).unwrap()));
         client.on_packet(&server.data(&frames::reliable(2, 2, false, 0, &ping).unwrap()));
         assert_eq!(client.keepalive_replies(), 2);
+        client.take_sends();
 
         // The 1160-byte MTU pad: generated (own clock), same pad id, plus
         // its ping trio — unreliable, so the exchange closes.

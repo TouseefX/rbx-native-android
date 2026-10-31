@@ -437,7 +437,9 @@ mod tests {
             0x3fff_ffff,
             0x4000_0000,
             0x0010_0000_0000,
-            u64::MAX,
+            // The 8-byte form's ceiling: the width marker owns the
+            // first byte's top two bits, so only 62 bits are value.
+            0x3fff_ffff_ffff_ffff,
         ] {
             let mut out = Vec::new();
             write_varint(&mut out, v);
@@ -446,6 +448,12 @@ mod tests {
         // A truncation at every width is a wait, not an error.
         assert_eq!(read_varint(&[]), None);
         assert_eq!(read_varint(&[0xC0]), None);
+        // Values past the ceiling lose their top bits — the reference's
+        // format does the same, and no frame length gets anywhere near
+        // 2^62.
+        let mut out = Vec::new();
+        write_varint(&mut out, u64::MAX);
+        assert_eq!(read_varint(&out), Some((0x3fff_ffff_ffff_ffff, 8)));
     }
 
     #[test]
