@@ -17,17 +17,24 @@ This reference goes beyond the earlier short guide. It describes the observed ga
 | Label | Meaning |
 |---|---|
 | **[GAME]** | Observed or implemented by the public Boblox **game-session** receiver at commit `8c46b6dc175e22f50a7661bd19ff86eb5dbe4287`. Useful as a concrete reference; not proof of Studio Team Create compatibility. |
-| **[STUDIO STATIC]** | Found by inspecting a particular official Studio binary, without running a Studio session. Names, isolated machine-code behavior, or local data structures do not by themselves establish the network envelope. |
+| **[STUDIO STATIC]** | Found by inspecting a particular official Studio binary, without running a Studio session. Names and local structures alone do not establish the full network protocol; direct traces can establish only the selected build-specific branches. |
 | **[STUDIO EMULATED]** | Selected machine-code functions executed on synthetic inputs under Unicorn, with specified helpers mocked. This is not a Studio session or a network capture. |
 | **[DESIGN]** | An implementation recommendation or an invented example. It is not a native Roblox packet. |
 | **[UNKNOWN]** | Required for the real target but not established by available evidence. |
 
-The game receiver, the particular Studio executable, and your Rust port are **not known to be the same build or protocol**. You said your port can join Team Create; its source and a Team Create capture were not supplied. Therefore there is no verified native-Team-Create decoder or server implementation in this document. Where the native details are unknown, the guide says what evidence is missing rather than inventing bytes.
+The game receiver, the particular Studio executable, and your Rust port are **not known to be the same build or protocol**. You reported that your port joins Team Create. Since this guide was first written, I reviewed only your `rbx_replication` and `rbx_transport` crates at commit `bcaaadfa15a9aca92a4688f95d02a2ab69dda787` (§14.1); I did not inspect the rest of your application. No live Team Create capture or end-to-end editing test was supplied or performed. There is therefore no *verified* native-Team-Create encoder or server implementation in this guide. Where native details are unknown, the guide says what evidence is missing rather than inventing bytes.
+
+### The practical result for your two crates
+
+* A promising first edit is **one existing boolean property**, not instance creation or script text. Pinned Studio's ordinary property writer, synthetic schema lookups and item envelope were exercised offline; the resulting bytes agree with your game-format reader for six invented scalar cases (§11.9). The class, reference and property IDs in those tests are fabricated.
+* Studio's schema reader has now been traced from class/member order to the property index written by that ordinary path. This supports trying your `Schema::global_property_id` **only after confirming that the actual negotiated session uses the matching version/layout**. It does not make API-dump order a wire schema.
+* In the inspected crates, the `drive` loop has no local-edit command input, and reliable send/retry handling has an ACK/64-slot limitation (§14.1). These are concrete integration issues, but neither alone proves why your particular application cannot send edits: other crates were not inspected.
+* A tested **offline candidate boolean encoder** is in §11.9.5. It is not an accepted Team Create packet, a complete sender, or a substitute for a live two-client check.
 
 ### Quick answers
 
 1. **Where is the place?** It may be reconstructed from initial replicated state, but the exact Studio bootstrap is not established and need not be a downloadable original `.rbxl`. If records are sent, gather them, resolve parents and references, process relevant changes and script source, then write a new file.
-2. **Where do I hook my Rust Boblox port?** At the callback that receives a **complete, decrypted, already transport-reassembled logical replication message**, before a game runtime discards or simplifies it. Which callback that is depends on your port.
+2. **Where do I hook my Rust Boblox port?** The inspected transport `Client::take_messages()` returns complete application payloads; the inspected `drive` function feeds those into a census. A candidate world decoder can consume the same payloads, but whether your application already does so elsewhere was outside this review (§14.1).
 3. **How do I know the IDs and types?** In Boblox's observed game format, the session schema supplies ordered class/member/event tables. Snapshot property slots are class-local; live property IDs are global and schema-specific.
 4. **How do I synchronize later edits?** Apply creation, property changes, parenting, deletion and editor operations in protocol order, with a consistent initial snapshot and stable object identities. The corresponding **Team Create wire formats are not all known**.
 5. **How do I edit scripts?** Treat editor documents and their concurrent operations as a separate subsystem; `Script.Source`, compiled game bytecode and an editor buffer are not interchangeable. Studio code directly serializes an operation and dispatches it through a `SendOperation` descriptor, but its network envelope and complete semantics remain unknown (§11.7.3).
@@ -56,9 +63,12 @@ The game receiver, the particular Studio executable, and your Rust port are **no
     * [How my edits reach the server and other collaborators](#116-how-my-edits-reach-the-server-and-other-collaborators)
     * [Actual Studio outgoing paths: properties, scripts, cursors and presence](#117-decompilation-how-studio-constructs-outgoing-changes)
     * [Verified Collaborator fields, identity and lifecycle](#118-verifying-collaborator-fields-identity-and-lifecycle)
+    * [Schema lookup, outbound property framing and tested Rust candidate](#119-schema-lookup-to-a-candidate-outbound-property)
 12. [Loading and saving place files](#12-loading-and-saving-place-files)
 13. [Runnable Rust example: records to `.rbxl`](#13-runnable-rust-example-records-to-rbxl)
 14. [A practical integration plan for your port](#14-a-practical-integration-plan-for-your-port)
+    * [Your two crates and the first outgoing property](#141-your-two-crates-and-the-first-outgoing-property)
+    * [Specific send, retry and first-sync findings](#142-specific-send-retry-and-first-sync-findings)
 15. [Verification and test matrix](#15-verification-and-test-matrix)
 16. [Troubleshooting](#16-troubleshooting)
 17. [Security and resource limits](#17-security-and-resource-limits)
@@ -1238,7 +1248,7 @@ For Live Scripting, the server must handle the native document-open/source state
 
 #### E. What we know—and what still blocks an actual send
 
-**[STUDIO STATIC]** In the pinned Windows Studio 0.745 binary, one `ChangePropertyItem` path writes item byte `0x03`, calls a reference-related helper, writes a two-byte metadata field, and invokes further serializers. Section 11.7 now traces the queue, writer and selected reference behavior in more detail. **[GAME]** Boblox's game receiver parses its `0x03` as a reference, global property ID and typed value. This is a promising overlap to investigate, not proof of a Team Create client→server message, full `CFrame` layout, identity mapping, authorization, or ack/echo semantics.
+**[STUDIO STATIC / EMULATED]** In the pinned Windows Studio 0.745 binary, an ordinary `ChangePropertyItem` path selects a schema entry, writes `03`, the reference, that entry's two-byte property index and a typed value; a normal accumulator/flush path adds `83` and `00`. Section 11.9 documents the exact branches and mocks. The six synthetic scalar results also parse in your **game-format** reader. This is strong offline evidence for a candidate, not proof of an accepted Team Create client→server message, complete `CFrame` layout, live identity mapping, authorization, or ack/echo semantics.
 
 The synthetic game `0x03` examples in §§7 and 10.7 were accepted by the **game parser only**. They do not show that an unmodified Studio client sends those bytes or a Team Create server accepts them. To support the user's native target, the remaining blocker is the build-specific inbound/outbound Team Create codec and lifecycle—not a missing `Collaborator` method.
 
@@ -1251,14 +1261,14 @@ This section answers the send-path question using the actual pinned Windows Stud
 
 | User action | What the pinned code establishes | What it does not establish |
 |---|---|---|
-| Change an instance property | A `ChangePropertyItem` queue and writer path emits a selected item header, reference and a two-byte metadata field, then calls value-related code. | Exact Team Create envelope, every typed value, runtime subscription for each property, authorization or echo. |
+| Change an instance property | An ordinary `ChangePropertyItem` path selects a schema property index and, in a tested mocked branch, places a typed scalar item inside an `83 ... 00` application envelope (§11.9). | Actual Team Create session schema/direction and every variant or value, callback effects, runtime subscription, transport channel, authorization or echo. |
 | Move the editor camera / change collaborator status | `Collaborator` fields have real setters and change notifications. `CFrame` is copied as an **in-memory** value. | Whether camera motion reaches that setter in every case, network direction, actual bytes or automatic replication. |
 | Move a script caret | An update helper builds the `cursors` JSON structure and passes it as a string to a named remote-event descriptor. A separate broadcast helper builds `userCursors`. | Coordinate origin/units, timestamp interpretation, network direction or complete frame. |
 | Type in a script | A helper serializes an operation into JSON and dispatches it with `SendOperation(id, op)`; the relevant runtime descriptor has an `int64` plus a string argument. | Exact wire encoding, source/open and ack lifecycle, position units, complete OT and end-to-end routing. |
 
 The words **send** and **remote event** below describe what the inspected code and descriptors do internally. The address chain does not by itself prove which network peer sends a particular event or that a game-schema record is its final packet.
 
-#### 11.7.1 Property changes: from a queued item to a partial byte sequence
+#### 11.7.1 Property changes: from a queued item to selected bytes
 
 **[STUDIO STATIC]** In the pinned executable, the RTTI names `Network::Replicator::ChangePropertyItem`. Its constructor is `0x14612fa70`. One path at `0x145fc5c00` looks up class/property metadata (`0x145f0eb70`, `0x145fbf810`), selects an entry, constructs an item and queues it through `0x14601ef40`. Another caller at `0x145f6bcf0` also reaches the constructor. A vtable entry points to `0x146130a00`, whose path reaches the writer `0x14612f820`.
 
@@ -1274,7 +1284,7 @@ ChangePropertyItem / selected schema metadata
        └─ value-related serialization 0x145f455d0 / 0x145fa34a0
 ```
 
-This is **not** enough to say the final wire record is always `03 + reference + property ID + value`: callbacks and branches matter, the containing message is unknown, and the two-byte field has not been independently established as a Team Create property ID. The path does, however, show why the Boblox game's similar-looking `0x03` record is a useful comparison.
+Later tracing connected the selected two-byte field to the version-3 schema reader's property index and found an ordinary `83`/`00` accumulator/flush path. Six scalar examples were then executed with explicit mocks (§11.9). That establishes **one pinned-build synthetic path**, not that every property, connection or Team Create message always has that shape: callbacks, special branches, session schema and authorization still matter.
 
 **[STUDIO STATIC / SYNTHETIC EMULATION]** For the reference writer examined here:
 
@@ -1531,6 +1541,153 @@ For an illustrative **decoded local state**—not bytes to send—you could have
 For your own server's internal design, bind writes to the authenticated actor, validate edit permissions, bound presence/update rates, and use a bounded pending queue for an event referring to an as-yet-unknown object. Keep presence ephemeral and outside your persistable place model unless your actual application needs an explicit export. These are design recommendations, not proven native rules. **A complete Studio-compatible implementation still requires actual schema IDs and typed codecs, object creation/removal framing, property/event subscriptions, direction, authorization, bootstrap and ordering.**
 
 
+### 11.9 Schema lookup to a candidate outbound property
+
+This section is the most recent **offline** bridge between the pinned Studio binary and the two crates you named. It is intentionally narrower than “all of Team Create”: one ordinary property branch, six scalar mock inputs, no live Studio session and no peer acceptance test.
+
+#### 11.9.1 What the pinned schema code actually connects
+
+**[STUDIO STATIC]** The pinned schema initializer/reader at `0x14611c8e0` rejects a schema version other than `3` on this path. Its class loop maintains a running property ordinal. For each class, it reads the member count and records the start/end of that class's property range. For each member, the code at `0x14611d080–0x14611d105` reads its name and type tag and fills a `0x20`-byte entry:
+
+| Entry offset | What this path writes | Why it matters |
+|---|---|---|
+| `+0x00`, 2 bytes | Current running member/property ordinal. | `0x14612f820` later writes these two bytes into the ordinary property item. |
+| `+0x09`, 1 byte | The type tag read from the schema. | `0x145f455d0` dispatches on this tag when it writes the value. |
+| `+0x0a`, 2 bytes | Enum-related index for the tag-7 branch; sentinel otherwise. | Some value types need more than a tag. |
+| `+0x18`, pointer | A matched local reflection property descriptor, when found and permitted by the code's checks. | The ordinary per-class map associates that descriptor with the property ordinal. A missing/mismatched/filtered descriptor need not be usable. |
+
+The code increments the ordinal across the member lists in schema order, including entries for which it cannot resolve an eligible local descriptor. Do **not** compact the table to only the properties your app recognizes. The tag-60 branch and later fixups have special behavior, so this is not a complete description of every descriptor. The lookup at `0x145fc5c00` uses the object's reflected class pointer to find its class entry (`0x145f0eb70`), uses the reflected property pointer to find the ordinal (`0x145fbf810`), indexes the global `0x20`-byte entry array, and passes that entry to `ChangePropertyItem`.
+
+The schema reader also assigns a separate running **event** ordinal to each event entry, stores typed argument descriptors, and builds a per-class map for matching local reflection event descriptors. The ordinary event queue path `0x145f5b460` looks up the class and descriptor, selects a `0x28`-byte event entry, and constructs an `EventInvocationItem`. This supports the idea of session-specific event IDs and argument types; it does **not** prove that `SendOperation` or a cursor signal is connected to that queue in a live Team Create session, nor establish its argument bytes, direction, ordering or permission.
+
+This resembles `Schema::global_property_id(class_index, slot)` in your `rbx_replication` crate: both flatten class member lists. It is **strong static support for the ordinary version-3 path**, not proof that your actual Team Create connection always negotiates that reader/layout, or that a property name alone is sufficient. In particular, a Roblox API dump, `.rbxl` property order, `Collaborator.UserId` and a local DOM referent are not substitutes for a current-session schema or reference. Studio also has a schema-building function that writes application byte `0x97`, but its full envelope, tail and actual Team Create deployment remain session-dependent.
+
+#### 11.9.2 From queued item to application envelope
+
+**[STUDIO STATIC]** One path is:
+
+```text
+local ordinary property change
+  → 0x145fc5c00: eligibility; class and property pointer lookups
+  → 0x14612fa70: construct ChangePropertyItem; queue via 0x14601ef40
+  → 0x145f9aab0 / 0x145f9c0a0: sendItemsPacket and queue consumer
+  → 0x145f9a740 → 0x146133e30 → 0x146135450: item accumulator
+  → 0x146133be0: initialize a stream and write 83
+  → 0x1461356f0: invoke the item's vtable writer for mode 0
+  → 0x146130a00 → 0x146130a50 → 0x14612f820:
+       write 03, reference, property index, then typed value
+  → later flush at 0x146133230: append 00 to a nonempty item stream
+  → 0x1461342e0: send path [not executed by the test]
+```
+
+The mode-0 conclusion for this property item follows its actual pinned vtable (`0x149531ff8`, slot `+0x20` returns zero; slot `+8` is its writer). Studio has other send modes, chunking, cached/special items, feature flags and callbacks. This is an **application payload** at a selected accumulator boundary, not the encrypted UDP datagram and not proof of any universal packet structure.
+
+**[STUDIO EMULATED]** The [queued-property harness](roblox-team-create-rust/evidence/studio-outgoing/emulate_property_queued.py) exercises the real queue-builder code, both pointer-keyed schema lookups and ordinary item constructor against **invented in-memory tables**. It intercepts queue insertion, manually hands the constructed item to the real accumulator, then manually calls the flush branch and intercepts its transport call. Consequently it does **not** execute the real scheduler/queue consumer or actual network send. It mocks the eligibility and send guards, descriptor/getter and Replicator virtual calls, item base constructor, allocation, stream construction/length, shared-pointer operations, capacity, memcpy, statistics, context builder, cookie check and final send. Feature flags are zero; none of this state was captured from a session.
+
+In a negative synthetic case, removing the property from the fabricated per-class map made the real property lookup return no entry and the queue-builder made **zero** queue-insertion calls. This explains one possible mechanism for a missing send, not a diagnosis of your app: its real schema, listeners and guards were not observed.
+
+#### 11.9.3 Six complete *synthetic application buffers*
+
+The mock inputs use scope `1`, object number `101`, made-up property ordinal `0x1593`, one mocked property getter and an empty stream. These are full buffers at the intercepted send boundary **only under those mocks**; they are not captured packets and are not known to be valid for any actual place/session.
+
+| Synthetic schema tag | Mock getter | Buffer emitted by the selected native path |
+|---:|---:|---|
+| 9 | `false` | `83 03 01 65 00 00 00 93 15 00 00` |
+| 9 | `true` | `83 03 01 65 00 00 00 93 15 01 00` |
+| 11 | `1.25` | `83 03 01 65 00 00 00 93 15 00 00 a0 3f 00` |
+| 12 | `-2.5` | `83 03 01 65 00 00 00 93 15 00 00 00 00 00 00 04 c0 00` |
+| 7 | `300` | `83 03 01 65 00 00 00 93 15 ac 02 00` |
+| 10 | `-300` | `83 03 01 65 00 00 00 93 15 d7 04 00` |
+
+Read the second line as: `83` accumulator prefix; `03` property item; `01` synthetic scope; `65 00 00 00` synthetic object number; `93 15` invented ordinal in little-endian order; `01` boolean; final `00` flush terminator. The six exercised arms wrote a byte, four little-endian float bytes, eight little-endian double bytes, an unsigned varint, and a signed zigzag varint, respectively. Their **real property mappings, constraints and overrides are not established**. A callback mocked here could have side effects or append information in a real session.
+
+The older partial-header test in §11.7.1 remains useful for null/default reference behavior. In the selected Studio helper, a zero scope can trigger a session default and `0xffffffff` is a null sentinel. The game crate's `Ref.lo` is a `u64`; blindly writing arbitrary `u64` values as this pinned Studio scope is not justified.
+
+#### 11.9.4 Cross-check against your game-format reader
+
+The exact mock output vectors were passed to your isolated `rbx_replication::item::parse_message` with an entirely **invented** game-format version-3 schema. The fictitious `SyntheticProperty` was positioned at ordinal `0x1593`; the filler classes and members were only there to build that ordinal. All six parsed as one property item with `Ref { lo: 1, id: 101 }` and the expected values. Your reader keeps tags 11 and 12 as `Value::Opaque` byte arrays; it does not turn them into typed floats.
+
+A deliberately wrong synthetic schema demonstrates why parsing alone is not proof: the same `01` value parsed as `Bool(true)` with tag 9 but as `Int(-1)` with tag 10. The [test source](roblox-team-create-rust/evidence/studio-outgoing/studio-synthetic-compat.test.rs.txt), [vectors](roblox-team-create-rust/evidence/studio-outgoing/property-queued-vectors.tsv), and [test output](roblox-team-create-rust/evidence/studio-outgoing/studio-game-parser-check.txt) document the comparison. It shows agreement among these synthetic assumptions, **not** a negotiated Team Create schema, a delivery guarantee or server acceptance.
+
+#### 11.9.5 Small Rust encoder for an offline first experiment
+
+This function was compiled and tested with your isolated `rbx_replication` crate. For the invented tag-9 schema/reference it matched the emulated true-value buffer above, and it rejects a missing property, wrong tag, zero scope and all-ones scope. It intentionally supports **only** the selected boolean candidate. `class_name`, `property_name`, `target` and `schema` must come from the **same verified session epoch**; the type system below does not enforce that. Do not ship this as a verified native encoder or transmit the fake sample.
+
+```rust
+use rbx_replication::{Ref, Schema};
+
+/// OFFLINE CANDIDATE ONLY: one synthetic 0x83 / 0x03 boolean item.
+/// Do not treat this as a verified Team Create sender or transmit the
+/// synthetic example. Native permissions, session rules, callbacks, channel,
+/// direction and server acceptance are not established.
+pub fn candidate_bool_message(
+    schema: &Schema,
+    target: Ref,
+    class_name: &str,
+    property_name: &str,
+    value: bool,
+) -> Result<Vec<u8>, &'static str> {
+    if schema.version != 3 {
+        return Err("unverified schema version");
+    }
+    // Pinned reference writer uses a 32-bit scope and treats all-ones as
+    // null. Its scope-zero fallback needs real session context: reject it.
+    if target.lo == 0 || target.lo >= u64::from(u32::MAX) {
+        return Err("scope is null, sentinel, or outside the tested 32-bit form");
+    }
+    let mut classes = schema
+        .classes
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.name == class_name);
+    let (class_idx, class) = classes.next().ok_or("class missing")?;
+    if classes.next().is_some() {
+        return Err("ambiguous class");
+    }
+    let mut members = class
+        .members
+        .iter()
+        .enumerate()
+        .filter(|(_, m)| m.name == property_name);
+    let (slot, member) = members.next().ok_or("property missing")?;
+    if members.next().is_some() {
+        return Err("ambiguous property");
+    }
+    if member.tag != 9 {
+        return Err("not a tested tag-9 boolean");
+    }
+    let id = schema
+        .global_property_id(class_idx, slot)
+        .ok_or("property ID overflow")?;
+
+    let mut out = vec![0x83, 0x03];
+    let mut scope = target.lo;
+    loop {
+        let byte = (scope & 0x7f) as u8;
+        scope >>= 7;
+        out.push(byte | if scope == 0 { 0 } else { 0x80 });
+        if scope == 0 {
+            break;
+        }
+    }
+    out.extend_from_slice(&target.id.to_le_bytes());
+    out.extend_from_slice(&id.to_le_bytes());
+    out.push(u8::from(value));
+    out.push(0x00);
+    Ok(out)
+}
+```
+
+For a real *candidate* such as `Part.Anchored`, call this only if the observed target is the right Part, the exact current schema has that property/tag, and your actor is allowed to change it. Preserve unknown schema members when assigning the ordinal. This sample does not implement dynamic flags, real callback effects, other types, batching, create/delete, ownership, retries or server validation.
+
+#### 11.9.6 Where this fits in the inspected transport
+
+`Client::send_reliable(&payload, true)` is a **client-side** API in your inspected transport, not a verified server encoder. `true` currently chooses reliable ordered frames using channel 0; whether that is the correct Team Create edit channel is unknown. The same long-lived owner must drain `take_sends()` and actually transmit every encrypted datagram, process incoming ACKs and timers, and handle I/O errors. A `true` return means local frame/seal/queue success, not that the server received or applied the edit. Fix the ACK retirement and finite retry-budget issue in §14.1 before relying on a sustained editing session.
+
+After the outbound path is verified, distinguish **queued → transport-acknowledged → application-confirmed/rejected**. Reconcile actual echoed authoritative changes and avoid applying your own edit twice. A transport ACK is not application confirmation; a timeout is not automatically a safe retry of a non-idempotent edit. The current crate does not expose all of this as a completed sync state machine.
+
+**Still not covered:** actual bootstrap and schema tail, all property and value variants, create/reparent/delete and instance references, snapshot/live interleaving, permissions and recovery, presence, and Live Scripting's separate document/source/operation/ack/convergence protocol. No live Studio or Team Create server was available in this research; even the boolean sender remains a hypothesis until an authorized end-to-end test.
+
 ---
 
 ## 12. Loading and saving place files
@@ -1738,6 +1895,64 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 ## 14. A practical integration plan for your port
 
+### 14.1 Your two crates and the first outgoing property
+
+**Answer:** the guide is enough to build the **session plumbing and a narrow experimental boolean property encoder**, cross-checked against a mocked pinned-Studio path and your game-format reader (§11.9). It is **not enough to claim that encoder sends an accepted native Team Create edit**. The exact current session, real descriptors, callback effects, transport channel, authority and echo remain to be verified.
+
+This section is based only on [`crates/rbx_replication`](https://github.com/TouseefX/rbx-native-android/tree/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_replication) and [`crates/rbx_transport`](https://github.com/TouseefX/rbx-native-android/tree/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_transport) at commit `bcaaadfa15a9aca92a4688f95d02a2ab69dda787`. It does not make claims about other application code.
+
+| Piece | What the inspected code has | What is needed next |
+|---|---|---|
+| Session sender | `Client::send_reliable` and `send_join_message` accept application bytes, frame them and queue encrypted datagrams; `take_sends()` drains them to the I/O owner. | Keep the *same* live `Client`, socket, crypto counters and sequence numbers; feed local edit commands to that owner. `send_join_message` is a generic byte sender, not an edit encoder. |
+| Receive-side model | `rbx_replication` has game-style schema/item/value readers and a staging `World::apply`. | Map accepted records and updates into the editor's real instance tree. This may already exist elsewhere; the inspected `drive` path itself feeds a census, not that world. Unknown items and ignored event/reference semantics are not complete sync. |
+| Target and property | The readers retain a session reference and derive game-style global property IDs from the session schema. | Maintain an explicit local-instance-to-network-reference map for the current connection. Resolve the actual instance class and member against the current session schema; neither a DOM ID nor `Collaborator.UserId` is automatically the network reference. |
+| Property writer | The ordinary pinned-Studio path connects a schema property ordinal to `03`, a reference and tested scalar values; one accumulator/flush path emits `83 ... 00` (§11.9). | Confirm the *actual* Team Create schema/session, scope, real callback effects, value branch, direction, channel/reliability, ordering and authorization. Do not treat the fabricated sample IDs or all property types as verified. |
+| Long-running reliability | The client queues some reliable datagrams for retries. | The inspected code counts server ACKs but does not match them to pending retransmits; its 64-entry retry budget is not replenished in-session. Match ACK ranges to attempts, retire confirmed fragments, enforce bounded backpressure and signal failure. A transport ACK is not proof the server applied an edit. |
+| Proof | Synthetic parser and isolated function tests are useful. | Verify a real, authorized edit against the matching build and session when access is available; observe the result from another collaborator or reload. Static research and synthetic tests alone do not establish end-to-end acceptance. |
+
+**Concrete first target: an existing `Part.Anchored` boolean.** Preserve the Part's observed network reference and session epoch. Resolve the actual class/member/type using that session's schema; if it is absent or not tag 9, stop. The candidate encoder in §11.9.5 checks the synthetic branch against Studio machine code and the reader. Only try it in an authorized disposable session after the actual session format, channel and permissions are established, the transport reliability issue is fixed, and you can verify state from a separate collaborator. Do not hard-code any synthetic IDs, headers or values in an application.
+
+The inspected `drive` owns a local `Client` and runs for a configured duration; it does not expose an edit-command input. One possible integration is a long-lived single owner with a bounded local-edit queue. It should feed received datagrams to `Client::on_packet`, run the existing timers and ACK logic, process its commands, drain `take_sends`, and handle actual socket errors. The exact application wiring outside these two crates was not inspected. Ordered frames currently use channel zero; the correct Team Create edit channel has not been verified.
+
+**Scripts are a separate milestone.** A property prototype does not implement Live Scripting's document operations, revisions, acknowledgements or concurrency; `Script.Source` cannot simply be assumed to use a normal property-change packet (§10 and §11.7.3).
+
+### 14.2 Specific send, retry and first-sync findings
+
+These findings refer to the inspected commit only; they do **not** say how any uninspected part of your application is wired. The original checkout was unchanged. The tests below used a throwaway two-crate copy and synthetic transport traffic.
+
+#### A. The owner needs an edit input, not just a send method
+
+The inspected [`drive`](https://github.com/TouseefX/rbx-native-android/blob/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_transport/src/drive.rs#L126-L143) constructs a local `Client`, runs until its duration expires, feeds received payloads to a replication **census**, and returns a report. In that path there is no input queue for the editor's property changes. `Client::send_reliable` can frame supplied bytes, but it does not detect a local `Instance` change or construct its item.
+
+A suitable direction is one long-lived connection owner, with a bounded channel of commands such as `SetBool { epoch, target_ref, class, property, value }`. The owner validates the epoch, target and schema, builds a candidate only for a supported/verified type, queues it on the same `Client`, pumps I/O and receives the authoritative result. This is a design sketch, **not** a claim your app has no other send path. A server would need its own connection/transport implementation; this inspected `Client` is not one.
+
+`drive.rs`'s [`flush_sends`](https://github.com/TouseefX/rbx-native-android/blob/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_transport/src/drive.rs#L398-L402) discards the boolean result of `Io::send`. For an edit path, surface socket-send failure and keep bounded, explicit retry/backpressure state; “queued locally” must not silently become “sent successfully.”
+
+#### B. Reliable does not currently mean reliably tracked for a whole session
+
+In [`client.rs`](https://github.com/TouseefX/rbx-native-android/blob/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_transport/src/client.rs#L719-L723), a received server ACK increments a counter and returns; its ranges are not matched to outstanding retransmissions. [`queue_rtx`](https://github.com/TouseefX/rbx-native-android/blob/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_transport/src/client.rs#L1030-L1079) decrements a budget initially set to 64. The budget is reset when the data session is installed, but it is not replenished for completed/expired messages during that session. Pending entries can retransmit until their five-attempt limit even if already acknowledged.
+
+Two isolated synthetic probes made the consequences visible:
+
+```text
+ACK received:                ACK counter = 1; pending retries still = 1; budget = 63
+After 64 reliable sends:     retry budget = 0
+65th reliable send:          returns true and produces a datagram, but adds no retry entry
+```
+
+See [probe source](roblox-team-create-rust/evidence/studio-outgoing/transport-retry-probes.test.rs.txt) and [output](roblox-team-create-rust/evidence/studio-outgoing/transport-retry-probes-output.txt). In the inspected driver, reliable clock messages can be generated roughly every 170 ms; 64 such messages alone are about 11 seconds, and other reliable traffic can exhaust the budget earlier. Timing varies; this is a code-derived warning, not a measured live-session failure.
+
+For a long-running edit session, parse and validate transport ACK ranges, associate all datagram attempts with the correct outstanding reliable message/fragment, retire on confirmed receipt, reuse bounded window capacity, and report retry exhaustion or backpressure rather than returning an unqualified success. Keep transport receipt separate from authoritative edit acceptance. Add tests for reordered/duplicate/lost ACKs, retransmissions under new datagram IDs, split fragments, reconnects and sequence wrap. Determine the actual Team Create channel and packet semantics rather than assuming this game-derived implementation is sufficient.
+
+#### C. Keep first replication, schema and presence connected to the same epoch
+
+* `rbx_transport::join_schema::Schema` and `rbx_replication::Schema` are **different Rust types**. The inspected census retains the former; the candidate encoder uses the latter. Reparse the same authorized session schema or write a tested conversion that preserves class/member/event order, tags and opaque tail. Do not substitute API-dump ordering or a different session's dictionary.
+* `RxStream::AppMessage` retains reliability, ordered status, channel and ordering index, but `Client::take_messages()` exposes only the payload bytes. Preserve or surface this metadata in a diagnostic/edit pipeline before discarding it, especially while the native Team Create channel is unknown.
+* In the inspected client, an exactly five-byte `0x84` application marker is handled/answered and then consumed before `take_messages`; the census sets `snapshot_done` only if a marker is actually fed to it. In that particular path the diagnostic can therefore remain false despite the client's marker handler running. A typed marker event or explicit forwarding can synchronize the layers, but **do not assume** this marker is the Team Create completion rule just because the game-derived path handles it.
+* Store `(epoch, network Ref)` for each decoded object; keep `Collaborator.UserId` and local `.rbxl`/DOM references in separate maps. Buffer or reconcile snapshot/live overlap in order, and report unknown items or missing parents rather than silently calling the place complete. Script source and editor operations remain a separate source-of-truth problem (§10).
+
+For a first controlled test, log only non-secret metadata: connection epoch, schema fingerprint, target reference and class/property name, ordinal/tag, local queue result, socket result, transport ACK status and any authoritative echo/rejection. A payload that parses is not an accepted edit; a transport ACK is not an application confirmation.
+
 ### Phase A — prove where your data is
 
 1. Identify which transport path your Rust port uses, and where complete logical messages are delivered. Instrument message ID/size/order without credentials.
@@ -1841,11 +2056,11 @@ The following gaps are **blocking facts**, not implementation details that can s
 
 | Area | Known evidence | Still needed for unmodified Studio |
 |---|---|---|
-| Session/bootstrap | Your port is reported to join; pinned Studio contains Team Create-related mode/join strings. | Exact target build, accepted authentication/authorization, transport and handshake, channels, flags, message ordering and reconnect semantics. Your code/capture has not been reviewed. |
-| Schema | Public game `0x97` prefix and ordered tables; a substantial tail is opaque. | Actual Team Create schema delivery, tail, build compatibility, negotiation/filtering and whether the game layout applies at all. |
+| Session/bootstrap | Your port is reported to join; its `rbx_replication` and `rbx_transport` crates were reviewed (§14.1); pinned Studio contains Team Create-related mode/join strings. | Exact target build, accepted authentication/authorization, channels, flags, message ordering and reconnect semantics. The rest of the application was not reviewed; no live Team Create capture was examined. |
+| Schema | Public game `0x97` prefix and ordered tables; pinned Studio builds a `97` schema and has a version-3 reader that constructs class/property ordinals (§11.9). A substantial tail is opaque. | Which schema and variants a real Team Create session negotiates, delivery order, filtering, full tail and build compatibility. |
 | Initial world | Game `0x83/0x16` record batches; pinned Studio has kind-1/5 builders. | Native instance builders/flags and full trailers; required root/service mapping, shared data, assets, terrain, filtering and completion procedure. |
 | Identity/lifecycle | A game reference is `lo` plus optional u32; some game live items are parsed. | Native namespaces, identity persistence, create/update/reparent/delete messages and semantics, duplicate handling, reconnect. |
-| Properties/events | Game tables; pinned Studio property/event item writers and synthetic partial property headers (§11.7.1–2). | Team Create framing and tables, typed values/overrides, actual listener connections, directions, permissions and ordering. |
+| Properties/events | Pinned Studio ordinary property schema-index, scalar value and `83 ... 00` path exercised with mocks; generic event writer observed statically (§§11.7, 11.9). | Real Team Create schema/session and callbacks, special branches, non-scalar/override types, actual listener connections, directions, permissions, channels, ordering and accepted edits. |
 | Script editing | Studio operation JSON dispatches through a `SendOperation(int64, string)` reflection descriptor; a narrow type-0 transform was emulated (§11.7.3). | Native wire argument encoding/framing and direction, source delivery, atom semantics/units, timestamp/hash/ack meanings, complete multi-atom transforms and convergence behavior. |
 | Collaborator presence | Pinned class fields, API/security and enum; selected local creation, service signal, status/idle and removal paths; six emulated setters (§11.8); cursor event descriptors/JSON builders (§11.7.4–5). | Native event framing/directions and typed codecs, caret units/timestamps, whether camera changes reach those setters, actual replication connections, initial presence and removal delivery. |
 | Persistence | Local file readers/writers and a tested synthetic export. | Proof all necessary state is present and saved at a consistent collaborative revision; behavior for omitted/unavailable data. |
@@ -1856,10 +2071,11 @@ An authorized, minimal two-client trace with a precisely recorded action sequenc
 
 ## 19. Sources and provenance
 
+* Focused Rust port review: [`rbx_replication`](https://github.com/TouseefX/rbx-native-android/tree/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_replication) and [`rbx_transport`](https://github.com/TouseefX/rbx-native-android/tree/bcaaadfa15a9aca92a4688f95d02a2ab69dda787/crates/rbx_transport), commit `bcaaadfa15a9aca92a4688f95d02a2ab69dda787`. No other project crates were inspected.
 * Public Boblox game receiver, pinned revision: [repository](https://gitlab.com/kingdudely/Boblox/-/tree/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287), [schema and snapshot reader](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/solve/repl_snapshot.cpp), [value reader](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/solve/repl_core.cpp), [live item reader](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/solve/repl_stream.cpp), [runtime application](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/engine/live_runtime.cpp), [project findings](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/FINDINGS.md). Some older header/findings comments are superseded by later code/findings; this guide follows the pinned implementations where noted. No license was found in the inspected checkout; check its terms before copying source or captures.
 * Join/player comparison in §2.4–2.5: public Boblox fixtures [`join97_new_frame.bin`](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/run/join97_new_frame.bin), [`repl_native97.bin`](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/run/repl_native97.bin), and [`msg02.bin`](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/tests/vectors/repl/msg02.bin), plus its [RbxTransport session](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/quic/session.cpp), [RakNet join builder](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/raknet/join_flow.cpp), and [game runtime instance code](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/rbx_runtime/src/instance/instance.cpp). Fixture hashes and the offline synthetic parser check are recorded above.
-* New outgoing-path evidence: [`roblox-team-create-rust/evidence/studio-outgoing/README.md`](roblox-team-create-rust/evidence/studio-outgoing/README.md), including Collaborator API excerpts and lifecycle decompilation, disassembly, RTTI, synthetic test results, saved harnesses, warning notes and SHA-256 manifest. No Studio capture is included.
+* New outgoing-path evidence: [`roblox-team-create-rust/evidence/studio-outgoing/README.md`](roblox-team-create-rust/evidence/studio-outgoing/README.md), including schema and packet-path decompilation/disassembly, synthetic schema-lookup/accumulator tests, game-parser comparison, Collaborator analysis, harnesses and SHA-256 manifest. No Studio capture is included.
 * Pinned Studio static evidence in the previously supplied local research project: `roblox-team-create-rust/docs/FINDINGS.md`, `docs/CANDIDATE_SNAPSHOT.md`, `docs/VALIDATION.md`, `src/script_operation.rs`, `src/operation_transform.rs` and `evidence/`. The studied release was Windows Studio `0.745.0.7451137`, deployment `version-7062aec9dbe74b14`, EXE SHA-256 `781b36ed6fb62e61292b9e6a64327280c7da12b00f3ea8b2c91a3f4834f860ec`. Static code addresses are specific to that pinned image; no Studio session was executed.
-* [Official Studio archive for the pinned deployment](https://setup.rbxcdn.com/version-7062aec9dbe74b14-RobloxStudio.zip) and [matching API dump](https://setup.rbxcdn.com/version-7062aec9dbe74b14-API-Dump.json). The archive and executable were downloaded from the CDN and hash-checked for the earlier static research.
+* [Official Studio archive for the pinned deployment](https://setup.rbxcdn.com/version-7062aec9dbe74b14-RobloxStudio.zip), [matching API dump](https://setup.rbxcdn.com/version-7062aec9dbe74b14-API-Dump.json), and [WindowsStudio64 version endpoint](https://clientsettings.roblox.com/v2/client-version/WindowsStudio64). On 31 October 2026 the default version endpoint returned this pinned deployment; the production-channel endpoint returned HTTP 401. This does not establish the version of any other installation.
 * [Roblox Live Scripting announcement](https://devforum.roblox.com/t/live-scripting-beta/2640607), [collaboration documentation](https://github.com/Roblox/creator-docs/blob/main/content/en-us/projects/collaboration.md), [collaborator location announcement](https://devforum.roblox.com/t/jump-to-your-collaborator%E2%80%99s-location-in-team-create/2618317), [collaborator visibility announcement](https://devforum.roblox.com/t/improved-visibility-of-collaborators-in-studio/2893919), [ScriptDocument API](https://create.roblox.com/docs/reference/engine/classes/ScriptDocument), [ScriptEditorService API](https://create.roblox.com/docs/reference/engine/classes/ScriptEditorService), and [DraftsService API](https://create.roblox.com/docs/reference/engine/classes/DraftsService). These are behavior/API references, not native packet specifications.
 * [`rbx_binary` 3.0.1 reader](https://docs.rs/rbx_binary/3.0.1/rbx_binary/fn.from_reader.html), [`to_writer`](https://docs.rs/rbx_binary/3.0.1/rbx_binary/fn.to_writer.html), and [`rbx-dom` repository](https://github.com/rojo-rbx/rbx-dom) for local file and DOM operations.
