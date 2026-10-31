@@ -42,6 +42,7 @@ mod layers;
 mod layers_panel;
 mod layout;
 mod light_guides;
+mod localization;
 mod loren_panel;
 mod luau_lsp;
 mod mcp;
@@ -78,9 +79,12 @@ pub(crate) use chrome::panel_topbar;
 pub(crate) use coedit::BETA_ID as COEDIT_BETA_ID;
 pub(crate) use export::Export;
 pub(crate) use layout::{edge_from_key, edge_key, Edge, Panel, SavedEdge, SavedGroup, SavedLayout};
+pub(crate) use localization::BETA_ID as PSEUDO_LOC_BETA_ID;
 pub(crate) use mcp::BETA_ID as MCP_BETA_ID;
+pub(crate) use perf_view::BETA_ID as PERF_BETA_ID;
 pub(crate) use play::copy_name::DEFAULT as PLAY_COPY_NAME_DEFAULT;
 pub(crate) use playtests::DEFAULT_RATE_HZ as PLAYTEST_RATE_DEFAULT;
+pub(crate) use require_graph::BETA_ID as REQUIRE_GRAPH_BETA_ID;
 pub(crate) use roving::install as install_key_bindings;
 pub(crate) use view_snap::PresetView;
 mod tree_keys;
@@ -88,6 +92,7 @@ mod tree_keys;
 mod argon_dock;
 mod datastores;
 mod game_settings;
+mod require_graph;
 mod rows;
 mod save;
 mod script_analysis;
@@ -113,6 +118,7 @@ mod toolbar;
 pub(crate) mod tooltip;
 mod ugc;
 mod ui_editor;
+mod update_planning;
 mod view_snap;
 mod viewport_dock;
 mod wally_dock;
@@ -275,6 +281,8 @@ pub(crate) struct Shell {
     templates_window: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Customize Shortcuts, while open, see `shortcuts_window`.
     shortcuts_window: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// The Require Graph, while open, see `require_graph`.
+    require_graph_window: Option<WindowHandle<gpui_kit::component::Root>>,
     /// The Controller Emulator, while open, see `controller_emulator`.
     controller_window: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Version History, while open, see `roblox_publish::history`.
@@ -283,6 +291,7 @@ pub(crate) struct Shell {
     game_settings: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Data Stores, while open, see `datastores`.
     data_stores: Option<WindowHandle<gpui_kit::component::Root>>,
+    update_planning: Option<WindowHandle<gpui_kit::component::Root>>,
     /// Check Avatar Item and Upload Avatar Item, while open, see `ugc`.
     ugc_validator: Option<WindowHandle<gpui_kit::component::Root>>,
     ugc_face: Option<WindowHandle<gpui_kit::component::Root>>,
@@ -371,6 +380,9 @@ pub(crate) struct Shell {
     input_edits: input_panel::InputEdits,
     /// The Security Audit dock's cached findings; see `shell::security_audit`.
     audit: security_audit::AuditState,
+    /// The Localization dock's preview switch and strings; see
+    /// `shell::localization`.
+    localization: localization::LocalizationState,
     loren: loren_panel::LorenState,
     avatar: avatar_dock::AvatarDock,
     style_scroll: ScrollHandle,
@@ -868,10 +880,12 @@ impl Shell {
             settings_window: None,
             templates_window: None,
             shortcuts_window: None,
+            require_graph_window: None,
             controller_window: None,
             version_history: None,
             game_settings: None,
             data_stores: None,
+            update_planning: None,
             ugc_validator: None,
             ugc_face: None,
             ugc_upload: None,
@@ -909,6 +923,7 @@ impl Shell {
             style_edits: style_panel::StyleEdits::default(),
             input_edits: input_panel::InputEdits::default(),
             audit: Default::default(),
+            localization: Default::default(),
             layers: layers::LayerState::load(&path),
             loren: loren_panel::LorenState::default(),
             avatar: avatar_dock::AvatarDock::default(),
@@ -1102,8 +1117,10 @@ impl Shell {
         // `shell::perf_view`): turns the Performance view on, a screenshot
         // aid, since its dropdown can't be clicked from outside.
         if let Ok(name) = std::env::var("RBX_STUDIO_PERF") {
+            let beta = crate::beta::enabled(PERF_BETA_ID);
             let metric = rbx_viewer::perf::Metric::ALL
                 .into_iter()
+                .chain(rbx_viewer::perf::Metric::BETA.into_iter().filter(|_| beta))
                 .find(|metric| metric.label().to_lowercase().contains(&name.to_lowercase()));
             shell.set_perf_metric(metric, cx);
         }
@@ -1233,6 +1250,11 @@ impl Shell {
         if std::env::var_os(shortcuts_window::OPEN_VARIABLE).is_some() {
             shell.open_shortcuts(cx);
         }
+        // `RBX_STUDIO_REQUIRE_GRAPH` (see `shell::require_graph`): the same,
+        // for the Require Graph, with its beta on.
+        if std::env::var_os(require_graph::OPEN_VARIABLE).is_some() {
+            shell.open_require_graph(cx);
+        }
         // `RBX_STUDIO_CONTROLLER_EMULATOR`: the same, for the Controller
         // Emulator.
         if std::env::var_os(controller_emulator::OPEN_VARIABLE).is_some() {
@@ -1245,6 +1267,7 @@ impl Shell {
         shell.apply_debug_style_editor(cx);
         shell.apply_debug_input_actions(cx);
         shell.apply_debug_security_audit(cx);
+        shell.apply_debug_pseudo_locale(cx);
         if std::env::var_os(playtests::DEBUG_VARIABLE).is_some() {
             shell.set_panel_open(layout::Panel::Playtests, true, cx);
         }

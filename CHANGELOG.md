@@ -1,6 +1,253 @@
 # Changelog
 
+## 2026-10-31
+
+- **Publish as a new experience.** Publishing a file that isn't linked yet
+  opens the game picker like before, but it now has a New experience
+  button. Name, description, and who owns it (you or a group you can
+  create in), same as Studio's Publish As. Roblox makes a private
+  experience from the Baseplate template with your sign-in
+  (`universes/v1/universes/create`, what Studio's own publish calls), we
+  name it, link the file and ask to publish like any picked game. If the
+  name gets refused the experience still exists, so it links anyway and
+  Output says so. (@chteau)
+
+- **Game Settings does the Creator Hub only stuff now.** Icon, thumbnails
+  (add and remove, up to 10), Playability (public or private) and Enable
+  Studio Access to API Services moved out of "Not reachable" and save with
+  the rest of the page, through your Roblox sign-in. Genre shows what the
+  experience has, but stays a Creator Hub link like in Studio, Roblox only
+  lets you change it once every three months. No reordering: Studio's old
+  order call says OK and moves nothing, so that stays on the Creator Hub.
+  Going public needs Roblox's Maturity & Compliance Questionnaire first,
+  that's what the 403 on `activate` was. So a private experience that
+  hasn't done it shows that and a Creator Hub link instead of the switch,
+  same gate real Studio's Manage Audience runs. (@chteau)
+
+- **Game Settings catches the sign-in late.** Opened before the editor
+  had read the Roblox sign-in from the keyring, it stayed on the signed
+  out rows for good, bc nothing told it the session showed up. Now it
+  switches over once it lands. (@chteau)
+
+- **Home's page head stops overlapping.** In the game picker the search
+  slid under the owner dropdown and hid its arrow, and the dropdown's text
+  sat higher than the search's. The search now makes room and narrows when
+  the head is crowded, and dropdown text is centred like the other fields.
+  (@chteau)
+
+## 2026-10-30
+
+- **GUI under a script isn't drawn anymore.** A Frame hung off a Script,
+  LocalScript, Configuration, Model or anything else that isn't a GuiObject
+  or a Folder showed up in our viewport, but Studio draws nothing there, in
+  edit or in Play. Now only Folders pass a GUI tree through, same as Studio,
+  for ScreenGui, SurfaceGui and BillboardGui. Reported by @TouseefX in #294.
+  (@chteau)
+
+- **Play tells you when Roblox itself is turned down.** I couldn't hear
+  anything in Play, turns out our launch was fine (Sober's stream plays,
+  not muted, same as running Sober alone) but Roblox's own volume slider
+  was at 10%, and Sober keeps that between runs. Play now drops a warning
+  in Output when it's under 30% so you know to bump it in Esc › Settings.
+  (@chteau)
+
+- **Play follows a teleport instead of ending.** A game that sent the
+  player to another server (TeleportService, a reserved server included)
+  ended the Play with "you left the game" and closed Roblox. The probe now
+  marks a leave that `Player.OnTeleport` started, the server it left goes
+  quiet, and the editor waits for the player in the next server: the link,
+  Output, Invite and the live Client/Server views carry on there. A real
+  leave still ends the Play. (@chteau)
+
+- **GUI from a hand-written place looks like Studio now.** A `.rbxlx` that
+  leaves properties out got our own fallbacks, which were what Studio's
+  Insert gives a new object: white boxes, Source Sans, no `Legacy`. Roblox
+  loads a missing property as the class default, so I fill every
+  `GuiObject`/`LayerCollector` property a file skips from the reflection
+  defaults before the GUI is planned. That's grey (163,162,165), `Legacy`
+  at `TextSize` 8, `ZIndexBehavior.Global`, a white scroll bar and so on.
+  I saved a place of bare objects back out of Studio and every value
+  matched. (@chteau)
+- **Text is sized off each font's own metrics.** The em was a flat 1/1.2 of
+  `TextSize`. I measured `GetTextSize` in Studio for eight families and the
+  line box is the face's hhea ascent plus descent, so Arimo was drawing
+  about 9% too small. `Legacy` is Arimo at 1.5 times the `TextSize`, which
+  is why "Click me" at 24 looked so much bigger in Studio. (@chteau)
+- **No top bar inset in the edit view.** We pushed every `ScreenGui` down
+  36 px. Studio's edit view doesn't: `GetGuiInset()` reads 0 and a default
+  screen sits at (0, 0). The running game does inset it, but that's the
+  real client in Play, not us. (@chteau)
+- **ScrollingFrame draws the line between the canvas and the bar.** Studio
+  outlines the bar's strip with the frame's border, so you get a
+  `BorderColor3` line at the window's edge. We only drew the thumb.
+  Screenshots in `docs/screenshots/gui-defaults/`. (@chteau)
+
+- **MCP: build a place end to end, and play it on any keyboard.** Fixes
+  from an agent that built and played a whole game through the MCP server.
+  Studio's MCP can't save, and its `game:SavePlace()` only errors on a
+  local file, so there's a new tool of ours, `save_place`: it saves like
+  File › Save, or does a Save As when you give it a `.rbxl` or `.rbxlx`
+  path. Its description says it's ours, not Studio's.
+  `user_keyboard_input` now sends a key by where it sits on a US keyboard,
+  which is what a `KeyCode` means: `W` walks forward on AZERTY too (it
+  used to arrive as `Z`), and `Hash` is Shift+3 instead of failing. Keys
+  also land when another window is active or covers the editor. The
+  client dropped presses unless it thought the pointer was over it, so it
+  now gets a crossing event and the focus, nothing moves the pointer, and
+  the focus goes back when the call ends with no key held.
+  `user_mouse_input` forgets the pointer when a call ends, like Studio's:
+  a click with no position in a new call errors with Studio's own text.
+  `get_console_output` cuts like Studio's now: whole lines, newest kept,
+  up to 20000 characters, behind `[TRUNCATED DUE TO LENGTH LIMIT]`. Play
+  also finds Sober when `XDG_DATA_HOME` points somewhere else (an
+  isolated test home): the editor points `flatpak` at
+  `~/.local/share/flatpak`, and an empty flatpak folder left in that home
+  no longer hides it. And the client window is now picked by being
+  created after Play started, not by id: the X server gives a closed
+  client's window id to the next one, so a Sober window still around when
+  Play started could hide the new one until the 90 s wait ran out.
+  (@chteau)
+
+- **`require("./x")` works in Edit.** `execute_luau`, the command bar and
+  plugins resolve require-by-string paths the way Roblox does: `./`,
+  `../`, `@self` and `@game`, walked like Luau's own require navigator,
+  with its error reasons. Modules from Rojo-style projects can finally be
+  checked in Edit. `multi_edit` also stops refusing a script whose name
+  differs from a sibling's only in case (`G_main` next to `g_main`). It
+  creates or edits that exact name, since Roblox names are case-sensitive.
+  I ran all of it next to real Studio (0.745) and matched what it says.
+  The command bar's `require` starts from a context of its own, so
+  `require("@game/...")` works there and `require("./x")` says "could not
+  get parent of requiring context", while `execute_luau` has no context
+  at all ("could not reset to requiring context"). A path that lands on
+  something that isn't a ModuleScript says `Unable to require module from
+  given path './x'`. A module that errors prints its error once and its
+  requirer gets "Requested module experienced an error while loading",
+  then and every later time, without running it again. Writing `MeshId`
+  or `MeshContent` from a script, the command bar or MCP now fails like
+  Studio's: "The current thread cannot write 'MeshId' (lacking capability
+  NotAccessible)". `printidentity()` exists now (4 in the command bar, 10
+  over MCP), and "not a valid member" errors name the instance too, as in
+  `Nope is not a valid member of MeshPart "Workspace.Mesh"`.
+  `character_navigation` waits for a character and its Humanoid like
+  Studio's does, instead of failing at once, and a walk longer than 30 s
+  no longer times out on the way. (@chteau)
+
+- **Game Settings › Security has Allow Mesh / Image APIs.** It's the switch
+  that lets a published game create `EditableMesh` and `EditableImage`;
+  with it off the client says "EditableMesh is not accessible". I watched
+  real Studio's traffic with its HTTP trace logging on: opening Security
+  reads `develop.roblox.com/v2/universes/{id}/configuration`, and its
+  Game Settings plugin keeps the switch there as
+  `isMeshTextureApiAccessAllowed`. That v2 endpoint says 403 "Not allowed"
+  to anything that isn't Studio though, so we use the v1 `configuration`,
+  which has the same field and is what the Creator Hub patches. Open Cloud
+  has nothing for it, so like Team Create it runs as your Roblox sign-in,
+  waits for Save, and is read back after the write. Label, description and
+  Terms of Use link are Studio's own strings. A group game greys it out
+  unless you own the group, like Studio. Turned it on for the Play sandbox
+  this way: the "EditableMesh is not accessible" errors went away in Play,
+  and real Studio's Security tab shows it on. (@chteau)
+
+- **Play takes places up to 150 MB.** The cap was 10 MiB because the place
+  publishing OpenAPI spec says `x-roblox-size-limit: 10485760`. That number
+  is stale: Roblox raised the API to 100 MB back in 2021. So I measured it
+  against the Play sandbox: exactly 157,286,400 bytes (150 MiB) publishes,
+  one byte more gets cut off mid-upload, 200 MiB gets a 413. The cap is
+  that now, and the error says 150 MB. The OpenArena port's 92.9 MB place
+  got refused before this; it publishes fine. Heads up, Studio's own save
+  limit is 100 MB, so a place between the two plays here but won't save
+  from Studio. (@chteau)
+## 2026-10-29
+
+- **Animation Graph state machines play when the place opens in Studio.**
+  Our binary writer put each class's PROP chunks right after its own INST
+  chunk, and Studio resolves an `Instance` attribute as it reads the PROP:
+  a state machine's `EntryState` pointing at an `ObjectValue` whose INST
+  chunk came later loaded as a dead `InstanceHandle`, so the machine played
+  nothing. Every INST chunk is now written first, as Studio does. The
+  editor also sets `EntryState` to a state machine's first state (it stays
+  editable). Removing the entry state leaves the machine without one, as
+  Studio does, so a later state does not take over. The preview plays
+  nothing without an entry as Studio does, even on an "(Any)" transition,
+  and lights no state. `GetParameter` returns the parameter's default
+  before it is set. Adding a parameter with the Number/Bool/Trigger/Text
+  buttons now works: clicking one used to wipe the typed name first.
+  (@chteau)
+
+- **Pseudo-localization preview and string extraction** (beta, behind
+  File › Beta Features): a Pseudo-loc tile beside Show UI draws every GUI
+  text longer, bracketed and accented, or right to left, in the 3D view and
+  the UI Editor, and outlines each text object that no longer fits. Nothing
+  is written to the place, so save and undo are untouched. A new
+  Localization dock lists those overflows to jump to, and the place's
+  user-facing strings, GUI text with `AutoLocalize` on and literals client
+  scripts set on `.Text`, which it writes into a `LocalizationTable` in
+  Studio's own format as one undo step, skipping strings already in a
+  table. Catching a layout that only fits English before a translator ever
+  sees the game is the point. (@chteau)
+- **Performance heatmap totals and a model ranking (beta).** Behind
+  File › Beta Features, the Viewport dock's Performance view gains Total
+  and Physics. Total weighs every factor a part costs into one score:
+  triangles, decoded texture memory, instances, simulated parts and
+  physics constraints, `PreciseConvexDecomposition` (or `Default` on a
+  dense mesh), dense meshes casting shadows, lights with `Shadows` on,
+  and translucent or Glass overdraw. Both also rank the 20 costliest
+  models, each row giving what drives it, its raw figures on hover, and a
+  click that selects the model and frames it. The weights are a
+  documented estimate for comparing parts of one place, not Roblox's own
+  costs. (@chteau)
+
+- **Module require graph (beta).** View › Require Graph, behind File ›
+  Beta Features, draws every script and ModuleScript with an edge for
+  each `require(...)` the security audit's resolver can follow (services,
+  `WaitForChild`, `FindFirstChild`, dot chains, `script.Parent`, locals,
+  and require-by-string paths). A require it can't follow (a dynamic
+  path, an asset id) is a dashed edge to a box with its text and line.
+  Cycles are drawn red, a client script requiring something in
+  `ServerScriptService` or `ServerStorage` (which fails at run time)
+  amber, and a column beside the graph lists both, the unknown requires
+  and the modules nothing requires. A box opens its script; an edge's
+  line badge opens the require. (@chteau)
+
 ## 2026-10-28
+
+- **Update planning (beta)**: countdown icons on autopilot, MiniDev's
+  idea. File › Update Planning… (switch it on under Beta features) lists
+  your experiences; for one, pick the current icon (fetched from Roblox or
+  a file), the new icon and the update time, and its reusable timers (12,
+  6, 3 and 1 hours to start with, each a 512×512 overlay in one of three
+  styles we drew, or your own PNG) show on a timeline of what the icon will
+  be when. Start update uploads every image at once so Roblox reviews it
+  early, then a steps view shows each one in review, approved, upcoming or
+  applied, with the "update in" countdown and Cancel. Each step swaps the
+  icon through the key's `legacy-universe:manage` route and sends a
+  desktop notification; a late run applies whatever is due now and skips
+  the rest. Steps fire while the editor is open and from a helper the OS
+  runs every minute (a systemd user timer, a launchd agent or a Task
+  Scheduler task), removed when nothing is left. None of it has been sent
+  to Roblox yet; the findings are in
+  `docs/research/update-planning-icon-api.md`. (@chteau)
+- **Co-editing with no rbx-native host, and a faster first sync**: the
+  Worker relay now keeps the co-editing op log in its Durable Object
+  storage, ciphertext only, so a team of Studio users can co-edit with
+  nobody running rbx-native. A new host no longer starts from an empty log:
+  every peer keeps the entries it read, and hands them to a relay that lost
+  them (the hosted relay waits 30 s for that before taking new edits). The
+  plugin now seals a big change first and posts it in 512 KiB groups
+  instead of one request per 7 KB chunk: 12,000 parts went from 632 POSTs
+  over 29 s to 16 POSTs, landing in the log in 2.3 s, measured against
+  real Studio on a local relay. Numbers and the design are in
+  `docs/research/coedit-hostless.md`. (@chteau)
+- **Pre-alpha fixes**: skipping the API key wizard is remembered, so a
+  launch without a key goes to Home (Manage key adds one later) and only
+  `--setup` brings the wizard back. `--select` names an instance with a dot
+  in it (`Workspace.Smoke.spec`): the longest child name that fits wins at
+  each step, backing off if the rest of the path then fails. The soft-snap
+  search takes its time budget as an argument, which stops its test failing
+  on slow CI runners, and the Device Simulator's touch stand-in is split
+  into four modules instead of one 1000-line script, behaving the same.
+  (@chteau)
 
 - **Alpha test builds**: a hand-dispatched `Test build` workflow builds
   `rbxstudio` in release for Windows, macOS (Apple Silicon) and Linux and
@@ -31,6 +278,22 @@
   `ViGEmClient.dll` you put next to the editor (not shipped, and not yet
   tried on Windows). `examples/gamepad_demo.rs` makes a place that logs
   what a game script sees from the pad. (@chteau)
+- **The rest of the Animation Graph guesses, measured**: the runtime's
+  last UNVERIFIED behaviours were measured in real Studio, and the runtime
+  now matches them. A trigger is seen by exactly one step and reads true
+  until the next one clears it. A state-machine transition takes effect
+  within the step that sees it. Ties between transitions are no longer
+  random: a state's own transition beats "(Any)", then the first listed
+  wins. During a transition both sides fire their markers. A marker is
+  taken at the start of the step that passes it, not at the end. A
+  Priority Select fades to rest once every Trigger is off. Its
+  Interruptible setting only holds back a move to a higher input. A pick
+  from rest cuts in with no fade. A Mask naming no mask passes everything
+  through, Invert or not, and Unsynced blend inputs keep running while
+  weightless. `studio_graph.rs` now checks against a committed text dump
+  of Studio's numbers, so it runs without Studio. Found along the way, and
+  not fixed: Studio ignores the `EntryState` our writer saves, so our state
+  machines play nothing there. (@chteau)
 - **Animation Graphs play as real Studio does**: the guesses the graph
   runtime made where Roblox's docs are silent were measured in real Studio
   and fixed to match. RandomSequence now picks what Studio picks for the

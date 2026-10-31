@@ -1,10 +1,10 @@
 //! Save and Cancel: the local edits land in the place as one undo step,
-//! the cloud ones and the Team Create switch go to Roblox together.
+//! the cloud ones and the sign-in switches go to Roblox together.
 
 use gpui_kit::*;
 
 use super::model::{self, LocalDraft};
-use super::{fetch, team_create, GameSettingsWindow, Notice};
+use super::{extras, fetch, team_create, GameSettingsWindow, Notice};
 
 /// The notice for a save that sent edits to Roblox, composed from what happened.
 fn save_notice(wrote_local: bool, refused: Option<&str>) -> Notice {
@@ -63,36 +63,49 @@ impl GameSettingsWindow {
             _ => None,
         };
         let team_create = self.team_create.pending(self.link.as_ref());
+        let extras = self
+            .extras
+            .pending(self.team_create.web.as_ref(), self.link.as_ref());
         self.reseed = true;
-        match (pending, team_create) {
-            (None, None) if wrote_local => {
+        match (pending, team_create, extras) {
+            (None, None, None) if wrote_local => {
                 self.notice = Some(Notice {
                     ok: true,
                     text: "Saved to this place.".to_string(),
                 });
             }
-            (None, None) => {}
-            (pending, team_create) => {
+            (None, None, None) => {}
+            (pending, team_create, extras) => {
                 self.saving = true;
                 self.notice = None;
                 self.generation += 1;
                 self.team_create.generation += 1;
-                let generations = (self.generation, self.team_create.generation);
+                self.extras.generation += 1;
+                let generations = (
+                    self.generation,
+                    self.team_create.generation,
+                    self.extras.generation,
+                );
                 cx.spawn(async move |this, cx| {
-                    let (cloud, team_create) = cx
+                    let (cloud, team_create, extras) = cx
                         .background_spawn(async move {
                             (
                                 pending.map(|(link, remote, updates)| {
                                     fetch::save(&link, &remote, &updates)
                                 }),
-                                team_create.map(|(web, universe, on)| {
-                                    team_create::save(&web, universe, on)
-                                }),
+                                team_create.as_ref().map(team_create::save),
+                                extras.as_ref().map(extras::save),
                             )
                         })
                         .await;
                     let _ = this.update(cx, |this, cx| {
-                        if generations != (this.generation, this.team_create.generation) {
+                        if generations
+                            != (
+                                this.generation,
+                                this.team_create.generation,
+                                this.extras.generation,
+                            )
+                        {
                             return;
                         }
                         this.saving = false;
@@ -107,10 +120,11 @@ impl GameSettingsWindow {
                             }
                             None => {}
                         }
-                        match team_create {
-                            Some(Ok(on)) => this.team_create.draft.rebase(on),
-                            Some(Err(text)) => refusals.push(text),
-                            None => {}
+                        if let Some(saved) = team_create {
+                            this.team_create.saved(saved, &mut refusals);
+                        }
+                        if let Some(saved) = extras {
+                            this.extras.saved(saved, &mut refusals);
                         }
                         let refusals = refusals.join(" ");
                         this.notice = Some(save_notice(
@@ -132,7 +146,8 @@ impl GameSettingsWindow {
         if let Some(remote) = self.cloud.remote.clone() {
             self.cloud.reset(remote);
         }
-        self.team_create.draft.revert();
+        self.team_create.revert();
+        self.extras.revert();
         let local = {
             let s = self.shell.read(cx);
             LocalDraft::read(&s.dom, &s.database)

@@ -7,6 +7,8 @@ use crate::graph::model::{Mask, MaskJoint, Param, Transition, WaitFor};
 mod events;
 mod semantics;
 mod studio;
+mod studio_flow;
+mod studio_pick;
 
 /// A one-second clip holding `joint` at x = `x` (and at `x + 1` at its end,
 /// so its time can be read off the pose).
@@ -80,6 +82,7 @@ fn state_machine_crossfades_on_an_expression() {
     let sm = g.add(NodeKind::StateMachine);
     g.connect(idle, sm, "State1");
     g.connect(run, sm, "State2");
+    semantics::set(&mut g, sm, "EntryState", Value::Text("State1".into()));
     let mut t = Transition::new(Some(0), 1);
     t.expression = "speed > 5".into();
     t.duration = 0.5;
@@ -127,12 +130,13 @@ fn any_state_transitions_and_finished_transitions() {
     assert_eq!(p.active(sm), Some(1));
     assert_eq!(
         p.get("jump"),
-        Some(&Value::Bool(false)),
-        "triggers reset after a step"
+        Some(&Value::Bool(true)),
+        "a trigger reads on until the next step clears it"
     );
     p.step(0.5);
     assert_eq!(p.active(sm), Some(1));
     p.step(0.6);
+    p.step(0.);
     assert_eq!(p.active(sm), Some(0), "back once the wave finished");
 }
 

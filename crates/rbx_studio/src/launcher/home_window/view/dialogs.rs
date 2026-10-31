@@ -32,6 +32,8 @@ impl HomeWindow {
                 members,
             } => self
                 .team_create_dialog(experience, members, cx)
+            Dialog::NewExperience { busy, error } => self
+                .new_experience_dialog(*busy, error.as_deref(), cx)
                 .into_any_element(),
             Dialog::LocalCopy {
                 experience,

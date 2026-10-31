@@ -48,7 +48,6 @@ pub(super) use starter::hides_contents;
 pub use starter::shows_screen;
 pub(crate) use stroke::Join;
 pub(super) use stroke::{Stroke, StrokePosition};
-#[cfg(test)]
 pub(crate) use text::Span as TextSpan;
 pub(crate) use text::{span_face, Text};
 pub(super) use viewport::each_part as each_viewport_part;
@@ -61,6 +60,8 @@ const SCREEN_CLASS: &str = "ScreenGui";
 const BILLBOARD_CLASS: &str = "BillboardGui";
 const SURFACE_CLASS: &str = "SurfaceGui";
 const ELEMENT_CLASS: &str = "GuiObject";
+/// The one non-`GuiObject` class a GUI tree is walked through, see [`Group`].
+const FOLDER_CLASS: &str = "Folder";
 /// The three text classes share every text property, so one reader serves
 /// all of them, and their `UIStroke` outlines glyphs rather than the box;
 /// only the `TextBox` placeholder rule tells them apart.
@@ -92,7 +93,7 @@ pub(crate) fn plan(
     database: &ReflectionDatabase,
     materials: &mut Catalog,
 ) -> Vec<Screen> {
-    let styles = Styled::new(dom);
+    let styles = Styled::new(dom, database);
     let mut screens = Vec::new();
     for &root in dom.root_refs() {
         gather(dom, database, &styles, materials, root, &mut screens);
@@ -117,7 +118,7 @@ pub(crate) fn plan_root(
         }
         up = dom.parent(ancestor);
     }
-    let styles = Styled::for_tree(dom, root);
+    let styles = Styled::for_tree(dom, database, root);
     let mut found = Vec::new();
     gather(dom, database, &styles, materials, root, &mut found);
     found.into_iter().find(|screen| screen.referent == root)
@@ -150,9 +151,9 @@ fn gather(
         into.push(Screen {
             referent,
             enabled: flag(properties, "Enabled", true),
+            auto_localize: flag(properties, "AutoLocalize", true),
             space: None,
             display_order: integer(properties, "DisplayOrder", 0),
-            top_inset: constraints::top_bar_inset(properties),
             device_safe: constraints::device_safe(properties),
             global_z_index: constraints::global_z_index(properties),
             clip_to_safe_area: constraints::clip_to_safe_area(properties),
@@ -179,9 +180,9 @@ fn gather(
         into.push(Screen {
             referent,
             enabled: flag(properties, "Enabled", true),
+            auto_localize: flag(properties, "AutoLocalize", true),
             space: Some(canvas),
             display_order: 0,
-            top_inset: 0.0,
             device_safe: false,
             global_z_index: constraints::global_z_index(properties),
             clip_to_safe_area: false,
@@ -197,7 +198,7 @@ fn gather(
 }
 
 /// What one container holds: its own `GuiObject` children in tree order, and
-/// a [`Group`] for every non-`GuiObject` child that holds elements of its own.
+/// a [`Group`] for every `Folder` child that holds elements of its own.
 pub(super) fn elements(
     dom: &WeakDom,
     database: &ReflectionDatabase,
@@ -218,6 +219,11 @@ pub(super) fn elements(
             if let Some(node) = element(dom, database, styles, materials, child) {
                 nodes.push(node);
             }
+            continue;
+        }
+        // A `Script`, a `Configuration`, a `Model`, anything else ends the
+        // tree: Studio draws nothing hung off one, in edit view or in Play.
+        if !database.is_subclass_of(instance.class(), FOLDER_CLASS) {
             continue;
         }
         let (children, groups_of) = elements(dom, database, styles, materials, instance.children());
@@ -268,6 +274,7 @@ fn element(
     Some(Node {
         referent,
         name: instance.name().to_string(),
+        auto_localize: flag(properties, "AutoLocalize", true),
         layout_order: integer(properties, "LayoutOrder", 0),
         position: span(properties, "Position"),
         size: span(properties, "Size"),

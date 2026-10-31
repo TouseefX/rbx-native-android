@@ -1,5 +1,5 @@
 //! What a `ScreenGui` tree is read into: resolution-independent nodes, the
-//! layout scopes any plain instances among them open, and the screen that
+//! layout scopes any `Folder`s among them open, and the screen that
 //! holds them.
 
 use rbx_assets::AssetRef;
@@ -39,6 +39,9 @@ pub(in crate::scene::gui) struct Node {
     /// rather than describing the instance itself, `UIPageLayout.CurrentPage`
     /// can be matched back to the node it points at.
     pub(in crate::scene::gui) referent: Ref,
+    /// `AutoLocalize`, which turns localization off for the whole subtree,
+    /// so the pseudo-localization preview leaves it as written too.
+    pub(in crate::scene::gui) auto_localize: bool,
     /// Only read for `SortOrder.Name` under a [`List`].
     pub(in crate::scene::gui) name: String,
     pub(in crate::scene::gui) layout_order: i32,
@@ -115,15 +118,16 @@ impl Node {
     }
 }
 
-/// What one non-`GuiObject` instance inside a GUI tree, a `Folder`, or a
-/// `Configuration`, a `ModuleScript`, anything, contributes to the picture.
+/// What one `Folder` inside a GUI tree contributes to the picture.
 ///
-/// Roblox draws a `GuiObject` whose ancestry reaches a `ScreenGui`/
-/// `BillboardGui`/`SurfaceGui` however many plain instances sit in between,
-/// so such an instance is walked *through* rather than being an end to the
-/// tree. It has no box of its own, so its contents resolve against the
-/// container above it, the nearest `GuiBase2d`, and they paint where it
-/// sits among its siblings.
+/// Studio draws a `GuiObject` only while every instance between it and its
+/// `ScreenGui`/`BillboardGui`/`SurfaceGui` is a `GuiObject` or a `Folder`:
+/// one hung off a `Script`, a `LocalScript`, a `ModuleScript`, a
+/// `Configuration`, a `ValueBase`, a `Model` or a `Part` is not drawn, in edit
+/// view or in Play, however deep. So a `Folder` is walked *through* rather
+/// than being an end to the tree. It has no box of its own, so its contents
+/// resolve against the container above it, the nearest `GuiBase2d`, and they
+/// paint where it sits among its siblings.
 ///
 /// It is not simply transparent, though. Roblox's `Folder` page: "Each
 /// `Folder` in your UI hierarchy can define its own `UILayout`
@@ -174,10 +178,9 @@ pub(crate) struct Screen {
     /// does not place it on a part, see `super::gather`. Never drawn by the
     /// overlay: the scene draws these in the world (`super::super::space`).
     pub(crate) space: Option<[f32; 2]>,
+    /// See [`Node::auto_localize`].
+    pub(in crate::scene::gui) auto_localize: bool,
     pub(in crate::scene::gui) display_order: i32,
-    /// `ScreenInsets`: pixels of the viewport's top edge the canvas gives up
-    /// to Roblox's top bar.
-    pub(in crate::scene::gui) top_inset: f32,
     /// Whether the device's safe-area insets (a phone's notch and home
     /// indicator) apply: every `ScreenInsets` mode but `None` adds them.
     pub(in crate::scene::gui) device_safe: bool,

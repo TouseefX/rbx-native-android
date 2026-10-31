@@ -13,41 +13,51 @@ impl HomeWindow {
     /// In the game picker, the experience is handed over and the picker
     /// closes instead; nothing is downloaded.
     pub(super) fn open_experience(&mut self, experience: Experience, cx: &mut Context<Self>) {
+        if !self.hand_over(experience.clone(), None, cx) {
+            // With a saved session, opening a game asks first: the live Team
+            // Create session, or the local copy. Without one there is nothing
+            // to join, so it goes straight to the copy as before.
+            if self.session.is_some() {
+                self.dialog = Some(Dialog::TeamCreate {
+                    experience,
+                    members: Members::Loading,
+                });
+                self.load_team_create_members(cx);
+                cx.notify();
+                return;
+            }
+            match home::local_copy(&experience) {
+                Some(path) => {
+                    self.dialog = Some(Dialog::LocalCopy {
+                        experience,
+                        path,
+                        replace: false,
+                    })
+                }
+                None => self.download(experience, true, cx),
+            }
+            cx.notify();
+        }
+    }
+
+    /// In the game picker, hands `experience` over and closes the picker;
+    /// false when this is Home.
+    pub(super) fn hand_over(
+        &mut self,
+        experience: Experience,
+        note: Option<String>,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if let Some(pick) = self.pick.clone() {
             // Deferred: the window can't be removed from inside its own
             // event handler.
             let handle = self.handle;
             cx.defer(move |cx| {
-                pick(experience, cx);
+                pick(experience, note, cx);
                 let _ = handle.update(cx, |_, window, _| window.remove_window());
             });
-            return;
+            return true;
         }
-        // With a saved session, opening a game asks first: the live Team
-        // Create session, or the local copy. Without one there is nothing
-        // to join, so it goes straight to the copy as before.
-        if self.session.is_some() {
-            self.dialog = Some(Dialog::TeamCreate {
-                experience,
-                members: Members::Loading,
-            });
-            self.load_team_create_members(cx);
-            cx.notify();
-            return;
-        }
-        match home::local_copy(&experience) {
-            Some(path) => {
-                self.dialog = Some(Dialog::LocalCopy {
-                    experience,
-                    path,
-                    replace: false,
-                })
-            }
-            None => self.download(experience, true, cx),
-        }
-        cx.notify();
-    }
-
     /// Who is in the place's live Team Create session, read when the
     /// dialog opens — the same session members call Game Settings uses.
     fn load_team_create_members(&mut self, cx: &mut Context<Self>) {
@@ -114,6 +124,7 @@ impl HomeWindow {
             None => self.download(experience, true, cx),
         }
         cx.notify();
+        false
     }
 
     pub(super) fn download(

@@ -63,6 +63,9 @@
 //! `RBX_STUDIO_UI_EDITOR=1|<width>x<height>` opens the UI Editor on its
 //! canvas at startup, at that simulated resolution when one is given, the
 //! same aid, for the canvas (see `shell::ui_editor`).
+//! `RBX_STUDIO_PSEUDO_LOC=1|rtl|strings` turns the pseudo-localization
+//! preview on and opens the Localization dock, the same aid, for that beta
+//! (see `shell::localization`).
 //! `RBX_STUDIO_FRAME_SHEET=1|picker|picker:<query>|fit` then opens the
 //! `ViewportFrame` sheet on the selected frame, with the Workspace picker
 //! (searching for `<query>`) or the Fit menu up, the same aid, for the
@@ -123,6 +126,7 @@ mod input_actions;
 mod key_store;
 mod launcher;
 mod layers;
+mod localization;
 mod login_flow;
 mod luau_lsp;
 mod mcp;
@@ -158,6 +162,7 @@ mod timeline;
 mod tokens;
 mod transform;
 mod ui_canvas;
+mod update_planning;
 mod viewport_frame;
 mod wally_client;
 mod workspace_view;
@@ -204,6 +209,12 @@ const WINDOW_SIZE: (f32, f32) = (1600.0, 900.0);
 /// library only.
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub fn run_desktop() {
+    // Before any thread starts: Play runs Sober, a user Flatpak, and an
+    // isolated `XDG_DATA_HOME` would hide it from `flatpak`.
+    #[cfg(target_os = "linux")]
+    if let Some(dir) = rbx_play::launch::missed_user_flatpaks() {
+        std::env::set_var("FLATPAK_USER_DIR", dir);
+    }
     // The Network Simulator's elevated helper is this same executable,
     // relaunched by `rbx_play::netsim::Shaper::start`; it needs none of the
     // editor, so it branches off before anything else loads.
@@ -224,6 +235,10 @@ pub fn run_desktop() {
             &arguments,
             rbx_loren::cli::Overrides::default(),
         ));
+    }
+    // The update-planning helper the OS runs every minute: no window.
+    if std::env::args().nth(1).as_deref() == Some(update_planning::helper::TICK_FLAG) {
+        std::process::exit(update_planning::tick_main());
     }
     // Before anything can ask whether a beta feature is on.
     beta::init();
@@ -332,6 +347,7 @@ pub fn run_desktop() {
             let plan = match check {
                 Some(check) => {
                     let (key, session) = check.await;
+                    let key = launcher::setup::remembering_skip(key, home::key_skipped(), setup);
                     launcher::setup::plan(key, session, setup)
                 }
                 None => None,

@@ -1,6 +1,8 @@
 //! The window's drawing: the tab sidebar, the page of rows grouped by
 //! where they live, and the Save/Cancel footer.
 
+mod extras;
+mod playability;
 mod rows;
 mod team_create;
 
@@ -78,6 +80,10 @@ impl GameSettingsWindow {
                     .child(kit::icon(tab.glyph(), 14.))
                     .child(kit::text(12.5, 18.).child(tab.title()))
                     .on_click(cx.listener(move |this, _, _, cx| {
+                        // Each page starts at its title, not at the last one's scroll.
+                        if this.tab != tab {
+                            this.scroll.set_offset(Point::default());
+                        }
                         this.tab = tab;
                         cx.notify();
                     }))
@@ -88,10 +94,19 @@ impl GameSettingsWindow {
         let tab = self.tab;
         let cloud_rows = self.cloud_rows(cx);
         let local_rows = self.local_rows(cx);
-        let team_create_rows = if tab == Tab::BasicInfo {
-            self.team_create_rows(cx)
-        } else {
-            Vec::new()
+        let team_create_rows = match tab {
+            Tab::BasicInfo => self.team_create_rows(cx),
+            Tab::Security => {
+                let mut rows = self.mesh_apis_rows(cx);
+                rows.extend(self.security_extras(cx));
+                rows
+            }
+            _ => Vec::new(),
+        };
+        let extras_rows = match tab {
+            Tab::BasicInfo => self.basic_info_extras(cx),
+            Tab::Permissions => self.permissions_extras(cx),
+            _ => Vec::new(),
         };
         let missed: Vec<AnyElement> = UNREACHABLE
             .iter()
@@ -142,10 +157,26 @@ impl GameSettingsWindow {
             })
             .when(!team_create_rows.is_empty(), |d| {
                 d.child(section(
-                    "Team Create",
+                    if tab == Tab::Security {
+                        "On Roblox"
+                    } else {
+                        "Team Create"
+                    },
                     Some("Roblox sign-in"),
                     "Saved to the live experience with your Roblox sign-in, not the API key.",
                     team_create_rows,
+                ))
+            })
+            .when(!extras_rows.is_empty(), |d| {
+                d.child(section(
+                    if tab == Tab::BasicInfo {
+                        "Listing"
+                    } else {
+                        "On Roblox"
+                    },
+                    Some("Roblox sign-in"),
+                    "Saved to the live experience with your Roblox sign-in, not the API key.",
+                    extras_rows,
                 ))
             })
             .when(!local_rows.is_empty(), |d| {

@@ -102,15 +102,197 @@ The graph subtree of that save is
 `tests/fixtures/studio_state_machine.rbxmx`. `rbx_xml` now folds
 `__attrRef_*` into the blob on reading and splits it back out on writing.
 
-## Still not measured (UNVERIFIED in the code)
+## Second pass: triggers, events, state machines, phase sync
 
-- Whether a trigger parameter lasts exactly one step.
-- How events split across a transition.
-- Whether an "(Any)" transition can re-enter the playing state, and which
-  generator breaks ties between transitions.
-- What a Priority Select does when every Trigger turns off after one fired,
-  and whether Interruptible guards moves to lower inputs.
-- What a Mask naming no shared mask does.
-- Blend phase-sync beyond the documented virtual duration.
+Measured 2026-10-28/29 in the same Studio, with the same harness. The
+graphs are in `crates/rbx_animation/tests/studio_graph_probe/unknowns.rs`.
+Two clip sets were added: `MA`/`MB` hold P0/P1 at x = 1 for a one-second
+loop, with `KeyframeMarker`s `Ev` "A0".."A3" at 0, 0.25, 0.5 and 0.75 s
+and "B0".."B3" at 0.1, 0.35, 0.6 and 0.85 s. `L1`/`L2` loop P0/P1 from
+x = 0 to 1 over one and two seconds, so a joint's x is its clip's phase.
+Each sample now also prints the markers reached, as `value@step`, and every
+parameter's `GetParameter` value.
 
-None of these was in scope for this pass. Each needs its own probe.
+Four things about the harness:
+
+- Marker handlers are deferred, and `Workspace.SignalBehavior` cannot be
+  read or set from the command bar. The event cases call `task.wait()`
+  after each step so the handlers run before the next one. A frame with
+  no step changes nothing in the graph; sample 4 of the trigger case
+  checks this.
+- A state machine with no `EntryState` plays nothing.
+- Studio resolves an `Instance` attribute (type `0x25`) while it reads
+  the holder's PROP chunk, against the instances whose INST chunks it has
+  read so far. A target whose INST chunk comes later stays an unresolved
+  `InstanceHandle` (`:Get()` returns nil, and Studio saves it back as
+  referent `0xFFFFFFFF`), and the state machine plays nothing. Studio
+  writes every INST chunk before the first PROP. `rbx_binary` used to
+  write each class's PROPs right after its INST, and `AnimationNodeDefinition`
+  is seen before `ObjectValue`, so every `EntryState` it wrote was lost.
+  The referent numbers, the blob bytes and the PRNT order were not the
+  cause: a file written with Studio's postorder PRNT still failed, and the
+  same file with INST chunks first resolved all 32 state machines
+  (measured 2026-10-29, Studio 0.745). `GetAttribute` returns an
+  `InstanceHandle` for any `Instance` attribute, set from Lua or not;
+  `:Get()` gives the instance.
+- With no `EntryState`, an "(Any)" transition whose condition holds does
+  not start a state either (`NoEntry`, three steps then `Go` on).
+
+The whole run was done twice and gave identical output.
+
+**Triggers.** A trigger state machine cycles T0 → T1 → T2 → T0, with one
+hop per evaluation that sees `Go`. A trigger is seen by exactly one
+evaluation, whether that is a `StepAnimations(1/30)` or a
+`StepAnimations(0)`. `GetParameter` still reads true after that step, and
+the next step clears it before it evaluates. If the trigger is fired again
+while it still reads true, the second fire is lost. In the samples below,
+"Go after" is what `GetParameter` returned:
+
+| sample | action | state | Go after |
+|---|---|---|---|
+| 1 | fire, no step | T0 | true |
+| 2 | 1 step | T1 | true |
+| 3 | 1 step | T1 | false |
+| 7 | fire, `StepAnimations(0)` | T0 | true |
+| 8 | 1 step | T0 | false |
+| 10 | fire, 2 steps | T1 | false |
+| 11 | fire, 1 step | T2 | true |
+| 12 | fire again, 1 step | T2 | false |
+
+A Bool held on takes one hop per step. Before any `SetParameter`,
+`GetParameter` returned each parameter's default (`false`, `""`, `0`,
+and `2` for `NoEntry`'s `N`). The docs say it returns nil. `Player::get`
+returns the default too.
+
+**Transitions take effect within the step.** Setting the condition and
+stepping once shows the new state, already blended. On a state
+machine's 1 s switch from MA to MB, the first step shows P0 0.96667 and
+P1 0.03333, the same as a Select's switch. `Player` used to take a
+state-machine transition after the step that saw it.
+
+**Events.** Studio fires both sides' markers during a 1 s transition, for
+its whole length and however small a side's share. MA → MB, switched at
+step 31, with Select and with a state machine:
+`A0@1 A1@8 A2@16 A3@23 | A0@31 B0@34 A1@38 B1@41 A2@46 B2@49 A3@53 B3@56`.
+A marker is taken where a step starts, not where it ends. The marker at
+0.5 s fires on step 16 rather than step 15, which lands on it. A looping
+clip's marker at 0 fires on the step after the wrap. A Blend1D at an
+exact tie (0.5) passes the first input's events (MA's).
+
+Once the blend ended, MB's next markers came one step earlier than a
+steady clock gives: `B0@63 B1@70`, where 64 and 71 were expected. It
+looks as if the incoming clip gains one extra step when the transition
+completes. Nothing else we measured can confirm it, because every clip
+that was blended into is either constant or had already reached its end.
+The `Handover` and `EvHandover` cases in the probe (T1 → L1 and MA → MB
+over 0.5 s, read every step) would pin it down. They are written but
+have not been run yet: the Studio lock was held for hours by other work.
+Until they run, our incoming clip keeps a steady clock (UNVERIFIED in
+`nodes/pick.rs`).
+
+**State machines.** In each case T0 plays, then both transitions out of it
+become ready in the same step:
+
+| case | transitions, in list order (priority) | Studio took |
+|---|---|---|
+| TieBC | T0→T1 (1), T0→T2 (1) | T1 |
+| TieCB | T0→T2 (1), T0→T1 (1) | T2 |
+| TieAny | (Any)→T2 (1), T0→T1 (1) | T1 |
+| PrioUp | T0→T1 (1), T0→T2 (2) | T2 |
+| PrioDown | T0→T1 (2), T0→T2 (1) | T1 |
+| PrioAny | (Any)→T2 (2), T0→T1 (1) | T2 |
+
+There is no randomness: eight runs of each tie, each with fresh GUIDs,
+came out alike. The higher Priority wins. On a tie, the state's own
+transition beats "(Any)", then the first listed wins. An "(Any)"
+transition to the state already playing does nothing: with R0 at 0.2 s,
+`Go` on, off and held left it running (y 0.46667, 0.53333, … 1.0). From
+T1 the same transition restarts R0 (y 0.06667 after a step), and holding
+`Go` on afterwards does not restart it again. With a 0.5 s length, the
+blend from T1 reads x 0.06667 and y 0.93778 after one step.
+
+**Priority Select.** Every input is OnceAndHold. The default transition is
+0.3 s for T0/T1 and 0 for the R0/R1 ramps.
+
+- When every Trigger turns off, the node fades to rest over the default
+  transition: x 1 → 0.88889 → … → 0.11111 → 0.
+- From rest, a newly triggered input cuts in with no fade. A Select
+  switching from nothing to a pin also cuts in, with x 1 after one step
+  despite its 0.3 s transition.
+- The current input's Interruptible setting holds back only a move to a
+  higher input. When R1 (below, Finished) was playing and A turned on,
+  the node stayed on R1 until it finished: y 0.2 … 0.99997, then R0 at
+  0.06667. It stayed even when B was turned off in the same step.
+- When the current input's own Trigger turns off, a move down or to
+  rest happens at once, whether it is set to Finished or to Trigger.
+
+**Mask naming no mask.** A Mask whose `Mask` is empty or names no shared
+mask passes everything through at full weight (P0 = P1 = 1 from `Both`).
+`Invert` changes nothing. We used to zero every joint under Invert.
+
+**Phase sync.** Blend1D over L1 (at 0) and L2 (at 1):
+
+- Synced, at 0.5 / 0.5: both clips advance 1/1.5 of a cycle per second.
+  After one step, P0 = P1 = 0.01111, which is half of phase 0.02222.
+- Synced, at 0.75 / 0.25: both advance 1/1.25 of a cycle per second.
+  So the virtual duration is the weighted arithmetic mean `Σ wᵢ·Dᵢ`.
+- Synced, at weight 0: L2 kept L1's phase, and at 0.5 again both read
+  0.33889.
+- Unsynced: each clip runs at its own rate, and a weightless one keeps
+  running. L2 read phase 0.05 at sample 22, after 63 steps (63/60
+  wrapped). If it had paused, it would read 0.633. Before this, we
+  paused weightless Unsynced inputs.
+
+## Entry state: our saves in Studio, and deleting it
+
+Measured 2026-10-29 in the same Studio, with the probe place.
+
+**Our saves.** A graph built in our editor's Animation Graph panel
+(a state machine with states "New State" ← clip T0 and "New State1" ←
+T3, a Bool `go` and a "New State" → "New State1" transition on `go`)
+was saved with the panel's Save, then Ctrl+S to `.rbxl` and File › Save
+As to `.rbxlx`. In Studio, both files gave `GetAttribute("EntryState")`
+an `InstanceHandle` whose `:Get()` is the "New State" `ObjectValue`.
+Played on the Animator, P0 sat at x = 1 (T0) for five steps, and after
+`SetParameter("go", true)` P1 sat at x = 1 (T3).
+
+**Deleting the entry.** From the command bar, on that machine:
+
+- `Parent = nil` or `Destroy()` on the entry state: `GetAttribute` still
+  returns an `InstanceHandle`, and `:Get()` returns the detached state
+  (Parent nil). The machine plays nothing, before and after `go`. Putting
+  the state back under the machine (before a `Destroy`) makes it play
+  again.
+- Adding a state then (an `ObjectValue` under the machine) does not make
+  it the entry, and the machine still plays nothing.
+- Ctrl+S and reopening: `:Get()` is nil (the binary file holds a
+  referent that no instance has), the machine plays nothing, and Studio
+  logs "StateMachine 'StateMachineNode': no EntryState, so it has no
+  state to start in". The transition out of the deleted state comes back
+  with `From` nil, so it reads as an "(Any)" transition. In an XML save,
+  Studio still writes `__attrRef_EntryState` naming the deleted state's
+  old referent.
+
+Studio's own Graph Editor (Avatar › Graph Editor) does not set an entry
+either: after Insert Node › State Machine and Create State, the machine
+has a `State` and no `EntryState` attribute.
+
+Our editor now matches the deletion half. Removing the entry state
+clears `EntryState`, and a later state does not take over, even one that
+reuses the deleted name. Our reader turns both Studio saves above into
+an empty `EntryState`, and the runtime plays nothing and reports no
+active state. One difference is kept on purpose: our editor still makes
+a new machine's first state its entry, because Studio's editor leaves
+that machine playing nothing until an entry is chosen.
+
+## Still not measured
+
+- What Studio's Graph Editor does when its entry state is deleted from
+  the canvas. Only the engine side (`Destroy`/`Parent = nil` from the
+  command bar) was measured. Choosing the entry in that editor was not
+  driven either.
+
+- Whether the incoming clip gains a step as a transition completes (see
+  Events; the `Handover` cases are ready to run).
+- Blend2D phase sync was not probed. It is taken to follow the same rule
+  as Blend1D.

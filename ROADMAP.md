@@ -287,9 +287,15 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     `DominantAxis`), `UISizeConstraint`, `UITextSizeConstraint`,
     `AutomaticSize` (children extent, a layout's `AbsoluteContentSize`,
     a text object's own bounds), `SizeConstraint`, `BorderMode`
-    (`Middle`/`Inset`), `ScreenGui.ScreenInsets`/`IgnoreGuiInset` (the top
-    bar reserved at 36 px, no Roblox page states the number, it is one
-    named constant) and `ZIndexBehavior.Global`.
+    (`Middle`/`Inset`), `ScreenGui.ScreenInsets`/`IgnoreGuiInset` (the
+    device's cutouts only: Studio's edit view keeps no top bar clear,
+    `GetGuiInset()` reads 0 there, so neither does ours) and
+    `ZIndexBehavior.Global`.
+  - A property a file leaves out reads as its class default, what Studio
+    loads it as (grey `BackgroundColor3`, `Legacy` font at `TextSize` 8,
+    `ZIndexBehavior.Global`, a white scroll bar, a `FixedSize` 800x600
+    `SurfaceGui`), not what Studio's Insert gives a new one. Checked by
+    saving a place of bare `GuiObject`s back out of Studio.
   - `StyleSheet`/`StyleRule`/`StyleLink`/`StyleDerive`: the selector
     engine (class, `.Tag`, `#Name`, `>` and `>>` combinators, `,` lists,
     nested rules merged into their parent's selector), `Priority` then
@@ -307,10 +313,11 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     re-rendering on every edit; sheet tokens and `StyleQuery` are not
     editable there yet.
   - Text metrics match Studio: `TextSize` is the *line box* height (the
-    docs: "line height equal to the `TextSize`"), the glyph em a fixed
-    1/1.2 of it, measured against Studio captures of three families
-    (Source Sans Pro, Gotham SSm, Fredoka One) to the pixel, which no font
-    table combination reproduced. A family that lacks the requested
+    docs: "line height equal to the `TextSize`"), and the line box is the
+    face's own hhea ascent plus descent, measured with `GetTextSize`
+    against eight families' advances (within 1%, the rest is Roblox
+    rounding each advance to a pixel). `Legacy` draws as Arimo at 1.5
+    times its `TextSize`. A family that lacks the requested
     weight shapes in its closest face rather than falling back to a
     system font (cosmic-text only matches an exact weight). Studio's
     synthetic bold for a weight the family lacks is not reproduced.
@@ -324,7 +331,8 @@ Roblox's own engine · 🤔 maybe, an idea kept for later and not committed to.
     has one and exempt from its siblings' layout.
   - `ScrollingFrame` (canvas, `CanvasPosition`, `AutomaticCanvasSize`, the
     scroll bars from their three images with every inset/position/
-    direction property), `CanvasGroup` (`GroupTransparency`/`GroupColor3`
+    direction property, and the border line Studio draws between the
+    window and the bar), `CanvasGroup` (`GroupTransparency`/`GroupColor3`
     over the subtree flattened to a texture, one blend for overlapping
     children), `ViewportFrame` (its parts under `CurrentCamera`: or the
     saved camera pose, with `Ambient`/`LightColor`/`LightDirection`, a
@@ -2572,6 +2580,11 @@ both the plain fetch failure and the silent fall back to a default
     picks match);
   - CubicV2 transitions, interrupted blends, a Select or Priority Select
     with nothing chosen, masks, backwards trims and re-triggered One Shots;
+  - a trigger lasting exactly one step, markers on both sides of a
+    transition, "(Any)" never re-entering the playing state, deterministic
+    transition ties, Priority Select once its Triggers turn off (and
+    Interruptible guarding only moves up), a Mask naming no mask, and
+    Synced/Unsynced phase sync;
   - an Instance-typed attribute (`EntryState`) in both formats: a
     referent inside `AttributesSerialize` in a binary file, a
     `__attrRef_EntryState` Ref property in an XML one, each checked
@@ -2605,6 +2618,44 @@ both the plain fetch failure and the silent fall back to a default
   Edits wait for Save. A refusal names the scope the key is missing
   (`universe:write`, `universe.place:write`), or reports that Team
   Create holds the place open.
+- [x] **Allow Mesh / Image APIs in Game Settings › Security.** Studio's
+  plugin keeps it as `isMeshTextureApiAccessAllowed` on
+  `develop.roblox.com/v2/universes/{id}/configuration` (seen in Studio's
+  own HTTP trace), but v2 only answers Studio, so we read and patch the
+  same field on v1 like the Creator Hub does. It runs as the Roblox
+  sign-in like Team Create, with Studio's label and text, and greys out
+  for a group game you don't own. The row sits in its own sign-in group
+  at the top of Security, not between Third Party Teleports and Third
+  Party Assets like in Studio, because the page groups rows by where
+  they're saved.
+- [x] **Publish as a new experience.** The game picker's New experience
+  button makes a private experience the way Studio's Publish As does
+  (`universes/v1/universes/create` with the Roblox sign-in, then the name
+  and description on `develop` v2 with a v1 fallback), links the file and
+  publishes it. Live-tested: one experience made, named, published to and
+  read back in real Studio's Experience Settings.
+- [x] **Game Settings' Creator Hub rows.** Icon, thumbnails (add and
+  remove, up to 10), Playability and Enable Studio Access to API Services
+  run as the Roblox sign-in and wait for Save; genre is shown read-only
+  with a Creator Hub link. Live-tested: icon upload, two thumbnail uploads
+  and a removal (read back through the public media and thumbnail APIs),
+  and the API access switch on and off (read back, and seen on in real
+  Studio's Security tab). Thumbnails can't be reordered: Studio's old
+  `thumbnails/order` call answers 200 but moves nothing, and a removal
+  only works with the media slot's own id, not the image id.
+- [x] **Playability says why it can't go public.** Roblox's 403 "You are
+  not authorized to configure this universe" on `activate` is its release
+  gate: `develop` `GET /v1/universes/{id}/activation-eligibility` (the call
+  real Studio makes too) answers not eligible, not maturity rated, until
+  the Maturity & Compliance Questionnaire is done. A private experience
+  that fails the gate shows the reason and a Creator Hub link instead of
+  the switch. Live-tested on an unarchived private test experience, and
+  real Studio's Manage Audience › Release publicly opens on that same
+  questionnaire.
+- [ ] 📋 **Going public from Game Settings once the gate passes**: the
+  switch still calls `activate`/`deactivate` for an experience that's
+  eligible or already public, but no test experience has answered the
+  questionnaire, so neither direction has been checked live.
 - [x] **Hover states fade** (what the visual pass left behind): every
   `hover` and `group_hover` style eases between its resting and hovered
   colours over 120 ms (`tokens::DURATION_HOVER`) and turns back from
@@ -2789,6 +2840,145 @@ both the plain fetch failure and the silent fall back to a default
   `segment_mesh` and `generate_texture` take the selection when
   `instance_path` is left out, as Studio does. The Play capture on
   Windows and the Win32 input have not been run on a real Windows PC.
+- [x] **MCP: save, keys by place, focus and pointer.** `save_place` is our
+  own tool (Studio's MCP has no save and `game:SavePlace()` only errors on
+  a local file): Save, or Save As to a `.rbxl`/`.rbxlx` path, so a place
+  can be built start to finish over MCP. `user_keyboard_input` sends keys
+  by their US-keyboard place (evdev codes on Linux, set-1 scan codes on
+  Windows), as a `KeyCode` means, and on Linux reaches the client whatever
+  window is active or on top. Play finds a user-installed Sober with an
+  isolated `XDG_DATA_HOME`, and picks the client window by creation time
+  instead of an id list. The Windows scan codes haven't been run on a
+  real PC.
+  Checked on real Studio (2026-10-30):
+  - Pointer across calls. Studio doesn't keep it: a click with no
+    position in a new call answers `Either x and y, instance_path, or a
+    prior action that establishes mouse position is required`. I had
+    made ours keep it, so I took that back out. Ours gives the same
+    error now and only reuses a position inside one call.
+  - Console cap. Studio keeps whole lines, newest first, while they add
+    up to 20000 characters (newlines don't count), and puts
+    `[TRUNCATED DUE TO LENGTH LIMIT]` on the line above. 400 lines of 101
+    characters gave the marker and 200 lines, 600 lines of 50 gave the
+    marker and 400, one 25000 character line gave just the marker. Ours
+    kept the last 20000 characters cut mid line; it gives those three
+    answers exactly now.
+  - Mapping. Studio's `Input.Position` is always the x,y asked for:
+    (300,200), ClickMe (200,130), (600,50), right click (40,300), with
+    ClickMe's AbsolutePosition at 100,100 and a 0,58 inset. Ours gave the
+    same four, and the button printed `clicked 1`. The reported
+    (300,200) to (481,168.5) didn't come back.
+  - Still flaky: on a busy desktop some of our clicks never reach Sober
+    at all, even a raw XTest click sent by hand, while Chee was using the
+    PC. That's delivery, not mapping, and I haven't pinned it down.
+
+- [x] **Require-by-string and case-only script names over MCP.** Edit's
+  `execute_luau`, the command bar and plugins now take
+  `require("./Sibling")`, `require("../Up")`, `require("@self/Child")` and
+  `require("@game/ReplicatedStorage/Shared/X")`. The walk follows Luau's
+  own `Require` navigator, the library Studio links: exact names, `..`
+  and `.` anywhere, `@Game` in any case, and the navigator's own reasons
+  inside Roblox's `error requiring "path": reason`. A path that lands on
+  something other than a `ModuleScript` gives Roblox's usual invalid
+  argument error. `multi_edit` no longer refuses `G_main` beside `g_main`:
+  Roblox names are case-sensitive, so it's a script of its own, created
+  and edited by its own spelling. Run side by side with real Studio 0.745
+  (Vinegar, `version-7062aec9dbe74b14`), same calls on both, now matching:
+  - `multi_edit` creating `ServerScriptService.G_main` next to `g_main`:
+    Studio `Created G_main (Script) with 1 edits applied`, then
+    `Modified G_main (Script) with 1 edits applied` and `Modified g_main
+    ...` for each spelling, two scripts left. Ours says the same.
+  - `require` straight from `execute_luau`: `error requiring "./A": could
+    not reset to requiring context`, the same for `@game/...` and
+    `@self/...`. From the command bar: `could not get parent of requiring
+    context` for `./A` and `../A`, `could not resolve child component "A"`
+    for `@self/A`, and `@game/ReplicatedStorage/C` loads. Ours used to
+    give the `execute_luau` answer in the bar too.
+  - A path ending on a Script or a Folder: `Unable to require module
+    from given path './NotModule'` (ours said `Attempted to call require
+    with invalid argument(s).`).
+  - A module that errors, for example `require("./Missing")` inside it:
+    Output gets `error requiring "./Missing": could not resolve child
+    component "Missing"`, and the requirer gets `Requested module
+    experienced an error while loading`, also on every later `require`
+    of it, which doesn't run it again. Ours used to pass the module's
+    error straight through and rerun it. A cycle prints `Requested module
+    was required recursively`, then the generic error, on both.
+  - `MeshId` and `MeshContent` writes, from `execute_luau` and the
+    command bar: `The current thread cannot write 'MeshId' (lacking
+    capability NotAccessible)`, whatever the value. Ours wrote them. The
+    check is the dump's `NotAccessibleSecurity` write, so the 13 other
+    properties marked that way fail too. `TextureID` writes on both.
+    `InitialSize`: `InitialSize is not a valid member of MeshPart
+    "Workspace.Mesh"` on both now (ours had no `"Workspace.Mesh"` part,
+    for any instance).
+  - `printidentity()`: `Current identity is 10` over MCP, `Current
+    identity is 4` in the command bar, `printidentity("tag")` gives
+    `tag 10`. Ours had none.
+  - `character_navigation` with `CharacterAutoLoads` off: Studio never
+    answers, it waits for `CharacterAdded`. Given a Model with no
+    Humanoid as `Character`, it warns `Infinite yield possible on
+    'Workspace.Bot:WaitForChild("Humanoid")'` and keeps waiting; add a
+    Humanoid and it walks and answers `Success`. Ours errored `The
+    character has not spawned` at once. It waits now too, prints the same
+    infinite yield warning, and with a server script spawning the
+    character 40 s in, answered `Success` after 43.7 s. The bridge also
+    gave up on any walk after 30 s; it waits 11 minutes now, past the
+    editor's own 10. One gap left: our bridge serves one call at a time,
+    so while a walk waits nothing else gets through, where Studio's other
+    tools keep answering.
+  Still different: we have no `Content` datatype yet, so
+  `MeshPart.MeshContent` reads as a string and `Content.fromUri` is nil
+  (Studio: `Content{SourceType=None}`); a missing member of `game` says
+  `of DataModel` without Studio's `"Verify.rbxlx"`; and `require` of an
+  asset id isn't supported.
+- [x] **Pseudo-localization preview and string extraction (beta)**: View's
+  Pseudo-loc tile draws every TextLabel, TextButton and TextBox about 40%
+  longer, bracketed and accented (`[!! Ţĥé … !!]`), optionally right to
+  left, on the 3D view's overlay and the UI Editor's canvas. It is display
+  only: the renderer draws copies, so the DOM, save and undo never see it.
+  Rich-text tags, `%d`-style specifiers and `{placeholders}` stay whole.
+  Every text object the longer text no longer fits, given its size,
+  `TextWrapped`, `TextScaled` and `AutomaticSize` and measured by the
+  renderer's own typesetter, is outlined red and listed in the
+  Localization dock, a click away. The dock's Strings tab lists the
+  `Text` of every object `AutoLocalize` leaves on and every literal a
+  client script assigns to `.Text` (parsed with `full_moon`), and writes
+  the new ones into a `LocalizationTable` under `LocalizationService` as
+  one undo step, in the `Contents` JSON Studio keeps, skipping strings a
+  table already holds.
+- [x] **Performance heatmap: totals and models (beta)**, behind the
+  `perf-models` switch. The Performance view gains Total and Physics:
+  `rbx_viewer::perf::models` weighs triangles, texture memory, instances,
+  simulated parts, constraints, costly collision fidelities, dense meshes
+  casting shadows, shadowed lights and blended overdraw into points, a
+  documented estimate rather than Roblox's own costs. The 20 costliest
+  models are ranked with a breakdown, and a click selects and frames one.
+- [x] **Module require graph (beta)**, behind the `require-graph`
+  switch: View › Require Graph, built on `rbx_audit::require_graph`,
+  draws scripts and modules with their statically resolved requires,
+  dashed unknown ones with their line, red cycles, amber client-to-server
+  requires, and lists those with the unused modules. Clicks open the
+  script or the require line.
+
+- [x] **Update planning: countdown icons on autopilot** (beta, concept by
+  [@MiniDev](https://vm.tiktok.com/ZN8AFbRwp/), see Acknowledgements).
+  File › Update Planning… lists the user's experiences with each one's
+  status. Per experience, reusable **timers** (12, 6, 3 and 1 hours to
+  start with), each a 512×512 overlay in one of three built-in styles or
+  the user's own PNG. A plan takes the current icon (fetched from Roblox
+  or a file), the new icon and the update time; the timeline previews
+  every composite at its time, then the new icon. **Start update** uploads
+  every image as a decal so it is reviewed early; the steps view shows each
+  as Uploaded, Approved and Upcoming or Applied, with the "update in"
+  countdown and Cancel. Steps are "set the icon the plan says is due now",
+  so a late run catches up; they fire while the editor is open and from
+  `rbxstudio --update-planning-tick`, which Start registers with the OS (a
+  systemd user timer, a launchd agent, a Task Scheduler task) and the last
+  run removes. Open Cloud can set the icon with an API key, through the
+  `legacy-universe:manage` game-icon route
+  (`docs/research/update-planning-icon-api.md`). Timer edits apply to the
+  next update only.
 
 ### Play / Test (`rbx_play`, `shell::play`)
 - [x] **Play without Roblox Studio** (`crates/rbx_play`, `shell/play`):
@@ -2802,6 +2992,9 @@ both the plain fetch failure and the silent fall back to a default
   closed after a confirmation (each client allows one instance); Invite
   copies a link to the exact test server. Research and live results:
   `docs/research/play-sandbox/`.
+- [x] Play publishes places up to 150 MiB, what Open Cloud really takes
+  (measured to the byte). It used to stop at 10 MiB because the OpenAPI
+  spec still says so.
 - [x] Server and client `print`/`warn`/`error` reach the Output dock
   during Play, tagged like Studio's context labels (Server blue, Client
   green). An error shows the Luau message itself, its `Script:line`, and
@@ -3151,6 +3344,13 @@ both the plain fetch failure and the silent fall back to a default
   not a default this project should ship opinionated about.
 
 ### Editor
+- [ ] 📋 **`EditableMesh` and `EditableImage` in the Luau runtime**: right
+  now scripts can't make them at all. Needs `AssetService:CreateEditableMesh`,
+  `CreateEditableImage` and `CreateMeshPartAsync`, the vertex/face/UV
+  methods, and the viewport drawing the result live, in Edit and in Play.
+  Found while porting OpenArena: its player and weapon models are
+  vertex-animated MD3s that get rebuilt every frame through `EditableMesh`,
+  so none of them show up in our editor yet (real Roblox runs them fine).
 - [ ] 📋 **The MCP server's AI generation tools and the package flag**:
   `generate_mesh`, `generate_material`, `generate_procedural_model`,
   `segment_mesh` and `generate_texture` are listed with Studio's schemas
@@ -3160,37 +3360,15 @@ both the plain fetch failure and the silent fall back to a default
   `insert_asset` always answers `isPackage: false`, since Open Cloud does
   not say whether an asset is a package.
 
-- [ ] 📋 **Update planning: countdown icons on autopilot** (concept by
-  [@MiniDev](https://vm.tiktok.com/ZN8AFbRwp/), see Acknowledgements).
-  Per experience, a set of reusable **timers** (say H-12, H-6, H-3, H-1),
-  each a transparent 512×512 PNG overlay such as an hourglass with
-  "6 Hours". To **plan an update** you pick the current icon (a file, or
-  fetched from Roblox) as the base for the timers, the new icon to apply at
-  update time, and the update's date and time. A **timeline** then
-  previews every step: each overlay composited on the current icon at its
-  time, then the new icon at T. **Start update** uploads every composited
-  image straight away, so each is moderated and approved hours early. A
-  steps view shows each one as Uploaded, Approved and then Upcoming or
-  Applied, with a live "update in" countdown and a Cancel. At each step
-  the experience icon is swapped automatically on every place in the
-  universe, with a desktop notification when it's applied ("New icon
-  applied on 3 places"). It needs a sidebar of the user's experiences with
-  per-experience status. Timer edits apply to future updates only, never to
-  one already started. Still open: whether Open Cloud can set an
-  experience's icon with an API key, or only the cookie-authenticated web
-  endpoint can.
-
-  Steps are written as "set the icon the plan says is due now", so a late
-  run catches up and any number of runners can't conflict. They fire while
-  the editor is open. **Start update** also registers a small background
-  helper with the OS, so steps keep firing after the editor is closed as
-  long as the PC is on and someone is logged in: a systemd user timer on
-  Linux, Task Scheduler on Windows, launchd on macOS. The helper is
-  removed when the plan finishes or is cancelled. Firing with the PC off
-  is under [Maybe](#maybe).
-
-  Later, the same plan could also restart servers onto the new version and
-  send an in-game announcement through MessagingService.
+- [ ] 📋 **Update planning: live check and what's left**: the shipped beta
+  has never talked to Roblox. Still to prove with a real key: that the
+  `legacy-universe:manage` icon route accepts the experience's source
+  language (its documented error 26 says it may not), that an image
+  approved as a decal ahead of time makes the swap skip review, and that
+  the OS helper fires and removes itself on Windows and macOS. Windows has
+  no desktop notification yet. Later, the same plan could also restart
+  servers onto the new version and send an in-game announcement through
+  MessagingService.
 
 - [x] **Accessory Fitting Tool** (Avatar › Accessory): pick a `MeshPart` or
   `Model`, Accessory or Clothing, the asset type and body scale, fit it on
@@ -3578,12 +3756,16 @@ engine, just as an escape hatch.
 
 ### Collaboration
 
-- [ ] 📋 **Co-editing without an rbx-native host, and at scale**, only the
-  hosted relay (an rbx-native user's own) keeps the op log, so Studio users
-  alone cannot co-edit, and a new host starts with an empty log (peers read
-  it from the start, and unsent edits move to it). Attributes and tags go
-  both ways; a 12,000 part place was tested live against Studio (the adds
-  land in about a minute, single edits in under 2 s).
+- [x] **Co-editing without an rbx-native host, and at scale**: the Worker
+  relay keeps the op log (ciphertext only), so Studio users alone can
+  co-edit; a new host is handed the log by the peers that read it instead of
+  starting empty; a 12,000 part change is posted in 16 requests instead of
+  632 (see [the measurements](docs/research/coedit-hostless.md)).
+- [ ] 📋 **Co-editing hostless, still unproven live**: Studio-only
+  co-editing ran against a local `wrangler dev`, not a deployed Worker, and
+  the handover between two real hosted relays is covered by tests over
+  HTTP, not run live. The 12,000 part sync still spends about 10 s in the
+  plugin collecting and sealing in Luau before anything is sent.
 
 Neither replaces **Team Create**, Roblox's actual real-time multi-user
 editing, that stays proprietary with no public protocol to build against

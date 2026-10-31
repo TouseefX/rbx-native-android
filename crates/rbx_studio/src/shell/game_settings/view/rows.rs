@@ -41,6 +41,8 @@ impl GameSettingsWindow {
             .iter()
             .copied()
             .filter(|f| f.tab() == self.tab)
+            // Signed in, Playability is the sign-in's switch instead.
+            .filter(|f| *f != CloudField::Visibility || self.team_create.web.is_none())
             .collect();
         if fields.is_empty() {
             return Vec::new();
@@ -271,7 +273,7 @@ pub(super) fn plain_row() -> Div {
 
 pub(super) fn row(
     label: &'static str,
-    description: &'static str,
+    description: impl IntoElement,
     scope: Option<&'static str>,
     edited: bool,
     control: AnyElement,

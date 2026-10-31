@@ -2,13 +2,16 @@
 //! file's own, on one set of pages shaped like Studio's Experience
 //! Settings, each row saying where its value lives (see `catalog`). Edits
 //! wait for Save: the cloud ones go to Roblox, the local ones land in the
-//! place as one undo step. Team Create's switch and session list, on
-//! Permissions, run as the editor's Roblox sign-in instead (`team_create`).
+//! place as one undo step. Team Create's switch and session list, and
+//! Security's Allow Mesh / Image APIs, run as the editor's Roblox sign-in
+//! instead (`team_create`), and so do the icon, thumbnails, genre,
+//! Playability and Studio's API access (`extras`).
 //!
 //! Like Version History, the window keeps no copy of the link: it reads it
 //! from `links.json` when it opens and whenever `roblox.changes` moves.
-//! `RBX_STUDIO_ROBLOX=game-settings` opens it with the editor; see `fetch` for
-//! the capture mock.
+//! `RBX_STUDIO_ROBLOX=game-settings` opens it with the editor, on the page
+//! `RBX_STUDIO_GAME_SETTINGS_TAB` names (`Permissions`, `Security`…); see
+//! `fetch` for the capture mock.
 
 use std::collections::BTreeMap;
 
@@ -22,14 +25,17 @@ use crate::tokens;
 use super::Shell;
 
 mod catalog;
+mod extras;
 mod fetch;
 mod inputs;
+mod media;
 mod model;
 mod save;
 mod team_create;
 mod view;
 
 use catalog::{CloudField, Tab};
+use extras::Extras;
 use model::{CloudDraft, CloudValue, LocalDraft};
 use team_create::TeamCreate;
 
@@ -72,6 +78,7 @@ pub(crate) struct GameSettingsWindow {
     /// Bumped by every load and save, so a reply that lost the race is dropped.
     generation: u64,
     team_create: TeamCreate,
+    extras: Extras,
     inputs: BTreeMap<InputKey, Entity<InputState>>,
     /// Inputs whose text doesn't parse, with why; Save waits for none.
     invalid: BTreeMap<InputKey, String>,
@@ -187,6 +194,10 @@ impl GameSettingsWindow {
             )
         };
         Self::poll_members(cx);
+        let tab = std::env::var("RBX_STUDIO_GAME_SETTINGS_TAB")
+            .ok()
+            .and_then(|name| Tab::ALL.into_iter().find(|t| t.title() == name))
+            .unwrap_or(tab);
         let mut this = GameSettingsWindow {
             link: home::link_of(&path),
             shell,
@@ -198,6 +209,7 @@ impl GameSettingsWindow {
             notice: None,
             generation: 0,
             team_create: TeamCreate::new(session),
+            extras: Extras::default(),
             inputs,
             invalid: BTreeMap::new(),
             reseed: true,
@@ -229,6 +241,7 @@ impl GameSettingsWindow {
     /// Fetches the remote settings for the current link (nothing unlinked).
     fn load(&mut self, cx: &mut Context<Self>) {
         self.load_team_create(cx);
+        self.load_extras(cx);
         self.generation += 1;
         let generation = self.generation;
         let Some(link) = self.link.clone() else {
@@ -276,6 +289,9 @@ impl GameSettingsWindow {
     }
 
     fn is_dirty(&self) -> bool {
-        self.cloud.is_dirty() || self.local.is_dirty() || self.team_create.draft.pending().is_some()
+        self.cloud.is_dirty()
+            || self.local.is_dirty()
+            || self.team_create.is_dirty()
+            || self.extras.is_dirty()
     }
 }

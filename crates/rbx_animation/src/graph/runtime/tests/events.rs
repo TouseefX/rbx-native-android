@@ -47,7 +47,7 @@ fn a_looping_clip_raises_its_markers_each_pass() {
     assert_eq!(p.events()[0].node, clip);
     p.step(0.2);
     assert!(p.events().is_empty());
-    p.step(0.7);
+    p.step(0.75);
     assert_eq!(names(&p), [("Step".into(), 1.)], "across the wrap");
 }
 
@@ -157,11 +157,12 @@ fn a_transition_passes_both_sides_by_their_share() {
 }
 
 #[test]
-fn parameters_read_nil_until_set_and_keep_their_defaults() {
+fn parameters_read_their_defaults_until_set() {
     let mut g = Graph::default();
     g.add_param(ParamKind::Number);
     let mut p = Player::new(g, &resolve);
-    assert_eq!(p.get("NumberParameter"), None);
+    assert_eq!(p.get("NumberParameter"), Some(&Value::Number(0.)));
+    assert_eq!(p.get("Missing"), None);
     assert_eq!(p.defaults()["NumberParameter"], Value::Number(0.));
     p.set("NumberParameter", Value::Number(3.));
     assert_eq!(p.get("NumberParameter"), Some(&Value::Number(3.)));
