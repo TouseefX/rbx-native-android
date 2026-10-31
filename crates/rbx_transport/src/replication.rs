@@ -135,11 +135,9 @@ impl Replication {
             0x83 => self.on_chain(body, log),
             0x81 => self.on_peer(body, log),
             0x8D => self.on_region(body, log),
-            0x84 => {
-                if !self.snapshot_done {
-                    self.snapshot_done = true;
-                    log("replication: snapshot done (0x84 marker)".to_string());
-                }
+            0x84 if !self.snapshot_done => {
+                self.snapshot_done = true;
+                log("replication: snapshot done (0x84 marker)".to_string());
             }
             _ => {}
         }
@@ -189,7 +187,7 @@ impl Replication {
                 if shared {
                     self.shared_batches += 1;
                 }
-                if self.batches <= 5 || self.batches % 100 == 0 {
+                if self.batches <= 5 || self.batches.is_multiple_of(100) {
                     let kind = if shared { "shared-string" } else { "instance" };
                     log(format!(
                         "replication: {kind} batch #{} ({}B inner)",
@@ -220,7 +218,7 @@ impl Replication {
             Ok(inner) => {
                 self.regions += 1;
                 self.region_bytes += inner.len() as u64;
-                if self.regions <= 5 || self.regions % 100 == 0 {
+                if self.regions <= 5 || self.regions.is_multiple_of(100) {
                     log(format!(
                         "replication: terrain chunk #{} ({}B)",
                         self.regions,

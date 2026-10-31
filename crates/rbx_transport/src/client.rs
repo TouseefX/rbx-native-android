@@ -888,7 +888,7 @@ impl Client {
             self.kal_per_id[usize::from(out_id)] += 1;
         }
         let ms = self.now_ms();
-        let clk24 = (ms & 0xff_ff_ff) as u32;
+        let clk24 = ms & 0xff_ff_ff;
         if big_pad {
             // Native pad shape: `00 <00*5> <u24 clock> 00*5 ...`, and the
             // 0x03 form adds a u32 clock, the 06 5f marker and five
