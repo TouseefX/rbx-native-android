@@ -537,7 +537,8 @@ mod tests {
         // slot. Folder's 2 members put Collaborator's base at 2.
         assert_eq!(collaborator.member_base, 2);
         assert_eq!(collaborator.global_property_id("UserId"), Some(2 + 7));
-        assert_eq!(collaborator.global_property_id("CFrame"), Some(2 + 0));
+        // CFrame is slot 0, so its global id is the base itself.
+        assert_eq!(collaborator.global_property_id("CFrame"), Some(2));
         // Player's base counts Folder, Collaborator and the service's
         // zero members too.
         let player = schema.class("Player").unwrap();
