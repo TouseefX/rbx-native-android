@@ -57,6 +57,7 @@ pub mod join_game;
 pub mod join_msg;
 pub mod join_schema;
 pub mod join_target;
+pub mod join_write;
 pub mod offline;
 pub mod replication;
 pub mod rupp;

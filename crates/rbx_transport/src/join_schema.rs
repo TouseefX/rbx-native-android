@@ -287,6 +287,12 @@ impl Class {
     pub fn global_event_id(&self, name: &str) -> Option<u32> {
         self.event_by_name.get(name).map(|i| self.event_base + *i as u32)
     }
+
+    /// An event by name, with its argument descriptors — what a
+    /// `0x07` invocation's arguments are encoded against.
+    pub fn event(&self, name: &str) -> Option<&Event> {
+        self.event_by_name.get(name).map(|i| &self.events[*i])
+    }
 }
 
 /// First-wins name → position map, so a duplicated name inside one
