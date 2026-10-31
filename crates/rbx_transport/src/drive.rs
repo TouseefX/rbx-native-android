@@ -243,7 +243,10 @@ pub fn drive(
     let mut a6_stage = 0u32;
     let mut clock_step: u32 = 0x270;
     let mut hb_started = false;
+    // The quiet-line state: see the liveness check in the loop below.
     let mut quiet_announced: u64 = 0;
+    let mut quiet_acks: u64 = 0;
+    let mut quiet_alive: Option<bool> = None;
     let mut app_messages = 0u64;
     let mut app_bytes = 0u64;
     let mut first_message = true;
@@ -315,15 +318,34 @@ pub fn drive(
                 }
             }
         }
-        // The RCC never sends a disconnect: a silent socket is a dead
-        // session, so say so instead of looking like a quiet one.
+        // The RCC never sends a disconnect: silence alone cannot tell a
+        // reaped session from an idle world, but its ACKs can.
         if let Some(quiet) = client.ms_since_rx() {
-            if quiet > 6000 && quiet.saturating_sub(quiet_announced) > 6000 {
-                quiet_announced = quiet;
-                say(format!(
-                    "NO SERVER DATAGRAM for {}s — reaped session or idle world (it never disconnects)",
-                    quiet / 1000
-                ));
+            if quiet > 6000 {
+                let acks = client.server_acks();
+                let alive = acks > quiet_acks;
+                let flip = quiet_alive != Some(alive);
+                if flip || quiet.saturating_sub(quiet_announced) > 60_000 {
+                    quiet_announced = quiet;
+                    quiet_acks = acks;
+                    quiet_alive = Some(alive);
+                    say(if alive {
+                        format!(
+                            "no server data for {}s — idle world (the RCC still ACKs our datagrams)",
+                            quiet / 1000
+                        )
+                    } else {
+                        format!(
+                            "no server data for {}s and no ACKs either — reaped session",
+                            quiet / 1000
+                        )
+                    });
+                }
+            } else {
+                // Data flowed again: the next silence starts from zero.
+                quiet_announced = 0;
+                quiet_acks = client.server_acks();
+                quiet_alive = None;
             }
         }
         if now >= next_ack {
@@ -349,11 +371,13 @@ pub fn drive(
         }
     }
     say(format!(
-        "session stopped after {}ms: {} messages ({}B), {} datagrams out, {} challenges answered",
+        "session stopped after {}ms: {} messages ({}B), {} datagrams out, {} server ACKs, {} retransmits, {} challenges answered",
         now_ms().saturating_sub(start),
         app_messages,
         app_bytes,
         client.datagrams_tx(),
+        client.server_acks(),
+        client.retransmits_tx(),
         client.challenge_answers()
     ));
     if let Some(summary) = replication.summary() {
