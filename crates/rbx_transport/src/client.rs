@@ -1388,8 +1388,10 @@ pub(crate) mod tests {
         assert_eq!(client.keepalive_replies(), 3);
 
         // A second pad with the same id: echoed again (the cap is six
-        // rounds per pad id, not one).
-        client.on_packet(&server.data(&frames::reliable(4, 4, true, 0, &pad).unwrap()));
+        // rounds per pad id, not one). It is a *new* ordered message,
+        // so its ordering index moves on — the old index would read as
+        // that message's retransmission and never deliver.
+        client.on_packet(&server.data(&frames::reliable(4, 4, true, 1, &pad).unwrap()));
         assert_eq!(client.keepalive_replies(), 4);
         assert_eq!(client.split_messages_tx(), 4);
     }
