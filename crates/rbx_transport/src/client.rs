@@ -12,16 +12,18 @@
 //! - the datagram counters — `dgram_no`, `rel_msg`, `ord_idx`, the split
 //!   id sequence, and the AEAD's transmit counter — with the ACK
 //!   datagrams deliberately *not* consuming a datagram id;
-//! - the RUPP subtype/token rule: the join token under subtype 1 for the
-//!   whole session by default (the subtype-2 switch is
-//!   `Config::token_sub_2` territory — it lost the session live on
-//!   2026-10-28), echoing the server's token only as an experiment;
-//! - receive bookkeeping: datagram dedup, ACKs flushed from inside the
-//!   receive path (the RCC's retransmit timer is faster than any outer
-//!   loop), and the server's 0xd0 ACKs counted as the only receipts;
-//! - the keepalive mirror: the 9/25-byte pings answered in kind, the
-//!   1160-byte MTU pad answered with one 0x03, two replies per id —
-//!   mirroring every pad builds an echo loop that drowns the join.
+//! - the RUPP subtype/token rule: the join token under subtype 1 through
+//!   the 0x09, then the server-issued token under subtype 2 from the
+//!   0x13 on — the native's schedule. The subtype-2 TLV2 port is the
+//!   session's real port (`rcc_data_port`), not NetStackPort;
+//! - receive bookkeeping: datagram dedup with *re-ACKed* retransmissions
+//!   (the lost packet may have been our ACK), ACKs flushed from inside
+//!   the receive path, and the server's 0xd0 ACKs counted as the only
+//!   receipts;
+//! - the keepalive mirror: the 9/25-byte pings answered unreliable with
+//!   our own clock, the big MTU pads *generated* per pad id with their
+//!   ping trio — echoing the server's own bytes back wedges its
+//!   MTU/time handshake forever.
 //!
 //! Not here, on purpose: the 2 ms pacing between split fragments (the
 //! socket layer's business — the reference sleeps inline, which a pure
@@ -30,7 +32,7 @@
 //! through an optional sink.
 
 use std::collections::HashSet;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::challenge;
 use crate::crypto::{self, SessionKeys, DATA_COUNTER_BASE};
@@ -52,11 +54,17 @@ pub struct Config {
     /// second address and Req2's inverted IP.
     pub peer_ip: [u8; 4],
     pub peer_port: u16,
-    /// The RCC pair every datagram's TLV2 carries (the join script's
-    /// NetStack address, *not* the UDP endpoint — substituting the UDP
-    /// port makes the server stop answering Req1).
+    /// The RCC pair every subtype-1 datagram's TLV2 carries (the join
+    /// script's NetStack address, *not* the UDP endpoint — substituting
+    /// the UDP port makes the server stop answering Req1).
     pub rcc_ip: [u8; 4],
     pub rcc_port: u16,
+    /// TLV2 port for subtype-2 datagrams — the established session's
+    /// real port, `ServerConnections[0].Port` (the port we dial). The
+    /// RCC routes the session path by TLV2, so advertising NetStackPort
+    /// there black-holes every subtype-2 datagram: the 0x09 is ACKed and
+    /// nothing after it is read. Zero = use `peer_port`.
+    pub rcc_data_port: u16,
     /// RUPP TLV1's token while we ride subtype 1: NetStackTokenValue.
     pub join_token: [u8; 16],
     /// Req1/Req2's protocol field (native: 5).
@@ -79,12 +87,19 @@ pub struct Config {
     pub encryption_mode: u8,
     /// The RUPP application id (native: 4).
     pub application_id: u8,
-    /// Ride subtype 2 with our own token from the 0x09 onward, like the
-    /// native. Off by default: the live 2026-10-28 result had the RCC
-    /// stop ACKing the moment subtype 2 started.
+    /// Ride subtype 2 with the session token from the 0x09 onward, ahead
+    /// of the native's schedule. Off by default: the 0x13 itself is the
+    /// native's first subtype-2 datagram, and that switch is what
+    /// `Client::new_incoming` performs.
     pub token_sub_2: bool,
-    /// Echo the server's announced token on subtype-2 datagrams (an A/B
-    /// knob; echoing Reply2's token gets everything dropped).
+    /// Pin the session to subtype 1 for the whole session, overriding the
+    /// 0x13's switch (an A/B knob; the established session the RCC
+    /// answers rides subtype 2).
+    pub token_sub_1: bool,
+    /// Echo the token the server issued in Reply2's RUPP header on every
+    /// subtype-2 datagram — the native's behaviour and the default since
+    /// the subtype-2 TLV2 port fix (`01 00 00 17 01 11 02 <16B>` is
+    /// reused verbatim). Off = present our own token instead.
     pub echo_server_token: bool,
     /// Send ACKs under subtype 1 with the join token even after a switch.
     pub ack_sub_1: bool,
@@ -102,6 +117,7 @@ impl Default for Config {
             peer_port: 0,
             rcc_ip: [0; 4],
             rcc_port: 0,
+            rcc_data_port: 0,
             join_token: [0; 16],
             protocol_version: 5,
             probe_size: 1129,
@@ -113,7 +129,8 @@ impl Default for Config {
             encryption_mode: 2,
             application_id: 4,
             token_sub_2: false,
-            echo_server_token: false,
+            token_sub_1: false,
+            echo_server_token: true,
             ack_sub_1: false,
             ack_token_mode: 0,
             key_seed: None,
@@ -150,9 +167,21 @@ pub struct Client {
     pending_acks: Vec<u32>,
     rx: RxStream,
 
+    // Reliable-datagram retransmission for the join. A single lost 0x90
+    // fragment leaves a hole in the RCC's ordered stream: it stops
+    // ACKing, the 0x8a behind the hole is never processed, and the 0x9b
+    // challenge never comes. Each unacknowledged reliable datagram is
+    // re-sent under a *fresh* datagram id (the reliable message number
+    // and split id stay put, so the receiver reassembles the same
+    // message; replaying the original id is discarded by the receiver's
+    // datagram-level dedupe before the message layer runs).
+    rtx: Vec<PendingTx>,
+    rtx_budget: i32,
+
     saw_net_settings: bool,
     kal_per_id: [u32; 256],
-    pad_replied: bool,
+    pad_replies: [u32; 256],
+    last_rx: Option<Instant>,
     t0: Instant,
 
     solver: Option<Solver>,
@@ -172,6 +201,7 @@ pub struct Client {
     non_rupp: u64,
     dgram_tx: u64,
     split_tx: u64,
+    rtx_tx: u64,
     acks_sent: u64,
     dups_dropped: u64,
     server_acks: u64,
@@ -179,6 +209,15 @@ pub struct Client {
     data_rx_frames: u64,
     app_bytes: u64,
     kal_replies: u64,
+    data_pongs: u64,
+}
+
+/// One queued reliable retransmit: the sealed datagram's plaintext, the
+/// time it becomes due again, and how many times it has been re-sent.
+struct PendingTx {
+    plain: Vec<u8>,
+    due: Instant,
+    tries: u32,
 }
 
 impl Client {
@@ -221,9 +260,12 @@ impl Client {
             seen_dgrams: HashSet::new(),
             pending_acks: Vec::new(),
             rx: RxStream::default(),
+            rtx: Vec::new(),
+            rtx_budget: 64,
             saw_net_settings: false,
             kal_per_id: [0; 256],
-            pad_replied: false,
+            pad_replies: [0; 256],
+            last_rx: None,
             t0: Instant::now(),
             solver: None,
             job_id: String::new(),
@@ -240,6 +282,7 @@ impl Client {
             non_rupp: 0,
             dgram_tx: 0,
             split_tx: 0,
+            rtx_tx: 0,
             acks_sent: 0,
             dups_dropped: 0,
             server_acks: 0,
@@ -247,6 +290,7 @@ impl Client {
             data_rx_frames: 0,
             app_bytes: 0,
             kal_replies: 0,
+            data_pongs: 0,
         }
     }
 
@@ -346,6 +390,18 @@ impl Client {
         self.split_tx
     }
 
+    /// Reliable datagrams re-sent under a fresh id (diagnostics).
+    pub fn retransmits_tx(&self) -> u64 {
+        self.rtx_tx
+    }
+
+    /// Milliseconds since the last authenticated server datagram, `None`
+    /// before the first one. The RCC ends a dead session without any
+    /// disconnect message, so silence is the signal.
+    pub fn ms_since_rx(&self) -> Option<u64> {
+        self.last_rx.map(|t| t.elapsed().as_millis() as u64)
+    }
+
     pub fn acks_sent(&self) -> u64 {
         self.acks_sent
     }
@@ -392,6 +448,11 @@ impl Client {
 
     pub fn keepalive_replies(&self) -> u64 {
         self.kal_replies
+    }
+
+    /// 0x83/05 data pings answered with a 0x83/06 pong.
+    pub fn data_pongs(&self) -> u64 {
+        self.data_pongs
     }
 
     /// Reply2's decrypted tail, when the tag verified.
@@ -456,27 +517,43 @@ impl Client {
         }
         let d = frames::connection_request(&self.session_guid);
         let ok = self.send_reliable(&d, false);
-        // The native's first three datagrams ride the join token under
-        // subtype 1; only the datagram after the 0x09 switches, and the
-        // switch still loses the live session — so it stays opt-in.
-        self.own_token_live = ok && self.cfg.token_sub_2;
+        // The 0x09 stays on subtype 1 (native order) — it is the native's
+        // *last* subtype-1 datagram. The switch to subtype 2 happens in
+        // `new_incoming`; `token_sub_2` only pulls it earlier, and even
+        // then not before the server has issued a session token.
+        self.own_token_live = ok && self.cfg.token_sub_2 && self.have_session;
         self.say("connection request sent");
         ok
     }
 
-    /// ID_NEW_INCOMING_CONNECTION (`0x13`): our socket address, the
-    /// peer's, twelve dummies — reliable ordered.
-    pub fn new_incoming(&mut self, local: ([u8; 4], u16)) -> bool {
+    /// ID_NEW_INCOMING_CONNECTION (`0x13`): the native's 114-byte shape —
+    /// a synthetic 127.139.202.222 address with a random port,
+    /// 128.255.254.254:0, nine 255.255.255.255:0 entries and the 36-byte
+    /// extension. Reliable ordered, and the datagram that flips the
+    /// session onto subtype 2 with the server-issued token.
+    pub fn new_incoming(&mut self) -> bool {
         if !self.data_ready {
             return false;
         }
-        let peer_port = if self.cfg.rcc_port != 0 {
-            self.cfg.rcc_port
+        // The native's 0x13 is the first datagram of the established
+        // session and the first under subtype 2; the earlier drops were
+        // the subtype-2 TLV2 port, not this payload. `token_sub_1` pins
+        // subtype 1 for A/B runs.
+        if self.have_session && !self.cfg.token_sub_1 {
+            self.own_token_live = true;
+        }
+        // The address/tail randoms are rolled per session; any fresh
+        // bytes work, so derive them from the keypair we present.
+        let mut rand = [0u8; 32];
+        rand.copy_from_slice(&self.keys.public());
+        let d = frames::new_incoming(&rand);
+        let ok = self.send_reliable(&d, true);
+        self.say(if ok {
+            "ID_NEW_INCOMING_CONNECTION sent 114B ok"
         } else {
-            self.cfg.peer_port
-        };
-        let d = frames::new_incoming(local, (self.cfg.peer_ip, peer_port));
-        self.send_reliable(&d, true)
+            "ID_NEW_INCOMING_CONNECTION send failed"
+        });
+        ok
     }
 
     /// ID_SUBMIT_TICKET (`0x8a`): the 5-part ClientTicket, reliable
@@ -494,6 +571,9 @@ impl Client {
     // --- the data layer ---------------------------------------------------
 
     /// One reliable application message, optionally reliable-ordered.
+    /// Queued for retransmission — the receiver's ACK is the only
+    /// receipt, and a lost fragment otherwise wedges the RCC's ordered
+    /// stream behind a hole.
     pub fn send_reliable(&mut self, data: &[u8], ordered: bool) -> bool {
         if !self.data_ready || data.is_empty() || data.len() > frames::MAX_MESSAGE {
             return false;
@@ -506,6 +586,7 @@ impl Client {
             self.ord_idx += 1;
         }
         self.rel_msg += 1;
+        self.queue_rtx(&frame);
         self.seal_and_send(&frame, true)
     }
 
@@ -558,6 +639,7 @@ impl Client {
             let Some(frame) = frame else {
                 return 0;
             };
+            self.queue_rtx(&frame);
             if !self.seal_and_send(&frame, true) {
                 return 0;
             }
@@ -633,6 +715,7 @@ impl Client {
             };
             self.rx_ctr = used + 1;
             self.data_rx_ok += 1;
+            self.last_rx = Some(Instant::now());
             if plain.len() >= 4 && plain[0] & 0xc0 == 0xc0 {
                 // The server's ACK form is 0xd0: transport only, and the
                 // only receipt the 0x09/0x13/0x90/0x8a ever get.
@@ -642,12 +725,19 @@ impl Client {
             if plain.len() >= 4 && plain[0] & 0x80 != 0 {
                 let num =
                     u32::from(plain[1]) | (u32::from(plain[2]) << 8) | (u32::from(plain[3]) << 16);
-                // ACK the highest reliable message number, not the
-                // datagram id: the RCC resends the same pad under fresh
-                // datagram ids forever if ids are what gets acked.
-                let ack_num = num.max(max_message_number(&plain));
+                // ACK the datagram id — that is what RakNet's ACK
+                // datagram carries. Acking a *message number* instead
+                // leaves the server's reliable window jammed: it resends
+                // the same 0x97/replication fragments forever, and the
+                // session dies right after the join snapshot.
+                let ack_num = num;
+                // A retransmission must be ACKed again: our previous ACK
+                // may have been the packet that got lost. Skip delivery,
+                // never the receipt.
                 if !self.seen_dgrams.insert(num) {
                     self.dups_dropped += 1;
+                    self.pending_acks.push(ack_num);
+                    self.flush_acks();
                     return;
                 }
                 self.pending_acks.push(ack_num);
@@ -681,6 +771,8 @@ impl Client {
         if let Some(peer) = reply.peer_data_public {
             self.keys.install_data(peer);
             self.data_ready = true;
+            self.rtx.clear();
+            self.rtx_budget = 64;
             self.tx_ctr = DATA_COUNTER_BASE;
             self.rx_ctr = DATA_COUNTER_BASE;
             self.say("reply2 verified, datagram keys installed");
@@ -702,6 +794,19 @@ impl Client {
             }
             if m.payload.len() == 5 && m.id == 0x84 {
                 self.ack_marker(&m.payload);
+                continue;
+            }
+            // The server's ~1 Hz data ping: the body echoed back with
+            // the sub-id flipped to 0x06. Left unanswered the RCC goes
+            // data-silent ~20 s into the session.
+            if m.payload.len() >= 2 && m.id == 0x83 && m.payload[1] == 0x05 {
+                let mut pong = m.payload.clone();
+                pong[1] = 0x06;
+                self.send_join_message(&pong, m.ordered);
+                self.data_pongs += 1;
+                if self.data_pongs == 1 {
+                    self.say("0x83/05 data ping answered (0x83/06)");
+                }
                 continue;
             }
             self.messages.push(m.payload);
@@ -750,38 +855,102 @@ impl Client {
         }
     }
 
-    /// Mirror one server ping. At most twice per id, and the 1160-byte
-    /// MTU pad gets exactly one 0x03 answer — mirroring every pad builds
-    /// the echo loop that drowns the join.
+    /// Mirror one server ping or MTU pad. The pads are *generated* from
+    /// our own clocks — echoing the server's own bytes back gives the RCC
+    /// its own timestamp, so its MTU/time handshake never completes: it
+    /// keeps probing with 1160-byte pads forever and never sends the
+    /// 0x9B challenge. A big pad is answered with the pad (same id, up
+    /// to six times) *and* its ping trio, all unreliable, or the RCC
+    /// never closes the exchange.
     fn mirror_keepalive(&mut self, m: &AppMessage) {
         let ping9 = m.payload.len() == 9 && matches!(m.id, 0x00 | 0x51..=0x53);
         let ping25 = m.payload.len() == 25 && matches!(m.id, 0x03 | 0x54..=0x56);
+        let big_pad = m.payload.len() > 64 && matches!(m.id, 0x00 | 0x03);
         let out_id = if ping9 || ping25 {
             m.id
-        } else if m.payload.len() > 64 && m.id == 0x00 {
-            if self.pad_replied {
+        } else if big_pad {
+            // Echo the same pad id, not 0x03: the RCC moves on to the
+            // next pad id only when it sees its own id back.
+            if self.pad_replies[usize::from(m.id)] >= 6 {
                 return;
             }
-            self.pad_replied = true;
-            0x03
+            self.pad_replies[usize::from(m.id)] += 1;
+            m.id
         } else {
             return;
         };
-        if self.kal_per_id[usize::from(out_id)] >= 2 {
+        // The per-id cap of two applies to the pings only; a pad exchange
+        // runs as many rounds as the RCC asks for (capped above).
+        if !big_pad {
+            if self.kal_per_id[usize::from(out_id)] >= 2 {
+                return;
+            }
+            self.kal_per_id[usize::from(out_id)] += 1;
+        }
+        let ms = self.now_ms();
+        let clk24 = (ms & 0xff_ff_ff) as u32;
+        let mut r;
+        if big_pad {
+            // Native pad shape: `00 <00*5> <u24 clock> 00*5 ...`, and the
+            // 0x03 form adds a u32 clock, the 06 5f marker and five
+            // random bytes — zeros to the length the RCC probed with.
+            let n = m.payload.len();
+            r = vec![0u8; n];
+            r[0] = out_id;
+            r[6] = (clk24 >> 16) as u8;
+            r[7] = (clk24 >> 8) as u8;
+            r[8] = clk24 as u8;
+            if out_id == 0x03 && n >= 25 {
+                r[14..18].copy_from_slice(&ms.to_be_bytes());
+                r[18] = 0x06;
+                r[19] = 0x5f;
+                // Five session-random bytes (any fresh values work).
+                r[20..25].copy_from_slice(&self.keys.public()[20..25]);
+            }
+            // Pads ride the reliable sequenced path (no ordering slot);
+            // the ping trio below rides unreliable.
+            self.send_join_message(&r, false);
+            if r.len() >= 9 {
+                let (a, b, c) = if out_id == 0x03 {
+                    (0x56u8, 0x55u8, 0x54u8)
+                } else {
+                    (0x53u8, 0x52u8, 0x51u8)
+                };
+                for pid in [a, b, c] {
+                    let p = [
+                        pid,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        (clk24 >> 16) as u8,
+                        (clk24 >> 8) as u8,
+                        clk24 as u8,
+                    ];
+                    self.send_unreliable(&p);
+                }
+            }
+            self.kal_replies += 1;
             return;
         }
-        self.kal_per_id[usize::from(out_id)] += 1;
-        let mut r = m.payload.clone();
+        r = m.payload.clone();
         r[0] = out_id;
-        // Refresh the clock fields with our own monotonic ms, big-endian
-        // like the native writes them.
-        let ms = self.now_ms().to_be_bytes();
         if r.len() == 9 {
-            r[5..9].copy_from_slice(&ms);
+            // Our own 24-bit clock's low half, like the native's 9-byte
+            // answer — never the server's value it arrived with.
+            r[5] = 0;
+            r[6] = 0;
+            r[7] = (clk24 >> 8) as u8;
+            r[8] = clk24 as u8;
         } else if r.len() == 25 {
-            r[21..25].copy_from_slice(&ms);
+            // The peer's clock stays at [6:9]; ours goes at [14:18].
+            r[14..18].copy_from_slice(&ms.to_be_bytes());
         }
-        self.send_join_message(&r, false);
+        // 9/25-byte pings are unreliable on the wire — giving them
+        // message numbers the RCC's ping path never sees wedges the
+        // exchange.
+        self.send_unreliable(&r);
         self.kal_replies += 1;
     }
 
@@ -832,50 +1001,87 @@ impl Client {
     }
 
     fn wrap_send(&mut self, sub: u8, token: [u8; 16], payload: &[u8]) -> bool {
+        // TLV2's port is subtype-dependent, and this is the difference
+        // that made every post-handshake session die after 2-5
+        // datagrams: subtype 1 (Req1/Req2/0x09) carries the join
+        // script's NetStackPort, subtype 2 (the established session)
+        // carries the port the session really sends to —
+        // ServerConnections[0].Port, the port we dial. The RCC routes
+        // the session path by TLV2, so advertising NetStackPort there
+        // black-holes every subtype-2 datagram: the 0x09 is ACKed and
+        // nothing after it is read.
+        let port = if sub == 2 {
+            if self.cfg.rcc_data_port != 0 {
+                self.cfg.rcc_data_port
+            } else {
+                self.cfg.peer_port
+            }
+        } else {
+            self.cfg.rcc_port
+        };
         let header = rupp::Header {
             token,
             subtype: sub,
-            rcc: Some((self.cfg.rcc_ip, self.cfg.rcc_port)),
+            rcc: Some((self.cfg.rcc_ip, port)),
         };
         self.out.push(rupp::wrap(&header, payload));
         true
     }
-}
 
-/// The highest reliable message number in a decrypted datagram — what the
-/// ACK path quotes when the RCC resends one message under fresh datagram
-/// ids. Ported verbatim, the 7-byte split skip included: the reference's
-/// ACK heuristic works as measured, quirk and all.
-fn max_message_number(d: &[u8]) -> u32 {
-    let mut best = 0u32;
-    let mut off = 4usize;
-    while off + 3 <= d.len() {
-        let rel = d[off];
-        let bits = (usize::from(d[off + 1]) << 8) | usize::from(d[off + 2]);
-        off += 3;
-        let kind = rel >> 5;
-        if kind > 4 || (rel == 0 && bits == 0) {
-            break;
+    /// Queue one reliable datagram for retransmission. Budgeted so the
+    /// post-join control ticks are not amplified, and capped so a stuck
+    /// session cannot grow the queue without bound.
+    fn queue_rtx(&mut self, plain: &[u8]) {
+        if self.rtx_budget <= 0 || plain.is_empty() || plain.len() > 1200 {
+            return;
         }
-        let dlen = bits.div_ceil(8);
-        if kind >= 2 {
-            if off + 3 > d.len() {
-                break;
-            }
-            let mn =
-                u32::from(d[off]) | (u32::from(d[off + 1]) << 8) | (u32::from(d[off + 2]) << 16);
-            best = best.max(mn);
-            off += 3;
+        self.rtx_budget -= 1;
+        if self.rtx.len() > 160 {
+            self.rtx.remove(0);
         }
-        if matches!(kind, 1 | 3 | 4) {
-            off += 4;
-        }
-        if rel & 0x10 != 0 {
-            off += 7;
-        }
-        off += dlen;
+        self.rtx.push(PendingTx {
+            plain: plain.to_vec(),
+            due: Instant::now() + Duration::from_millis(180),
+            tries: 0,
+        });
     }
-    best
+
+    /// Re-send every due unacknowledged reliable datagram under a *new*
+    /// datagram number (the reliable message number and split id stay
+    /// identical, so the receiver reassembles the same message). Call
+    /// from the session loop — the reference pumps this in its receive
+    /// loop.
+    pub fn pump_rtx(&mut self) {
+        if self.rtx.is_empty() {
+            return;
+        }
+        let now = Instant::now();
+        let mut i = 0;
+        while i < self.rtx.len() {
+            if now < self.rtx[i].due {
+                i += 1;
+                continue;
+            }
+            let n = self.rtx[i].plain.len();
+            if !(4..=1200).contains(&n) {
+                self.rtx.remove(i);
+                continue;
+            }
+            let mut d = self.rtx[i].plain.clone();
+            d[1..4].copy_from_slice(&self.dgram_no.to_le_bytes()[..3]);
+            let ok = self.seal_and_send(&d, true);
+            if ok {
+                self.rtx_tx += 1;
+            }
+            self.rtx[i].tries += 1;
+            if self.rtx[i].tries >= 5 {
+                self.rtx.remove(i);
+            } else {
+                self.rtx[i].due = now + Duration::from_millis(250);
+                i += 1;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1063,15 +1269,19 @@ pub(crate) mod tests {
         assert_eq!(&got[0].payload[9..], &frames::CONNECTION_REQUEST_TAIL[..]);
         assert!(!got[0].ordered);
 
-        // The 0x13: datagram 1, ordered.
-        assert!(client.new_incoming(([127, 0, 0, 1], 0)));
+        // The 0x13: datagram 1, ordered — and the datagram that flips
+        // the session onto subtype 2 (the mock's Reply2 already carried
+        // the server token, so the switch is live from here on).
+        assert!(client.new_incoming());
         let sends = client.take_sends();
+        assert_eq!(sends[0][4..7], [0x01, 0x11, 0x02]);
         let plain = server.open(&sends[0]).expect("the 0x13 opens");
         got.extend(server.rx.on_datagram(&plain));
         assert_eq!(got.len(), 2);
         assert_eq!(got[1].id, 0x13);
-        assert_eq!(got[1].payload.len(), 1 + 14 * 7);
-        assert_eq!(got[1].payload[1..8], [0x04, 127, 0, 0, 1, 0x00, 0x00]);
+        assert_eq!(got[1].payload.len(), 114);
+        assert_eq!(got[1].payload[1..6], [0x04, 127, 139, 202, 222]);
+        assert_eq!(got[1].payload[8..15], [0x04, 128, 255, 254, 254, 0x00, 0x00]);
         assert!(got[1].ordered);
         assert_eq!(got[1].ordering, 0);
 
@@ -1109,11 +1319,17 @@ pub(crate) mod tests {
         assert_eq!(client.acks_sent(), 2);
 
         // A retransmit of the first datagram: dropped before the message
-        // layer, no new ACK.
+        // layer, but ACKed *again* — the lost packet may have been our
+        // ACK, and deduping without re-ACKing jams the RCC's reliable
+        // window.
         client.on_packet(&server.data(&d1));
         assert!(client.take_messages().is_empty());
-        assert!(client.take_sends().is_empty());
         assert_eq!(client.dups_dropped(), 1);
+        let sends = client.take_sends();
+        assert_eq!(sends.len(), 1);
+        let reack = server.open(&sends[0]).expect("the re-ACK opens");
+        assert_eq!(reack[0], 0xc0);
+        assert_eq!(reack[1..7], [0x00, 0x01, 0x01, 0x00, 0x00, 0x00]);
 
         // The server's 0xd0 ACK: counted, nothing delivered, no reply.
         client.on_packet(&server.data(&[0xd0, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00]));
@@ -1123,13 +1339,14 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn keepalives_mirror_once_per_pad() {
+    fn keepalives_mirror_pings_and_generate_pads() {
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
 
-        // A 9-byte ping: mirrored with the same id and a fresh clock, the
-        // ACK first.
+        // A 9-byte ping: mirrored with the same id and a fresh clock —
+        // *unreliable*, so no reliable frame and no message number. The
+        // datagram's ACK goes out first.
         let mut ping = vec![0x00u8, 1, 0, 0, 0, 0, 0, 0, 0];
         ping[5..9].copy_from_slice(&1234u32.to_be_bytes());
         client.on_packet(&server.data(&frames::reliable(0, 0, false, 0, &ping).unwrap()));
@@ -1137,32 +1354,41 @@ pub(crate) mod tests {
         assert_eq!(sends.len(), 2);
         let mirror = server.open(&sends[1]).expect("mirror opens");
         assert_eq!(mirror[0], 0x81);
-        assert_eq!(mirror[4], 0x40);
-        assert_eq!(mirror[10], 0x00);
-        assert_ne!(mirror[15..19], 1234u32.to_be_bytes());
+        assert_eq!(mirror[4], 0x00); // kind 0: unreliable
+        assert_eq!(mirror[7], 0x00); // same id echoed
+        // Our own clock, not the server's 00 00 04 d2.
+        assert_ne!(&mirror[12..16], &[0x00, 0x00, 0x04, 0xd2]);
 
         // Same id twice more: one more mirror, then the per-id cap.
         client.on_packet(&server.data(&frames::reliable(1, 1, false, 0, &ping).unwrap()));
         client.on_packet(&server.data(&frames::reliable(2, 2, false, 0, &ping).unwrap()));
         assert_eq!(client.keepalive_replies(), 2);
 
-        // The 1160-byte MTU pad: answered with one 0x03, exactly once.
+        // The 1160-byte MTU pad: generated (own clock), same pad id, plus
+        // its ping trio — unreliable, so the exchange closes.
         let pad = vec![0x00u8; 1160];
         client.on_packet(&server.data(&frames::reliable(3, 3, true, 0, &pad).unwrap()));
-        client.on_packet(&server.data(&frames::reliable(4, 4, true, 0, &pad).unwrap()));
+        let sends = client.take_sends();
+        // ACK, two pad fragments (1160 > 1061 splits), then 53/52/51.
+        assert_eq!(sends.len(), 6);
+        let p0 = server.open(&sends[1]).expect("pad fragment opens");
+        assert_eq!(p0[0], 0x81);
+        let trio = [
+            server.open(&sends[3]).expect("ping opens"),
+            server.open(&sends[4]).expect("ping opens"),
+            server.open(&sends[5]).expect("ping opens"),
+        ];
+        assert_eq!(trio.iter().filter(|d| d[7] == 0x53).count(), 1);
+        assert_eq!(trio.iter().filter(|d| d[7] == 0x52).count(), 1);
+        assert_eq!(trio.iter().filter(|d| d[7] == 0x51).count(), 1);
+        assert!(trio.iter().all(|d| d[4] == 0x00));
         assert_eq!(client.keepalive_replies(), 3);
-        // The pad reply itself split (1160 > 1061).
-        assert_eq!(client.split_messages_tx(), 2);
-    }
 
-    #[test]
-    fn max_message_number_walks_the_datagram() {
-        let d = frames::reliable(3, 7, true, 2, b"\x8fdata").unwrap();
-        assert_eq!(max_message_number(&d), 7);
-        // Two messages in one datagram: the highest number wins.
-        let mut two = frames::reliable(4, 8, false, 0, b"\x00a").unwrap();
-        two.extend(&frames::reliable(4, 9, false, 0, b"\x00b").unwrap()[4..]);
-        assert_eq!(max_message_number(&two), 9);
+        // A second pad with the same id: echoed again (the cap is six
+        // rounds per pad id, not one).
+        client.on_packet(&server.data(&frames::reliable(4, 4, true, 0, &pad).unwrap()));
+        assert_eq!(client.keepalive_replies(), 4);
+        assert_eq!(client.split_messages_tx(), 4);
     }
 
     #[test]
@@ -1249,5 +1475,34 @@ pub(crate) mod tests {
         let ack = server.open(&sends[1]).expect("marker ack opens");
         assert_eq!(ack[14..19], [0x04, 0x01, 0x02, 0x03, 0x04]);
         assert_eq!(client.marker_acks(), 1);
+    }
+
+    #[test]
+    fn data_pings_are_ponged_with_the_sub_id_flipped() {
+        let mut client = Client::new(config());
+        let mut server = Server::new(client.public());
+        handshake(&mut client, &mut server);
+
+        // The server's ~1 Hz 0x83/05 ping: the body echoed, the sub-id
+        // flipped to 0x06, and nothing handed to the app layer.
+        let ping = [0x83u8, 0x05, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE];
+        let d = frames::reliable(0, 0, true, 0, &ping).unwrap();
+        client.on_packet(&server.data(&d));
+        assert!(client.take_messages().is_empty());
+        assert_eq!(client.data_pongs(), 1);
+        let sends = client.take_sends();
+        assert_eq!(sends.len(), 2); // the ACK, then the pong
+        let pong = server.open(&sends[1]).expect("pong opens");
+        assert_eq!(pong[0], 0x81);
+        assert_eq!(pong[4], 0x60); // reliable ordered, like the ping
+        // [14..] is the delivered payload: id, sub-id, body verbatim.
+        assert_eq!(&pong[14..21], &[0x83, 0x06, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE]);
+
+        // Any other 0x83 subtype is app data, not a ping.
+        let chain = [0x83u8, 0x16, 0x00, 0x01, 0x02];
+        let d = frames::reliable(1, 1, true, 1, &chain).unwrap();
+        client.on_packet(&server.data(&d));
+        assert_eq!(client.data_pongs(), 1);
+        assert_eq!(client.take_messages(), vec![chain.to_vec()]);
     }
 }

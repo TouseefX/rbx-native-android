@@ -10,8 +10,10 @@
 //! 4 + 19 + 8 = 31 bytes on the game path. TLV1 is the token
 //! (`01 11 <sub> <16B>`: type 1, len 17, subtype 1 = the join script's
 //! NetStackTokenValue, 2 = the session's own token); TLV2 is the RCC
-//! this session belongs to (`02 06 <IPv4 network order> <port BE16>`) —
-//! the server the join log names, which the RCC validates even on Req1.
+//! this session belongs to (`02 06 <IPv4 network order> <port BE16>`)
+//! — and its *port is subtype-dependent*: subtype 1 carries the join
+//! script's NetStackPort, subtype 2 the session's real port
+//! (`ServerConnections[0].Port`), which the RCC routes the session by.
 //! The server wraps its replies the same way, with short headers (total
 //! 4 or 23), and datagrams that do not parse as RUPP are dropped.
 

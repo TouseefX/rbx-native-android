@@ -8,16 +8,21 @@
 //! 2. Req2 up to three times until Reply2 verifies (its tag proves the
 //!    rx key);
 //! 3. the first encrypted datagram, ID_CONNECTION_REQUEST (0x09), a
-//!    600ms answer window, then the ACKs it owed;
-//! 4. the join burst ([`join_flow::send_join_flow`]): `0x13`@0, `0x90`@1,
-//!    `0x92`@2, `0x8a`@3, `0x8f`@4, the challenge's answer at 5 — never
-//!    gated on the `0x93` (the RCC answers the `0x90` with its `0x93`
-//!    and the `0x9B` within two datagrams, and the native has its `0x90`
-//!    in flight before the `0x93` lands);
-//! 5. the session: pump every 30ms, the native's `0xA6` input stream at
-//!    ~30Hz (`01`, `02`, `03` once then `04` forever, `stepId` +4 per
-//!    message — a one-shot burst is not enough: the RCC stops receiving
-//!    route ACKs and never replicates), ACKs every ~250ms.
+//!    short answer window, then the ACKs it owed — the native sends its
+//!    0x13 and 0x90 back-to-back with the 0x09;
+//! 4. the join burst ([`join_flow::send_join_flow`]): `0x13`@0, the
+//!    pre-join MTU ladder (unordered), `0x90`@1, `0x92`@2, `0x8a`@3,
+//!    `0x8f`@4, the challenge's answer at 5 — never gated on the `0x93`
+//!    (the RCC answers the `0x90` with its `0x93` and the `0x9B` within
+//!    two datagrams, and the native has its `0x90` in flight before the
+//!    `0x93` lands);
+//! 5. the session, at the native's measured cadence: pump every 30ms,
+//!    `0xA6` route frames every ~75ms (`01` once, then the tagged `02`
+//!    through `04`, `stepId` +4 per message from `0x14c`), one `0xA1`
+//!    camera frame per ~730ms, `0x83/23` input clocks every ~170ms, the
+//!    `0x83/05` physics-ack pair every ~2.5/5s, the `0x83/07` opener
+//!    once, ACKs every ~250ms, and reliable retransmits pumped every
+//!    loop.
 //!
 //! The challenge is answered reactively inside the client, never waited
 //! for; a failed solve sends nothing (a wrong answer gets the session
@@ -31,12 +36,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::time::Duration;
 
 /// What the driver needs from the network: datagrams out to the peer a
-/// socket is connected to, one back within `ms` (or `None`), and our own
-/// address, which the `0x13`'s second field carries.
+/// socket is connected to, one back within `ms` (or `None`).
 pub trait Io {
     fn send(&mut self, datagram: &[u8]) -> bool;
     fn recv_timeout(&mut self, ms: u32) -> Option<Vec<u8>>;
-    fn local(&self) -> ([u8; 4], u16);
 }
 
 /// The real [`Io`]: one UDP socket, bound anywhere, connected to the
@@ -72,13 +75,6 @@ impl Io for UdpIo {
             Err(_) => None,
         }
     }
-
-    fn local(&self) -> ([u8; 4], u16) {
-        match self.socket.local_addr() {
-            Ok(SocketAddr::V4(a)) => (a.ip().octets(), a.port()),
-            _ => ([0, 0, 0, 0], 0),
-        }
-    }
 }
 
 /// Everything one run needs. `js` is the join script with the hydration
@@ -107,6 +103,8 @@ pub struct Report {
     pub challenge_answers: u64,
     pub saw_challenge: bool,
     pub saw_net_settings: bool,
+    /// What the replication stream carried; see `replication`.
+    pub replication: crate::replication::Replication,
 }
 
 /// The RakNet endpoint never answered Req1.
@@ -149,7 +147,7 @@ pub fn drive(
         client.set_logger(Box::new(move |line| (*sink.borrow_mut())(line)));
     }
     client.set_solver(inputs.solver, &job_id);
-    let say = |line: String| (*log.borrow_mut())(line);
+    let mut say = |line: String| (*log.borrow_mut())(line);
 
     // 1. Req1, up to three times, two seconds per answer window.
     for attempt in 1..=3u8 {
@@ -191,11 +189,13 @@ pub fn drive(
     }
     say("encrypted handshake complete (Reply2 verified)".to_string());
 
-    // 3. The first encrypted datagram: ID_CONNECTION_REQUEST, an answer
-    //    window, then the ACKs it owed. The 0x13 rides the burst itself.
+    // 3. The first encrypted datagram: ID_CONNECTION_REQUEST, a short
+    //    answer window, then the ACKs it owed. The native sends its 0x13
+    //    and 0x90 back-to-back with the 0x09 — a 600 ms wait for the
+    //    0x93 settings push is not part of its join.
     client.connection_request();
     flush_sends(&mut client, io);
-    pump(&mut client, io, 600);
+    pump(&mut client, io, 30);
     client.flush_acks();
     flush_sends(&mut client, io);
     say(if client.saw_net_settings() {
@@ -208,7 +208,6 @@ pub fn drive(
     //    reference does.
     let rng32 = (now_ms() as u32) ^ 0x9E37_79B9;
     let flow = FlowInputs {
-        local: io.local(),
         js: inputs.js,
         reply: inputs.reply,
         place: inputs.place,
@@ -227,31 +226,105 @@ pub fn drive(
     }
     flush_sends(&mut client, io);
 
-    // 5. The session.
+    // 5. The session. The cadence is the native's, measured from its
+    // decrypted TX stream: 0xA6 route frames at ~13/s, one 0xA1 camera
+    // frame per ~730 ms, 0x83/23 input clocks at ~6/s (the clock starts
+    // at 0x270 and advances +8 per tick), a 0x83/05 physics ack pair
+    // (unreliable 45B every ~2.5 s, reliable 50B every ~5 s) and the
+    // 19-byte 0x83/07 control opener once.
     let start = now_ms();
     let mut next_input = start;
     let mut next_ack = start + 250;
-    let mut a6_step: u32 = 0x148;
+    let mut next_camera = start;
+    let mut next_clock_tick = start;
+    let mut next_ack83 = start + 2500;
+    let mut next_ack83_pair = start + 5000;
+    let mut a6_step: u32 = 0x14c;
     let mut a6_stage = 0u32;
+    let mut clock_step: u32 = 0x270;
+    let mut hb_started = false;
+    let mut quiet_announced: u64 = 0;
     let mut app_messages = 0u64;
     let mut app_bytes = 0u64;
     let mut first_message = true;
+    let mut replication = crate::replication::Replication::default();
     while now_ms().saturating_sub(start) < inputs.duration_ms {
         pump(&mut client, io, 30);
         let now = now_ms();
         if now >= next_input {
-            next_input += 33;
+            next_input += 75;
             // A clock that jumped (or a stall) does not fire a burst of
             // catch-up frames; the reference snaps the schedule.
             if now > next_input + 500 {
-                next_input = now + 33;
+                next_input = now + 75;
             }
             let frame = a6_frame(a6_index(a6_stage), a6_step);
             if client.send_unreliable(&frame) && a6_stage == 0 {
                 say("0xA6 input stream started (native route frames)".to_string());
             }
+            // The 0xA1 camera frame: `a1 <u32le clock>` + the 39-byte
+            // body the native's capture carries verbatim, one per
+            // ~730 ms.
+            if now >= next_camera {
+                next_camera = now + 730;
+                let mut a1 = vec![0xA1];
+                a1.extend_from_slice(&a6_step.to_le_bytes());
+                a1.extend_from_slice(&A1_TAIL);
+                client.send_unreliable(&a1);
+            }
             a6_step = a6_step.wrapping_add(4);
             a6_stage += 1;
+        }
+        // The post-join control stream starts with the first app
+        // message — the reference keys it off the world existing.
+        if !hb_started && app_messages > 0 {
+            hb_started = true;
+            let opener = hex_bytes("830701b612050013100000e04023b401000000");
+            client.send_join_message(&opener, true);
+        }
+        if hb_started {
+            if now >= next_clock_tick {
+                next_clock_tick = now + 170;
+                clock_step = clock_step.wrapping_add(8);
+                let hb = [
+                    0x83u8,
+                    0x23,
+                    (clock_step & 0xff) as u8,
+                    ((clock_step >> 8) & 0xff) as u8,
+                    ((clock_step >> 16) & 0xff) as u8,
+                    0,
+                    0,
+                ];
+                client.send_join_message(&hb, true);
+            }
+            if now >= next_ack83 {
+                let pair = now >= next_ack83_pair;
+                next_ack83 = now + 2500;
+                if pair {
+                    next_ack83_pair = now + 5000;
+                }
+                let unrel = hex_bytes(
+                    "830516dc10000000000000dc10000000000000b4f3314298612842000000000000000001db100000a03a834400",
+                );
+                client.send_unreliable(&unrel);
+                if pair {
+                    let rel = hex_bytes(
+                        "830516dc10000000000000dc10000000000000b4f3314298612842000000000000000000db100000a03a8344230c02000000",
+                    );
+                    client.send_join_message(&rel, true);
+                }
+            }
+        }
+        // The RCC never sends a disconnect: a silent socket is a dead
+        // session, so say so instead of looking like a quiet one.
+        if let Some(quiet) = client.ms_since_rx() {
+            if quiet > 6000 && quiet.saturating_sub(quiet_announced) > 6000 {
+                quiet_announced = quiet;
+                say(format!(
+                    "NO SERVER DATAGRAM for {}s — reaped session or idle world (it never disconnects)",
+                    quiet / 1000
+                ));
+            }
         }
         if now >= next_ack {
             next_ack += 250;
@@ -261,6 +334,10 @@ pub fn drive(
         for message in client.take_messages() {
             app_messages += 1;
             app_bytes += message.len() as u64;
+            // What the session carries, framed and classified (see
+            // `replication`): join data, instance batches, terrain,
+            // peers — the census the world builder will feed on.
+            replication.feed(&message, &mut say);
             if first_message {
                 first_message = false;
                 let id = message.first().copied().unwrap_or(0);
@@ -279,6 +356,9 @@ pub fn drive(
         client.datagrams_tx(),
         client.challenge_answers()
     ));
+    if let Some(summary) = replication.summary() {
+        say(format!("replication: {summary}"));
+    }
     Ok(Report {
         steps,
         datagrams_tx: client.datagrams_tx(),
@@ -287,6 +367,7 @@ pub fn drive(
         challenge_answers: client.challenge_answers(),
         saw_challenge: client.saw_challenge(),
         saw_net_settings: client.saw_net_settings(),
+        replication,
     })
 }
 
@@ -300,28 +381,42 @@ fn flush_sends(client: &mut Client, io: &mut dyn Io) {
 /// Everything that arrives within `ms`, into the client — and everything
 /// that makes it queue, back out. The window is per quiet spell: the
 /// first receive that times out ends it, which for a join client's
-/// traffic is the same wall clock as the reference's deadline.
+/// traffic is the same wall clock as the reference's deadline. Due
+/// reliable retransmits go out here too, so a lost join fragment is
+/// re-sent on time instead of after a long receive block.
 fn pump(client: &mut Client, io: &mut dyn Io, ms: u32) {
     while let Some(datagram) = io.recv_timeout(ms) {
         client.on_packet(&datagram);
     }
+    client.pump_rtx();
     flush_sends(client, io);
 }
 
-/// The native's `0xA6` route frames, captured: `01`, `02`, `03` once
-/// then `04` at ~30Hz, `stepId` +4 per message. The `stepId` is patched
-/// into the two 4-byte LE slots each frame carries.
+/// The native's `0xA6` route frames (2026-10-30): `01` is the short
+/// count=1 form, `02`-`04` carry the 11-byte tag
+/// `10 03 00 64 d0 b7 e6 d7 ff 03 e0`, and the step starts at `0x14c`,
+/// +4 per message. The step is patched into the two 4-byte LE slots
+/// each frame carries.
 const A6: [(&str, usize); 4] = [
-    ("a60101000148010000480100000000", 5),
-    ("a6020100014c0100004c0100000000040400", 5),
+    ("a6010100014c0100004c0100000000", 5),
+    ("a602010010030064d0b7e6d7ff03e050010000500100000000040400", 15),
     (
-        "a603010010030064d0b7e6d7ff03e050010000500100000000040400040400",
+        "a603010010030064d0b7e6d7ff03e054010000540100000000040400040400",
         15,
     ),
     (
-        "a604010010030064d0b7e6d7ff03e054010000540100000000040400040400040400",
+        "a604010010030064d0b7e6d7ff03e058010000580100000000040400040400040400",
         15,
     ),
+];
+
+/// The native `0xA1` camera frame's 39-byte body, carried verbatim by
+/// every frame in the capture (only the clock changes).
+const A1_TAIL: [u8; 39] = [
+    0x01, 0x00, 0x00, 0x00, 0x43, 0x62, 0xf9, 0xff, 0x01, 0x00, //
+    0x00, 0x00, 0x01, 0xb6, 0x12, 0x05, 0x00, 0x7e, 0x01, 0x09, //
+    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, //
+    0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f,
 ];
 
 fn a6_index(stage: u32) -> usize {
@@ -460,10 +555,6 @@ mod tests {
         fn recv_timeout(&mut self, _ms: u32) -> Option<Vec<u8>> {
             self.inbox.pop_front()
         }
-
-        fn local(&self) -> ([u8; 4], u16) {
-            ([192, 168, 1, 50], 50000)
-        }
     }
 
     #[test]
@@ -472,24 +563,43 @@ mod tests {
         assert_eq!(a6_index(2), 2);
         assert_eq!(a6_index(3), 3);
         assert_eq!(a6_index(9), 3);
-        let f = a6_frame(0, 0x148);
+        // The steps the native's frames carry: 0x14c +4 per message.
+        let f = a6_frame(0, 0x14c);
         assert_eq!(f.len(), 15);
         assert_eq!(f[0], 0xa6);
-        assert_eq!(&f[5..9], &0x148u32.to_le_bytes());
-        assert_eq!(&f[9..13], &0x148u32.to_le_bytes());
-        let f = a6_frame(1, 0x14c);
-        assert_eq!(f.len(), 18);
         assert_eq!(&f[5..9], &0x14cu32.to_le_bytes());
-        let f = a6_frame(2, 0x150);
-        assert_eq!(f.len(), 31);
+        assert_eq!(&f[9..13], &0x14cu32.to_le_bytes());
+        let f = a6_frame(1, 0x150);
+        assert_eq!(f.len(), 28);
         assert_eq!(&f[15..19], &0x150u32.to_le_bytes());
-        let f = a6_frame(3, 0x154);
-        assert_eq!(f.len(), 34);
+        let f = a6_frame(2, 0x154);
+        assert_eq!(f.len(), 31);
         assert_eq!(&f[15..19], &0x154u32.to_le_bytes());
-        assert_eq!(&f[19..23], &0x154u32.to_le_bytes());
-        // +4 per message, as the native's stepIds go.
         let f = a6_frame(3, 0x158);
+        assert_eq!(f.len(), 34);
         assert_eq!(&f[15..19], &0x158u32.to_le_bytes());
+        assert_eq!(&f[19..23], &0x158u32.to_le_bytes());
+    }
+
+    #[test]
+    fn the_control_stream_constants_match_the_capture() {
+        // The 0x83/07 opener is 19 bytes; the 0x83/05 acks are the
+        // captured 45-byte unreliable and 50-byte reliable pair.
+        assert_eq!(
+            hex_bytes("830701b612050013100000e04023b401000000").len(),
+            19
+        );
+        let unrel = hex_bytes(
+            "830516dc10000000000000dc10000000000000b4f331429861284200000000000000001db100000a03a834400",
+        );
+        let rel = hex_bytes(
+            "830516dc10000000000000dc10000000000000b4f3314298612842000000000000000000db100000a03a8344230c02000000",
+        );
+        assert_eq!(unrel.len(), 45);
+        assert_eq!(rel.len(), 50);
+        assert_eq!(A1_TAIL.len(), 39);
+        assert_eq!(A1_TAIL[0], 0x01);
+        assert_eq!(A1_TAIL[38], 0x3f);
     }
 
     #[test]

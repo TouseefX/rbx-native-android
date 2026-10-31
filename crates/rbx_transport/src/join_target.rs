@@ -1,9 +1,10 @@
 //! The join script -> [`Config`] bridge: the reference's
 //! `readJoinTarget`/`readSessionCrypto`, verbatim semantics. Everything
 //! the transport needs comes out of the join-game reply's `joinScript`
-//! object; the one number people get wrong is in here as a comment —
-//! the RUPP TLV2 pair is `rcc_ip:NetStackPort`, *not* the RCC's own
-//! port from `ServerConnections`.
+//! object; the one pair of numbers people get wrong is in here as a
+//! comment — RUPP TLV2 is *subtype-dependent*: subtype-1 datagrams
+//! carry `rcc_ip:NetStackPort`, the established session's subtype-2
+//! datagrams carry `rcc_ip:ServerConnections[0].Port`.
 
 use crate::client::Config;
 use serde_json::Value;
@@ -13,8 +14,8 @@ use serde_json::Value;
 /// - `NetStackPort` — a number in v1 joins, a string in legacy replies.
 /// - `UdmuxEndpoints[0]` — the RakNet endpoint we dial.
 /// - `ServerConnections[0].Address` — the RCC address for RUPP TLV2,
-///   paired with `NetStackPort` (the field's own `Port` is a different
-///   number and is never used).
+///   paired with `NetStackPort` on subtype-1 datagrams and with
+///   `ServerConnections[0].Port` on subtype-2 (the session's own port).
 /// - `NetStackTokenValue` — base64, 16 bytes, optional.
 /// - `EphemeralEarlyPubKey` — the per-session server key, bare base64
 ///   or a keyring document.
@@ -57,10 +58,16 @@ pub fn config_from_join_script(js: &Value) -> Result<Config, String> {
         return Err("joinScript lacks ServerConnections[0].Address".to_string());
     }
     cfg.rcc_ip = ipv4_field(&rcc, "ServerConnections[0].Address")?;
-    // RUPP TLV2 carries rcc_ip:NetStackPort (native rupp_tx001). The RCC
-    // port in ServerConnections is a different number and is NOT the
-    // TLV value — sending it makes the edge drop the handshake.
+    // Subtype-1 TLV2 (Req1/Req2/0x09) carries rcc_ip:NetStackPort
+    // (native rupp_tx001) — sending the RCC port there makes the edge
+    // drop the handshake. The established session's subtype-2 datagrams
+    // are the opposite: they carry the port the session really sends
+    // to, ServerConnections[0].Port, or the RCC silently drops every
+    // one of them.
     cfg.rcc_port = netstack_port;
+    if let Some(p) = servers[0].get("Port").map(port_of).filter(|p| *p != 0) {
+        cfg.rcc_data_port = p;
+    }
 
     // The token is parsed but not required: a caller may supply one out
     // of band, and policy belongs to whoever needs it.
@@ -312,8 +319,10 @@ mod tests {
         assert_eq!(cfg.peer_ip, [10, 190, 0, 5]);
         assert_eq!(cfg.peer_port, 50105);
         assert_eq!(cfg.rcc_ip, [10, 17, 9, 213]);
-        // The RCC pair is the NetStackPort, never ServerConnections' own.
+        // Subtype-1 TLV2 pairs with the NetStackPort; subtype-2 carries
+        // the session's real port from ServerConnections[0].
         assert_eq!(cfg.rcc_port, 51751);
+        assert_eq!(cfg.rcc_data_port, 9999);
         assert_eq!(cfg.join_token, token);
         assert_eq!(cfg.peer_pub, key);
         assert_eq!(cfg.ticket_pre, pre);
@@ -331,6 +340,9 @@ mod tests {
         let cfg = config_from_join_script(&js).unwrap();
         assert_eq!(cfg.peer_port, 51751); // no endpoint Port -> NetStackPort
         assert_eq!(cfg.rcc_port, 51751);
+        // No ServerConnections Port either: the data port falls back to
+        // the dial port at send time.
+        assert_eq!(cfg.rcc_data_port, 0);
         // No NetStackTokenValue and no ClientTicket: defaults stay.
         assert_eq!(cfg.join_token, [0u8; 16]);
         assert!(cfg.ticket_pre.is_empty());
