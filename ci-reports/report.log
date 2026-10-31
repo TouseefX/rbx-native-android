@@ -3,58 +3,72 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
-[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
-[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
-[1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
+[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
-[1m[91merror[E0277][0m[1m: the trait bound `[u64; 256]: std::default::Default` is not satisfied[0m
-  [1m[94m--> [0mcrates/rbx_transport/src/replication.rs:57:5
-   [1m[94m|[0m
-[1m[94m52[0m [1m[94m|[0m #[derive(Debug, Default)]
-   [1m[94m|[0m                 [1m[94m-------[0m [1m[94min this derive macro expansion[0m
-[1m[94m...[0m
-[1m[94m57[0m [1m[94m|[0m     pub types: [u64; 256],
-   [1m[94m|[0m     [1m[91m^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mthe trait `std::default::Default` is not implemented for `[u64; 256]`[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mhelp[0m: the following other types implement trait `std::default::Default`:
-             &[T]
-             &mut [T]
-             [T; 0]
-             [T; 1]
-             [T; 2]
-             [T; 3]
-             [T; 4]
-             [T; 5]
-           and 27 others
-
-[1m[91merror[E0277][0m[1m: the trait bound `[u64; 256]: std::default::Default` is not satisfied[0m
-  [1m[94m--> [0mcrates/rbx_transport/src/replication.rs:59:5
-   [1m[94m|[0m
-[1m[94m52[0m [1m[94m|[0m #[derive(Debug, Default)]
-   [1m[94m|[0m                 [1m[94m-------[0m [1m[94min this derive macro expansion[0m
-[1m[94m...[0m
-[1m[94m59[0m [1m[94m|[0m     pub chain_types: [u64; 256],
-   [1m[94m|[0m     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mthe trait `std::default::Default` is not implemented for `[u64; 256]`[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mhelp[0m: the following other types implement trait `std::default::Default`:
-             &[T]
-             &mut [T]
-             [T; 0]
-             [T; 1]
-             [T; 2]
-             [T; 3]
-             [T; 4]
-             [T; 5]
-           and 27 others
-
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
+[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
-[1mFor more information about this error, try `rustc --explain E0277`.[0m
-[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 2 previous errors
+[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
+[1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
+[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
+[1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
+[1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
+[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
+[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
+[1m[91merror[0m[1m: casting to the same type is unnecessary (`u32` -> `u32`)[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/client.rs:891:21
+    [1m[94m|[0m
+[1m[94m891[0m [1m[94m|[0m         let clk24 = (ms & 0xff_ff_ff) as u32;
+    [1m[94m|[0m                     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: try: `(ms & 0xff_ff_ff)`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#unnecessary_cast
+    [1m[94m= [0m[1mnote[0m: `-D clippy::unnecessary-cast` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::unnecessary_cast)]`
+
+[1m[91merror[0m[1m: this `if` can be collapsed into the outer `match`[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/replication.rs:139:17
+    [1m[94m|[0m
+[1m[94m139[0m [1m[94m|[0m [1m[91m/[0m                 if !self.snapshot_done {
+[1m[94m140[0m [1m[94m|[0m [1m[91m|[0m                     self.snapshot_done = true;
+[1m[94m141[0m [1m[94m|[0m [1m[91m|[0m                     log("replication: snapshot done (0x84 marker)".to_string());
+[1m[94m142[0m [1m[94m|[0m [1m[91m|[0m                 }
+    [1m[94m|[0m [1m[91m|_________________^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#collapsible_match
+    [1m[94m= [0m[1mnote[0m: `-D clippy::collapsible-match` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::collapsible_match)]`
+[1m[96mhelp[0m: collapse nested if block
+    [1m[94m|[0m
+[1m[94m138[0m [92m~ [0m            0x84
+[1m[94m139[0m [92m~ [0m                if !self.snapshot_done [92m=> [0m{
+[1m[94m140[0m [1m[94m|[0m                     self.snapshot_done = true;
+[1m[94m141[0m [1m[94m|[0m                     log("replication: snapshot done (0x84 marker)".to_string());
+[1m[94m142[0m [92m~ [0m                }
+    [1m[94m|[0m
+
+[1m[91merror[0m[1m: manual implementation of `.is_multiple_of()`[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/replication.rs:192:41
+    [1m[94m|[0m
+[1m[94m192[0m [1m[94m|[0m                 if self.batches <= 5 || self.batches % 100 == 0 {
+    [1m[94m|[0m                                         [1m[91m^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: replace with: `self.batches.is_multiple_of(100)`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#manual_is_multiple_of
+    [1m[94m= [0m[1mnote[0m: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+[1m[91merror[0m[1m: manual implementation of `.is_multiple_of()`[0m
+   [1m[94m--> [0mcrates/rbx_transport/src/replication.rs:223:41
+    [1m[94m|[0m
+[1m[94m223[0m [1m[94m|[0m                 if self.regions <= 5 || self.regions % 100 == 0 {
+    [1m[94m|[0m                                         [1m[91m^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: replace with: `self.regions.is_multiple_of(100)`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#manual_is_multiple_of
+
+[1m[91merror[0m: could not compile `rbx_transport` (lib) due to 4 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
 clippy=101 test=0
