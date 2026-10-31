@@ -18,6 +18,10 @@ rand_core = { version = "0.6", features = ["getrandom"] }
 # The join-message envelope's AES-128 single blocks — the same `aes` crate
 # aes-gcm already builds on, so this adds no new code to the build.
 aes = "0.8"
+# The replication stream's 0x97 join data and 0x16 instance batches arrive
+# zstd-compressed; ruzstd is the pure-Rust decoder rbx_binary already
+# builds with, so the Android target gains nothing new.
+ruzstd = "0.9"
 # The 0x90/0x8a bodies carry JSON whose key order must match the native's
 # serialiser. `preserve_order` is already unified into the workspace's
 # serde_json through the vendored gpui, so this only makes that visible
