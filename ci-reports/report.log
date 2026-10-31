@@ -1,31 +1,186 @@
 ## cargo fmt --check
-error: expected `,` following `match` arm
-  --> /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window/view/dialogs.rs:34:61
-   |
-34 |                 .team_create_dialog(experience, members, cx)
-   |                                                             ^
-   |
-help: missing a comma here to end this `match` arm
-   |
-34 |                 .team_create_dialog(experience, members, cx),
-   |                                                             +
-
-Error writing files: failed to resolve mod `dialogs`: cannot parse /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window/view/dialogs.rs
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window.rs:372:
+                     }
+                 }));
+         }
+-        this    }
++        this
++    }
+ 
+     /// The groups the owner dropdown lists after "You", by name.
+     pub(super) fn set_groups(&mut self, mut groups: Vec<rbx_cloud::Group>) {
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:394:
+             // Drop the connection and redo the handshake with a fresh
+             // script.
+             Err(err) if attempt < SESSION_ATTEMPTS && drive::is_handshake_miss(&err) => {
+-                say(format!("{err} — dropping the connection for a fresh session"));
++                say(format!(
++                    "{err} — dropping the connection for a fresh session"
++                ));
+                 continue;
+             }
+             Err(err) => return Err(err),
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:456:
+ ) -> Result<Value, String> {
+     for attempt in 1..=NEGOTIATION_TRIES {
+         status.set_phase(Phase::Negotiating { attempt });
+-        let answered = rbx_transport::join_game::team_create_join(
+-            place,
+-            cookie.expose_secret(),
+-            false,
+-        )?;
++        let answered =
++            rbx_transport::join_game::team_create_join(place, cookie.expose_secret(), false)?;
+         if !rbx_transport::join_game::team_create_endpoints(&answered).is_empty() {
+             return Ok(answered);
+         }
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:467:
+         if rbx_transport::join_game::all_null(&answered) {
+-            say(format!("session warming up (attempt {attempt}), asking again"));
++            say(format!(
++                "session warming up (attempt {attempt}), asking again"
++            ));
+         } else {
+-            say(format!("no endpoint in the answer yet (attempt {attempt}), asking again"));
++            say(format!(
++                "no endpoint in the answer yet (attempt {attempt}), asking again"
++            ));
+         }
+         std::thread::sleep(std::time::Duration::from_secs(1));
+     }
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:601:
+         session.finished();
+         let (phase, log) = session.snapshot();
+         assert!(matches!(phase, Phase::Failed(ref err) if err == "endpoint answered 403"));
+-        assert_eq!(log.last().map(String::as_str), Some("join failed: endpoint answered 403"));
++        assert_eq!(
++            log.last().map(String::as_str),
++            Some("join failed: endpoint answered 403")
++        );
+         assert!(session.is_finished());
+     }
+ 
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:632:
+         assert!(members.is_empty());
+         assert!(!me);
+         let (_, log) = session.snapshot();
+-        assert_eq!(log.last().map(String::as_str), Some("in server: 0 (nobody else)"));
++        assert_eq!(
++            log.last().map(String::as_str),
++            Some("in server: 0 (nobody else)")
++        );
+         let settled = session.version();
+         // The same answer again: nothing new, no version tick.
+         session.note_members(Vec::new(), Some(5));
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:671:
+ 
+     #[test]
+     fn the_peer_comes_from_the_first_endpoint() {
+-        let js: Value = serde_json::from_str(
+-            r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":50105}]}"#,
+-        )
+-        .unwrap();
++        let js: Value =
++            serde_json::from_str(r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":50105}]}"#)
++                .unwrap();
+         assert_eq!(peer_of(&js), Ok(([10, 190, 0, 5], 50105)));
+         // The port as a string, as scripts have been seen carrying it.
+-        let js: Value = serde_json::from_str(
+-            r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":"50105"}]}"#,
+-        )
+-        .unwrap();
++        let js: Value =
++            serde_json::from_str(r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":"50105"}]}"#)
++                .unwrap();
+         assert_eq!(peer_of(&js), Ok(([10, 190, 0, 5], 50105)));
+         assert!(peer_of(&serde_json::json!({})).is_err());
+         assert!(peer_of(&serde_json::json!({"UdmuxEndpoints":[]})).is_err());
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:771:
+ 
+     #[test]
+     fn hydration_merges_only_what_the_service_sent() {
+-        let mut js: Value =
+-            serde_json::from_str(r#"{"UserId":5,"AgeBracket":"old"}"#).unwrap();
++        let mut js: Value = serde_json::from_str(r#"{"UserId":5,"AgeBracket":"old"}"#).unwrap();
+         let doc: Value = serde_json::from_str(
+             r#"{"playerInfo":{"ageBracket":"13-to-17","gender":2,"platform":"Android"}}"#,
+         )
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/team_join.rs:799:
+     fn the_captured_templates_still_build() {
+         assert_eq!(TMPL_90[0], 0x90);
+         assert_eq!(TMPL_8A[0], 0x8a);
+-        let js: Value =
+-            serde_json::from_str(r#"{"UserId":5,"CharacterAppearanceId":5}"#).unwrap();
++        let js: Value = serde_json::from_str(r#"{"UserId":5,"CharacterAppearanceId":5}"#).unwrap();
+         let reply: Value = serde_json::from_str(
+             r#"{"joinTicket":{"SerializedClientFields":"a","EncryptedServerFields":"b"}}"#,
+         )
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher.rs:22:
+ mod home_window;
+ mod key_check;
+ mod publishing;
+-pub(crate) mod team_join;
+ pub(crate) mod setup;
+ pub(crate) mod startup;
++pub(crate) mod team_join;
+ pub(crate) mod ui;
+ mod wizard;
+ 
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/shell/team_create.rs:39:
+     /// The card's poller: repaints when the session wrote something,
+     /// records the verdict in the Output dock when it ends, and stops
+     /// once that end is painted (or the window is gone).
+-    pub(in crate::shell) fn watch_team_create(
+-        &mut self,
+-        session: Session,
+-        cx: &mut Context<Self>,
+-    ) {
++    pub(in crate::shell) fn watch_team_create(&mut self, session: Session, cx: &mut Context<Self>) {
+         cx.spawn(async move |this, cx| {
+             let mut seen = None;
+             let mut recorded = false;
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/shell/team_create.rs:110:
+                 format!("Asking the session server ({attempt})\u{2026}"),
+                 ui::accent(),
+             ),
+-            Phase::Joined if members.is_empty() => (
+-                "Joined \u{2014} session live".to_string(),
+-                ui::green(),
+-            ),
++            Phase::Joined if members.is_empty() => {
++                ("Joined \u{2014} session live".to_string(), ui::green())
++            }
+             Phase::Joined => (
+                 format!("Joined \u{2014} {} in server", members.len()),
+                 ui::green(),
+Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/shell/team_create.rs:225:
+                                         .rounded_full()
+                                         .border_1()
+                                         .border_color(ui::panel())
+-                                        .bg(if online {
+-                                            ui::green()
+-                                        } else {
+-                                            tokens::text3()
+-                                        }),
++                                        .bg(if online { ui::green() } else { tokens::text3() }),
+                                 )
+                         }))
+                         .when(more > 0, |row| {
 ## cargo clippy
 [1m[92m    Updating[0m crates.io index
 [1m[92m    Checking[0m rbx_dom v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_dom)
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
+[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
+[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
-[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
-[1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
-[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
+[1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
@@ -43,61 +198,21 @@ Error writing files: failed to resolve mod `dialogs`: cannot parse /home/runner/
 [1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
 [1m[92m    Checking[0m gpui-kit-assets v0.6.4
-[1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
 [1m[92m    Checking[0m gpui-pre-linux v0.3.5
+[1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[0m[1m: expected `,` following `match` arm[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/view/dialogs.rs:34:61
-   [1m[94m|[0m
-[1m[94m34[0m [1m[94m|[0m                 .team_create_dialog(experience, members, cx)
-   [1m[94m|[0m                                                             [1m[91m^[0m
-   [1m[94m|[0m
-[1m[96mhelp[0m: missing a comma here to end this `match` arm
-   [1m[94m|[0m
-[1m[94m34[0m [1m[94m| [0m                .team_create_dialog(experience, members, cx)[92m,[0m
-   [1m[94m|[0m                                                             [92m+[0m
+[1m[91merror[0m[1m: unused import: `gpui_kit::prelude::FluentBuilder`[0m
+ [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/view/crash_notice.rs:9:5
+  [1m[94m|[0m
+[1m[94m9[0m [1m[94m|[0m use gpui_kit::prelude::FluentBuilder;
+  [1m[94m|[0m     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [1m[94m|[0m
+  [1m[94m= [0m[1mnote[0m: `-D unused-imports` implied by `-D warnings`
+  [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_imports)]`
 
-[1m[91merror[E0308][0m[1m: mismatched types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/open.rs:130:9
-    [1m[94m|[0m
-[1m[94m115[0m [1m[94m|[0m     pub(super) fn open_team_create_locally(&mut self, cx: &mut Context<Self>) {
-    [1m[94m|[0m                                                                              [1m[94m-[0m [1m[94mhelp: try adding a return type: `-> bool`[0m
-[1m[94m...[0m
-[1m[94m130[0m [1m[94m|[0m         false
-    [1m[94m|[0m         [1m[91m^^^^^[0m [1m[91mexpected `()`, found `bool`[0m
-
-[1m[91merror[E0308][0m[1m: `match` arms have incompatible types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/view/dialogs.rs:33:18
-    [1m[94m|[0m
-[1m[94m 18[0m [1m[94m|[0m           Some(match dialog {
-    [1m[94m|[0m                [1m[94m------------[0m [1m[94m`match` arms have incompatible types[0m
-[1m[94m...[0m
-[1m[94m 24[0m [1m[94m|[0m               } => self
-    [1m[94m|[0m [1m[94m __________________-[0m
-[1m[94m 25[0m [1m[94m|[0m [1m[94m|[0m                 .archive_dialog(place, *restore, *busy, error.as_deref(), cx)
-[1m[94m 26[0m [1m[94m|[0m [1m[94m|[0m                 .into_any_element(),
-    [1m[94m|[0m [1m[94m|___________________________________-[0m [1m[94mthis is found to be of type `gpui_kit::AnyElement`[0m
-[1m[94m 27[0m [1m[94m|[0m               Dialog::Cookie { busy, error } => self
-    [1m[94m|[0m [1m[94m _______________________________________________-[0m
-[1m[94m 28[0m [1m[94m|[0m [1m[94m|[0m                 .cookie_dialog(*busy, error.as_deref(), cx)
-[1m[94m 29[0m [1m[94m|[0m [1m[94m|[0m                 .into_any_element(),
-    [1m[94m|[0m [1m[94m|___________________________________-[0m [1m[94mthis is found to be of type `gpui_kit::AnyElement`[0m
-[1m[94m...[0m
-[1m[94m 33[0m [1m[94m|[0m               } => self
-    [1m[94m|[0m [1m[91m __________________^[0m
-[1m[94m 34[0m [1m[94m|[0m [1m[91m|[0m                 .team_create_dialog(experience, members, cx)
-    [1m[94m|[0m [1m[91m|____________________________________________________________^[0m [1m[91mexpected `AnyElement`, found opaque type[0m
-[1m[94m...[0m
-[1m[94m450[0m [1m[94m|[0m       ) -> impl IntoElement {
-    [1m[94m|[0m            [1m[94m----------------[0m [1m[94mthe found opaque type[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m:   expected struct `[1m[35mgpui_kit::AnyElement[0m`
-            found opaque type `[1m[35mimpl gpui_kit::IntoElement[0m`
-
-[1mFor more information about this error, try `rustc --explain E0308`.[0m
-[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 3 previous errors
+[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 1 previous error
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 3 previous errors
+[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 1 previous error
 fmt=1 clippy=101 test=0
