@@ -28,6 +28,12 @@ const LINES: usize = 3;
 /// cannot stretch for them.
 const WIDTH: usize = 90;
 
+/// How many roster avatars the card paints before a `+n`.
+const AVATARS: usize = 5;
+
+/// The roster avatar's size, in pixels.
+const AVATAR_PX: f32 = 16.;
+
 impl Shell {
     /// The card's poller: repaints when the session wrote something,
     /// records the verdict in the Output dock when it ends, and stops
@@ -48,6 +54,12 @@ impl Shell {
                     continue;
                 }
                 seen = Some(version);
+                // The roster's new faces need headshots; the cache is
+                // shared with the presence panel, so only ids it does
+                // not have yet are fetched. Read before `update`: the
+                // session is not the window.
+                let (roster, _) = session.members();
+                let member_ids: Vec<u64> = roster.into_iter().map(|m| m.id).collect();
                 let verdict = if done && !recorded {
                     recorded = true;
                     match session.snapshot().0 {
@@ -71,6 +83,8 @@ impl Shell {
                         if let Some(feedback) = verdict {
                             shell.output.push("Team Create", feedback);
                         }
+                        let missing = shell.team_presence.take_unasked(member_ids);
+                        shell.fetch_headshots(missing, cx);
                         cx.notify();
                     })
                     .is_ok();
@@ -88,12 +102,20 @@ impl Shell {
     pub(in crate::shell) fn team_create_card(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let session = self.team_create.as_ref()?;
         let (phase, log) = session.snapshot();
+        let (members, me) = session.members();
         let (headline, dot) = match phase {
             Phase::Negotiating { attempt } => (
                 format!("Asking the session server ({attempt})\u{2026}"),
                 ui::accent(),
             ),
-            Phase::Joined => ("Joined \u{2014} session live".to_string(), ui::green()),
+            Phase::Joined if members.is_empty() => (
+                "Joined \u{2014} session live".to_string(),
+                ui::green(),
+            ),
+            Phase::Joined => (
+                format!("Joined \u{2014} {} in server", members.len()),
+                ui::green(),
+            ),
             Phase::Rejoining { attempt } => (
                 format!("Rejoining \u{2014} fresh session (attempt {attempt})\u{2026}"),
                 ui::accent(),
@@ -153,6 +175,44 @@ impl Shell {
                         .child(div().flex_1())
                         .child(dismiss),
                 )
+                .children((!members.is_empty()).then(|| {
+                    // Studio's team-create panel, on a card: the
+                    // server's roster as round avatars (the same shared
+                    // headshot cache the presence panel uses), a `+n`
+                    // for the rest, and a green check when the server's
+                    // list has us.
+                    let more = members.len().saturating_sub(AVATARS);
+                    h_flex()
+                        .items_center()
+                        .gap(px(4.))
+                        .children(members.iter().take(AVATARS).map(|m| {
+                            let color = super::team_presence::parse_color(
+                                rbx_presence::schema::color_for(m.id),
+                            )
+                            .unwrap_or((255, 255, 255));
+                            super::team_presence::avatar(
+                                self.team_presence.avatars.get(&m.id).cloned(),
+                                color,
+                                member_name(m),
+                                AVATAR_PX,
+                            )
+                        }))
+                        .when(more > 0, |row| {
+                            row.child(
+                                ui::text(10., 14.)
+                                    .text_color(tokens::text3())
+                                    .child(format!("+{more}")),
+                            )
+                        })
+                        .when(me, |row| {
+                            let you = h_flex()
+                                .items_center()
+                                .gap(px(2.))
+                                .child(ui::icon("check", 10.).text_color(ui::green()))
+                                .child(ui::text(10., 12.).text_color(ui::green()).child("you"));
+                            row.child(div().flex_1()).child(you)
+                        })
+                }))
                 .children(log.into_iter().skip(skip).map(|line| {
                     ui::text(10.5, 14.)
                         .text_color(tokens::text3())
@@ -170,5 +230,15 @@ fn short(text: &str) -> String {
         format!("{}\u{2026}", text.chars().take(WIDTH).collect::<String>())
     } else {
         text.to_string()
+    }
+}
+
+/// The member's display name, falling back to the username — the same
+/// pick the session's roster lines use.
+fn member_name(member: &rbx_cloud::SessionMember) -> &str {
+    if member.display_name.is_empty() {
+        &member.name
+    } else {
+        &member.display_name
     }
 }

@@ -18,6 +18,11 @@ mod model;
 mod panel;
 mod viewport;
 
+// The team-create roster card (a sibling module) draws the same round
+// avatars the presence panel does, through the same shared cache.
+pub(in crate::shell) use model::parse_color;
+pub(in crate::shell) use panel::avatar;
+
 pub(super) use hooks::PresenceMark;
 
 use std::time::Instant;
@@ -135,6 +140,19 @@ pub(super) struct TeamPresence {
 }
 
 impl TeamPresence {
+    /// The ids in `ids` whose headshots have not been asked for yet,
+    /// marking them asked as a side effect — the shared cache's guard,
+    /// for avatar fetches triggered outside this module (the
+    /// team-create roster card).
+    pub(in crate::shell) fn take_unasked(
+        &mut self,
+        ids: impl IntoIterator<Item = u64>,
+    ) -> Vec<u64> {
+        ids.into_iter()
+            .filter(|id| *id != 0 && self.avatar_asked.insert(*id))
+            .collect()
+    }
+
     pub(super) fn new(
         settings: TeamPresenceSettings,
         window: &mut Window,
@@ -841,6 +859,15 @@ impl Shell {
             .map(|c| c.user_id)
             .filter(|id| *id != 0 && presence.avatar_asked.insert(*id))
             .collect();
+        self.fetch_headshots(missing, cx);
+    }
+
+    /// Fetches headshots for the given ids (which the caller has
+    /// already filtered against the asked-for set) and merges them into
+    /// the shared cache — the presence panel's collaborators and the
+    /// team-create roster card draw from the same Studio-style round
+    /// avatars, so both fetch through here.
+    pub(in crate::shell) fn fetch_headshots(&mut self, missing: Vec<u64>, cx: &mut Context<Self>) {
         if missing.is_empty() {
             return;
         }

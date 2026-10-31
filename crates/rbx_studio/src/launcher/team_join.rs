@@ -59,6 +59,13 @@ fn reply_for_flow(reply: &Value) -> &Value {
 /// How many of the session's last lines the status keeps.
 const LOG_TAIL: usize = 6;
 
+/// How often the member list is re-read while the session runs. The
+/// RakNet stream cannot tell us who is in the place yet (the roster
+/// rides the replication the world builder will parse), so the
+/// team-create endpoint is the source of truth — and the test: the
+/// server only lists the account once its session is really registered.
+const MEMBER_POLL: std::time::Duration = std::time::Duration::from_secs(1);
+
 /// The session's on-screen status: the thread writes, the editor
 /// window's card (see `shell::team_create`) reads a snapshot, and
 /// `version` ticks on every write so the card's poller only repaints
@@ -78,6 +85,14 @@ struct SessionState {
     phase: Phase,
     log: VecDeque<String>,
     version: u64,
+    /// Who the team-create endpoint says is in the place right now.
+    members: Vec<rbx_cloud::SessionMember>,
+    /// The first member read has happened (so an empty list is
+    /// reported once, not every poll).
+    members_seen: bool,
+    /// Our own account is in that list — the "the server really has
+    /// you" verdict.
+    me_listed: bool,
 }
 
 /// Where the join stands, for the card's headline and its dot's color.
@@ -109,6 +124,9 @@ impl Session {
                     phase: Phase::Negotiating { attempt: 1 },
                     log: VecDeque::new(),
                     version: 0,
+                    members: Vec::new(),
+                    members_seen: false,
+                    me_listed: false,
                 }),
                 finished: AtomicBool::new(false),
             }),
@@ -165,6 +183,75 @@ impl Session {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         (state.phase.clone(), state.log.iter().cloned().collect())
+    }
+
+    /// Who the team-create endpoint says is in the place, and whether
+    /// our own account is among them.
+    pub(crate) fn members(&self) -> (Vec<rbx_cloud::SessionMember>, bool) {
+        let state = self
+            .inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        (state.members.clone(), state.me_listed)
+    }
+
+    /// One member-list read: on any change the card repaints (the
+    /// version tick) and the roster says so in the log — the roster is
+    /// small and changes rarely, unlike the poll. The lock is taken
+    /// directly, not through `edit`, because `edit` ticks the version
+    /// on every call and the poll would then wake the card every
+    /// second for nothing.
+    fn note_members(&self, list: Vec<rbx_cloud::SessionMember>, own: Option<u64>) {
+        let me = own.is_some_and(|me| list.iter().any(|m| m.id == me));
+        let mut lines: Vec<String> = Vec::new();
+        {
+            let mut state = self
+                .inner
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let roster_changed = state.members != list || state.me_listed != me;
+            let first = !state.members_seen;
+            if !roster_changed && !first {
+                return;
+            }
+            let was_me = state.me_listed;
+            state.members_seen = true;
+            state.members = list;
+            state.me_listed = me;
+            state.version += 1;
+            // The roster line: the endpoint's names, or that it is
+            // empty. `line` locks on its own, so the strings are
+            // built here and written after the edit.
+            let names = state
+                .members
+                .iter()
+                .map(|m| {
+                    if m.display_name.is_empty() {
+                        m.name.as_str()
+                    } else {
+                        m.display_name.as_str()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            let names = if names.is_empty() {
+                "nobody else".to_string()
+            } else {
+                names
+            };
+            lines.push(format!("in server: {} ({names})", state.members.len()));
+            if me && !was_me {
+                lines.push("the server's member list has you — session confirmed".to_string());
+            }
+            if was_me && !me && !first {
+                lines.push("you dropped off the server's member list".to_string());
+            }
+        }
+        for line in lines {
+            self.line(&line);
+        }
     }
 }
 
@@ -223,6 +310,17 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
         };
         carry_wrapper_fields(&mut js, &reply);
         hydrate(&mut js, cookie);
+        if attempt == 1 {
+            // The roster card's feed, on its own thread: it outlives
+            // rejoin attempts (it stops when `run` exits, not when the
+            // socket drops) and only the join script knows our user id.
+            poll_members(
+                place,
+                cookie.clone(),
+                status.clone(),
+                js.get("UserId").and_then(|v| v.as_u64()),
+            );
+        }
         let peer = peer_of(&reply)?;
         ensure_udmux(&mut js, peer);
         say(format!("joining {}:{}", std::net::Ipv4Addr::from(peer.0), peer.1));
@@ -262,6 +360,25 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
         }
     }
     Err("the Team Create session never came up".to_string())
+}
+
+/// The roster card's feed: re-reads the team-create member list (see
+/// `rbx_cloud::team_create`) until the session thread exits — any exit
+/// flips `finished`, which covers a clean end, a failure, and the
+/// rejoin attempts in between. The list is the endpoint's view of the
+/// place's active session, which exists once the negotiation has warmed
+/// it, so it can see us before the RakNet handshake even completes.
+fn poll_members(place: u64, cookie: SessionCookie, status: Session, own: Option<u64>) {
+    let _ = std::thread::Builder::new()
+        .name("team-create-members".to_string())
+        .spawn(move || {
+            while !status.is_finished() {
+                if let Ok(list) = rbx_cloud::team_create_members(&cookie, place) {
+                    status.note_members(list, own);
+                }
+                std::thread::sleep(MEMBER_POLL);
+            }
+        });
 }
 
 /// Asks the team-create endpoint until its answer carries an endpoint:
@@ -436,6 +553,46 @@ mod tests {
         let (_, log) = session.snapshot();
         assert_eq!(log.len(), LOG_TAIL);
         assert_eq!(log.first().map(String::as_str), Some("line 4"));
+    }
+
+    #[test]
+    fn the_roster_lines_only_on_change() {
+        fn member(id: u64, name: &str) -> rbx_cloud::SessionMember {
+            rbx_cloud::SessionMember {
+                id,
+                name: name.to_string(),
+                display_name: String::new(),
+            }
+        }
+        let session = Session::new();
+        // The first read says who is in, even when it is nobody.
+        session.note_members(Vec::new(), Some(5));
+        let (members, me) = session.members();
+        assert!(members.is_empty());
+        assert!(!me);
+        let (_, log) = session.snapshot();
+        assert_eq!(log.last().map(String::as_str), Some("in server: 0 (nobody else)"));
+        let settled = session.version();
+        // The same answer again: nothing new, no version tick.
+        session.note_members(Vec::new(), Some(5));
+        assert_eq!(session.version(), settled);
+        // Someone joins — and it is us.
+        session.note_members(vec![member(7, "bob"), member(5, "cleo")], Some(5));
+        let (members, me) = session.members();
+        assert_eq!(members.len(), 2);
+        assert!(me);
+        let (_, log) = session.snapshot();
+        assert_eq!(
+            log.last().map(String::as_str),
+            Some("the server's member list has you — session confirmed")
+        );
+        // Someone leaves, we stay: the roster line alone.
+        session.note_members(vec![member(5, "cleo")], Some(5));
+        let (members, me) = session.members();
+        assert_eq!(members.len(), 1);
+        assert!(me);
+        let (_, log) = session.snapshot();
+        assert_eq!(log.last().map(String::as_str), Some("in server: 1 (cleo)"));
     }
 
     #[test]
