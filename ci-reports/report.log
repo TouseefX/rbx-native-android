@@ -1,126 +1,35 @@
 ## cargo fmt --check
-error: this file contains an unclosed delimiter
-   --> /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window/open.rs:606:3
-    |
- 10 | impl HomeWindow {
-    |                 - unclosed delimiter
-...
- 50 |     ) -> bool {
-    |               - this delimiter might not be properly closed...
-...
- 66 |             _ => {}
-    |                  -- block is empty, you might have not meant to close it
-...
-500 | }
-    | - ...as it matches this but it has different indentation
-...
-606 | }
-    |  ^
+error: expected `,` following `match` arm
+  --> /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window/view/dialogs.rs:34:61
+   |
+34 |                 .team_create_dialog(experience, members, cx)
+   |                                                             ^
+   |
+help: missing a comma here to end this `match` arm
+   |
+34 |                 .team_create_dialog(experience, members, cx),
+   |                                                             +
 
-Error writing files: failed to resolve mod `open`: cannot parse /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window/open.rs
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/client.rs:1105:
-         if ranges.is_empty() {
-             return;
-         }
--        let covers = |id: u32| ranges.iter().any(|&(lo, hi)| lo <= hi && id >= lo && id <= hi);
-+        let covers = |id: u32| {
-+            ranges
-+                .iter()
-+                .any(|&(lo, hi)| lo <= hi && id >= lo && id <= hi)
-+        };
-         let before = self.rtx.len();
--        self.rtx.retain(|entry| !entry.ids.iter().any(|&id| covers(id)));
-+        self.rtx
-+            .retain(|entry| !entry.ids.iter().any(|&id| covers(id)));
-         let retired = before - self.rtx.len();
-         if retired > 0 {
-             self.rtx_budget = (self.rtx_budget + retired as i32).min(RTX_BUDGET);
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/client.rs:1358:
-         assert_eq!(got[1].id, 0x13);
-         assert_eq!(got[1].payload.len(), 114);
-         assert_eq!(got[1].payload[1..6], [0x04, 127, 139, 202, 222]);
--        assert_eq!(got[1].payload[8..15], [0x04, 128, 255, 254, 254, 0x00, 0x00]);
-+        assert_eq!(
-+            got[1].payload[8..15],
-+            [0x04, 128, 255, 254, 254, 0x00, 0x00]
-+        );
-         assert!(got[1].ordered);
-         assert_eq!(got[1].ordering, 0);
- 
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/client.rs:1433:
-         assert_eq!(mirror[0], 0x81);
-         assert_eq!(mirror[4], 0x00); // kind 0: unreliable
-         assert_eq!(mirror[7], 0x00); // same id echoed
--        // Our own clock, not the server's 00 00 04 d2.
-+                                     // Our own clock, not the server's 00 00 04 d2.
-         assert_ne!(&mirror[12..16], &[0x00, 0x00, 0x04, 0xd2]);
- 
-         // Same id twice more: one more mirror, then the per-id cap. Their
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/client.rs:1580:
-         let pong = server.open(&sends[1]).expect("pong opens");
-         assert_eq!(pong[0], 0x81);
-         assert_eq!(pong[4], 0x60); // reliable ordered, like the ping
--        // [14..] is the delivered payload: id, sub-id, body verbatim.
-+                                   // [14..] is the delivered payload: id, sub-id, body verbatim.
-         assert_eq!(&pong[14..21], &[0x83, 0x06, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE]);
- 
-         // Any other 0x83 subtype is app data, not a ping.
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/drive.rs:430:
- /// each frame carries.
- const A6: [(&str, usize); 4] = [
-     ("a6010100014c0100004c0100000000", 5),
--    ("a602010010030064d0b7e6d7ff03e050010000500100000000040400", 15),
-     (
-+        "a602010010030064d0b7e6d7ff03e050010000500100000000040400",
-+        15,
-+    ),
-+    (
-         "a603010010030064d0b7e6d7ff03e054010000540100000000040400040400",
-         15,
-     ),
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/drive.rs:750:
-         assert!(is_handshake_miss(NO_REPLY2));
-         // Local failures and parse errors are not the RCC wedging.
-         assert!(!is_handshake_miss("Req1 build/send failed"));
--        assert!(!is_handshake_miss("Req2 build/send failed (ticket blobs too large?)"));
-+        assert!(!is_handshake_miss(
-+            "Req2 build/send failed (ticket blobs too large?)"
-+        ));
-         assert!(!is_handshake_miss("joinScript lacks NetStackPort"));
-         assert!(!is_handshake_miss(""));
-     }
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport/src/join_flow.rs:265:
-                 let place_id = if inputs.place != 0 {
-                     inputs.place
-                 } else {
--                    inputs.js.get("PlaceId").and_then(Value::as_u64).unwrap_or(0)
-+                    inputs
-+                        .js
-+                        .get("PlaceId")
-+                        .and_then(Value::as_u64)
-+                        .unwrap_or(0)
-                 };
-                 let t2 = join_msg::tail2_from_90_template(tmpl_90).unwrap_or(0);
-                 // The key is the string's first 16 bytes, verbatim —
+Error writing files: failed to resolve mod `dialogs`: cannot parse /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/launcher/home_window/view/dialogs.rs
 ## cargo clippy
 [1m[92m    Updating[0m crates.io index
 [1m[92m    Checking[0m rbx_dom v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_dom)
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
-[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
-[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
+[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
+[1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
+[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
 [1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
@@ -131,6 +40,7 @@ Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_trans
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m    Checking[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
 [1m[92m    Checking[0m rbx_ugc v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_ugc)
+[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
 [1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
@@ -138,24 +48,56 @@ Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_trans
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[0m[1m: this file contains an unclosed delimiter[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/open.rs:606:3
-    [1m[94m|[0m
-[1m[94m 10[0m [1m[94m|[0m impl HomeWindow {
-    [1m[94m|[0m                 [1m[94m-[0m [1m[94munclosed delimiter[0m
-[1m[94m...[0m
-[1m[94m 50[0m [1m[94m|[0m     ) -> bool {
-    [1m[94m|[0m               [1m[94m-[0m [1m[94mthis delimiter might not be properly closed...[0m
-[1m[94m...[0m
-[1m[94m 66[0m [1m[94m|[0m             _ => {}
-    [1m[94m|[0m                  [1m[94m--[0m [1m[94mblock is empty, you might have not meant to close it[0m
-[1m[94m...[0m
-[1m[94m500[0m [1m[94m|[0m }
-    [1m[94m|[0m [1m[94m-[0m [1m[94m...as it matches this but it has different indentation[0m
-[1m[94m...[0m
-[1m[94m606[0m [1m[94m|[0m }
-    [1m[94m|[0m  [1m[91m^[0m
+[1m[91merror[0m[1m: expected `,` following `match` arm[0m
+  [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/view/dialogs.rs:34:61
+   [1m[94m|[0m
+[1m[94m34[0m [1m[94m|[0m                 .team_create_dialog(experience, members, cx)
+   [1m[94m|[0m                                                             [1m[91m^[0m
+   [1m[94m|[0m
+[1m[96mhelp[0m: missing a comma here to end this `match` arm
+   [1m[94m|[0m
+[1m[94m34[0m [1m[94m| [0m                .team_create_dialog(experience, members, cx)[92m,[0m
+   [1m[94m|[0m                                                             [92m+[0m
 
-[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 1 previous error
+[1m[91merror[E0308][0m[1m: mismatched types[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/open.rs:130:9
+    [1m[94m|[0m
+[1m[94m115[0m [1m[94m|[0m     pub(super) fn open_team_create_locally(&mut self, cx: &mut Context<Self>) {
+    [1m[94m|[0m                                                                              [1m[94m-[0m [1m[94mhelp: try adding a return type: `-> bool`[0m
+[1m[94m...[0m
+[1m[94m130[0m [1m[94m|[0m         false
+    [1m[94m|[0m         [1m[91m^^^^^[0m [1m[91mexpected `()`, found `bool`[0m
+
+[1m[91merror[E0308][0m[1m: `match` arms have incompatible types[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/launcher/home_window/view/dialogs.rs:33:18
+    [1m[94m|[0m
+[1m[94m 18[0m [1m[94m|[0m           Some(match dialog {
+    [1m[94m|[0m                [1m[94m------------[0m [1m[94m`match` arms have incompatible types[0m
+[1m[94m...[0m
+[1m[94m 24[0m [1m[94m|[0m               } => self
+    [1m[94m|[0m [1m[94m __________________-[0m
+[1m[94m 25[0m [1m[94m|[0m [1m[94m|[0m                 .archive_dialog(place, *restore, *busy, error.as_deref(), cx)
+[1m[94m 26[0m [1m[94m|[0m [1m[94m|[0m                 .into_any_element(),
+    [1m[94m|[0m [1m[94m|___________________________________-[0m [1m[94mthis is found to be of type `gpui_kit::AnyElement`[0m
+[1m[94m 27[0m [1m[94m|[0m               Dialog::Cookie { busy, error } => self
+    [1m[94m|[0m [1m[94m _______________________________________________-[0m
+[1m[94m 28[0m [1m[94m|[0m [1m[94m|[0m                 .cookie_dialog(*busy, error.as_deref(), cx)
+[1m[94m 29[0m [1m[94m|[0m [1m[94m|[0m                 .into_any_element(),
+    [1m[94m|[0m [1m[94m|___________________________________-[0m [1m[94mthis is found to be of type `gpui_kit::AnyElement`[0m
+[1m[94m...[0m
+[1m[94m 33[0m [1m[94m|[0m               } => self
+    [1m[94m|[0m [1m[91m __________________^[0m
+[1m[94m 34[0m [1m[94m|[0m [1m[91m|[0m                 .team_create_dialog(experience, members, cx)
+    [1m[94m|[0m [1m[91m|____________________________________________________________^[0m [1m[91mexpected `AnyElement`, found opaque type[0m
+[1m[94m...[0m
+[1m[94m450[0m [1m[94m|[0m       ) -> impl IntoElement {
+    [1m[94m|[0m            [1m[94m----------------[0m [1m[94mthe found opaque type[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m:   expected struct `[1m[35mgpui_kit::AnyElement[0m`
+            found opaque type `[1m[35mimpl gpui_kit::IntoElement[0m`
+
+[1mFor more information about this error, try `rustc --explain E0308`.[0m
+[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 3 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 3 previous errors
 fmt=1 clippy=101 test=0
