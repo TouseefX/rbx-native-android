@@ -586,7 +586,11 @@ mod tests {
         inner.push(0x01); // one class
         inner.push(0x00); // property bound
         inner.push(0x00); // event bound
-        inner.push(11); // "Collaborator"
+        // The class name's length comes from the literal itself — a
+        // hand-counted 11 for "Collaborator" (12 letters) is exactly
+        // the byte that broke this test on the report the first time
+        // it ever ran.
+        inner.push(b"Collaborator".len() as u8);
         inner.extend_from_slice(b"Collaborator");
         inner.push(0x00); // no members
         inner.extend_from_slice(&0u16.to_le_bytes()); // class flags
