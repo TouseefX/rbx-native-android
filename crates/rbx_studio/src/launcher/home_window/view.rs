@@ -1,6 +1,7 @@
 //! Home's pages, sidebar and dialogs, one file each; the layout grid and
 //! the small drawing helpers they share live here.
 
+mod crash_notice;
 mod dialogs;
 mod games;
 mod head;

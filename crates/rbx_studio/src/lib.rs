@@ -134,6 +134,7 @@ mod menu_bar;
 mod notes;
 mod pacing;
 mod packs;
+mod panic_log;
 mod playtests;
 mod pointer_lock;
 #[cfg(test)]
@@ -381,6 +382,11 @@ pub fn run_desktop() {
 /// the GPUI application and its window already alive (see
 /// `crates/rbx_android`).
 pub fn boot_mobile(cx: &mut App) {
+    // Before anything else can panic: the hook keeps the last crash in
+    // the app's private storage, where Home picks it up next launch
+    // (see `panic_log`) — on Android there is no stderr and the user
+    // has no adb, so without this a crash leaves nothing behind.
+    panic_log::install();
     // The kit's global theme and icons — as the desktop launch's `run`
     // callback does, and as GPUI Kit's mobile guide prescribes: mobile
     // builds keep this and `component::Root` and lose only the desktop

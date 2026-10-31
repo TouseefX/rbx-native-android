@@ -166,6 +166,10 @@ rbx_eyedropper = { path = "../rbx_eyedropper" }
 # not X11, so both stay desktop-Linux-only.
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
+# `panic_log`'s hook keeps logcat parity for whoever does have adb. Already
+# in the tree at this version (the Android host logs through it); the logger
+# itself is initialized by `rbx_android`, not here.
+log = "0.4"
 x11rb = { version = "0.13", features = ["randr", "xfixes"] }
 
 # The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and

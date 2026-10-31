@@ -6904,6 +6904,7 @@ dependencies = [
  "gpui-pre",
  "image",
  "libc",
+ "log",
  "lsp-types",
  "raw-window-handle",
  "rbx_animation",
