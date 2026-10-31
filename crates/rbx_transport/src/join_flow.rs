@@ -10,9 +10,20 @@
 //! challenge that lands mid-burst holds its answer until the burst's
 //! messages have taken the indexes the native leaves them at.
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use crate::client::Client;
 use crate::join_msg;
 use serde_json::Value;
+
+/// A per-session draw for the MTU ladder's counters — any value works,
+/// the shape is what the RCC reads.
+fn now_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0)
+}
 
 /// One burst step, as it left (or did not leave) the wire.
 #[derive(Debug, PartialEq, Eq)]
@@ -51,15 +62,19 @@ pub struct FlowOptions {
     /// 6/6 measured runs challenged with it, 0/6 without. Off: the
     /// native's shape, empty slots 2 and 4.
     pub join_extra: bool,
-    /// The 1160-byte `0x00` MTU pad the native puts between its 0x13
-    /// and its 0x90. Off (empty, default): with the pad in front of
-    /// our body the RCC answers 0x93 and never challenges (measured).
-    /// Given, and at least 1160 bytes, it is sent sequenced — not
-    /// ordered, so it takes no ordering slot.
+    /// The pre-join MTU ladder's old single-round shape: when this pad
+    /// is at least 1160 bytes, one round of *this* pad and its 0x51 ping
+    /// runs instead of the generated two-round ladder (an A/B knob).
+    /// Empty (default): two generated rounds — pad `0x00` 1160B plus
+    /// the 0x53/0x52/0x51 trio, then the same with the counter +9. The
+    /// RCC answers a join that arrives *after* the probe; without it the
+    /// same body gets 0x93 and then nothing at all, and one round leaves
+    /// it acknowledging only the first eight datagrams.
     pub pre_pad: Vec<u8>,
     /// The `0xA7` script-hash queue `[a7][count u16le][count x 16B]`.
-    /// On RbxTransport a non-empty queue is what draws the challenge;
-    /// the native's RakNet stream carries none. Empty (default) = off.
+    /// The native's RakNet stream carries none, and sending it pushes
+    /// the 0x90 to ordering slot 2, after which the RCC never sends its
+    /// 0x93. Empty (default) = not sent.
     pub a7: Vec<u8>,
 }
 
@@ -75,8 +90,6 @@ impl Default for FlowOptions {
 
 /// The flow's per-session inputs: everything the burst builds from.
 pub struct FlowInputs<'a> {
-    /// Our socket address, for the `0x13`.
-    pub local: ([u8; 4], u16),
     /// The join-game script (`joinScript` out of the join-game reply).
     pub js: &'a Value,
     /// The join-game HTTP reply, whose fields the 0x90 builder reads.
@@ -110,8 +123,9 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
     client.begin_join_flow();
 
     // The 0x13: datagram 1 straight after the 0x09, ordered index 0 —
-    // the one receipt the whole sequence hangs from.
-    if client.new_incoming(inputs.local) {
+    // the one receipt the whole sequence hangs from, and the datagram
+    // that flips the session onto subtype 2.
+    if client.new_incoming() {
         steps.push(Step::Sent {
             what: "0x13",
             datagrams: 1,
@@ -125,13 +139,39 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
         return steps;
     }
 
-    // The optional MTU pad: sequenced, not ordered, so it takes no
-    // ordering slot.
+    // The pre-join MTU ladder: `0x00` 1160B pads (a u16 BE counter at
+    // [7:9]) with their 0x53/0x52/0x51 ping trio, all carrying the same
+    // counter — TWICE, the second round at counter +9. The pings are
+    // unreliable on the wire (kind 0): reliable ones get message numbers
+    // the RCC's ping path never sees, so its MTU ladder never closes.
+    // One round leaves the RCC acknowledging only the first eight
+    // datagrams and never reading the 0x90 behind them.
     if opts.pre_pad.len() >= 1160 {
         let n = client.send_join_message(&opts.pre_pad, false);
+        let ping = [0x51u8, 0, 0, 0, 0, 0, 0, 0, 0];
+        client.send_unreliable(&ping);
         steps.push(Step::Sent {
             what: "MTU pad 0x00",
             datagrams: n,
+        });
+    } else {
+        let seq = now_ms() as u16;
+        let mut sent = 0usize;
+        for r in 0..2 {
+            let ctr = seq.wrapping_add(if r == 0 { 0 } else { 9 });
+            let mut pad = vec![0u8; 1160];
+            pad[0] = 0x00;
+            pad[7] = (ctr >> 8) as u8;
+            pad[8] = ctr as u8;
+            sent += client.send_join_message(&pad, false);
+            for id in [0x53u8, 0x52, 0x51] {
+                let ping = [id, 0, 0, 0, 0, 0, 0, (ctr >> 8) as u8, ctr as u8];
+                client.send_unreliable(&ping);
+            }
+        }
+        steps.push(Step::Sent {
+            what: "MTU ladder (2 rounds)",
+            datagrams: sent,
         });
     }
 
@@ -323,7 +363,6 @@ mod tests {
 
     fn inputs<'a>(js: &'a Value, tmpl_90: &'a [u8], reply: &'a Value) -> FlowInputs<'a> {
         FlowInputs {
-            local: ([192, 168, 1, 50], 50000),
             js,
             reply,
             place: 1818,
@@ -334,7 +373,9 @@ mod tests {
     }
 
     /// Run the flow against a fresh mock server and hand back the
-    /// steps plus everything the server delivered, as (id, ordering).
+    /// steps plus everything the server delivered *ordered*, as
+    /// (id, ordering) — the MTU ladder's pads and pings are sequenced
+    /// and unreliable by design, so they never take an ordering slot.
     fn run(js: &Value, tmpl_90: &[u8], opts: &FlowOptions) -> (Vec<Step>, Vec<(u8, u32)>) {
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
@@ -345,7 +386,9 @@ mod tests {
         for wire in client.take_sends() {
             if let Some(plain) = server.open(&wire) {
                 for m in server.rx.on_datagram(&plain) {
-                    delivered.push((m.id, m.ordering));
+                    if m.ordered {
+                        delivered.push((m.id, m.ordering));
+                    }
                 }
             }
         }
@@ -358,7 +401,7 @@ mod tests {
         assert!(steps.iter().all(Step::sent), "nothing may skip: {steps:?}");
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
-            ["0x13", "0x90", "0x92", "0x8a", "0x8f"]
+            ["0x13", "MTU ladder (2 rounds)", "0x90", "0x92", "0x8a", "0x8f"]
         );
         assert_eq!(
             delivered,
@@ -393,12 +436,15 @@ mod tests {
     #[test]
     fn a_missing_90_template_holds_the_rest_of_the_join() {
         let (steps, delivered) = run(&join_script(), b"", &FlowOptions::default());
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.len(), 3);
         assert_eq!(steps[0].what(), "0x13");
         assert!(steps[0].sent());
-        assert_eq!(steps[1].what(), "0x90");
-        assert!(!steps[1].sent());
-        // The 0x13 went out before the hold; nothing after it may.
+        assert_eq!(steps[1].what(), "MTU ladder (2 rounds)");
+        assert!(steps[1].sent());
+        assert_eq!(steps[2].what(), "0x90");
+        assert!(!steps[2].sent());
+        // The 0x13 and the ladder went out before the hold; nothing
+        // ordered may follow them.
         assert_eq!(delivered, vec![(0x13, 0)]);
     }
 
@@ -416,13 +462,15 @@ mod tests {
         let steps = send_join_flow(&mut client, &inputs(&js, &template_90(), &reply), &opts);
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
-            ["0x13", "0x90", "0x92", "0x8a", "0x8f"]
+            ["0x13", "MTU ladder (2 rounds)", "0x90", "0x92", "0x8a", "0x8f"]
         );
         let mut delivered = Vec::new();
         for wire in client.take_sends() {
             if let Some(plain) = server.open(&wire) {
                 for m in server.rx.on_datagram(&plain) {
-                    delivered.push((m.id, m.ordering));
+                    if m.ordered {
+                        delivered.push((m.id, m.ordering));
+                    }
                 }
             }
         }
@@ -477,8 +525,8 @@ mod tests {
             ..FlowOptions::default()
         };
         let (steps, delivered) = run(&join_script(), &template_90(), &opts);
-        assert_eq!(steps[1].what(), "0xA7");
-        assert!(!steps[1].sent());
+        assert_eq!(steps[2].what(), "0xA7");
+        assert!(!steps[2].sent());
         assert_eq!(
             delivered,
             vec![(0x13, 0), (0x90, 1), (0x92, 2), (0x8a, 3), (0x8f, 4)]
@@ -492,7 +540,7 @@ mod tests {
         assert!(!steps.iter().all(Step::sent));
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
-            ["0x13", "0x90", "0x92", "0x8a", "0x8f"]
+            ["0x13", "MTU ladder (2 rounds)", "0x90", "0x92", "0x8a", "0x8f"]
         );
         // The 0x8a slot is not reserved, so the 0x8f lands at 3.
         assert_eq!(delivered, vec![(0x13, 0), (0x90, 1), (0x92, 2), (0x8f, 3)]);

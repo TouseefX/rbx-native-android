@@ -157,17 +157,39 @@ pub fn connection_request(session_guid: &[u8; 8]) -> Vec<u8> {
     out
 }
 
-/// ID_NEW_INCOMING_CONNECTION (`0x13`): our socket address, the peer's,
-/// then twelve dummy entries. RakNet addresses are
-/// `[ver][ip4][port BE]`.
-pub fn new_incoming(local: ([u8; 4], u16), peer: ([u8; 4], u16)) -> Vec<u8> {
-    let mut out = Vec::with_capacity(1 + 14 * 7);
+/// ID_NEW_INCOMING_CONNECTION (`0x13`): the native's 114-byte shape from
+/// two live captures — a synthetic 127.139.202.222 address with a
+/// *random* port (not the socket's own; both captures agree on the
+/// address and differ on the port), 128.255.254.254:0, nine
+/// 255.255.255.255:0 entries, then the 36-byte extension with its
+/// per-session randoms. The older 14-address form was dropped by the
+/// RCC: it ACKed the 0x09 and stopped ACKing the very next datagram.
+/// RakNet addresses are `[ver][ip4][port BE]`; `rand` is any 32 fresh
+/// bytes (the caller's session keypair).
+pub fn new_incoming(rand: &[u8; 32]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(114);
     out.push(0x13);
-    push_address(&mut out, &local.0, local.1);
-    push_address(&mut out, &peer.0, peer.1);
-    for _ in 0..12 {
+    let mut adv_port = u16::from_be_bytes([rand[0], rand[1]]);
+    if adv_port < 1024 {
+        adv_port = 1024 + (u32::from(adv_port) % 64_512) as u16;
+    }
+    push_address(&mut out, &[127, 139, 202, 222], adv_port);
+    push_address(&mut out, &[128, 255, 254, 254], 0);
+    for _ in 0..9 {
         push_address(&mut out, &[0xff, 0xff, 0xff, 0xff], 0);
     }
+    // 36-byte extension: 00*5 | A(3B) | 00*6 | B(2B) | 00 06 5f | C(5B)
+    // | 00 00 48 00 | 00*6 | D(2B) — A/B/C/D rolled per session.
+    let mut tail = [0u8; 36];
+    tail[5..8].copy_from_slice(&rand[2..5]);
+    tail[14..16].copy_from_slice(&rand[5..7]);
+    tail[16] = 0x00;
+    tail[17] = 0x06;
+    tail[18] = 0x5f;
+    tail[19..24].copy_from_slice(&rand[7..12]);
+    tail[25] = 0x48;
+    tail[34..36].copy_from_slice(&rand[12..14]);
+    out.extend_from_slice(&tail);
     out
 }
 
@@ -299,13 +321,17 @@ mod tests {
         assert_eq!(&request[1..9], &[1, 2, 3, 4, 5, 6, 7, 8]);
         assert_eq!(&request[9..], &CONNECTION_REQUEST_TAIL[..]);
 
-        let incoming = new_incoming(([127, 0, 0, 1], 0), ([10, 190, 0, 5], 50105));
-        assert_eq!(incoming.len(), 1 + 14 * 7);
+        let incoming = new_incoming(&[0x5a; 32]);
+        assert_eq!(incoming.len(), 114);
         assert_eq!(incoming[0], 0x13);
-        assert_eq!(incoming[1..8], [0x04, 127, 0, 0, 1, 0x00, 0x00]);
-        assert_eq!(incoming[8..15], [0x04, 10, 190, 0, 5, 0xc3, 0xb9]);
+        // The synthetic address, the any-peer, then nine dummies.
+        assert_eq!(incoming[1..8], [0x04, 127, 139, 202, 222, 0x5a, 0x5a]);
+        assert_eq!(incoming[8..15], [0x04, 128, 255, 254, 254, 0x00, 0x00]);
         assert_eq!(incoming[15..22], [0x04, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00]);
-        assert_eq!(incoming[92..99], [0x04, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00]);
+        assert_eq!(incoming[71..78], [0x04, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00]);
+        // The extension (36B from offset 78) and its fixed markers.
+        assert_eq!(&incoming[78 + 16..78 + 19], &[0x00, 0x06, 0x5f]);
+        assert_eq!(incoming[78 + 25], 0x48);
     }
 
     #[test]
