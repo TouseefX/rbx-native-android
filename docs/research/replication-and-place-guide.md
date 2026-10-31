@@ -18,6 +18,7 @@ This reference goes beyond the earlier short guide. It describes the observed ga
 |---|---|
 | **[GAME]** | Observed or implemented by the public Boblox **game-session** receiver at commit `8c46b6dc175e22f50a7661bd19ff86eb5dbe4287`. Useful as a concrete reference; not proof of Studio Team Create compatibility. |
 | **[STUDIO STATIC]** | Found by inspecting a particular official Studio binary, without running a Studio session. Names, isolated machine-code behavior, or local data structures do not by themselves establish the network envelope. |
+| **[STUDIO EMULATED]** | Selected machine-code functions executed on synthetic inputs under Unicorn, with specified helpers mocked. This is not a Studio session or a network capture. |
 | **[DESIGN]** | An implementation recommendation or an invented example. It is not a native Roblox packet. |
 | **[UNKNOWN]** | Required for the real target but not established by available evidence. |
 
@@ -29,8 +30,9 @@ The game receiver, the particular Studio executable, and your Rust port are **no
 2. **Where do I hook my Rust Boblox port?** At the callback that receives a **complete, decrypted, already transport-reassembled logical replication message**, before a game runtime discards or simplifies it. Which callback that is depends on your port.
 3. **How do I know the IDs and types?** In Boblox's observed game format, the session schema supplies ordered class/member/event tables. Snapshot property slots are class-local; live property IDs are global and schema-specific.
 4. **How do I synchronize later edits?** Apply creation, property changes, parenting, deletion and editor operations in protocol order, with a consistent initial snapshot and stable object identities. The corresponding **Team Create wire formats are not all known**.
-5. **How do I edit scripts?** Treat editor documents and their concurrent operations as a separate subsystem; `Script.Source`, compiled game bytecode and an editor buffer are not interchangeable. Some nested Studio operation data is statically understood, but its event envelope and complete semantics are not.
+5. **How do I edit scripts?** Treat editor documents and their concurrent operations as a separate subsystem; `Script.Source`, compiled game bytecode and an editor buffer are not interchangeable. Studio code directly serializes an operation and dispatches it through a `SendOperation` descriptor, but its network envelope and complete semantics remain unknown (§11.7.3).
 6. **Can this already be made to work with unmodified Studio?** Not reliably from the available evidence alone. The missing native bootstrap, schema/tail, instance lifecycle and script event/operation details are listed in §18.
+7. **What can I verify about `Collaborator`?** The pinned build exposes nine class-specific fields and local service/creation/update paths; in specific creation and status paths, the service signal uses the same ID as `UserId`. This does not establish their Team Create wire encoding or delivery (§11.8).
 
 ### Contents
 
@@ -51,6 +53,9 @@ The game receiver, the particular Studio executable, and your Rust port are **no
     * [Text cursors, selections, and viewport presence](#106-text-cursors-collaborator-selections-and-3d-viewport-presence)
     * [Decode an initial Collaborator and later changes](#107-worked-collaborator-baseline-and-updates)
 11. [Design the collaboration server](#11-design-the-collaboration-server)
+    * [How my edits reach the server and other collaborators](#116-how-my-edits-reach-the-server-and-other-collaborators)
+    * [Actual Studio outgoing paths: properties, scripts, cursors and presence](#117-decompilation-how-studio-constructs-outgoing-changes)
+    * [Verified Collaborator fields, identity and lifecycle](#118-verifying-collaborator-fields-identity-and-lifecycle)
 12. [Loading and saving place files](#12-loading-and-saving-place-files)
 13. [Runnable Rust example: records to `.rbxl`](#13-runnable-rust-example-records-to-rbxl)
 14. [A practical integration plan for your port](#14-a-practical-integration-plan-for-your-port)
@@ -313,7 +318,7 @@ A robust reconstruction strategy is:
 4. Keep session presence separate from the persistable place, while letting them share references where the actual protocol establishes such a link. `Collaborator` properties in the pinned Studio API have `CanSave=false`; they are valuable for the *live session*, not evidence that the original place file stores connected users.
 5. Only export as a complete place when the evidence supports completeness. `.rbxl` source, live script buffers, assets/terrain, unsupported values, filtered objects, and changes concurrent with capture may need additional work (§12 and §18).
 
-In the **Boblox game** reference, an initial instance record may occur in an inflated `0x83/0x16` batch; the game parser can also receive live `0x02` spawns and `0x03` updates. §10.7 shows a tested *synthetic* `Collaborator` record and updates for that game schema. Their presence and wire encoding in an unmodified Studio Team Create session remain to be verified.
+In the **Boblox game** reference, an initial instance record may occur in an inflated `0x83/0x16` batch; the game parser can also receive live `0x02` spawns and `0x03` updates. §10.7 shows a tested *synthetic* `Collaborator` record and updates for that game schema. Their presence and wire encoding in an unmodified Studio Team Create session remain to be verified. The local Studio creation, status and removal evidence is covered separately in §11.8.
 
 
 
@@ -863,11 +868,11 @@ SendOperation(id, op)
 SendAtomicOperation(requestId, guid, op, hash)
 ```
 
-These are registration strings/argument labels in the binary. They are **not** verified packet IDs, argument wire types, sender/receiver directions, authorization rules, or a complete event sequence. The presence of `OpenedWithSource` is not proof that a particular `0x07` game event transmits source or that every client is authorized to receive it. The hash algorithm and what the hash covers are not established.
+These are registration strings/argument labels in the binary. Later descriptor and call-path analysis establishes some C++/reflection argument types and a direct `SendOperation` JSON dispatch (§11.7.3). They are **not** verified packet IDs, on-wire encodings, sender/receiver directions, authorization rules, or a complete event sequence. The presence of `OpenedWithSource` is not proof that a particular `0x07` game event transmits source or that every client is authorized to receive it. The hash algorithm and what the hash covers are not established.
 
 ### 10.3 An observed nested operation shape
 
-**[STUDIO STATIC + SYNTHETIC EXAMPLE]** The pinned binary's operation writer/reader supports a nested JSON structure with the fields below. This example was invented to illustrate the shape, not captured from a Studio session and not a complete network message:
+**[STUDIO STATIC + SYNTHETIC EXAMPLE]** The pinned binary's operation writer/reader supports a nested JSON structure with the fields below. A later mocked execution also linked this logical shape to `SendOperation` dispatch (§11.7.3). This example was invented to illustrate the shape, not captured from a Studio session and not a complete network message:
 
 ```json
 {
@@ -998,7 +1003,7 @@ The `Collaborator` descriptors are a particularly useful lead for the initial sy
 | `IsIdle` | `bool` | Candidate idle flag; independent from status and document/source content. |
 | `Status` | `CollaboratorStatus` | Candidate editing status. The pinned API dump declares `None=0`, `Editing3D=1`, `Scripting=2`, `PrivateScripting=3`. Preserve unknown enum values; these API values do not by themselves prove the native wire mapping or permissions. |
 
-The `50 d3` game schema's local slots, tags and global property IDs are listed in §2.5. `Collaborator` is class index **141** (`8d 00` as u16 LE) in that one schema. The object references and property values below are invented; the class index comes from that public schema. In particular, the real parent of a Studio collaborator is not established here.
+The `50 d3` game schema's local slots, tags and global property IDs are listed in §2.5. `Collaborator` is class index **141** (`8d 00` as u16 LE) in that one schema. The object references and property values below are invented; the class index comes from that public schema. In particular, the parent in this synthetic record is invented; §11.8 separately identifies a service-parenting call in one Studio-local creation path, not a proven network record.
 
 #### A. One initial record inside a hypothetical game batch
 
@@ -1159,6 +1164,372 @@ Use an internal append-only change journal or transactional store, with snapshot
 A local file → DOM → proposed records pipeline is useful for experiments. It is **not** a complete native server until all of the following are known for the exact Studio build: schema generation/negotiation and tail, required initial messages, filtering, services and identity lifecycle, batch flags/trailers, all value forms, parent/reference order, actual live item/event formats, source bootstrap, authorization, and script concurrency semantics. Return an explicit unsupported error rather than sending guessed data to unmodified clients.
 
 The earlier candidate encoder handled only selected game-schema mappings, rejects scripts and unmapped data, and on one 82-instance baseplate audit reported 565 unsupported property mappings. Passing its Boblox parser checks was useful differential testing but did not demonstrate Studio acceptance, trailer validity, or complete place fidelity.
+
+### 11.6 How my edits reach the server and other collaborators
+
+This section answers the collaborator's question: **“I am the person editing. How do I tell the server to sync my place edits, camera and other changes to everyone else?”**
+
+#### Who sends what?
+
+* **If your editing client is unmodified Studio:** once it is connected to a properly functioning Team Create session and you have Edit permission, you perform normal edits in Studio. Studio's own client is responsible for generating its native collaboration messages. You do not call `Collaborator` as a generic “send my `.rbxl`” command.
+* **If your editing client is your Rust/Boblox port:** receiving and decoding the initial replication is not enough. Your port also needs the **client-to-server native writers**, the correct session identity, ordering and any required acknowledgements. The pinned Boblox research describes its game receiver but says upstream owned writes were not implemented; it is not a complete Team Create edit sender.
+* **If you are implementing the Rust server:** it must decode the actual incoming Studio edits, authorize and apply them, then generate valid native updates for other connected Studio clients. The Rust project delivered with this guide does **not** yet implement that end-to-end native adapter.
+
+The `Collaborator` class is useful evidence for **who is present and where they are working**. It is marked `NotCreatable` and its relevant fields are hidden in the pinned Studio API; `CollaboratorsService` methods/signals include `RobloxScriptSecurity` members. These descriptors are not a documented general-purpose public API for commanding a server to import a file or broadcast changes, and their existence does not establish what Studio transmits when a field changes.
+
+#### A. Put the `.rbxl` on the authoritative side
+
+An `.rbxl` sitting on one collaborator's computer is not automatically visible to the server. For a **custom server you control**, a practical bootstrap is for the server operator to import the file through a separate trusted setup mechanism, such as loading a local server-side file with `rbx_binary::from_reader`. That is an administrative import, not a native Team Create packet. The server then holds an authoritative in-memory place and must expose the initial state through whatever **verified native bootstrap** Studio requires. The file need not be transmitted verbatim.
+
+If a collaboration session is already active, replacing its whole place with a local file is a separate, potentially destructive operation: authorize it, back up or preserve current work, define conflict policy, and resynchronize participants using an actually supported workflow. Do not silently overwrite the existing server state, and do not assume unmodified Studio exposes an upload-whole-place command for your custom server.
+
+For Roblox's hosted service, the corresponding user workflow is to have an authorized shared experience, open that experience in a Team Create session, and edit it with the necessary permissions; a separately opened local file is not by itself the shared session. See [Roblox's collaboration documentation](https://create.roblox.com/docs/projects/collaboration). Live Scripting and Drafts can behave differently, so do not assume every local editor buffer is already the shared source.
+
+#### B. Normal place-instance edit: client → server → clients
+
+**[DESIGN — internal commands, not a native wire format]** Suppose Alice moves an existing Part, and Bob is also editing the same place:
+
+```text
+Alice's Studio                Rust collaboration server                 Bob's Studio
+──────────────                ─────────────────────────                 ────────────
+Alice moves Part       ──native client edit message──▶  decode message
+                                                        derive Alice from session
+                                                        map target reference
+                                                        authorize + validate
+                                                        commit Part.CFrame in world
+                                                        assign internal ordering
+                                                        encode Bob's native update ──▶  apply update
+                              respond/ack to Alice as the *verified protocol* requires
+```
+
+The server-side operation can be represented internally as:
+
+```text
+SetInstanceProperty {
+    actor: authenticated_session_user,
+    target: server_internal_object_id,
+    property: CFrame,
+    value: position_and_rotation
+}
+```
+
+This is **not** JSON or bytes to send to Studio. The implementation steps are:
+
+1. Receive a **complete, decrypted, transport-reassembled client→server application message**. Use the actual build/session codec to decode its item, target, property and value. Do not confuse packet-layer flags with application item IDs.
+2. Derive the actor from the authenticated connection. Check Edit permission and any per-object/property restrictions; verify the target exists, the class supports the property, the CFrame is valid and finite, and the change is permitted. Never authorize based only on a `UserId` claimed in a payload.
+3. Resolve the incoming network reference to the server's authoritative object. A `.rbxl`/DOM referent and a network reference are separate identities. Keep per-session mappings until you have verified the native namespace rules.
+4. Serialize world edits in a consistent order, mutate the authoritative model once, and journal/checkpoint persistent changes according to your storage policy. If a client is still receiving an initial snapshot, it must subsequently receive the relevant ordered changes without gaps or duplicates.
+5. Encode the committed update for each authorized recipient using that recipient's verified schema and reference mapping. Do not blindly forward Alice's raw packet when IDs, schema or visibility can differ between connections. If safe forwarding is later proven for a particular protocol, it can be an optimization.
+6. Send the correct acknowledgement or echo to Alice **only as the actual protocol requires**. Alice may have applied an optimistic local edit already; an unexamined echo can apply it twice. Handle disconnect, retry and resynchronization explicitly.
+
+Creating an instance, reparenting, deletion, attributes and references each need their own native decoder and validation. Reparenting must not create cycles; a deleted object must not be accidentally resurrected by an older queued update. `.rbxl` checkpoints are not a substitute for a correctly ordered live change stream.
+
+#### C. My camera is presence, not a Part edit
+
+A Part's `CFrame` changes the shared place object. Your **Studio viewport camera** describes where *you* are looking; it is normally transient per-collaborator presence, not a request to move every other user's viewport or persist a camera into the place.
+
+The pinned Studio API marks `Camera` and `Workspace.CurrentCamera` `NotReplicated` and lists hidden `Collaborator.CFrame` under a Camera category. This makes `Collaborator.CFrame` a useful investigation lead, but does **not** prove its wire encoding, whether Studio sends it directly to the server, or how another client receives it. Roblox's documented collaborator **Join** feature moves the local user to the other collaborator's view; the view is not locked afterward. See the [collaborator-location announcement](https://devforum.roblox.com/t/jump-to-your-collaborator%E2%80%99s-location-in-team-create/2618317).
+
+**[DESIGN]** If the verified native protocol delivers a user's camera pose, a server can associate it with the authenticated session, update that collaborator's transient presence, and relay only to authorized participants. A conceptual server-side update is `SetPresencePose { actor: session_user, pose }`—not a native message. Never allow Alice to update Bob's presence simply by supplying Bob's user ID. Throttle/coalesce high-frequency pose updates, avoid storing them as `.rbxl` edits, and clear stale presence on disconnect. Selection, text caret and document location require their own decoded data and privacy rules; a camera `CFrame` alone cannot describe them.
+
+#### D. Script typing is not necessarily a property replacement
+
+For Live Scripting, the server must handle the native document-open/source state and edit operations, their order, acknowledgements and concurrency. The pinned Studio binary contains `BeginEdit`, `SendOperation`, `SendAtomicOperation` and an inner operation JSON shape (§10), but those are not complete verified client→server packets. `CurDocGUID` and `CurScriptLineNumber` are presence clues; they cannot replace the actual source text or operations. Do not send the synthetic nested JSON from §10.3 to Studio or a Roblox server as if it were the native envelope.
+
+#### E. What we know—and what still blocks an actual send
+
+**[STUDIO STATIC]** In the pinned Windows Studio 0.745 binary, one `ChangePropertyItem` path writes item byte `0x03`, calls a reference-related helper, writes a two-byte metadata field, and invokes further serializers. Section 11.7 now traces the queue, writer and selected reference behavior in more detail. **[GAME]** Boblox's game receiver parses its `0x03` as a reference, global property ID and typed value. This is a promising overlap to investigate, not proof of a Team Create client→server message, full `CFrame` layout, identity mapping, authorization, or ack/echo semantics.
+
+The synthetic game `0x03` examples in §§7 and 10.7 were accepted by the **game parser only**. They do not show that an unmodified Studio client sends those bytes or a Team Create server accepts them. To support the user's native target, the remaining blocker is the build-specific inbound/outbound Team Create codec and lifecycle—not a missing `Collaborator` method.
+
+**Future verification, if live Studio access becomes available:** compare an authorized two-client session with an idle control; make exactly one change at a time: rename a Part, move a Part, create/reparent/delete an instance, move only the editor camera, move only a caret, and type one character. Record direction, logical message boundaries, schema fingerprint and resulting behavior on the server and second client, plus any ack/echo. Redact credentials, source and private user data. The user previously selected offline research, so none of these Studio captures has been made here; static analysis can identify candidates but cannot prove interoperability.
+
+
+### 11.7 Decompilation: how Studio constructs outgoing changes
+
+This section answers the send-path question using the actual pinned Windows Studio executable, not only the Boblox game parser. It is the most direct evidence in this guide about what Studio constructs. **It is still not an observed Team Create network session.** Addresses are virtual addresses in Windows Studio `0.745.0.7451137`, deployment `version-7062aec9dbe74b14`, executable SHA-256 `781b36ed6fb62e61292b9e6a64327280c7da12b00f3ea8b2c91a3f4834f860ec`. They are not stable identifiers across releases.
+
+| User action | What the pinned code establishes | What it does not establish |
+|---|---|---|
+| Change an instance property | A `ChangePropertyItem` queue and writer path emits a selected item header, reference and a two-byte metadata field, then calls value-related code. | Exact Team Create envelope, every typed value, runtime subscription for each property, authorization or echo. |
+| Move the editor camera / change collaborator status | `Collaborator` fields have real setters and change notifications. `CFrame` is copied as an **in-memory** value. | Whether camera motion reaches that setter in every case, network direction, actual bytes or automatic replication. |
+| Move a script caret | An update helper builds the `cursors` JSON structure and passes it as a string to a named remote-event descriptor. A separate broadcast helper builds `userCursors`. | Coordinate origin/units, timestamp interpretation, network direction or complete frame. |
+| Type in a script | A helper serializes an operation into JSON and dispatches it with `SendOperation(id, op)`; the relevant runtime descriptor has an `int64` plus a string argument. | Exact wire encoding, source/open and ack lifecycle, position units, complete OT and end-to-end routing. |
+
+The words **send** and **remote event** below describe what the inspected code and descriptors do internally. The address chain does not by itself prove which network peer sends a particular event or that a game-schema record is its final packet.
+
+#### 11.7.1 Property changes: from a queued item to a partial byte sequence
+
+**[STUDIO STATIC]** In the pinned executable, the RTTI names `Network::Replicator::ChangePropertyItem`. Its constructor is `0x14612fa70`. One path at `0x145fc5c00` looks up class/property metadata (`0x145f0eb70`, `0x145fbf810`), selects an entry, constructs an item and queues it through `0x14601ef40`. Another caller at `0x145f6bcf0` also reaches the constructor. A vtable entry points to `0x146130a00`, whose path reaches the writer `0x14612f820`.
+
+The relevant writer path is, schematically:
+
+```text
+ChangePropertyItem / selected schema metadata
+   └─ 0x14612f820
+       ├─ item-code helper 0x14601f0d0(..., 3)
+       ├─ reference writer 0x1460c6210(..., instance)
+       ├─ write two raw bytes from selected metadata, 0x142a28f20
+       ├─ virtual callback at replicator vtable +0x410
+       └─ value-related serialization 0x145f455d0 / 0x145fa34a0
+```
+
+This is **not** enough to say the final wire record is always `03 + reference + property ID + value`: callbacks and branches matter, the containing message is unknown, and the two-byte field has not been independently established as a Team Create property ID. The path does, however, show why the Boblox game's similar-looking `0x03` record is a useful comparison.
+
+**[STUDIO STATIC / SYNTHETIC EMULATION]** For the reference writer examined here:
+
+1. If the object pointer is null, or the low 32-bit scope value is `0xffffffff`, it writes unsigned varint zero and does not write the object-number word.
+2. Otherwise, it writes the low 32-bit scope as an unsigned base-128 varint. If that scope is zero it substitutes a default scope from the replicator.
+3. It then writes the high 32-bit object number as four raw little-endian bytes.
+
+This is how this particular helper behaves; the precise native identity/namespace and collision rules are still unknown. A local `.rbxl` referent must not be treated as that network ID without an explicit mapping.
+
+The following are **partial header outputs**, obtained by running the selected native writer/reference/varint machine code in Unicorn with synthetic objects and selected allocation, logging, memory-copy and callback side effects mocked. The test stops before the typed property value. `0x1234` is an invented metadata field, not a discovered property ID:
+
+```text
+Synthetic input                         Selected header bytes
+scope 1, object 201, field 0x1234       03 01 c9 00 00 00 34 12
+scope 300, object 0x11223344            03 ac 02 44 33 22 11 34 12
+  same invented field 0x1234
+scope 0, default 5, object 201          03 05 c9 00 00 00 34 12
+null object, field 0x1234               03 00 34 12
+scope 0xffffffff, field 0x1234          03 00 34 12
+```
+
+Read the first line as item byte `03`; scope `01`; object number `c9 00 00 00`; invented field `34 12`. `ac 02` is varint 300. These bytes are **not a complete packet, not a captured Studio edit, and not a valid example to transmit**. They isolate the behavior of selected functions in a controlled test. The emulator's mocked virtual callback in particular cannot establish whether real callbacks add data or alter state.
+
+#### 11.7.2 Events: how script/presence payloads might enter generic replication
+
+**[STUDIO STATIC]** There is also an `EventInvocationItem` constructor at `0x1461312c0`, with a queueing path through `0x145f865d0` and `0x14601ef40`. A vtable entry leads `0x146132870 → 0x1461329c0`. In its normal, non-cached branch, the latter writes byte `07`, calls the same reference writer, writes a raw two-byte metadata field, and iterates arguments through `0x145f47420`. It has an alternative cached/pre-serialized branch. Generic signal/event dispatch code includes `0x142addf70` and `0x142a674b0`.
+
+This narrows the investigation: **the pinned Studio has a generic event item with a superficially game-like `07` prefix.** It does not establish that a particular `SendOperation` or cursor descriptor is connected to that network item in a Team Create session. In particular, do not construct `07` plus invented IDs and JSON and call it a working Studio message. The runtime listener connections, descriptor/schema lookup, argument encodings, event direction, permissions and containing frame must be established.
+
+#### 11.7.3 Actual `SendOperation` dispatch and operation JSON
+
+The prior section showed the JSON fields. The additional decompilation links an operation writer **directly to a specific event descriptor**:
+
+```text
+0x145c51f30(operation object)
+   ├─ 0x145c81b00
+   │   ├─ 0x145c81050: write payload.atoms[]
+   │   └─ 0x145c818d0: write timestamps.local / timestamps.remote
+   └─ 0x145c64be0 → 0x142addf70
+        descriptor read from 0x14ca00618 → 0x14d8292f0
+        registered at 0x1406284b0 as SendOperation(id, op)
+```
+
+The descriptor's RTTI identifies a `LiveScriptingService` remote-event signature equivalent to **signed 64-bit integer plus `std::string` at the C++/reflection level**. `id` is an event argument, not a proven user ID, revision or on-wire integer representation. The string is the serialized operation passed through this path; the network argument encoding and complete envelope remain unresolved.
+
+**[STUDIO STATIC / SYNTHETIC EMULATION]** The machine-code path `0x145c51f30 → 0x145c81b00 → 0x145c81050 / 0x145c818d0` was executed on a synthetic operation. The JSON library and downstream event dispatch were mocked. The mock observed one `SendOperation` descriptor dispatch with invented ID `42` and the following logical string contents:
+
+```json
+{
+  "payload": {
+    "atoms": [
+      { "type": 0, "position": 5, "contents": "hé" }
+    ]
+  },
+  "timestamps": { "local": 1, "remote": 0 }
+}
+```
+
+Those values and the ID are invented. The emulation confirms the tested code's field/control-flow relationship under mocked helpers, **not exact native JSON byte formatting**, a captured event or a working client/server exchange. Numeric type 0 behaves like an insertion in one isolated transform, but its complete meaning and the position's byte/character/line unit are not established (§10.4).
+
+There is another promising connection: a `LiveScriptingDMClient` path at `0x145b280a0` logs “Sending edit for ID”, iterates operation-like strings and calls an object's virtual slot `+0x58`. The RTTI-identified `LiveScriptingService` vtable at `0x1494dc1f8` has `0x145c65970` at that same slot. `0x145c65970` copies the operation string and dispatches through `0x145c64b10` / `0x145c64be0` using the same `SendOperation` descriptor. This is strong static consistency, **not proof that the DM client's actual dynamic object always uses that vtable**; the virtual target in a live session has not been observed.
+
+Related names such as `SendAtomicOperation(requestId, guid, op, hash)` and `OpenedWithSource` are registered too. Their full sequence, string formats, hash algorithm, document-open behavior, acknowledgement and recovery semantics are still unknown. Do not treat a local `Script.Source` property update as a replacement for that missing editor protocol.
+
+#### 11.7.4 Script cursor/selection presence: two different JSON objects
+
+**[STUDIO STATIC]** The update helper `0x145c6a4d0` calls `0x145c6f000` to serialize cursor data and passes two strings to `0x145c6e7b0`. The descriptor pointer `0x14ca005a8 → 0x14d8286d0` is registered at `0x140627550` as:
+
+```text
+UpdateClientRemoteCursorPosition(script, remoteCursorPosition)
+```
+
+RTTI for the relevant descriptor uses two C++ strings. An analogous URI variant (`0x145c6eec0`) uses a different descriptor but the same cursor JSON builder. A two-cursor synthetic input, executed through the real JSON-builder machine code with JSON primitives mocked, produces this **logical object** for the second argument:
+
+```json
+{
+  "cursors": [
+    {
+      "positionLineIndex": 3,
+      "positionCursorIndex": 5,
+      "anchorLineIndex": 3,
+      "anchorCursorIndex": 5
+    },
+    {
+      "positionLineIndex": 4,
+      "positionCursorIndex": 1,
+      "anchorLineIndex": 4,
+      "anchorCursorIndex": 2
+    }
+  ],
+  "serializedTimestamps": "clock"
+}
+```
+
+The `script` argument is a string at this reflection boundary; it is not yet proven to be a GUID, path or URI in this variant. `"clock"` is a deliberately arbitrary stand-in, **not** a valid timestamp specification. Position/anchor field meanings, bases, units and remote ordering still require verification; the plugin-facing `ScriptDocument` indexing rules are not proof of wire rules.
+
+**A different helper serves an aggregated/broadcast-shaped event.** `0x145c6ecd0` calls `0x145c6f150` and uses descriptor `0x14ca00590 → 0x14d8284c0`, registered as `BroadcastRemoteCursorPositionsWithConnectionId(connectionId, remoteCursorPosition)`. RTTI identifies a signed 64-bit argument and a string at the reflection boundary. Selected real builders were separately emulated with mocked JSON primitives and invented values:
+
+```json
+{
+  "userCursors": [
+    {
+      "ownerUserId": 123,
+      "playerName": "Alice",
+      "cursors": [
+        {
+          "positionLineIndex": 3,
+          "positionCursorIndex": 5,
+          "anchorLineIndex": 3,
+          "anchorCursorIndex": 5
+        }
+      ],
+      "maybeOudated": false
+    }
+  ],
+  "timestamps": "clock"
+}
+```
+
+The spelling **`maybeOudated` is exactly as found in this build**, even though it looks like a typo. The pinned JSON writer path treats that field as a Boolean. The singular update uses `serializedTimestamps`; the aggregated form uses `timestamps`. Both examples have invented data, mocked JSON functions and no native transport envelope. Descriptor names suggest roles, but **do not prove client→server or server→client direction**.
+
+#### 11.7.5 Collaborator camera and state: observed setters, not a camera packet
+
+The pinned `Collaborator.CFrame` registration associates the name with getter `0x140d68060` and setter `0x144e55470`. The setter checks for a changed value, copies 48 bytes of its **in-memory** representation, then calls the change-notification helper `0x142a67fa0`. That does **not** prove the network value consists of 48 raw bytes; the typed wire serializer may encode it differently.
+
+The pinned binary also associates these names with setters that notify on change:
+
+| `Collaborator` field | Setter address |
+|---|---:|
+| `CollaboratorColor3` | `0x144e55590` |
+| `CurDocGUID` | `0x144e55770` |
+| `CurScriptLineNumber` | `0x144e558e0` |
+| `IsIdle` | `0x144e559c0` |
+| `Status` | `0x144e55aa0` |
+| `UserId` | `0x144e55c00` |
+| `Username` | `0x144e55cd0` |
+
+`CollaboratorsService` also registers `CollaboratorStatusUpdateRequestedSignal(collaboratorId, newStatus)`. These facts make the class useful for tracking camera/document/identity presence. They do not establish that a user's camera motion always reaches this setter, that its notification is connected to the queued item path in the target session, or that the service signal is sent in a particular direction. Nor do `CurDocGUID` or line number carry the document text.
+
+#### 11.7.6 What to implement, and what not to assume
+
+For your Rust server, a useful division of responsibilities is:
+
+```text
+Authenticated connection + native framing/schema/reference adapter
+  ├─ world changes: resolve object → validate property/value → commit → relay
+  ├─ presence: bind state to session actor → coalesce/relay → expire on leave
+  └─ live document: open/source state → ordered operation processing → relay/ack
+```
+
+The adapter cannot yet be completed solely from these static observations. In a test decoder, only after the actual native framing and schema are known, the selected `03`/`07` writer paths are reasonable starting points for locating a reference, metadata and typed payload. Maintain build-specific tests; reject unknown or malformed data instead of guessing field IDs or consuming the rest of a message as a value. Do not assume DOM references, schema IDs, user IDs and document handles are interchangeable.
+
+On every incoming edit, derive the actor from the authenticated session, check edit permission and object/document ownership, validate bounds and types, then apply once in a consistent order. Keep snapshot and subsequent changes consistent; use the **actual** protocol's echo, acknowledgment and resynchronization behavior when established. Presence should be ephemeral and throttled; source editing requires correct operation transforms and revision handling, not arbitrary full-text overwrites. These are server-design requirements, not a claim that the missing native protocol is implemented.
+
+**Offline verification boundary:** selected native code was decompiled and executed under synthetic emulation, but no unmodified Studio session, encrypted capture, second client or end-to-end exchange was available. The evidence files and exact mocked boundaries are listed in §19. The missing framing, value codecs, event links/directions and document lifecycle are the next blocking facts, not a matter of guessing a packet from the JSON examples.
+
+
+### 11.8 Verifying `Collaborator`: fields, identity, and lifecycle
+
+**What was actually checked:** the official Windows Studio `0.745.0.7451137` API dump and the executable with SHA-256 `781b36ed6fb62e61292b9e6a64327280c7da12b00f3ea8b2c91a3f4834f860ec`. We traced class registration, methods, several local creation/update/removal paths and property setters. We also executed selected functions with synthetic state and mocked helpers. This is stronger evidence about **this build's local object model**, but it is **not a capture of Team Create traffic**. Later builds may differ.
+
+#### 11.8.1 The nine class-specific fields
+
+**[STUDIO API + STATIC]** The pinned API describes `Collaborator` as an `Instance` tagged `NotCreatable`. It has the following nine **own** properties; inherited properties such as `Name` and `Parent` are separate. All nine are tagged `Hidden`, have `CanLoad=false` and `CanSave=false`, and have `None` read/write security in the API dump. The serialization flags concern loading/saving; they **do not tell us whether a field is or is not replicated**.
+
+| Field | Pinned API type | What the verification adds | What not to infer |
+|---|---|---|---|
+| `CFrame` | `CFrame` | Category is `Camera`; setter `0x144e55470` compares, copies an in-memory value and calls a property-notification helper on change. | A camera packet, direction, update frequency or 48-byte wire value. |
+| `CollaboratorColor` | `int` | Exists but is explicitly tagged `Deprecated`. | That it has the same encoding or semantics as `CollaboratorColor3`, or that it must be sent. |
+| `CollaboratorColor3` | `Color3` | Setter `0x144e55590`; one local creation path assigns a color. | That the chosen color is transmitted as three raw floats or initialized identically in every session. |
+| `CurDocGUID` | `string` | Setter `0x144e55770`; the status path consults a lookup related to this property. | That it contains document text, or that its wire representation is a particular UUID/path format. |
+| `CurScriptLineNumber` | `int` | Setter `0x144e558e0`; a selected synthetic test changed its local value to 15. | Whether the line describes caret or viewport, its indexing base, a column or a selection. |
+| `IsIdle` | `bool` | Setter `0x144e559c0`; an idle helper also dispatches an `IsIdle`-related service signal. | That property updates and the service signal are identical or have a known network direction. |
+| `Status` | `CollaboratorStatus` | Setter `0x144e55aa0`; a separate path selects a status and dispatches `CollaboratorStatusUpdatedSignal`. | That any claimed client status proves authorization or access to a private document. |
+| `UserId` | `int64` | Setter `0x144e55c00`; in one creation path it is initialized from the same ID used for the created signal. | That it equals the network instance reference, connection ID, or every other event's ID. |
+| `Username` | `string` | Setter `0x144e55cd0`; the same creation path supplies the username string to the `Instance.Name` setter. | That a name is unique, immutable, or a safe authority key. |
+
+The pinned `CollaboratorStatus` enum is `None=0`, `Editing3D=1`, `Scripting=2`, `PrivateScripting=3`. These are API/reflection values. Preserve unknown numeric enum values in a build-tolerant reader; a numeric API value does not itself prove its wire encoding. Do not expose private document names or contents merely because a user has a particular status.
+
+The complete extracted API entries are in [`collaborator-api-pinned.json`](roblox-team-create-rust/evidence/studio-outgoing/collaborator-api-pinned.json). The generic outgoing `0x03` path described in §11.7.1 and these setters are **separate observations**: the listener connecting a particular `Collaborator` setter to a particular network item has not been traced in a running Team Create session.
+
+#### 11.8.2 A real local creation path: the useful ID relationship
+
+**[STUDIO STATIC]** Function `0x144e503d0` takes an ID and username string and, on the examined path, performs these local calls in this order:
+
+```text
+create a Collaborator object
+  UserId       ← input ID             (through the UserId descriptor's setter)
+  Username     ← input username       (through the Username descriptor's setter)
+  Color3       ← chosen local color   (CollaboratorColor3 setter)
+  dispatch CollaboratorInstanceCreatedSignal(service, input ID)
+  pass input username to Instance.Name setter
+  pass service object to Instance parent-setting helper
+```
+
+The important, directly supported relationship is **this path initializes `Collaborator.UserId` with the same input ID passed to `CollaboratorInstanceCreatedSignal`**. We also traced the two generic helpers: the first reaches the `Instance.Name` setter registered with the `Name` descriptor; the second reaches a parent-management routine containing a “Setting parent” diagnostic. That is evidence of a service-parenting call in this path, not proof of the tree in every session. The local signal-dispatch call precedes the name and parent-setting calls here; it does **not** establish the order or timing of anything on the network.
+
+`CollaboratorsService` is itself an `Instance` with `Service` and `NotCreatable` tags. Its child-validation virtual function at `0x144e52440` rejects an object failing its `Collaborator` type check with the diagnostic `Child of collaborators service must be a collaborator`. The child-removal callback `0x144e4e8a0` checks the child's type, obtains its `UserId` via the descriptor and performs an ID-based map lookup. These observations are local service behavior; they do not prove all objects arrive as replicated children or that there is only one object per user.
+
+A separate removal-shaped function, `0x144e51740`, takes an ID, searches a service collection, calls an object-management helper when a matching entry is found, and calls the dispatcher for `CollaboratorInstanceDestroyedSignal` with that same input ID. We did not verify the eventual destruction, callbacks, delivery or all alternate paths. Do not derive a native destroy packet or universal event ordering from it.
+
+Instruction traces: [creation and child checks](roblox-team-create-rust/evidence/studio-outgoing/collaborator-create-and-child-disassembly.txt), [name/parent registration and setter evidence](roblox-team-create-rust/evidence/studio-outgoing/collaborator-name-parent-evidence-disassembly.txt), [parent-management core](roblox-team-create-rust/evidence/studio-outgoing/collaborator-parent-core-disassembly.txt), and [removal/callers](roblox-team-create-rust/evidence/studio-outgoing/collaborator-removal-and-callers-disassembly.txt). Address-preserving [Ghidra pseudocode](roblox-team-create-rust/evidence/studio-outgoing/collaborator-lifecycle-pseudocode.txt) is supporting context only: incomplete external memory/types and removed-block warnings limit it.
+
+#### 11.8.3 Service methods and signals are not automatically packets
+
+The pinned API dump declares these `CollaboratorsService` members with `RobloxScriptSecurity`:
+
+| Member | API-level signature | What is established |
+|---|---|---|
+| `GetCollaboratorsList` | `() → Instances` | Registered to local method `0x144e4dff0`; one inspected implementation iterates a service collection. It is not a network bootstrap specification. |
+| `RequestFlyToCollaborator` | `(collaboratorId: int64) → null` | Registered to a local method; its name/signature do not establish a transport message or remote camera behavior. |
+| `CollaboratorInstanceCreatedSignal` | `(collaboratorId: int64)` | The creation path above dispatches the input ID after initializing the object's ID and username. |
+| `CollaboratorInstanceDestroyedSignal` | `(collaboratorId: int64)` | The inspected removal-shaped path dispatches its input ID after a successful lookup. |
+| `CollaboratorStatusUpdatedSignal` | `(collaboratorId: int64, newStatus: CollaboratorStatus)` | The status path reads the object's `UserId` and stored `Status`, then dispatches those values. |
+| `CollaboratorIdleUpdate` | `(collaboratorId: int64, isIdle: bool)` | The idle path sets an object's `IsIdle` and dispatches using its own ID/bool arguments. Equality between that ID argument and that object's `UserId` was **not** established for this path. |
+
+`CollaboratorStatusUpdateRequestedSignal(collaboratorId, newStatus)` is also registered by the binary, but is **absent from the inspected API dump**. Its existence alone does not establish which peer may invoke it or its wire format. The dump includes other service members as well; see the complete API excerpt rather than treating this table as the entire service API. `RobloxScriptSecurity` is a restriction on those API members; it is not a license to invoke them from arbitrary plugin code.
+
+In the examined status-update helper `0x144e51a80`, input `1` selects status `1`; inputs `2` or `3` go through a `CurDocGUID`-related lookup that can select `2` or `3`; other inputs select `0`. The helper calls the status setter, reads the stored status and obtains that object's `UserId`, then calls a service dispatcher with `(UserId, stored status)`. This is one local path, not a specification of every valid status transition, permission check or network message.
+
+**Important distinction:** a setter's change notification and a service signal are different mechanisms. In the status helper above, the service dispatcher is called after the setter even if the selected status already equals the current status. You cannot infer one service signal per property notification, or deduplicate all events based only on the current property value.
+
+#### 11.8.4 What was executed, with what mocked
+
+**[STUDIO EMULATED]** Six actual setter functions from the pinned executable were run under Unicorn using a synthetic object, a disabled optional-instrumentation flag, and fake external hooks. Each test set a changed value and then repeated the identical value:
+
+| Test | Result in this controlled test |
+|---|---|
+| `IsIdle`: `false → true → true` | Stored `true`; one mocked property-notification call for the change, none for the identical repeat. |
+| `Status`: `0 → 2 → 2` | Stored `2`; one mocked notification, none for the repeat. |
+| `UserId`: `0 → 4294967301 → 4294967301` | Retained the value above `2³²`; one mocked notification, none for the repeat. |
+| `CurScriptLineNumber`: `0 → 15 → 15` | Stored `15`; one mocked notification, none for the repeat. |
+| `CollaboratorColor3`: chosen finite RGB value repeated | Copied the selected in-memory value; one mocked notification, none for the identical repeat. |
+| `CFrame`: chosen 48-byte in-memory value repeated | Copied those 48 bytes; one mocked notification, none for the identical repeat. The rotation-equality helper was replaced by an exact-byte mock. |
+
+We also ran the real status-update wrapper with status `1` twice after an initial local status of `2`. The reflected `UserId` getter, notification helper and downstream service dispatcher were mocked: the test observed **one notification call but two dispatcher calls**, both carrying synthetic `UserId=4294967301` and status `1`. A stack-cookie checker and pre-set guard were also mocked. This is an isolated check of those code paths—not a live Studio process, actual listener delivery, serialization, transport, permission test or interoperability result. It does not establish general floating-point/NaN equality behavior or a `CFrame` wire size.
+
+The [test output](roblox-team-create-rust/evidence/studio-outgoing/collaborator-setter-emulation.txt), [readable harness](roblox-team-create-rust/evidence/studio-outgoing/emulate_collaborator_setters.harness.txt), [setter disassembly](roblox-team-create-rust/evidence/studio-outgoing/collaborator-setters-disassembly.txt), and [evidence README](roblox-team-create-rust/evidence/studio-outgoing/README.md) identify the inputs, mocks and reproduction requirements.
+
+#### 11.8.5 Applying this to your Rust port
+
+**[DESIGN, not a native message format]** Once your port has actually decoded a field or service signal from the correct current schema, keep these identities distinct:
+
+```text
+(session epoch, network object reference) → observed Collaborator state
+(session epoch, UserId)                   → zero, one or multiple object references
+connection/session                        → independently authenticated actor
+```
+
+Use a signed 64-bit representation for the API-level `UserId`; the test deliberately used `4294967301` to catch accidental 32-bit truncation. Keep the entire network reference as an opaque key until its real namespace/lifetime is established. Maintain a separate user-to-object index that can handle missing IDs, duplicate references, reconnects or later corrections; do not collapse actors merely because names match. The service-signal ID and `UserId` can be correlated in the **specific observed created/status paths**, not universally equated with the reference or peer ID.
+
+For an illustrative **decoded local state**—not bytes to send—you could have object `R` with `UserId=42`, `Username="Alex"`, `Status=Scripting`, `CurDocGUID="doc-1"` and `IsIdle=false`. Later, apply only a verified `IsIdle=true` change to `R`; preserve the other fields. If a decoded status signal for ID 42 also arrives, route it separately and reconcile it with object state under the actual protocol's ordering rules. Here `R`, `42`, and `doc-1` are invented examples, not established native references or GUIDs.
+
+For your own server's internal design, bind writes to the authenticated actor, validate edit permissions, bound presence/update rates, and use a bounded pending queue for an event referring to an as-yet-unknown object. Keep presence ephemeral and outside your persistable place model unless your actual application needs an explicit export. These are design recommendations, not proven native rules. **A complete Studio-compatible implementation still requires actual schema IDs and typed codecs, object creation/removal framing, property/event subscriptions, direction, authorization, bootstrap and ordering.**
+
 
 ---
 
@@ -1474,9 +1845,9 @@ The following gaps are **blocking facts**, not implementation details that can s
 | Schema | Public game `0x97` prefix and ordered tables; a substantial tail is opaque. | Actual Team Create schema delivery, tail, build compatibility, negotiation/filtering and whether the game layout applies at all. |
 | Initial world | Game `0x83/0x16` record batches; pinned Studio has kind-1/5 builders. | Native instance builders/flags and full trailers; required root/service mapping, shared data, assets, terrain, filtering and completion procedure. |
 | Identity/lifecycle | A game reference is `lo` plus optional u32; some game live items are parsed. | Native namespaces, identity persistence, create/update/reparent/delete messages and semantics, duplicate handling, reconnect. |
-| Properties/events | Game tables and several value readers; `0x03` and `0x07` have observed game shapes. | Team Create property/event tables, all value forms and overrides, directions, permissions, ordering and the live-script envelope. |
-| Script editing | Studio names/labels, a nested JSON shape, and a narrow emulated type-0 transform. | Source delivery, exact event framing/types, atom semantics/units, timestamp/hash/ack meanings, complete multi-atom transforms and convergence behavior. |
-| Collaborator presence | Official UI behavior and hidden `Collaborator`/`CollaboratorsService` API descriptors; the public game schema also declares these classes and fields (§2.5). | Native message fields and directions for colored cursors, selections, camera/viewport state, initial presence and removal; whether and how those descriptors are actually used. |
+| Properties/events | Game tables; pinned Studio property/event item writers and synthetic partial property headers (§11.7.1–2). | Team Create framing and tables, typed values/overrides, actual listener connections, directions, permissions and ordering. |
+| Script editing | Studio operation JSON dispatches through a `SendOperation(int64, string)` reflection descriptor; a narrow type-0 transform was emulated (§11.7.3). | Native wire argument encoding/framing and direction, source delivery, atom semantics/units, timestamp/hash/ack meanings, complete multi-atom transforms and convergence behavior. |
+| Collaborator presence | Pinned class fields, API/security and enum; selected local creation, service signal, status/idle and removal paths; six emulated setters (§11.8); cursor event descriptors/JSON builders (§11.7.4–5). | Native event framing/directions and typed codecs, caret units/timestamps, whether camera changes reach those setters, actual replication connections, initial presence and removal delivery. |
 | Persistence | Local file readers/writers and a tested synthetic export. | Proof all necessary state is present and saved at a consistent collaborative revision; behavior for omitted/unavailable data. |
 
 An authorized, minimal two-client trace with a precisely recorded action sequence and matching Studio build would be the most direct way to resolve many of these. Static analysis of additional pinned-build code can narrow hypotheses, but function names or isolated emulation are not a substitute for an end-to-end result. Keep the native adapter disabled/fail-closed when these facts are absent.
@@ -1487,6 +1858,7 @@ An authorized, minimal two-client trace with a precisely recorded action sequenc
 
 * Public Boblox game receiver, pinned revision: [repository](https://gitlab.com/kingdudely/Boblox/-/tree/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287), [schema and snapshot reader](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/solve/repl_snapshot.cpp), [value reader](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/solve/repl_core.cpp), [live item reader](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/solve/repl_stream.cpp), [runtime application](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/engine/live_runtime.cpp), [project findings](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/FINDINGS.md). Some older header/findings comments are superseded by later code/findings; this guide follows the pinned implementations where noted. No license was found in the inspected checkout; check its terms before copying source or captures.
 * Join/player comparison in §2.4–2.5: public Boblox fixtures [`join97_new_frame.bin`](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/run/join97_new_frame.bin), [`repl_native97.bin`](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/run/repl_native97.bin), and [`msg02.bin`](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/tests/vectors/repl/msg02.bin), plus its [RbxTransport session](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/quic/session.cpp), [RakNet join builder](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/client/src/raknet/join_flow.cpp), and [game runtime instance code](https://gitlab.com/kingdudely/Boblox/-/blob/8c46b6dc175e22f50a7661bd19ff86eb5dbe4287/rbx_runtime/src/instance/instance.cpp). Fixture hashes and the offline synthetic parser check are recorded above.
+* New outgoing-path evidence: [`roblox-team-create-rust/evidence/studio-outgoing/README.md`](roblox-team-create-rust/evidence/studio-outgoing/README.md), including Collaborator API excerpts and lifecycle decompilation, disassembly, RTTI, synthetic test results, saved harnesses, warning notes and SHA-256 manifest. No Studio capture is included.
 * Pinned Studio static evidence in the previously supplied local research project: `roblox-team-create-rust/docs/FINDINGS.md`, `docs/CANDIDATE_SNAPSHOT.md`, `docs/VALIDATION.md`, `src/script_operation.rs`, `src/operation_transform.rs` and `evidence/`. The studied release was Windows Studio `0.745.0.7451137`, deployment `version-7062aec9dbe74b14`, EXE SHA-256 `781b36ed6fb62e61292b9e6a64327280c7da12b00f3ea8b2c91a3f4834f860ec`. Static code addresses are specific to that pinned image; no Studio session was executed.
 * [Official Studio archive for the pinned deployment](https://setup.rbxcdn.com/version-7062aec9dbe74b14-RobloxStudio.zip) and [matching API dump](https://setup.rbxcdn.com/version-7062aec9dbe74b14-API-Dump.json). The archive and executable were downloaded from the CDN and hash-checked for the earlier static research.
 * [Roblox Live Scripting announcement](https://devforum.roblox.com/t/live-scripting-beta/2640607), [collaboration documentation](https://github.com/Roblox/creator-docs/blob/main/content/en-us/projects/collaboration.md), [collaborator location announcement](https://devforum.roblox.com/t/jump-to-your-collaborator%E2%80%99s-location-in-team-create/2618317), [collaborator visibility announcement](https://devforum.roblox.com/t/improved-visibility-of-collaborators-in-studio/2893919), [ScriptDocument API](https://create.roblox.com/docs/reference/engine/classes/ScriptDocument), [ScriptEditorService API](https://create.roblox.com/docs/reference/engine/classes/ScriptEditorService), and [DraftsService API](https://create.roblox.com/docs/reference/engine/classes/DraftsService). These are behavior/API references, not native packet specifications.
