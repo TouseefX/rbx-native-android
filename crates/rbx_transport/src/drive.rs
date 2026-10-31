@@ -370,7 +370,7 @@ pub fn drive(
             }
         }
     }
-    say(format!(
+    let mut line = format!(
         "session stopped after {}ms: {} messages ({}B), {} datagrams out, {} server ACKs, {} retransmits, {} challenges answered",
         now_ms().saturating_sub(start),
         app_messages,
@@ -379,7 +379,14 @@ pub fn drive(
         client.server_acks(),
         client.retransmits_tx(),
         client.challenge_answers()
-    ));
+    );
+    if client.rtx_untracked() > 0 {
+        // The retry budget was spent when these went out: the sends
+        // still left, but nothing is retransmitting them. Counted
+        // rather than silent — this is the backpressure signal.
+        line.push_str(&format!(", {} untracked", client.rtx_untracked()));
+    }
+    say(line);
     if let Some(summary) = replication.summary() {
         say(format!("replication: {summary}"));
     }
