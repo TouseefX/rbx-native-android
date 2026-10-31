@@ -55,6 +55,7 @@ pub mod frames;
 pub mod join_flow;
 pub mod join_game;
 pub mod join_msg;
+pub mod join_schema;
 pub mod join_target;
 pub mod offline;
 pub mod replication;

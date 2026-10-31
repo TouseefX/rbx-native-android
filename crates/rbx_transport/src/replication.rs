@@ -29,6 +29,8 @@
 
 use std::io::Read;
 
+use crate::join_schema::Schema;
+
 /// The 0x97 codec-version magics seen across server builds (the
 /// reference's own capture list — same `[00 00][u32][zstd]` layout
 /// after every one of them).
@@ -63,6 +65,12 @@ pub struct Replication {
     pub join_inner: Option<u64>,
     /// 0x97s that would not parse.
     pub join_failures: u64,
+    /// The parsed 0x97 dictionary, once one lands and parses: the
+    /// instance records and live updates decode against it.
+    pub schema: Option<Schema>,
+    /// 0x97s whose tables would not parse (the join data itself was
+    /// fine; the dictionary is kept out of the session's liveness).
+    pub schema_failures: u64,
     /// 0x83/0x16 instance batches, and their inner bytes total.
     pub batches: u64,
     /// Batches whose flags said shared strings rather than instances.
@@ -89,6 +97,8 @@ impl Default for Replication {
             messages: 0,
             join_inner: None,
             join_failures: 0,
+            schema: None,
+            schema_failures: 0,
             batches: 0,
             shared_batches: 0,
             batch_bytes: 0,
@@ -153,6 +163,47 @@ impl Replication {
                         body[1],
                         body[2]
                     ));
+                }
+                // The first dictionary wins; a session that re-sends
+                // its schema does not get a second parse unless the
+                // first failed.
+                if self.schema.is_none() {
+                    match Schema::parse(&inner) {
+                        Ok(schema) => {
+                            log(format!(
+                                "replication: schema v{}: {} enums, {} classes, {} properties, {} events",
+                                schema.version,
+                                schema.enums.len(),
+                                schema.classes.len(),
+                                schema.property_bound,
+                                schema.event_bound
+                            ));
+                            // The roster's classes, by name — the
+                            // Collaborator class is the players in
+                            // the Team Create, and its index is this
+                            // session's own, never a sample's.
+                            let roster: Vec<String> = [
+                                "Collaborator",
+                                "CollaboratorsService",
+                                "Player",
+                                "Players",
+                            ]
+                            .iter()
+                            .filter_map(|n| schema.class_index(n).map(|i| format!("{n}={i}")))
+                            .collect();
+                            if !roster.is_empty() {
+                                log(format!(
+                                    "replication: roster classes: {}",
+                                    roster.join(" ")
+                                ));
+                            }
+                            self.schema = Some(schema);
+                        }
+                        Err(err) => {
+                            self.schema_failures += 1;
+                            log(format!("replication: schema failed: {err}"));
+                        }
+                    }
                 }
                 self.join_inner = Some(inner.len() as u64);
             }
@@ -239,6 +290,9 @@ impl Replication {
         if let Some(inner) = self.join_inner {
             parts.push(format!("join data {inner}B"));
         }
+        if let Some(schema) = &self.schema {
+            parts.push(format!("schema ({} classes)", schema.classes.len()));
+        }
         if self.batches > 0 {
             parts.push(format!(
                 "{} batches ({}B){}",
@@ -260,7 +314,7 @@ impl Replication {
         if self.snapshot_done {
             parts.push("snapshot done".to_string());
         }
-        let failures = self.join_failures + self.batch_failures;
+        let failures = self.join_failures + self.batch_failures + self.schema_failures;
         if failures > 0 {
             parts.push(format!("{failures} parse failures"));
         }
@@ -520,6 +574,58 @@ mod tests {
             parse_join_outer(&[0x97, 0xA3, 0xCF]),
             Err("not a 0x97 frame".to_string())
         );
+    }
+
+    #[test]
+    fn the_join_data_yields_the_schema_and_names_the_roster_classes() {
+        // A minimal but well-formed dictionary (join_schema's own
+        // tests build the full shape): one class, the roster's own.
+        let mut inner = vec![0x03]; // schema version varint
+        inner.extend_from_slice(&15u64.to_le_bytes()); // flags
+        inner.push(0x00); // no enums
+        inner.push(0x01); // one class
+        inner.push(0x00); // property bound
+        inner.push(0x00); // event bound
+        inner.push(11); // "Collaborator"
+        inner.extend_from_slice(b"Collaborator");
+        inner.push(0x00); // no members
+        inner.extend_from_slice(&0u16.to_le_bytes()); // class flags
+        inner.push(0x00); // no events
+        inner.push(0x00); // no url prefixes
+        inner.push(0x01); // one shared name
+        inner.extend_from_slice(&[0x02, b'H', b'i']);
+        inner.push(0xee); // one tail byte
+        let frame = zstd(&inner);
+        let mut body = vec![0x97, 0xA3, 0xCF, 0x00, 0x00];
+        body.extend_from_slice(&(inner.len() as u32).to_le_bytes());
+        body.extend_from_slice(&frame);
+        let mut repl = Replication::default();
+        let lines = RefCell::new(Vec::new());
+        let mut log = |l: String| lines.borrow_mut().push(l);
+        repl.feed(&body, &mut log);
+        let schema = repl.schema.as_ref().expect("the dictionary parsed");
+        assert_eq!(schema.class_index("Collaborator"), Some(0));
+        assert_eq!(schema.shared_names, ["Hi"]);
+        assert_eq!(repl.schema_failures, 0);
+        assert!(lines
+            .borrow()
+            .iter()
+            .any(|l| l.contains("schema v3: 0 enums, 1 classes, 0 properties, 0 events")));
+        assert!(lines
+            .borrow()
+            .iter()
+            .any(|l| l.contains("roster classes: Collaborator=0")));
+        assert!(repl.summary().unwrap().contains("schema (1 classes)"));
+        // A second 0x97 does not replace the first dictionary.
+        let mut again = body.clone();
+        again[1] = 0x50;
+        again[2] = 0xD3;
+        repl.feed(&again, &mut log);
+        assert_eq!(
+            repl.schema.as_ref().unwrap().class_index("Collaborator"),
+            Some(0)
+        );
+        assert_eq!(repl.schema_failures, 0);
     }
 
     #[test]
