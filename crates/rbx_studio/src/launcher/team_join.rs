@@ -66,6 +66,13 @@ const LOG_TAIL: usize = 6;
 /// server only lists the account once its session is really registered.
 const MEMBER_POLL: std::time::Duration = std::time::Duration::from_secs(1);
 
+/// How often each listed member's availability is re-read. The member
+/// list already says who is in the session; presence says whether
+/// Roblox still has them online, which mostly catches the endpoint's
+/// list lagging a drop — so a slow cadence is enough, and the API is
+/// not asked every second for the same answer.
+const PRESENCE_POLL: std::time::Duration = std::time::Duration::from_secs(15);
+
 /// The session's on-screen status: the thread writes, the editor
 /// window's card (see `shell::team_create`) reads a snapshot, and
 /// `version` ticks on every write so the card's poller only repaints
@@ -93,6 +100,9 @@ struct SessionState {
     /// Our own account is in that list — the "the server really has
     /// you" verdict.
     me_listed: bool,
+    /// What the presence API last said about each listed member —
+    /// availability, not membership.
+    presences: std::collections::HashMap<u64, u8>,
 }
 
 /// Where the join stands, for the card's headline and its dot's color.
@@ -127,6 +137,7 @@ impl Session {
                     members: Vec::new(),
                     members_seen: false,
                     me_listed: false,
+                    presences: std::collections::HashMap::new(),
                 }),
                 finished: AtomicBool::new(false),
             }),
@@ -194,6 +205,31 @@ impl Session {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         (state.members.clone(), state.me_listed)
+    }
+
+    /// What the presence API last said about each listed member.
+    pub(crate) fn presences(&self) -> std::collections::HashMap<u64, u8> {
+        let state = self
+            .inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        state.presences.clone()
+    }
+
+    /// One presence read: on any change the card repaints, but nothing
+    /// is logged — availability flaps, and the roster's log is for the
+    /// events that matter.
+    fn note_presences(&self, map: std::collections::HashMap<u64, u8>) {
+        let mut state = self
+            .inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if state.presences != map {
+            state.presences = map;
+            state.version += 1;
+        }
     }
 
     /// One member-list read: on any change the card repaints (the
@@ -320,6 +356,7 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
                 status.clone(),
                 js.get("UserId").and_then(|v| v.as_u64()),
             );
+            poll_presence(cookie.clone(), status.clone());
         }
         let peer = peer_of(&reply)?;
         ensure_udmux(&mut js, peer);
@@ -381,6 +418,26 @@ fn poll_members(place: u64, cookie: SessionCookie, status: Session, own: Option<
                     status.note_members(list, own);
                 }
                 std::thread::sleep(MEMBER_POLL);
+            }
+        });
+}
+
+/// The roster card's availability feed: asks Roblox's presence API
+/// about whoever the member list currently holds, until the session
+/// thread exits. Slow on purpose — see `PRESENCE_POLL` — and a failed
+/// read simply keeps the last answer.
+fn poll_presence(cookie: SessionCookie, status: Session) {
+    let _ = std::thread::Builder::new()
+        .name("team-create-presence".to_string())
+        .spawn(move || {
+            while !status.is_finished() {
+                let ids: Vec<u64> = status.members().0.iter().map(|m| m.id).collect();
+                if !ids.is_empty() {
+                    if let Ok(list) = rbx_cloud::user_presence(&cookie, &ids) {
+                        status.note_presences(list.into_iter().collect());
+                    }
+                }
+                std::thread::sleep(PRESENCE_POLL);
             }
         });
 }

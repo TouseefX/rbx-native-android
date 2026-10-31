@@ -30,6 +30,7 @@ mod inventory;
 mod new_experience;
 mod parallel;
 mod places;
+pub mod presence;
 mod publish;
 pub mod quick_login;
 mod retry;
@@ -74,6 +75,7 @@ pub use new_experience::{
     create_experience, creator_groups, name_experience, CreatedExperience, CreatorGroup,
 };
 pub use places::{place_id_from_link, PlaceSummary};
+pub use presence::{user_presence, INVISIBLE, IN_GAME, IN_STUDIO, OFFLINE, ONLINE};
 pub use publish::PublishMode;
 pub use retry::rate_limit_waits;
 pub use scopes::{

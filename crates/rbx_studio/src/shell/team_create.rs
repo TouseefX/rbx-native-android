@@ -104,6 +104,7 @@ impl Shell {
         let session = self.team_create.as_ref()?;
         let (phase, log) = session.snapshot();
         let (members, me) = session.members();
+        let presences = session.presences();
         let (headline, dot) = match phase {
             Phase::Negotiating { attempt } => (
                 format!("Asking the session server ({attempt})\u{2026}"),
@@ -191,12 +192,45 @@ impl Shell {
                                 rbx_presence::schema::color_for(m.id),
                             )
                             .unwrap_or((255, 255, 255));
-                            super::team_presence::avatar(
-                                self.team_presence.avatars.get(&m.id).cloned(),
-                                color,
-                                member_name(m),
-                                AVATAR_PX,
-                            )
+                            // The status thing: the presence API's
+                            // answer as a dot on the avatar. Green is
+                            // Roblox having them online, in a game, or
+                            // in Studio; offline and chosen-invisible
+                            // go gray. No answer yet still counts — the
+                            // member list is the authority on who is in
+                            // the session, presence only on whether
+                            // Roblox still sees them.
+                            let online = match presences.get(&m.id) {
+                                Some(kind) => {
+                                    (rbx_cloud::ONLINE..=rbx_cloud::IN_STUDIO).contains(kind)
+                                }
+                                None => true,
+                            };
+                            div()
+                                .relative()
+                                .flex_none()
+                                .size(px(AVATAR_PX))
+                                .child(super::team_presence::avatar(
+                                    self.team_presence.avatars.get(&m.id).cloned(),
+                                    color,
+                                    member_name(m),
+                                    AVATAR_PX,
+                                ))
+                                .child(
+                                    div()
+                                        .absolute()
+                                        .bottom_0()
+                                        .right_0()
+                                        .size(px(9.))
+                                        .rounded_full()
+                                        .border_1()
+                                        .border_color(ui::panel())
+                                        .bg(if online {
+                                            ui::green()
+                                        } else {
+                                            tokens::text3()
+                                        }),
+                                )
                         }))
                         .when(more > 0, |row| {
                             row.child(
