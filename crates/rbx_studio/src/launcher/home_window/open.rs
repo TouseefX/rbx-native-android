@@ -127,7 +127,6 @@ impl HomeWindow {
             None => self.download(experience, true, cx),
         }
         cx.notify();
-        false
     }
 
     pub(super) fn download(

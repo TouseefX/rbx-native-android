@@ -137,7 +137,8 @@ pub(super) enum Dialog {
     NewExperience {
         busy: bool,
         error: Option<String>,
-    },}
+    },
+}
 
 pub(crate) struct HomeWindow {
     pub(super) boot: Boot,
@@ -159,6 +160,9 @@ pub(crate) struct HomeWindow {
     pub(super) cookie_input: Entity<InputState>,
     /// Auto-Recovery copies no editor owns, read as Home opens.
     pub(super) recovered: Vec<crate::recovery::Leftover>,
+    /// The crash the last run left behind, offered for copying until
+    /// dismissed (see `view::crash_notice`).
+    pub(super) last_crash: Option<crate::panic_log::CrashReport>,
     pub(super) search: Entity<InputState>,
     pub(super) link: Entity<InputState>,
     pub(super) link_state: LinkState,
@@ -312,6 +316,7 @@ impl HomeWindow {
             recovered: crate::recovery::folder()
                 .map(|folder| crate::recovery::leftovers(&folder))
                 .unwrap_or_default(),
+            last_crash: crate::panic_log::take_last_crash(),
             search,
             link,
             link_state: LinkState::Idle,
