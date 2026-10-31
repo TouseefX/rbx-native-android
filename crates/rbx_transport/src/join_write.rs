@@ -261,7 +261,10 @@ mod tests {
     fn fixture() -> Vec<u8> {
         let mut out = v(3);
         out.extend_from_slice(&15u64.to_le_bytes());
-        out.extend_from_slice(&v(0)); // no enums
+        // One enum, so Status's tag-7 member has a table to point at.
+        out.extend_from_slice(&v(1));
+        out.extend_from_slice(&s("CollaboratorStatus"));
+        out.push(0);
         out.extend_from_slice(&v(3)); // three classes
         out.extend_from_slice(&v(16)); // property bound
         out.extend_from_slice(&v(6)); // event bound
@@ -293,6 +296,12 @@ mod tests {
         ] {
             out.extend_from_slice(&s(name));
             out.push(tag);
+            if tag == 7 {
+                // Tag 7 is enum-typed: the dictionary carries the
+                // enum's table index as a u16 — while Status's *value*
+                // on the wire stays the tag's plain varint.
+                out.extend_from_slice(&0u16.to_le_bytes());
+            }
         }
         out.extend_from_slice(&0u16.to_le_bytes());
         out.extend_from_slice(&v(0));
