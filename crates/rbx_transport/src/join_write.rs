@@ -165,7 +165,9 @@ pub fn invoke_event(
     let event = class
         .event(event_name)
         .ok_or_else(|| format!("class {class_name} has no event {event_name}"))?;
-    let id = class.global_event_id(event_name).expect("the event just resolved");
+    let id = class
+        .global_event_id(event_name)
+        .expect("the event just resolved");
     let id = u16::try_from(id).map_err(|_| format!("event id {id} over the u16 wire field"))?;
     let tags: Vec<u8> = event.args.iter().map(|a| a.tag).collect();
     event_invocation(target, id, &tags, args)
@@ -317,7 +319,10 @@ mod tests {
                 "CollaboratorStatusUpdateRequestedSignal",
                 vec![(44, 0, 0), (7, 0, 0)],
             ),
-            ("CollaboratorStatusUpdatedSignal", vec![(44, 0, 0), (7, 0, 0)]),
+            (
+                "CollaboratorStatusUpdatedSignal",
+                vec![(44, 0, 0), (7, 0, 0)],
+            ),
         ] {
             out.extend_from_slice(&s(name));
             out.extend_from_slice(&v(args.len() as u64));
@@ -365,15 +370,10 @@ mod tests {
     #[test]
     fn the_worked_update_chain_matches() {
         let item = property_update(NetRef::new(1, 101), 5523, 9, &Value::Bool(false)).unwrap();
-        assert_eq!(
-            item,
-            [0x03, 0x01, 0x65, 0x00, 0x00, 0x00, 0x93, 0x15, 0x00]
-        );
+        assert_eq!(item, [0x03, 0x01, 0x65, 0x00, 0x00, 0x00, 0x93, 0x15, 0x00]);
         assert_eq!(
             chain(&[&item]),
-            [
-                0x83, 0x03, 0x01, 0x65, 0x00, 0x00, 0x00, 0x93, 0x15, 0x00, 0x00,
-            ]
+            [0x83, 0x03, 0x01, 0x65, 0x00, 0x00, 0x00, 0x93, 0x15, 0x00, 0x00,]
         );
     }
 
@@ -387,20 +387,14 @@ mod tests {
         let line = property_update(NetRef::new(1, 201), 2103, 10, &Value::Int(15)).unwrap();
         let idle = property_update(NetRef::new(1, 201), 2104, 9, &Value::Bool(true)).unwrap();
         let pose = property_update(NetRef::new(1, 201), 2099, 27, &pose).unwrap();
-        assert_eq!(
-            line,
-            [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x37, 0x08, 0x1e]
-        );
-        assert_eq!(
-            idle,
-            [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x38, 0x08, 0x01]
-        );
+        assert_eq!(line, [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x37, 0x08, 0x1e]);
+        assert_eq!(idle, [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x38, 0x08, 0x01]);
         assert_eq!(pose.len(), 8 + 13);
         assert_eq!(
             pose,
             [
-                0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x33, 0x08, 0x00, 0x00, 0x30, 0x41, 0x00,
-                0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0xc0, 0x02,
+                0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x33, 0x08, 0x00, 0x00, 0x30, 0x41, 0x00, 0x00,
+                0x80, 0x40, 0x00, 0x00, 0x00, 0xc0, 0x02,
             ]
         );
         let mut expected = vec![0x83];
@@ -424,9 +418,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             item,
-            [
-                0x07, 0x01, 0x65, 0x00, 0x00, 0x00, 0x05, 0x0f, 0x04, 0x54, 0x65, 0x73, 0x74,
-            ]
+            [0x07, 0x01, 0x65, 0x00, 0x00, 0x00, 0x05, 0x0f, 0x04, 0x54, 0x65, 0x73, 0x74,]
         );
         let mut expected = vec![0x83];
         expected.extend_from_slice(&item);
@@ -451,7 +443,10 @@ mod tests {
         // IsIdle, tag 9.
         assert_eq!(value(9, &Value::Bool(false)), [0x00]);
         // Username, tag 2: length then bytes.
-        assert_eq!(value(2, &Value::Str(b"Alex".to_vec())), [0x04, b'A', b'l', b'e', b'x']);
+        assert_eq!(
+            value(2, &Value::Str(b"Alex".to_vec())),
+            [0x04, b'A', b'l', b'e', b'x']
+        );
         // CollaboratorColor3, tag 19: three little-endian f32s.
         assert_eq!(
             value(19, &Value::Floats3([0.25, 0.5, 1.0])),
@@ -479,10 +474,7 @@ mod tests {
             &Value::Bool(true),
         )
         .unwrap();
-        assert_eq!(
-            idle,
-            [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x08, 0x00, 0x01]
-        );
+        assert_eq!(idle, [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x08, 0x00, 0x01]);
         // CurScriptLineNumber slot 4 → id 7, tag 10 zigzag 15.
         let line = member_update(
             &schema,
@@ -492,10 +484,7 @@ mod tests {
             &Value::Int(15),
         )
         .unwrap();
-        assert_eq!(
-            line,
-            [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x07, 0x00, 0x1e]
-        );
+        assert_eq!(line, [0x03, 0x01, 0xc9, 0x00, 0x00, 0x00, 0x07, 0x00, 0x1e]);
         // A wire shape the member does not carry is refused.
         assert!(member_update(
             &schema,

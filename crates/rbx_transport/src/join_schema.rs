@@ -248,7 +248,10 @@ impl Schema {
 
     /// The class's index in the schema's ordered class table.
     pub fn class_index(&self, name: &str) -> Option<u32> {
-        self.classes.iter().position(|c| c.name == name).map(|i| i as u32)
+        self.classes
+            .iter()
+            .position(|c| c.name == name)
+            .map(|i| i as u32)
     }
 }
 
@@ -285,7 +288,9 @@ impl Class {
 
     /// The global event id a `0x07` item carries for this event.
     pub fn global_event_id(&self, name: &str) -> Option<u32> {
-        self.event_by_name.get(name).map(|i| self.event_base + *i as u32)
+        self.event_by_name
+            .get(name)
+            .map(|i| self.event_base + *i as u32)
     }
 
     /// An event by name, with its argument descriptors — what a
@@ -439,19 +444,19 @@ mod tests {
         out.extend_from_slice(&v(4)); // four classes
         out.extend_from_slice(&v(15)); // property bound
         out.extend_from_slice(&v(5)); // event bound
-        // Folder: the §7 worked example's shape.
+                                      // Folder: the §7 worked example's shape.
         out.extend_from_slice(&s("Folder"));
         out.extend_from_slice(&v(2));
         out.extend_from_slice(&m("Archivable", 9, b""));
         out.extend_from_slice(&m("Name", 49, b""));
         out.extend_from_slice(&0u16.to_le_bytes());
         out.extend_from_slice(&v(0)); // no events
-        // Collaborator: the players in the session, at the same slots
-        // the public 50 d3 sample's table gives them — including its
-        // unlisted slot-1 member, named here as a placeholder because
-        // the guide does not name it. That member's presence is what
-        // shifts every later slot, which is why nothing downstream
-        // may hardcode the numbers.
+                                      // Collaborator: the players in the session, at the same slots
+                                      // the public 50 d3 sample's table gives them — including its
+                                      // unlisted slot-1 member, named here as a placeholder because
+                                      // the guide does not name it. That member's presence is what
+                                      // shifts every later slot, which is why nothing downstream
+                                      // may hardcode the numbers.
         out.extend_from_slice(&s("Collaborator"));
         out.extend_from_slice(&v(9));
         out.extend_from_slice(&m("CFrame", 27, b""));
@@ -471,10 +476,7 @@ mod tests {
         out.extend_from_slice(&v(0)); // no members
         out.extend_from_slice(&0u16.to_le_bytes());
         out.extend_from_slice(&v(5));
-        out.extend_from_slice(&e(
-            "CollaboratorIdleUpdate",
-            &[(44, 0, 0), (9, 0, 0)],
-        ));
+        out.extend_from_slice(&e("CollaboratorIdleUpdate", &[(44, 0, 0), (9, 0, 0)]));
         out.extend_from_slice(&e("CollaboratorInstanceCreatedSignal", &[(44, 0, 0)]));
         out.extend_from_slice(&e("CollaboratorInstanceDestroyedSignal", &[(44, 0, 0)]));
         out.extend_from_slice(&e(
@@ -537,7 +539,10 @@ mod tests {
         assert_eq!(collaborator.member(6).unwrap().extra, Extra::Enum(1));
         let status = collaborator.member(6).unwrap();
         assert_eq!(status.enum_index(), Some(1));
-        assert_eq!(schema.enums[status.enum_index().unwrap() as usize].name, "CollaboratorStatus");
+        assert_eq!(
+            schema.enums[status.enum_index().unwrap() as usize].name,
+            "CollaboratorStatus"
+        );
 
         // Global ids: every earlier class's members summed, plus the
         // slot. Folder's 2 members put Collaborator's base at 2.
@@ -567,7 +572,14 @@ mod tests {
         );
         let created = &service.events[1];
         assert_eq!(created.name, "CollaboratorInstanceCreatedSignal");
-        assert_eq!(created.args, vec![EventArg { tag: 44, extra_low: 0, extra_hi: 0 }]);
+        assert_eq!(
+            created.args,
+            vec![EventArg {
+                tag: 44,
+                extra_low: 0,
+                extra_hi: 0
+            }]
+        );
     }
 
     #[test]
@@ -590,7 +602,10 @@ mod tests {
             .expect("the Room shared name is in the fixture");
         runaway[at] = 0x7f; // 127-byte string from a 4-byte one
         let err = Schema::parse(&runaway).unwrap_err();
-        assert!(err.contains("truncated") || err.contains("over cap"), "{err}");
+        assert!(
+            err.contains("truncated") || err.contains("over cap"),
+            "{err}"
+        );
 
         // A member count past the cap, before it can allocate. The
         // Collaborator member count is the varint just before the
@@ -605,6 +620,9 @@ mod tests {
         flood.insert(at + 1, 0xff);
         flood.insert(at + 2, 0x01);
         let err = Schema::parse(&flood).unwrap_err();
-        assert!(err.contains("over cap") || err.contains("truncated"), "{err}");
+        assert!(
+            err.contains("over cap") || err.contains("truncated"),
+            "{err}"
+        );
     }
 }

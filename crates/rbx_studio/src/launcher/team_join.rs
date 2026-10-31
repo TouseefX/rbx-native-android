@@ -323,7 +323,11 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
         }
         let peer = peer_of(&reply)?;
         ensure_udmux(&mut js, peer);
-        say(format!("joining {}:{}", std::net::Ipv4Addr::from(peer.0), peer.1));
+        say(format!(
+            "joining {}:{}",
+            std::net::Ipv4Addr::from(peer.0),
+            peer.1
+        ));
         let mut io = UdpIo::connect(peer)?;
         let began = std::time::Instant::now();
         let now = || began.elapsed().as_millis() as u64;

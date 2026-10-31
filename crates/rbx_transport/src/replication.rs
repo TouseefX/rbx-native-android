@@ -182,20 +182,15 @@ impl Replication {
                             // Collaborator class is the players in
                             // the Team Create, and its index is this
                             // session's own, never a sample's.
-                            let roster: Vec<String> = [
-                                "Collaborator",
-                                "CollaboratorsService",
-                                "Player",
-                                "Players",
-                            ]
-                            .iter()
-                            .filter_map(|n| schema.class_index(n).map(|i| format!("{n}={i}")))
-                            .collect();
+                            let roster: Vec<String> =
+                                ["Collaborator", "CollaboratorsService", "Player", "Players"]
+                                    .iter()
+                                    .filter_map(|n| {
+                                        schema.class_index(n).map(|i| format!("{n}={i}"))
+                                    })
+                                    .collect();
                             if !roster.is_empty() {
-                                log(format!(
-                                    "replication: roster classes: {}",
-                                    roster.join(" ")
-                                ));
+                                log(format!("replication: roster classes: {}", roster.join(" ")));
                             }
                             self.schema = Some(schema);
                         }
@@ -306,7 +301,10 @@ impl Replication {
             ));
         }
         if self.regions > 0 {
-            parts.push(format!("{} terrain chunks ({}B)", self.regions, self.region_bytes));
+            parts.push(format!(
+                "{} terrain chunks ({}B)",
+                self.regions, self.region_bytes
+            ));
         }
         if !self.peers.is_empty() {
             parts.push(format!("{} peers", self.peers.len()));
@@ -397,8 +395,8 @@ fn parse_region_chunk(body: &[u8]) -> Result<Vec<u8>, String> {
 /// both overruns and short frames are mismatches, the reference
 /// rejects either.
 fn inflate(frame: &[u8], decomp: usize, what: &str) -> Result<Vec<u8>, String> {
-    let decoder = ruzstd::decoding::StreamingDecoder::new(frame)
-        .map_err(|err| format!("{what}: {err}"))?;
+    let decoder =
+        ruzstd::decoding::StreamingDecoder::new(frame).map_err(|err| format!("{what}: {err}"))?;
     // One byte past the declared size is enough to tell an overrun.
     let mut limited = decoder.take(decomp as u64 + 1);
     let mut out = Vec::new();
@@ -406,7 +404,10 @@ fn inflate(frame: &[u8], decomp: usize, what: &str) -> Result<Vec<u8>, String> {
         .read_to_end(&mut out)
         .map_err(|err| format!("{what}: {err}"))?;
     if out.len() != decomp {
-        return Err(format!("{what}: decoded {}B, expected {decomp}B", out.len()));
+        return Err(format!(
+            "{what}: decoded {}B, expected {decomp}B",
+            out.len()
+        ));
     }
     Ok(out)
 }
@@ -472,10 +473,7 @@ mod tests {
     use std::cell::RefCell;
 
     fn zstd(data: &[u8]) -> Vec<u8> {
-        ruzstd::encoding::compress_to_vec(
-            data,
-            ruzstd::encoding::CompressionLevel::Fastest,
-        )
+        ruzstd::encoding::compress_to_vec(data, ruzstd::encoding::CompressionLevel::Fastest)
     }
 
     #[test]
@@ -586,10 +584,10 @@ mod tests {
         inner.push(0x01); // one class
         inner.push(0x00); // property bound
         inner.push(0x00); // event bound
-        // The class name's length comes from the literal itself — a
-        // hand-counted 11 for "Collaborator" (12 letters) is exactly
-        // the byte that broke this test on the report the first time
-        // it ever ran.
+                          // The class name's length comes from the literal itself — a
+                          // hand-counted 11 for "Collaborator" (12 letters) is exactly
+                          // the byte that broke this test on the report the first time
+                          // it ever ran.
         inner.push(b"Collaborator".len() as u8);
         inner.extend_from_slice(b"Collaborator");
         inner.push(0x00); // no members

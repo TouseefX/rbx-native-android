@@ -6,11 +6,11 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 
 use super::*;
-use rbx_cloud::Experience;
 use crate::home::RecentPlace;
 use crate::launcher::home_window::{CookieState, Dialog, HomeWindow, Members};
 use crate::launcher::ui::{self, Weight};
 use crate::tokens;
+use rbx_cloud::Experience;
 
 impl HomeWindow {
     pub(super) fn dialog_view(&mut self, cx: &mut Context<Self>) -> Option<AnyElement> {
@@ -27,7 +27,10 @@ impl HomeWindow {
             Dialog::Cookie { busy, error } => self
                 .cookie_dialog(*busy, error.as_deref(), cx)
                 .into_any_element(),
-            Dialog::TeamCreate { experience, members } => self
+            Dialog::TeamCreate {
+                experience,
+                members,
+            } => self
                 .team_create_dialog(experience, members, cx)
                 .into_any_element(),
             Dialog::LocalCopy {
@@ -446,11 +449,15 @@ impl HomeWindow {
         let line = match members {
             Members::Loading => None,
             Members::Loaded(list) if list.is_empty() => Some(
-                "Nobody\u{2019}s in the session right now \u{2014} you\u{2019}d be the first.".to_string(),
+                "Nobody\u{2019}s in the session right now \u{2014} you\u{2019}d be the first."
+                    .to_string(),
             ),
             Members::Loaded(list) => {
-                let names: Vec<&str> =
-                    list.iter().take(4).map(|m| m.display_name.as_str()).collect();
+                let names: Vec<&str> = list
+                    .iter()
+                    .take(4)
+                    .map(|m| m.display_name.as_str())
+                    .collect();
                 let more = list.len().saturating_sub(names.len());
                 Some(format!(
                     "{} in the session: {}{}",
@@ -488,11 +495,7 @@ impl HomeWindow {
                 _ => this,
             })
             .when_some(line, |this, line| {
-                this.child(
-                    ui::text(11.5, 16.)
-                        .text_color(tokens::text2())
-                        .child(line),
-                )
+                this.child(ui::text(11.5, 16.).text_color(tokens::text2()).child(line))
             })
             .when_some(why, |this, why| {
                 this.child(ui::text(11., 15.).text_color(tokens::text3()).child(why))

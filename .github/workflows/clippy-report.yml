@@ -30,12 +30,16 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: cargo clippy and cargo test
+      - name: cargo fmt, clippy and test
         run: |
           set +e
-          cargo clippy --workspace --all-targets -- -D warnings > /tmp/report.log 2>&1
+          echo '## cargo fmt --check' > /tmp/report.log
+          cargo fmt --all -- --check >> /tmp/report.log 2>&1
+          fmt_status=$?
+          echo '## cargo clippy' >> /tmp/report.log
+          cargo clippy --workspace --all-targets -- -D warnings >> /tmp/report.log 2>&1
           clippy_status=$?
           if [ "$clippy_status" -eq 0 ]; then
             echo '## cargo test' >> /tmp/report.log
@@ -50,8 +54,8 @@ jobs:
             grep -B 2 -A 12 '^error' /tmp/report.log | head -300
             echo '```'
           } > "$GITHUB_STEP_SUMMARY"
-          if [ "$clippy_status" -ne 0 ] || [ "$test_status" -ne 0 ]; then
-            echo "clippy=$clippy_status test=$test_status" >> /tmp/report.log
+          if [ "$fmt_status" -ne 0 ] || [ "$clippy_status" -ne 0 ] || [ "$test_status" -ne 0 ]; then
+            echo "fmt=$fmt_status clippy=$clippy_status test=$test_status" >> /tmp/report.log
             exit 1
           fi
       - name: Push the report to the branch

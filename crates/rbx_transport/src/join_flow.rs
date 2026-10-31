@@ -401,7 +401,14 @@ mod tests {
         assert!(steps.iter().all(Step::sent), "nothing may skip: {steps:?}");
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
-            ["0x13", "MTU ladder (2 rounds)", "0x90", "0x92", "0x8a", "0x8f"]
+            [
+                "0x13",
+                "MTU ladder (2 rounds)",
+                "0x90",
+                "0x92",
+                "0x8a",
+                "0x8f"
+            ]
         );
         assert_eq!(
             delivered,
@@ -462,7 +469,14 @@ mod tests {
         let steps = send_join_flow(&mut client, &inputs(&js, &template_90(), &reply), &opts);
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
-            ["0x13", "MTU ladder (2 rounds)", "0x90", "0x92", "0x8a", "0x8f"]
+            [
+                "0x13",
+                "MTU ladder (2 rounds)",
+                "0x90",
+                "0x92",
+                "0x8a",
+                "0x8f"
+            ]
         );
         let mut delivered = Vec::new();
         for wire in client.take_sends() {
@@ -540,7 +554,14 @@ mod tests {
         assert!(!steps.iter().all(Step::sent));
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
-            ["0x13", "MTU ladder (2 rounds)", "0x90", "0x92", "0x8a", "0x8f"]
+            [
+                "0x13",
+                "MTU ladder (2 rounds)",
+                "0x90",
+                "0x92",
+                "0x8a",
+                "0x8f"
+            ]
         );
         // The 0x8a slot is not reserved, so the 0x8f lands at 3.
         assert_eq!(delivered, vec![(0x13, 0), (0x90, 1), (0x92, 2), (0x8f, 3)]);

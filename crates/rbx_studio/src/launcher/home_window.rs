@@ -395,7 +395,10 @@ impl HomeWindow {
                     ]),
                     _ => Members::Loading,
                 };
-                Dialog::TeamCreate { experience, members }
+                Dialog::TeamCreate {
+                    experience,
+                    members,
+                }
             }),
             _ => None,
         };

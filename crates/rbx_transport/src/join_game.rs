@@ -186,7 +186,9 @@ pub fn team_create_join(place: u64, cookie: &str, preemptive: bool) -> Result<Va
         if let Some(token) = token {
             request = request.header("X-CSRF-TOKEN", token);
         }
-        let mut response = request.send(&bytes).map_err(|err| format!("team-create: {err}"))?;
+        let mut response = request
+            .send(&bytes)
+            .map_err(|err| format!("team-create: {err}"))?;
         let token = response
             .headers()
             .get("x-csrf-token")
@@ -294,9 +296,7 @@ fn endpoints_at_level(v: &Value, out: &mut Vec<JoinEndpoint>) {
     if let Some(arr) = field_ci(v, "UdmuxEndpoints").and_then(Value::as_array) {
         for e in arr {
             let addr = field_ci(e, "Address").and_then(address_of_value);
-            let port = field_ci(e, "Port")
-                .and_then(port_of_value)
-                .or(server_port);
+            let port = field_ci(e, "Port").and_then(port_of_value).or(server_port);
             if let (Some(address), Some(port)) = (addr, port) {
                 push_unique(out, JoinEndpoint { address, port });
             }
@@ -394,7 +394,8 @@ pub fn join_game(
     job: Option<&str>,
     follow: Option<u64>,
     universe: Option<u64>,
-) -> Result<JoinReply, String> {    let agent = agent();
+) -> Result<JoinReply, String> {
+    let agent = agent();
     let body = join_body(place, job, follow, universe, &uuid4(), &uuid4(), &uuid4());
     let bytes = serde_json::to_vec(&body).map_err(|err| format!("v1: {err}"))?;
     let cookie = cookie_header(cookie);
@@ -620,7 +621,10 @@ mod tests {
         // from ServerConnections is what remains.
         assert_eq!(
             team_create_endpoints(&both),
-            vec![JoinEndpoint { address: "52.84.150.39".to_string(), port: 49153 }]
+            vec![JoinEndpoint {
+                address: "52.84.150.39".to_string(),
+                port: 49153
+            }]
         );
         // Only-internal answers are kept: a desktop on the RCC's own
         // network can still route to them.
