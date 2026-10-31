@@ -730,17 +730,17 @@ impl Client {
                 // leaves the server's reliable window jammed: it resends
                 // the same 0x97/replication fragments forever, and the
                 // session dies right after the join snapshot.
-                let ack_num = num;
+                //
                 // A retransmission must be ACKed again: our previous ACK
                 // may have been the packet that got lost. Skip delivery,
                 // never the receipt.
                 if !self.seen_dgrams.insert(num) {
                     self.dups_dropped += 1;
-                    self.pending_acks.push(ack_num);
+                    self.pending_acks.push(num);
                     self.flush_acks();
                     return;
                 }
-                self.pending_acks.push(ack_num);
+                self.pending_acks.push(num);
                 // Immediately: the RCC's retransmit timer (~250 ms) is
                 // faster than any once-a-second outer flush.
                 self.flush_acks();
@@ -889,13 +889,12 @@ impl Client {
         }
         let ms = self.now_ms();
         let clk24 = (ms & 0xff_ff_ff) as u32;
-        let mut r;
         if big_pad {
             // Native pad shape: `00 <00*5> <u24 clock> 00*5 ...`, and the
             // 0x03 form adds a u32 clock, the 06 5f marker and five
             // random bytes — zeros to the length the RCC probed with.
             let n = m.payload.len();
-            r = vec![0u8; n];
+            let mut r = vec![0u8; n];
             r[0] = out_id;
             r[6] = (clk24 >> 16) as u8;
             r[7] = (clk24 >> 8) as u8;
@@ -934,7 +933,7 @@ impl Client {
             self.kal_replies += 1;
             return;
         }
-        r = m.payload.clone();
+        let mut r = m.payload.clone();
         r[0] = out_id;
         if r.len() == 9 {
             // Our own 24-bit clock's low half, like the native's 9-byte
