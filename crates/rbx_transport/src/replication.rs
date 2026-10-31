@@ -49,7 +49,7 @@ const REGION_PREFIX: [u8; 5] = [0x01, 0xEC, 0x1A, 0x09, 0x00];
 /// What the session's replication stream carried. Failures are counted
 /// and logged, never fatal: the session's own liveness does not depend
 /// on a parseable world.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Replication {
     /// Bytes still waiting for their frame to complete.
     pending: Vec<u8>,
@@ -76,6 +76,29 @@ pub struct Replication {
     pub peers: Vec<u32>,
     /// The 0x84 snapshot-done marker.
     pub snapshot_done: bool,
+}
+
+// Manual because `Default` is not implemented for `[u64; 256]` — std
+// only derives it for arrays up to 32 elements.
+impl Default for Replication {
+    fn default() -> Self {
+        Replication {
+            pending: Vec::new(),
+            types: [0; 256],
+            chain_types: [0; 256],
+            messages: 0,
+            join_inner: None,
+            join_failures: 0,
+            batches: 0,
+            shared_batches: 0,
+            batch_bytes: 0,
+            batch_failures: 0,
+            regions: 0,
+            region_bytes: 0,
+            peers: Vec::new(),
+            snapshot_done: false,
+        }
+    }
 }
 
 impl Replication {
