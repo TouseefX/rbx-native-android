@@ -6962,6 +6962,7 @@ dependencies = [
  "blake2",
  "chacha20poly1305",
  "rand_core 0.6.4",
+ "ruzstd",
  "serde_json",
  "ureq",
  "x25519-dalek",
