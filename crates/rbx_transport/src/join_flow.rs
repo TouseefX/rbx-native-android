@@ -265,7 +265,11 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
                 let place_id = if inputs.place != 0 {
                     inputs.place
                 } else {
-                    inputs.js.get("PlaceId").and_then(Value::as_u64).unwrap_or(0)
+                    inputs
+                        .js
+                        .get("PlaceId")
+                        .and_then(Value::as_u64)
+                        .unwrap_or(0)
                 };
                 let t2 = join_msg::tail2_from_90_template(tmpl_90).unwrap_or(0);
                 // The key is the string's first 16 bytes, verbatim —

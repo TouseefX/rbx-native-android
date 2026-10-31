@@ -430,7 +430,10 @@ fn pump(client: &mut Client, io: &mut dyn Io, ms: u32) {
 /// each frame carries.
 const A6: [(&str, usize); 4] = [
     ("a6010100014c0100004c0100000000", 5),
-    ("a602010010030064d0b7e6d7ff03e050010000500100000000040400", 15),
+    (
+        "a602010010030064d0b7e6d7ff03e050010000500100000000040400",
+        15,
+    ),
     (
         "a603010010030064d0b7e6d7ff03e054010000540100000000040400040400",
         15,
@@ -750,7 +753,9 @@ mod tests {
         assert!(is_handshake_miss(NO_REPLY2));
         // Local failures and parse errors are not the RCC wedging.
         assert!(!is_handshake_miss("Req1 build/send failed"));
-        assert!(!is_handshake_miss("Req2 build/send failed (ticket blobs too large?)"));
+        assert!(!is_handshake_miss(
+            "Req2 build/send failed (ticket blobs too large?)"
+        ));
         assert!(!is_handshake_miss("joinScript lacks NetStackPort"));
         assert!(!is_handshake_miss(""));
     }

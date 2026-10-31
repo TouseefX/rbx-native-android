@@ -58,6 +58,9 @@ impl HomeWindow {
             });
             return true;
         }
+        false
+    }
+
     /// Who is in the place's live Team Create session, read when the
     /// dialog opens — the same session members call Game Settings uses.
     fn load_team_create_members(&mut self, cx: &mut Context<Self>) {

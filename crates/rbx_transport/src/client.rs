@@ -1105,9 +1105,14 @@ impl Client {
         if ranges.is_empty() {
             return;
         }
-        let covers = |id: u32| ranges.iter().any(|&(lo, hi)| lo <= hi && id >= lo && id <= hi);
+        let covers = |id: u32| {
+            ranges
+                .iter()
+                .any(|&(lo, hi)| lo <= hi && id >= lo && id <= hi)
+        };
         let before = self.rtx.len();
-        self.rtx.retain(|entry| !entry.ids.iter().any(|&id| covers(id)));
+        self.rtx
+            .retain(|entry| !entry.ids.iter().any(|&id| covers(id)));
         let retired = before - self.rtx.len();
         if retired > 0 {
             self.rtx_budget = (self.rtx_budget + retired as i32).min(RTX_BUDGET);
@@ -1358,7 +1363,10 @@ pub(crate) mod tests {
         assert_eq!(got[1].id, 0x13);
         assert_eq!(got[1].payload.len(), 114);
         assert_eq!(got[1].payload[1..6], [0x04, 127, 139, 202, 222]);
-        assert_eq!(got[1].payload[8..15], [0x04, 128, 255, 254, 254, 0x00, 0x00]);
+        assert_eq!(
+            got[1].payload[8..15],
+            [0x04, 128, 255, 254, 254, 0x00, 0x00]
+        );
         assert!(got[1].ordered);
         assert_eq!(got[1].ordering, 0);
 
@@ -1433,7 +1441,7 @@ pub(crate) mod tests {
         assert_eq!(mirror[0], 0x81);
         assert_eq!(mirror[4], 0x00); // kind 0: unreliable
         assert_eq!(mirror[7], 0x00); // same id echoed
-        // Our own clock, not the server's 00 00 04 d2.
+                                     // Our own clock, not the server's 00 00 04 d2.
         assert_ne!(&mirror[12..16], &[0x00, 0x00, 0x04, 0xd2]);
 
         // Same id twice more: one more mirror, then the per-id cap. Their
@@ -1580,7 +1588,7 @@ pub(crate) mod tests {
         let pong = server.open(&sends[1]).expect("pong opens");
         assert_eq!(pong[0], 0x81);
         assert_eq!(pong[4], 0x60); // reliable ordered, like the ping
-        // [14..] is the delivered payload: id, sub-id, body verbatim.
+                                   // [14..] is the delivered payload: id, sub-id, body verbatim.
         assert_eq!(&pong[14..21], &[0x83, 0x06, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE]);
 
         // Any other 0x83 subtype is app data, not a ping.
