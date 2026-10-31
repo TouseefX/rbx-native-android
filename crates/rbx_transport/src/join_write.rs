@@ -251,7 +251,7 @@ mod tests {
 
     fn s(text: &str) -> Vec<u8> {
         let mut out = v(text.len() as u64);
-        out.extend_from_slice(text.bytes());
+        out.extend_from_slice(text.as_bytes());
         out
     }
 

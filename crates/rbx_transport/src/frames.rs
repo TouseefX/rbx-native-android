@@ -147,6 +147,37 @@ pub fn ack(ranges: &[(u32, u32)]) -> Vec<u8> {
     out
 }
 
+/// Decode the ranges [`ack`] encodes, so a received ACK's datagram ids
+/// can be matched against what was sent. `None` on a malformed body;
+/// an empty vector is a well-formed ACK that covers nothing.
+pub fn parse_ack_ranges(plain: &[u8]) -> Option<Vec<(u32, u32)>> {
+    if plain.len() < 3 || plain[0] & 0xc0 != 0xc0 {
+        return None;
+    }
+    let count = u16::from_be_bytes([plain[1], plain[2]]) as usize;
+    let id_at = |at: usize| -> Option<u32> {
+        let b = plain.get(at..at + 3)?;
+        Some(u32::from(b[0]) | (u32::from(b[1]) << 8) | (u32::from(b[2]) << 16))
+    };
+    let mut out = Vec::new();
+    let mut at = 3usize;
+    for _ in 0..count {
+        let single = *plain.get(at)?;
+        at += 1;
+        let lo = id_at(at)?;
+        at += 3;
+        let hi = if single == 0x01 {
+            lo
+        } else {
+            let hi = id_at(at)?;
+            at += 3;
+            hi
+        };
+        out.push((lo, hi));
+    }
+    Some(out)
+}
+
 /// ID_CONNECTION_REQUEST (`0x09`): our session GUID — the eight bytes
 /// Req2's plaintext carried — then the build-constant tail.
 pub fn connection_request(session_guid: &[u8; 8]) -> Vec<u8> {

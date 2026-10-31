@@ -177,6 +177,11 @@ pub struct Client {
     // datagram-level dedupe before the message layer runs).
     rtx: Vec<PendingTx>,
     rtx_budget: i32,
+    /// Entries retired by a matching server ACK.
+    rtx_retired: u64,
+    /// Reliable sends that went out with no retry tracking, because
+    /// the budget was fully spent — the backpressure signal.
+    rtx_untracked: u64,
 
     saw_net_settings: bool,
     kal_per_id: [u32; 256],
@@ -212,12 +217,24 @@ pub struct Client {
     data_pongs: u64,
 }
 
+/// How many reliable datagrams may await confirmation at once. A slot
+/// returns when its entry is retired by a matching ACK or gives up
+/// after its five attempts, so a session whose server never
+/// acknowledges (the RCC streams but sends no ACKs — measured on
+/// device) still cycles its slots through the attempt limit instead
+/// of running dry after sixty-four sends and silently losing retry
+/// tracking.
+const RTX_BUDGET: i32 = 64;
+
 /// One queued reliable retransmit: the sealed datagram's plaintext, the
-/// time it becomes due again, and how many times it has been re-sent.
+/// time it becomes due again, how many times it has been re-sent, and
+/// every datagram id it has used — the original plus each retry's
+/// fresh id, so an ACK for any of them retires it.
 struct PendingTx {
     plain: Vec<u8>,
     due: Instant,
     tries: u32,
+    ids: Vec<u32>,
 }
 
 impl Client {
@@ -261,7 +278,9 @@ impl Client {
             pending_acks: Vec::new(),
             rx: RxStream::default(),
             rtx: Vec::new(),
-            rtx_budget: 64,
+            rtx_budget: RTX_BUDGET,
+            rtx_retired: 0,
+            rtx_untracked: 0,
             saw_net_settings: false,
             kal_per_id: [0; 256],
             pad_replies: [0; 256],
@@ -408,6 +427,17 @@ impl Client {
 
     pub fn server_acks(&self) -> u64 {
         self.server_acks
+    }
+
+    /// Pending retransmissions retired by a matching server ACK.
+    pub fn rtx_retired(&self) -> u64 {
+        self.rtx_retired
+    }
+
+    /// Reliable sends that went out without retry tracking because the
+    /// budget was spent — the backpressure signal.
+    pub fn rtx_untracked(&self) -> u64 {
+        self.rtx_untracked
     }
 
     pub fn dups_dropped(&self) -> u64 {
@@ -718,8 +748,12 @@ impl Client {
             self.last_rx = Some(Instant::now());
             if plain.len() >= 4 && plain[0] & 0xc0 == 0xc0 {
                 // The server's ACK form is 0xd0: transport only, and the
-                // only receipt the 0x09/0x13/0x90/0x8a ever get.
+                // only receipt the 0x09/0x13/0x90/0x8a ever get. Its
+                // ranges also retire whatever retransmissions they
+                // cover — an entry waiting on an ACK that already came
+                // is a slot and a retransmit wasted.
                 self.server_acks += 1;
+                self.retire_rtx(&plain);
                 return;
             }
             if plain.len() >= 4 && plain[0] & 0x80 != 0 {
@@ -772,7 +806,7 @@ impl Client {
             self.keys.install_data(peer);
             self.data_ready = true;
             self.rtx.clear();
-            self.rtx_budget = 64;
+            self.rtx_budget = RTX_BUDGET;
             self.tx_ctr = DATA_COUNTER_BASE;
             self.rx_ctr = DATA_COUNTER_BASE;
             self.say("reply2 verified, datagram keys installed");
@@ -794,6 +828,10 @@ impl Client {
             }
             if m.payload.len() == 5 && m.id == 0x84 {
                 self.ack_marker(&m.payload);
+                // Answered *and* delivered: the census's snapshot-done
+                // diagnostic lives on the same marker, so the layers
+                // cannot disagree about whether the snapshot ended.
+                self.messages.push(m.payload);
                 continue;
             }
             // The server's ~1 Hz data ping: the body echoed back with
@@ -1031,18 +1069,50 @@ impl Client {
     /// post-join control ticks are not amplified, and capped so a stuck
     /// session cannot grow the queue without bound.
     fn queue_rtx(&mut self, plain: &[u8]) {
-        if self.rtx_budget <= 0 || plain.is_empty() || plain.len() > 1200 {
+        if !(4..=1200).contains(&plain.len()) {
+            return;
+        }
+        if self.rtx_budget <= 0 {
+            // The send itself still goes out — only its retry tracking
+            // is gone. Counted, never silent: this is the
+            // backpressure signal.
+            self.rtx_untracked += 1;
             return;
         }
         self.rtx_budget -= 1;
         if self.rtx.len() > 160 {
+            // The oldest entry gives up its slot — and its budget.
             self.rtx.remove(0);
+            self.rtx_budget += 1;
         }
+        let id = u32::from(plain[1]) | (u32::from(plain[2]) << 8) | (u32::from(plain[3]) << 16);
         self.rtx.push(PendingTx {
             plain: plain.to_vec(),
             due: Instant::now() + Duration::from_millis(180),
             tries: 0,
+            ids: vec![id],
         });
+    }
+
+    /// Retire every pending retransmission whose datagram id — original
+    /// or retry — falls inside the server ACK's ranges, returning each
+    /// slot to the budget. A late or duplicate ACK simply matches
+    /// nothing.
+    fn retire_rtx(&mut self, plain: &[u8]) {
+        let Some(ranges) = frames::parse_ack_ranges(plain) else {
+            return;
+        };
+        if ranges.is_empty() {
+            return;
+        }
+        let covers = |id: u32| ranges.iter().any(|&(lo, hi)| lo <= hi && id >= lo && id <= hi);
+        let before = self.rtx.len();
+        self.rtx.retain(|entry| !entry.ids.iter().any(|&id| covers(id)));
+        let retired = before - self.rtx.len();
+        if retired > 0 {
+            self.rtx_budget = (self.rtx_budget + retired as i32).min(RTX_BUDGET);
+            self.rtx_retired += retired as u64;
+        }
     }
 
     /// Re-send every due unacknowledged reliable datagram under a *new*
@@ -1064,17 +1134,25 @@ impl Client {
             let n = self.rtx[i].plain.len();
             if !(4..=1200).contains(&n) {
                 self.rtx.remove(i);
+                self.rtx_budget += 1;
                 continue;
             }
             let mut d = self.rtx[i].plain.clone();
             d[1..4].copy_from_slice(&self.dgram_no.to_le_bytes()[..3]);
+            let id = self.dgram_no;
             let ok = self.seal_and_send(&d, true);
             if ok {
                 self.rtx_tx += 1;
+                // The ACK for this attempt covers the fresh id, so the
+                // entry has to remember it.
+                self.rtx[i].ids.push(id);
             }
             self.rtx[i].tries += 1;
             if self.rtx[i].tries >= 5 {
+                // Gave up: the slot returns with the entry — a budget
+                // that only drains turns every later send untracked.
                 self.rtx.remove(i);
+                self.rtx_budget += 1;
             } else {
                 self.rtx[i].due = now + Duration::from_millis(250);
                 i += 1;
@@ -1474,7 +1552,9 @@ pub(crate) mod tests {
         let d = frames::reliable(0, 0, true, 0, &marker).unwrap();
         client.on_packet(&server.data(&d));
 
-        assert!(client.take_messages().is_empty());
+        // Answered *and* delivered: the census's snapshot-done
+        // diagnostic reads the same marker from take_messages.
+        assert_eq!(client.take_messages(), vec![marker.to_vec()]);
         let sends = client.take_sends();
         assert_eq!(sends.len(), 2);
         let ack = server.open(&sends[1]).expect("marker ack opens");
@@ -1509,5 +1589,57 @@ pub(crate) mod tests {
         client.on_packet(&server.data(&d));
         assert_eq!(client.data_pongs(), 1);
         assert_eq!(client.take_messages(), vec![chain.to_vec()]);
+    }
+
+    #[test]
+    fn an_ack_retires_the_retransmission_and_returns_its_budget() {
+        let mut client = Client::new(config());
+        let mut server = Server::new(client.public());
+        handshake(&mut client, &mut server);
+
+        // One reliable send: queued for retransmission under its
+        // original datagram id, spending one budget slot.
+        assert!(client.send_reliable(b"edit me", true));
+        let sends = client.take_sends();
+        let plain = server.open(&sends[0]).expect("the edit opens");
+        let id = u32::from(plain[1]) | (u32::from(plain[2]) << 8) | (u32::from(plain[3]) << 16);
+        assert_eq!(client.rtx.len(), 1);
+        assert_eq!(client.rtx[0].ids, vec![id]);
+        assert_eq!(client.rtx_budget, RTX_BUDGET - 1);
+
+        // The server's ACK covers that id: the entry retires and the
+        // slot returns.
+        client.on_packet(&server.data(&frames::ack(&[(id, id)])));
+        assert_eq!(client.server_acks(), 1);
+        assert!(client.rtx.is_empty());
+        assert_eq!(client.rtx_budget, RTX_BUDGET);
+        assert_eq!(client.rtx_retired(), 1);
+
+        // A duplicate ACK retires nothing and mints no budget.
+        client.on_packet(&server.data(&frames::ack(&[(id, id)])));
+        assert_eq!(client.server_acks(), 2);
+        assert_eq!(client.rtx_budget, RTX_BUDGET);
+        assert_eq!(client.rtx_retired(), 1);
+
+        // An entry that exhausts its five attempts returns its slot
+        // too — with zero server ACKs (the RCC streams but never
+        // acknowledges our datagrams) this is the path that keeps the
+        // budget cycling instead of running dry.
+        client.rtx_budget = RTX_BUDGET - 1;
+        client.rtx.push(PendingTx {
+            plain: vec![0x81, 0, 0, 0],
+            due: Instant::now(),
+            tries: 4,
+            ids: vec![500],
+        });
+        client.pump_rtx();
+        assert!(client.rtx.is_empty());
+        assert_eq!(client.rtx_budget, RTX_BUDGET);
+
+        // A spent budget still sends — counted, never silent.
+        client.rtx_budget = 0;
+        assert!(client.send_reliable(b"untracked", true));
+        assert!(client.rtx.is_empty());
+        assert_eq!(client.rtx_untracked(), 1);
     }
 }
