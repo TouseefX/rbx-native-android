@@ -49,28 +49,41 @@ pub(crate) fn tick_main() -> i32 {
 
 /// [`api::connect`], with the key read from the OS credential store first
 /// the way the editor does at startup, through a windowless GPUI app (the
-/// store's API is GPUI's, on every OS).
+/// store's API is GPUI's, on every OS). Mobile has no `platform` module to
+/// run one with — and no store behind it either, which is why the Android
+/// host sets `RBX_NO_KEYRING` at boot — so there the read is a no-op and
+/// connecting goes with whatever env or config already handed over.
 fn connect_headless() -> Option<Box<dyn api::IconApi>> {
     if !api::mock_enabled() && rbx_cloud::ApiKey::from_env_or_config().is_none() {
-        let found = std::sync::Arc::new(std::sync::Mutex::new(None));
-        let slot = found.clone();
-        gpui_kit::platform::headless().run(move |cx| {
-            cx.spawn(async move |cx| {
-                let key = crate::key_store::read(cx).await.ok().flatten();
-                *slot.lock().unwrap_or_else(|e| e.into_inner()) = key;
-                cx.update(|cx| cx.quit());
-            })
-            .detach();
-            // A credential store that never answers must not wedge the
-            // scheduler's next runs behind this one.
-            cx.spawn(async move |cx| {
-                cx.background_executor().timer(KEY_WAIT).await;
-                cx.update(|cx| cx.quit());
-            })
-            .detach();
-        });
-        let key = found.lock().unwrap_or_else(|e| e.into_inner()).take();
-        rbx_cloud::ApiKey::install(key);
+        read_key_headless();
     }
     api::connect()
 }
+
+/// The windowless app itself: parks the store's answer in a slot the
+/// caller's thread can take once the app has quit.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn read_key_headless() {
+    let found = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let slot = found.clone();
+    gpui_kit::platform::headless().run(move |cx| {
+        cx.spawn(async move |cx| {
+            let key = crate::key_store::read(cx).await.ok().flatten();
+            *slot.lock().unwrap_or_else(|e| e.into_inner()) = key;
+            cx.update(|cx| cx.quit());
+        })
+        .detach();
+        // A credential store that never answers must not wedge the
+        // scheduler's next runs behind this one.
+        cx.spawn(async move |cx| {
+            cx.background_executor().timer(KEY_WAIT).await;
+            cx.update(|cx| cx.quit());
+        })
+        .detach();
+    });
+    let key = found.lock().unwrap_or_else(|e| e.into_inner()).take();
+    rbx_cloud::ApiKey::install(key);
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn read_key_headless() {}

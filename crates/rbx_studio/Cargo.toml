@@ -42,6 +42,10 @@ gpui-base = "0.6"
 # `PinchEvent`, the viewport's touch camera controls match on, which
 # gpui-kit's re-exports do not list either.
 gpui = { package = "gpui-pre", version = "=0.3.5", default-features = false }
+# `panic_log`'s hook keeps logcat parity for whoever does have adb. In the
+# tree at this version already (the Android host logs through it); the logger
+# itself is initialized by `rbx_android`, not here.
+log = "0.4"
 lsp-types = "0.97"
 # GPUI's own version: a RenderImage is built from its `image::Frame`s, so a
 # second copy of the crate would not typecheck.
@@ -166,10 +170,6 @@ rbx_eyedropper = { path = "../rbx_eyedropper" }
 # not X11, so both stay desktop-Linux-only.
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
-# `panic_log`'s hook keeps logcat parity for whoever does have adb. Already
-# in the tree at this version (the Android host logs through it); the logger
-# itself is initialized by `rbx_android`, not here.
-log = "0.4"
 x11rb = { version = "0.13", features = ["randr", "xfixes"] }
 
 # The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and
