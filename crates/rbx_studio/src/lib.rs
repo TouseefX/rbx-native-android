@@ -118,6 +118,7 @@ mod display;
 mod dragger;
 mod explorer;
 mod figma_store;
+pub mod flight;
 mod folder_colors;
 mod freeze;
 mod history;
@@ -387,6 +388,11 @@ pub fn boot_mobile(cx: &mut App) {
     // (see `panic_log`) — on Android there is no stderr and the user
     // has no adb, so without this a crash leaves nothing behind.
     panic_log::install();
+    // The last run's flight log, taken before this run's recorder can
+    // append to it, then the recorder itself: a heartbeat of resident
+    // memory every couple of seconds, so a silent death still shows
+    // Home what memory was doing when it went (see `flight`).
+    flight::boot_record();
     // The kit's global theme and icons — as the desktop launch's `run`
     // callback does, and as GPUI Kit's mobile guide prescribes: mobile
     // builds keep this and `component::Root` and lose only the desktop

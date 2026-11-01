@@ -106,6 +106,9 @@ class MainActivity : GameActivity() {
 
     override fun onDestroy() {
         mSurfaceView?.holder?.removeCallback(surfaceCallback)
+        // Before super: a clean close marks the flight recorder's log,
+        // so the next launch knows this run ended on purpose.
+        nativeShutdownMark()
         super.onDestroy()
     }
 
@@ -456,6 +459,7 @@ class MainActivity : GameActivity() {
         end: Int
     )
     private external fun nativeResumed()
+    private external fun nativeShutdownMark()
     private external fun nativePaused()
 
     companion object {

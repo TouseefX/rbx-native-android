@@ -15,8 +15,9 @@ use std::path::PathBuf;
 /// line, then the panic with its backtrace.
 const CRASH_LOG: &str = "last-crash.log";
 
-/// The folder it lives in, beside the editor's other private data.
-fn crash_dir() -> Option<PathBuf> {
+/// The folder it lives in, beside the editor's other private data —
+/// and beside the flight recorder's log (see `crate::flight`).
+pub(crate) fn store_dir() -> Option<PathBuf> {
     std::env::var_os("XDG_DATA_HOME")
         .filter(|value| !value.is_empty())
         .map(|root| PathBuf::from(root).join("rbx-native"))
@@ -54,7 +55,7 @@ pub(crate) fn install() {
         // One attempt, errors ignored: a panic hook must not be able to
         // panic itself, and a phone with no storage left has nowhere for
         // a crash log anyway.
-        if let Some(dir) = crash_dir() {
+        if let Some(dir) = store_dir() {
             let _ = std::fs::create_dir_all(&dir);
             let _ = std::fs::write(dir.join(CRASH_LOG), report);
         }
@@ -80,7 +81,7 @@ static PATH_LEN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize
 /// becomes memory, not this.
 #[cfg(target_os = "android")]
 fn install_native() {
-    if let Some(dir) = crash_dir() {
+    if let Some(dir) = store_dir() {
         let path = dir.join(CRASH_LOG).to_string_lossy().into_owned();
         let bytes: &'static [u8] = Box::leak(path.into_bytes().into_boxed_slice());
         PATH.store(
@@ -207,7 +208,7 @@ pub(crate) struct CrashReport {
 /// dismissing-on-next-launch, so it nags once per crash and returns for
 /// the next one.
 pub(crate) fn take_last_crash() -> Option<CrashReport> {
-    take_from(&crash_dir()?)
+    take_from(&store_dir()?)
 }
 
 fn take_from(dir: &std::path::Path) -> Option<CrashReport> {

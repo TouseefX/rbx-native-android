@@ -14,6 +14,64 @@ use crate::launcher::ui::{self, Weight};
 use crate::tokens;
 
 impl HomeWindow {
+    /// The last run's heartbeat tail, when that run died with no crash
+    /// report at all: what memory was doing as it went, or a note that
+    /// the system may simply have stopped it in the background.
+    pub(super) fn flight_section(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if self.last_crash.is_some() {
+            return None;
+        }
+        let tail = self.last_flight.clone()?;
+        Some(
+            v_flex()
+                .gap(px(12.))
+                .child(Self::section_head("Last run", None))
+                .child(
+                    h_flex()
+                        .min_h(px(48.))
+                        .items_center()
+                        .gap(px(GAP))
+                        .px(px(14.))
+                        .rounded(px(8.))
+                        .border_1()
+                        .border_color(tokens::border())
+                        .bg(ui::panel2())
+                        .child(
+                            ui::icon("circle-alert", 14.)
+                                .flex_none()
+                                .text_color(tokens::warning()),
+                        )
+                        .child(
+                            v_flex()
+                                .flex_1()
+                                .min_w_0()
+                                .child(
+                                    ui::text(12.5, 17.)
+                                        .truncate()
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_color(tokens::text())
+                                        .child("The app stopped without recording why"),
+                                )
+                                .child(
+                                    ui::text(11.5, 16.)
+                                        .truncate()
+                                        .text_color(tokens::text3())
+                                        .child(format!("Memory as it went: {tail}")),
+                                ),
+                        )
+                        .child(
+                            ui::button("flight-dismiss", "Dismiss", Weight::Ghost, true).on_click(
+                                cx.listener(|this, _, _, cx| {
+                                    this.last_flight = None;
+                                    cx.notify();
+                                }),
+                            ),
+                        ),
+                )
+                .into_any_element(),
+        )
+    }
+
     /// The notice, or nothing when the last run closed cleanly.
     pub(super) fn crash_section(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let crash = self.last_crash.as_ref()?;

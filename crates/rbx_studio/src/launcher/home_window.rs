@@ -163,6 +163,9 @@ pub(crate) struct HomeWindow {
     /// The crash the last run left behind, offered for copying until
     /// dismissed (see `view::crash_notice`).
     pub(super) last_crash: Option<crate::panic_log::CrashReport>,
+    /// The last run's flight-recorder tail, when that run died with no
+    /// crash report at all (see `view::crash_notice`).
+    pub(super) last_flight: Option<String>,
     pub(super) search: Entity<InputState>,
     pub(super) link: Entity<InputState>,
     pub(super) link_state: LinkState,
@@ -317,6 +320,7 @@ impl HomeWindow {
                 .map(|folder| crate::recovery::leftovers(&folder))
                 .unwrap_or_default(),
             last_crash: crate::panic_log::take_last_crash(),
+            last_flight: crate::flight::last_run(),
             search,
             link,
             link_state: LinkState::Idle,

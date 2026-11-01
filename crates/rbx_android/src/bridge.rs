@@ -192,6 +192,16 @@ pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeRes
     host::resumed();
 }
 
+/// `Activity.onDestroy`: the run is ending on purpose, so the flight
+/// recorder's log gets its shutdown mark and shows nothing next launch.
+#[unsafe(no_mangle)]
+pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativeShutdownMark(
+    _env: *mut jni::sys::JNIEnv,
+    _thiz: jobject,
+) {
+    rbx_studio::flight::mark_shutdown();
+}
+
 /// `Activity.onPause`, after the super call.
 #[unsafe(no_mangle)]
 pub unsafe extern "system" fn Java_com_touseefx_rbxnative_MainActivity_nativePaused(
