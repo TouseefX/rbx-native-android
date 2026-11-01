@@ -394,7 +394,9 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
             // Drop the connection and redo the handshake with a fresh
             // script.
             Err(err) if attempt < SESSION_ATTEMPTS && drive::is_handshake_miss(&err) => {
-                say(format!("{err} — dropping the connection for a fresh session"));
+                say(format!(
+                    "{err} — dropping the connection for a fresh session"
+                ));
                 continue;
             }
             Err(err) => return Err(err),
@@ -432,10 +434,11 @@ fn poll_presence(cookie: SessionCookie, status: Session) {
         .spawn(move || {
             while !status.is_finished() {
                 let ids: Vec<u64> = status.members().0.iter().map(|m| m.id).collect();
-                if !ids.is_empty() {
-                    if let Ok(list) = rbx_cloud::user_presence(&cookie, &ids) {
+                match rbx_cloud::user_presence(&cookie, &ids) {
+                    Ok(list) if !list.is_empty() => {
                         status.note_presences(list.into_iter().collect());
                     }
+                    _ => {}
                 }
                 std::thread::sleep(PRESENCE_POLL);
             }
@@ -456,18 +459,19 @@ fn negotiate(
 ) -> Result<Value, String> {
     for attempt in 1..=NEGOTIATION_TRIES {
         status.set_phase(Phase::Negotiating { attempt });
-        let answered = rbx_transport::join_game::team_create_join(
-            place,
-            cookie.expose_secret(),
-            false,
-        )?;
+        let answered =
+            rbx_transport::join_game::team_create_join(place, cookie.expose_secret(), false)?;
         if !rbx_transport::join_game::team_create_endpoints(&answered).is_empty() {
             return Ok(answered);
         }
         if rbx_transport::join_game::all_null(&answered) {
-            say(format!("session warming up (attempt {attempt}), asking again"));
+            say(format!(
+                "session warming up (attempt {attempt}), asking again"
+            ));
         } else {
-            say(format!("no endpoint in the answer yet (attempt {attempt}), asking again"));
+            say(format!(
+                "no endpoint in the answer yet (attempt {attempt}), asking again"
+            ));
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
@@ -601,7 +605,10 @@ mod tests {
         session.finished();
         let (phase, log) = session.snapshot();
         assert!(matches!(phase, Phase::Failed(ref err) if err == "endpoint answered 403"));
-        assert_eq!(log.last().map(String::as_str), Some("join failed: endpoint answered 403"));
+        assert_eq!(
+            log.last().map(String::as_str),
+            Some("join failed: endpoint answered 403")
+        );
         assert!(session.is_finished());
     }
 
@@ -632,7 +639,10 @@ mod tests {
         assert!(members.is_empty());
         assert!(!me);
         let (_, log) = session.snapshot();
-        assert_eq!(log.last().map(String::as_str), Some("in server: 0 (nobody else)"));
+        assert_eq!(
+            log.last().map(String::as_str),
+            Some("in server: 0 (nobody else)")
+        );
         let settled = session.version();
         // The same answer again: nothing new, no version tick.
         session.note_members(Vec::new(), Some(5));
@@ -671,16 +681,14 @@ mod tests {
 
     #[test]
     fn the_peer_comes_from_the_first_endpoint() {
-        let js: Value = serde_json::from_str(
-            r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":50105}]}"#,
-        )
-        .unwrap();
+        let js: Value =
+            serde_json::from_str(r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":50105}]}"#)
+                .unwrap();
         assert_eq!(peer_of(&js), Ok(([10, 190, 0, 5], 50105)));
         // The port as a string, as scripts have been seen carrying it.
-        let js: Value = serde_json::from_str(
-            r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":"50105"}]}"#,
-        )
-        .unwrap();
+        let js: Value =
+            serde_json::from_str(r#"{"UdmuxEndpoints":[{"Address":"10.190.0.5","Port":"50105"}]}"#)
+                .unwrap();
         assert_eq!(peer_of(&js), Ok(([10, 190, 0, 5], 50105)));
         assert!(peer_of(&serde_json::json!({})).is_err());
         assert!(peer_of(&serde_json::json!({"UdmuxEndpoints":[]})).is_err());
@@ -771,8 +779,7 @@ mod tests {
 
     #[test]
     fn hydration_merges_only_what_the_service_sent() {
-        let mut js: Value =
-            serde_json::from_str(r#"{"UserId":5,"AgeBracket":"old"}"#).unwrap();
+        let mut js: Value = serde_json::from_str(r#"{"UserId":5,"AgeBracket":"old"}"#).unwrap();
         let doc: Value = serde_json::from_str(
             r#"{"playerInfo":{"ageBracket":"13-to-17","gender":2,"platform":"Android"}}"#,
         )
@@ -799,8 +806,7 @@ mod tests {
     fn the_captured_templates_still_build() {
         assert_eq!(TMPL_90[0], 0x90);
         assert_eq!(TMPL_8A[0], 0x8a);
-        let js: Value =
-            serde_json::from_str(r#"{"UserId":5,"CharacterAppearanceId":5}"#).unwrap();
+        let js: Value = serde_json::from_str(r#"{"UserId":5,"CharacterAppearanceId":5}"#).unwrap();
         let reply: Value = serde_json::from_str(
             r#"{"joinTicket":{"SerializedClientFields":"a","EncryptedServerFields":"b"}}"#,
         )

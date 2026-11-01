@@ -39,11 +39,7 @@ impl Shell {
     /// The card's poller: repaints when the session wrote something,
     /// records the verdict in the Output dock when it ends, and stops
     /// once that end is painted (or the window is gone).
-    pub(in crate::shell) fn watch_team_create(
-        &mut self,
-        session: Session,
-        cx: &mut Context<Self>,
-    ) {
+    pub(in crate::shell) fn watch_team_create(&mut self, session: Session, cx: &mut Context<Self>) {
         cx.spawn(async move |this, cx| {
             let mut seen = None;
             let mut recorded = false;
@@ -110,10 +106,9 @@ impl Shell {
                 format!("Asking the session server ({attempt})\u{2026}"),
                 ui::accent(),
             ),
-            Phase::Joined if members.is_empty() => (
-                "Joined \u{2014} session live".to_string(),
-                ui::green(),
-            ),
+            Phase::Joined if members.is_empty() => {
+                ("Joined \u{2014} session live".to_string(), ui::green())
+            }
             Phase::Joined => (
                 format!("Joined \u{2014} {} in server", members.len()),
                 ui::green(),
@@ -225,11 +220,7 @@ impl Shell {
                                         .rounded_full()
                                         .border_1()
                                         .border_color(ui::panel())
-                                        .bg(if online {
-                                            ui::green()
-                                        } else {
-                                            tokens::text3()
-                                        }),
+                                        .bg(if online { ui::green() } else { tokens::text3() }),
                                 )
                         }))
                         .when(more > 0, |row| {

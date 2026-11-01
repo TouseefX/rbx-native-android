@@ -372,7 +372,8 @@ impl HomeWindow {
                     }
                 }));
         }
-        this    }
+        this
+    }
 
     /// The groups the owner dropdown lists after "You", by name.
     pub(super) fn set_groups(&mut self, mut groups: Vec<rbx_cloud::Group>) {

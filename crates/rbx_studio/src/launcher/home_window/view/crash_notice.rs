@@ -6,7 +6,6 @@
 //! the whole report, and a Dismiss that clears the way.
 
 use gpui_kit::component::{h_flex, v_flex};
-use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 
 use super::*;

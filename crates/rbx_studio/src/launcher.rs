@@ -22,9 +22,9 @@ mod fixtures;
 mod home_window;
 mod key_check;
 mod publishing;
-pub(crate) mod team_join;
 pub(crate) mod setup;
 pub(crate) mod startup;
+pub(crate) mod team_join;
 pub(crate) mod ui;
 mod wizard;
 
