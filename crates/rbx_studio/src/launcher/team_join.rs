@@ -19,10 +19,12 @@ use rbx_cloud::heartbeats::SessionCookie;
 use rbx_transport::drive::{self, DriveInputs, UdpIo};
 use serde_json::Value;
 
-/// The captured native `0x90` join body — the 2026-10-29 capture, with
-/// its 20-byte tail — spliced per session by `join_msg::build_90`.
-pub(crate) const TMPL_90: &[u8] =
-    include_bytes!("../../../../assets/team-create/native_90_fresh.bin");
+/// The captured native `0x90` join body is gone: the 2026-10-29 capture
+/// carried a real account's username and user ids, so it was dropped and
+/// scrubbed from the fork's history at the upstream maintainer's request.
+/// With no template the join flow holds the join (`join_flow` skips the
+/// 0x90 below 64 bytes) and `run` refuses up front with the reason.
+pub(crate) const TMPL_90: &[u8] = &[];
 /// The captured native `0x8a` ticket body.
 pub(crate) const TMPL_8A: &[u8] = include_bytes!("../../../../assets/team-create/native_8a.bin");
 
@@ -320,6 +322,13 @@ pub(crate) fn start(place: u64, cookie: SessionCookie) -> Session {
 /// logged a handful of lines — and a second and third socket when the
 /// RCC wedges the handshake (see `SESSION_ATTEMPTS`).
 fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Report, String> {
+    if TMPL_90.len() < 64 {
+        return Err(
+            "the captured 0x90 join template was dropped (a real account's data was \
+             baked into it); joining stays off until a clean template exists"
+                .to_string(),
+        );
+    }
     let say = |line: String| {
         eprintln!("team-create: {line}");
         status.line(&line);
@@ -797,27 +806,12 @@ mod tests {
         assert_eq!(js.get("UserId"), Some(&serde_json::json!(5)));
     }
 
-    /// The vendored captures are the real ones the transport was built
-    /// against: the 0x90 splices around its `{"UserId"` JSON with this
-    /// session's values, and the 0x8a is the ticket shape `build_8a`
-    /// parses. A capture that stopped matching would fail here, in CI,
-    /// before any device ever tried a join.
+    /// The 0x8a vendored capture is the real ticket shape `build_8a` parses.
+    /// The 0x90 capture is gone — a real account's data was baked into it
+    /// — so joining is held rather than spliced (see `TMPL_90`).
     #[test]
-    fn the_captured_templates_still_build() {
-        assert_eq!(TMPL_90[0], 0x90);
+    fn the_captured_ticket_still_parses() {
         assert_eq!(TMPL_8A[0], 0x8a);
-        let js: Value = serde_json::from_str(r#"{"UserId":5,"CharacterAppearanceId":5}"#).unwrap();
-        let reply: Value = serde_json::from_str(
-            r#"{"joinTicket":{"SerializedClientFields":"a","EncryptedServerFields":"b"}}"#,
-        )
-        .unwrap();
-        let (body, json) =
-            rbx_transport::join_msg::build_90(TMPL_90, &js, &reply).expect("the capture splices");
-        assert!(json.contains(r#""UserId":5"#), "{json}");
-        assert!(json.contains(r#""CharacterAppearanceId":5"#), "{json}");
-        // The prefix up to the LEB and the 20-byte tail are spliced
-        // verbatim from the capture, never re-encoded.
-        assert_eq!(&body[..3], &TMPL_90[..3]);
-        assert_eq!(&body[body.len() - 20..], &TMPL_90[TMPL_90.len() - 20..]);
+        assert!(TMPL_8A.len() >= 64);
     }
 }
