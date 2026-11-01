@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+# The editor itself: the `rbxstudio` binary is the desktop launch, and the
+# Android host in `crates/rbx_android` builds the library into the app and
+# calls `rbx_studio::boot_mobile` with the GPUI application the host owns.
+[lib]
+name = "rbx_studio"
+path = "src/lib.rs"
+
 [[bin]]
 name = "rbxstudio"
 path = "src/main.rs"
@@ -18,11 +25,27 @@ glam = "0.33"
 # `anyhow` and `lsp-types` are the types GPUI Kit's `DefinitionProvider` trait
 # is written in (Go to Declaration); both are already in the tree through it.
 anyhow = "1"
-gpui-kit = "0.6"
+# Pinned exactly: 0.6.2 is the release that can be hosted on iOS and Android
+# (`gpui_kit::is_mobile`, the desktop platform selector compiled out), and it
+# is built against gpui-pre 0.3.5 — the same snapshot `gpui-pre-mobile` (the
+# mobile platform `crates/rbx_android` hosts the editor through) pins, and the
+# same one the vendored `vendor/gpui-pre` carries. A later 0.6.x moves to a
+# later snapshot, which would put two `gpui-pre`s in the tree; bump this, the
+# vendor and the mobile pin together.
+gpui-kit = "=0.6.2"
 # Already in the tree under gpui-kit, and patched to `vendor/gpui-base`; named
 # directly only for the script editor's gutter slot, which gpui-kit's own
 # re-exports do not list (see `vendor/README.md`).
 gpui-base = "0.6"
+# Also already in the tree under gpui-kit (same snapshot `gpui-pre-mobile`
+# pins, patched to `vendor/gpui-pre`); named directly for `TouchPhase` and
+# `PinchEvent`, the viewport's touch camera controls match on, which
+# gpui-kit's re-exports do not list either.
+gpui = { package = "gpui-pre", version = "=0.3.5", default-features = false }
+# `panic_log`'s hook keeps logcat parity for whoever does have adb. In the
+# tree at this version already (the Android host logs through it); the logger
+# itself is initialized by `rbx_android`, not here.
+log = "0.4"
 lsp-types = "0.97"
 # GPUI's own version: a RenderImage is built from its `image::Frame`s, so a
 # second copy of the crate would not typecheck.
@@ -91,9 +114,6 @@ resvg = "0.46"
 # GPUI's own handle type: the X11 window id the pointer lock warps in comes out
 # of it, so a second copy of the crate would not typecheck.
 raw-window-handle = "0.6"
-# Already in the tree under GPUI's X11 backend; `xfixes` hides the cursor and
-# `randr` is where the display's refresh rate comes from.
-x11rb = { version = "0.13", features = ["randr", "xfixes"] }
 
 # Dock layout state serialization, uses same version serde_json brings in.
 serde = { version = "1", features = ["derive"] }
@@ -137,12 +157,24 @@ getrandom = "0.3"
 # The colour popover's eyedropper.
 rbx_eyedropper = { path = "../rbx_eyedropper" }
 
+# Linux only: `malloc_trim`, so a parked place's freed scene goes back to
+# the system rather than staying in the render thread's arena (already in
+# Cargo.lock through rbx_play), and the pointer lock's X11 backend —
+# `xfixes` hides the cursor, `randr` is where the display's refresh rate
+# comes from (both already in the tree under GPUI's X11 backend). Android is
+# not X11, so both stay desktop-Linux-only.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+x11rb = { version = "0.13", features = ["randr", "xfixes"] }
+
 # The pointer lock's Win32 backend (`pointer_lock::server`): cursor warp and
 # hide. Already in the tree (under `mio`, `rustix`, …) at this version.
-# Linux only: `malloc_trim`, so a parked place's freed scene goes back to
-# the system rather than staying in the render thread's arena. Already in
-# Cargo.lock through rbx_play.
-[target.'cfg(target_os = "linux")'.dependencies]
+# Android only: `panic_log`'s native-signal handler — a segmentation
+# fault or an abort takes the process without unwinding, so the panic
+# hook never runs and the crash the script editor shows would leave no
+# report. Already in the tree at this version (the Linux section above
+# and `rbx_android` use it).
+[target.'cfg(target_os = "android")'.dependencies]
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
@@ -168,5 +200,5 @@ rbx_autorig = { path = "../rbx_autorig", features = ["test-humanoid"] }
 # GPUI's headless test window/entity harness (`#[gpui_kit::test]`,
 # `TestAppContext`), for the dock registration regression test in
 # `shell/dock/tests.rs`. Test-only: `dev-dependencies` features never reach
-# the shipped binary.
-gpui-kit = { version = "0.6", features = ["test-support"] }
+# the shipped binary. Same exact pin as above.
+gpui-kit = { version = "=0.6.2", features = ["test-support"] }

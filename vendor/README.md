@@ -1,10 +1,10 @@
 # Vendored crates
 
-## `gpui-base` (0.6.1, Apache-2.0, `longbridge/gpui-kit`)
+## `gpui-base` (0.6.2, Apache-2.0, `longbridge/gpui-kit`)
 
-Unmodified crates.io 0.6.1 source (its `tests/` and `benches/` dropped, and
-their `[[test]]`/`[[bench]]` entries with them), patched in through the
-root `Cargo.toml`'s `[patch.crates-io]`, plus three public methods on the
+Unmodified crates.io 0.6.2 source (its `tests/`, `benches/` and `examples/`
+dropped, and their `[[test]]`/`[[bench]]` entries with them), patched in through
+the root `Cargo.toml`'s `[patch.crates-io]`, plus three public methods on the
 editor state in `src/input/base/state.rs`, each marked "rbx-native
 addition":
 
@@ -76,9 +76,9 @@ host carries `occlusion::probe()`; rbx_studio's own `deferred` popups do
 the same. During Play the editor reads `occlusion::rects` to cut those
 areas out of the embedded Roblox window (X Shape), so popups draw above it.
 
-## `gpui-pre` (0.3.4, Apache-2.0, `zed-industries/zed`'s GPUI as published)
+## `gpui-pre` (0.3.5, Apache-2.0, `zed-industries/zed`'s GPUI as published)
 
-Unmodified crates.io 0.3.4 source (its `examples/`, `tests/` and `docs/`
+Unmodified crates.io 0.3.5 source (its `examples/`, `tests/` and `docs/`
 dropped, and their `[[example]]`/`[[test]]` entries with them), patched in
 through the root `Cargo.toml`'s `[patch.crates-io]`, plus hover styles that
 ease instead of snapping, each piece marked "rbx-native addition":
@@ -96,6 +96,31 @@ ease instead of snapping, each piece marked "rbx-native addition":
   A running fade asks for the next frame; a settled one asks for nothing.
 - `src/gpui.rs`: the module and its re-export.
 
+Plus, marked the same way: `src/app.rs` presents the initial scene
+`App::open_window` just drew on Android (`Window::present` in
+`src/window.rs` widened to `pub(crate)` for it) — the host-driven Android
+loop presents only the frames GPUI asks for, and nothing asks for the first
+one, which was a black screen on device. And Android first-frame
+diagnostics, to remove once the mobile boot is proven: `src/app.rs` logs
+whether `open_window` drew or failed, `src/window.rs` logs each frame
+callback, the draw-and-present arm it takes, and the primitive counts
+`Window::present` hands the platform, and `src/executor.rs` and
+`src/platform_scheduler.rs` log foreground spawns and their dispatch to the
+main thread; `src/app/async_context.rs` numbers every `AsyncApp::update`
+poll (and logs `AsyncApp::refresh`), so a task whose poll never returns is
+visible by number.
+
+And, marked the same way, touch gestures for the camera: `src/gestures.rs`
+no longer locks pan deltas to the gesture's dominant axis (the viewport's
+touch camera turns on both, and scrollables lock their own axis per
+gesture — gpui-base's `scrollable_mask`), and a second finger landing on a
+pending touch or pan turns it into a pinch, emitted as `PinchEvent`s at the
+contacts' midpoint until either lifts (`RecognizedTouchGesture::Pinch`,
+dispatched in `src/window.rs` like any other gesture-derived event; a pan
+cut short by that second finger still gets its terminal scroll). The
+camera consumes both in `rbx_studio`'s workspace view: a finger pan turns
+the camera, a pinch zooms it.
+
 GPUI has no property transitions of its own, so this is what lets every
 `hover`/`group_hover` style in the editor — and in `gpui-base`'s widgets —
 fade without each call site animating a value by hand. With no
@@ -107,4 +132,36 @@ this crate's own tests need fonts from outside it and do not build here.
 
 To upgrade GPUI: re-copy the matching `gpui-pre` from
 `~/.cargo/registry/src/*/`, drop the example and test targets from its
-`Cargo.toml`, re-apply the three marked pieces, and bump the version.
+`Cargo.toml`, re-apply the marked pieces, and bump the version.
+
+## `gpui-mobile` (f706039, GPL-3.0-or-later OR AGPL-3.0-or-later OR Apache-2.0, `longbridge/gpui-mobile`)
+
+Unmodified source of git revision f706039 (its `.git`, `example/` and
+`PACKAGES-TO-IMPL.md`'s package stubs' build targets aside — the example tree
+is simply dropped), patched in through the root `Cargo.toml`'s
+`[patch."https://github.com/longbridge/gpui-mobile"]` (a git dependency of
+`crates/rbx_android`, so the patch section names the repository URL rather
+than crates.io), plus one marked change:
+
+- `src/android/platform.rs`: `AndroidClipboard` reads and writes the real
+  system `ClipboardManager` through the host activity's static bridge
+  (`MainActivity.readClipboardText`/`writeClipboardText` in
+  `crates/rbx_android/kotlin`, the same contract as the path picker's
+  `openFiles`), marked "rbx-native addition". The crate shipped a stub that
+  kept an in-process `Option<String>`, so a paste could never see what
+  another app had copied — the API key screen's Paste button read that empty
+  store and silently did nothing.
+- `src/android/platform.rs`, same marking: `AndroidCredentialStore` keeps
+  its entries in one file under the app's private config directory
+  (`XDG_CONFIG_HOME`/`gpui-mobile/credentials.bin`, written atomically via
+  a staging rename), replacing the crate's in-memory map, which forgot
+  everything at process exit — the editor's saved Open Cloud key was gone
+  on every relaunch. The file sits inside the app sandbox and full-disk
+  encryption; sealing it with the Android Keystore is the natural hardening
+  step, and the format (length-prefixed service/username/secret entries,
+  capped in count and secret size) leaves room for it.
+
+To upgrade: re-clone the repository at the new revision, drop `.git` and
+`example/`, re-apply the marked clipboard bridge (and re-point the class name
+in it at the host activity), and bump the `rev` in
+`crates/rbx_android/Cargo.toml` together with this path.

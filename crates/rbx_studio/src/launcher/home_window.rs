@@ -111,6 +111,12 @@ pub(crate) struct HomeWindow {
     pub(super) session: Option<rbx_cloud::heartbeats::SessionCookie>,
     /// Auto-Recovery copies no editor owns, read as Home opens.
     pub(super) recovered: Vec<crate::recovery::Leftover>,
+    /// The crash the last run left behind, offered for copying until
+    /// dismissed (see `view::crash_notice`).
+    pub(super) last_crash: Option<crate::panic_log::CrashReport>,
+    /// The last run's flight-recorder tail, when that run died with no
+    /// crash report at all (see `view::crash_notice`).
+    pub(super) last_flight: Option<String>,
     pub(super) search: Entity<InputState>,
     pub(super) link: Entity<InputState>,
     pub(super) link_state: LinkState,
@@ -234,6 +240,8 @@ impl HomeWindow {
             recovered: crate::recovery::folder()
                 .map(|folder| crate::recovery::leftovers(&folder))
                 .unwrap_or_default(),
+            last_crash: crate::panic_log::take_last_crash(),
+            last_flight: crate::flight::last_run(),
             search,
             link,
             link_state: LinkState::Idle,

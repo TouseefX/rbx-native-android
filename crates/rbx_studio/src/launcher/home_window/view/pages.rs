@@ -69,6 +69,8 @@ impl HomeWindow {
                     .child(Self::section_head("New", None))
                     .child(self.new_tiles(grid, cx)),
             )
+            .children(self.crash_section(cx))
+            .children(self.flight_section(cx))
             .children(self.recovered_section(cx))
             .when(!recent.is_empty(), |this| {
                 let tools = h_flex()

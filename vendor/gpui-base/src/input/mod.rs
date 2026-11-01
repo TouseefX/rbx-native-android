@@ -62,6 +62,8 @@ mod selection;
 #[path = "base/state.rs"]
 mod state;
 mod textarea;
+#[path = "base/touch.rs"]
+mod touch;
 #[path = "base/undo_manager.rs"]
 mod undo_manager;
 
