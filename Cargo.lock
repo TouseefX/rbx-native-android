@@ -6863,6 +6863,7 @@ dependencies = [
  "console_error_panic_hook",
  "cosmic-text",
  "glam",
+ "harfrust",
  "js-sys",
  "png 0.18.1",
  "pollster 1.0.1",
@@ -11308,4 +11309,3 @@ dependencies = [
  "syn 3.0.5",
  "winnow 1.0.4",
 ]
-
