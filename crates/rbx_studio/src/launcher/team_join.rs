@@ -19,12 +19,6 @@ use rbx_cloud::heartbeats::SessionCookie;
 use rbx_transport::drive::{self, DriveInputs, UdpIo};
 use serde_json::Value;
 
-/// The captured native `0x90` join body is gone: the 2026-10-29 capture
-/// carried a real account's username and user ids, so it was dropped and
-/// scrubbed from the fork's history at the upstream maintainer's request.
-/// With no template the join flow holds the join (`join_flow` skips the
-/// 0x90 below 64 bytes) and `run` refuses up front with the reason.
-pub(crate) const TMPL_90: &[u8] = &[];
 /// The captured native `0x8a` ticket body.
 pub(crate) const TMPL_8A: &[u8] = include_bytes!("../../../../assets/team-create/native_8a.bin");
 
@@ -48,7 +42,7 @@ const SESSION_ATTEMPTS: u32 = 3;
 
 /// The reply the join flow takes: the negotiation document when it
 /// carries a `joinTicket`, `Null` otherwise — `build_90` keeps the
-/// template's ticket for a non-object reply.
+/// pre-seated empty ticket for a non-object reply.
 fn reply_for_flow(reply: &Value) -> &Value {
     static NULL: Value = Value::Null;
     if reply.get("joinTicket").is_some() {
@@ -322,13 +316,6 @@ pub(crate) fn start(place: u64, cookie: SessionCookie) -> Session {
 /// logged a handful of lines — and a second and third socket when the
 /// RCC wedges the handshake (see `SESSION_ATTEMPTS`).
 fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Report, String> {
-    if TMPL_90.len() < 64 {
-        return Err(
-            "the captured 0x90 join template was dropped (a real account's data was \
-             baked into it); joining stays off until a clean template exists"
-                .to_string(),
-        );
-    }
     let say = |line: String| {
         eprintln!("team-create: {line}");
         status.line(&line);
@@ -383,7 +370,6 @@ fn run(place: u64, cookie: &SessionCookie, status: &Session) -> Result<drive::Re
                 js: &js,
                 reply: reply_for_flow(&reply),
                 place,
-                tmpl_90: TMPL_90,
                 tmpl_8a: TMPL_8A,
                 solver: rbx_challenge::solver(),
                 duration_ms: SESSION_MS,
@@ -683,7 +669,7 @@ mod tests {
         });
         assert!(reply_for_flow(&with).get("joinTicket").is_some());
         // Without one, the flow takes Null: build_90 keeps the
-        // template's ticket for a non-object reply.
+        // pre-seated empty ticket for a non-object reply.
         let without = serde_json::json!({"status": 2, "UdmuxEndpoints": []});
         assert!(reply_for_flow(&without).is_null());
     }
@@ -806,9 +792,10 @@ mod tests {
         assert_eq!(js.get("UserId"), Some(&serde_json::json!(5)));
     }
 
-    /// The 0x8a vendored capture is the real ticket shape `build_8a` parses.
-    /// The 0x90 capture is gone — a real account's data was baked into it
-    /// — so joining is held rather than spliced (see `TMPL_90`).
+    /// The 0x8a vendored capture is the real ticket shape `build_8a`
+    /// parses. The 0x90 body needs no capture anymore: `build_90`
+    /// constructs it from scratch, session values merged into a
+    /// wire-ordered skeleton.
     #[test]
     fn the_captured_ticket_still_parses() {
         assert_eq!(TMPL_8A[0], 0x8a);

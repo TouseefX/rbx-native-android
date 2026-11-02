@@ -86,7 +86,6 @@ pub struct DriveInputs<'a> {
     pub js: &'a Value,
     pub reply: &'a Value,
     pub place: u64,
-    pub tmpl_90: &'a [u8],
     pub tmpl_8a: &'a [u8],
     pub solver: Solver,
     pub duration_ms: u64,
@@ -211,7 +210,6 @@ pub fn drive(
         js: inputs.js,
         reply: inputs.reply,
         place: inputs.place,
-        tmpl_90: inputs.tmpl_90,
         tmpl_8a: inputs.tmpl_8a,
         rng32,
     };
@@ -522,31 +520,6 @@ mod tests {
     /// A 0x90 template, the same shape `join_flow`'s own tests use: 3
     /// prefix bytes, LEB length, JSON, 24-byte tail with the build
     /// constants where the reference reads them.
-    fn template_90() -> Vec<u8> {
-        let json = br#"{"UserId":1,"A":1,"B":"x","C":{"D":true,"E":2}}"#;
-        let mut t = vec![0x01, 0x02, 0x03];
-        let mut leb = Vec::new();
-        let mut n = json.len() as u64;
-        loop {
-            let mut b = (n & 0x7F) as u8;
-            n >>= 7;
-            if n != 0 {
-                b |= 0x80;
-            }
-            leb.push(b);
-            if n == 0 {
-                break;
-            }
-        }
-        t.extend_from_slice(&leb);
-        t.extend_from_slice(json);
-        let mut tail = [0u8; 24];
-        tail[8..12].copy_from_slice(&0x0000_ABCDu32.to_le_bytes());
-        tail[12..16].copy_from_slice(&0x1122_3344u32.to_le_bytes());
-        t.extend_from_slice(&tail);
-        t
-    }
-
     fn b64(data: &[u8]) -> String {
         const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         let mut out = String::new();
@@ -647,8 +620,8 @@ mod tests {
     fn the_whole_run_handshake_burst_and_session() {
         let js = join_script();
         // The join reply the real v1 endpoint sends: status plus the
-        // joinTicket build_90 splices into the 0x90 template's
-        // `__joinTicket` (an object reply without one is an error).
+        // joinTicket build_90 folds into the body's `__joinTicket`
+        // (an object reply without one is an error).
         let reply = json!({
             "status": 2,
             "joinTicket": {
@@ -684,7 +657,6 @@ mod tests {
                 js: &js,
                 reply: &reply,
                 place: 1818,
-                tmpl_90: &template_90(),
                 tmpl_8a: b"",
                 solver: Box::new(|_msg, _job| Some(0x0BAD_F00D)),
                 duration_ms: 300,
@@ -731,7 +703,6 @@ mod tests {
                 js: &js,
                 reply: &Value::Null,
                 place: 1818,
-                tmpl_90: &template_90(),
                 tmpl_8a: b"",
                 solver: Box::new(|_msg, _job| None),
                 duration_ms: 0,

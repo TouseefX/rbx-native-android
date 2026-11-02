@@ -475,53 +475,150 @@ fn merge_session_json(tmpl_text: &str, join_script: &Value) -> Result<String, St
     serde_json::to_string(&Value::Object(doc)).map_err(|e| e.to_string())
 }
 
-/// Locate `{"UserId"` in the 0x90 template and the LEB length in front of
-/// it: `(json offset, LEB offset, json length)`.
-fn split_90(tmpl: &[u8]) -> Result<(usize, usize, usize), String> {
-    const PROBE: &[u8] = br#"{"UserId""#;
-    let i = tmpl
-        .windows(PROBE.len())
-        .position(|w| w == PROBE)
-        .ok_or("0x90 template has no UserId JSON")?;
-    let mut start = i.saturating_sub(1);
-    while start > 0 && tmpl[start - 1] & 0x80 != 0 {
-        start -= 1;
+// --- the 0x90 join body, built from scratch -----------------------------
+
+/// The 0x90 body's opening bytes: the tag, a 1, application id 36 (the
+/// same constant the 0x8a carries), a 3 and a 14 the reference also
+/// pins. The two bytes after it are the flag count, little-endian.
+const HEADER_90: [u8; 8] = [0x90, 0x01, 0x24, 0x00, 0x00, 0x00, 0x03, 0x0E];
+
+/// The feature-flag names the native's join body carries between its
+/// header and its session document, in wire order. Public client
+/// settings, not account data: the same names the client-settings API
+/// hands out, length-prefixed one byte each.
+const FFLAGS_90: &[&str] = &[
+    "UserPlayerScriptsCCLIntegrationG",
+    "CLI198718Ver",
+    "UserPlayerScriptsCCLIntegrationB",
+    "TextChatWindowEnabledPhase2",
+    "UserPlayerScriptsCCLIntegrationE",
+    "AuroraDeterministicGuidNonNegativeIndex",
+    "IAS_InstancePointersHoldAcrossReplication3",
+    "AnimGraphServerAuthorityNodeIndices",
+    "DebugAdaptivePVCompressor",
+    "UserPlayerScriptsThumbstickContext",
+    "UserPlayerScriptsTapToMoveUsesIAS2",
+    "AnimGraphServerAuthorityPhaseSyncSkip",
+    "UserPlayerScriptsImprovementB",
+    "TerrainUndoUseCompressedChunks",
+    "AnimGraphServerAuthorityFloatAttributes",
+    "UserAbilitiesUserInterfaceE",
+    "UserPlayerScriptsCameraTouchUsesIAS",
+    "UserPlayerScriptsDynamicThumbstickUsesIAS",
+    "UserPlayerScriptsRefactor2",
+    "UserPlayerScriptsCCLIntegrationA",
+    "UserPlayerScriptsCCLIntegrationC",
+    "UserPlayerScriptsCCLIntegrationF",
+    "UserPlayerScriptsCCLIntegrationH",
+    "UserAbilitiesUserInterfaceD",
+    "UserAbilitiesUserInterfaceF",
+    "UserAbilitiesUserInterfaceG",
+    "UserPlayerScriptsUseScriptableBindings",
+    "UserPlayerScriptsSAuthDirectAPIs2",
+    "UserPlayerScriptsSupportTVRemoteKeycodes",
+    "UserAbilitiesUserInterfaceH",
+    "StudioOpenWithStreaming",
+    "UserAbilitiesUserInterfaceC",
+    "UserPlayerScriptsRefactor4",
+    "UserPlayerScriptsSAuthDirectAPIs",
+    "UserPlayerScriptsRefactor1",
+    "UserPlayerScriptsRefactor3",
+    "UserPlayerScriptsClassicThumbstickUsesIAS",
+    "UserPlayerScriptsImprovementC",
+    "UserPlayerScriptsPlayerControlState",
+    "TextChatWindowEnabledPhase3",
+    "RCCChannelName",
+    "UserPlayerScriptsImprovementA",
+    "CLI198718SyncVer",
+    "UserPlayerScriptsImprovementD",
+];
+
+/// The 20 build-constant bytes the body ends with: `tail[2]` (at
+/// `[len - 16..len - 12]`) is what the 0x8a's key derives from and
+/// `tail[3]` the 0x92's v9 (see [`tail2_from_90_template`] and
+/// [`v9_from_90_template`], which read them back off the built body).
+const TAIL_90: [u8; 20] = [
+    0x6E, 0x27, 0xFB, 0xB1, 0x8E, 0x78, 0xB1, 0x51, 0x47, 0xF0, 0x3C, 0xEA, 0x61, 0xAF, 0x8C, 0x44,
+    0xAC, 0x79, 0x80, 0x22,
+];
+
+/// The session document's field set, in the native's wire order: the
+/// identity fields the join script fills left neutral, the client and
+/// build fields at the values the native sends. Seating every field up
+/// front — `RandomSeed1`, `APIsecurityToken` and `__joinTicket`
+/// included — is what keeps the merge from ever reordering the doc.
+fn session_doc_90() -> Map<String, Value> {
+    let doc = serde_json::json!({
+        "UserId": 0,
+        "VerifiedAMP": 10,
+        "IsTeleportedIn": false,
+        "FollowUserId": 0,
+        "UserAgentStr": "Roblox/WinInet",
+        "HasVerifiedBadge": false,
+        "SuperSafeChat": false,
+        "ClientDeviceRamMegabytes": 7810,
+        "DisplayName": "",
+        "PartyId": "",
+        "UserName": "",
+        "TextChatRestrictionStatus": "NotRestricted",
+        "WhoCanWhisperChatWithMeInExperiences": "NoOne",
+        "VoiceMutingPlatformType": 0,
+        "CharacterAppearance": "",
+        "PreviousUniverseId": 0,
+        "AgeChecked": "1",
+        "UserIdMode": 1,
+        "PrivateServerID": "",
+        "DomainUserId": 0,
+        "GameChatType": "Enabled",
+        "AccountAge": 0,
+        "ServerClaimedTime": 0,
+        "RandomSeed1": "",
+        "UdmuxToken": 0,
+        "ClientRobloxChannel": "production",
+        "APIsecurityToken": "",
+        "PrivateServerOwnerID": 0,
+        "Locale2IdRef": "RBX31446740D9AE4C1CBA236E873B64790B",
+        "LocaleIdInternal": "en_us",
+        "Locale2Info": "33",
+        "MatchmakingAttributes": "{\"ServerAttributes\":[]}",
+        "LocaleId": "en_us",
+        "AgeBracket": "Age13To15",
+        "VrDevice": "",
+        "MembershipType": "None",
+        "CountryRegionCode": "US",
+        "OsPlatform": "Android",
+        "OsPlatformName": "Android",
+        "HasRobloxSubscription": false,
+        "ClientRobloxVersion": "2.739.691",
+        "RawJoinData": "",
+        "ClientJoinData": "{\"LaunchData\":\"\",\"ReferredByPlayerId\":0}",
+        "GameJoinContext": "{}",
+        "__joinTicket": "",
+        "IsUnder13": false,
+        "CharacterAppearanceId": 0,
+        "OriginalAccountCreationTimestampMs": 0,
+        "Gender": "Unknown",
+        "Platform": "Computer",
+        "Os": "Windows",
+        "IsOriginalUser": false
+    });
+    match doc {
+        Value::Object(map) => map,
+        _ => unreachable!("the literal above is an object"),
     }
-    let mut len = 0u64;
-    let mut shift = 0u32;
-    for &b in &tmpl[start..i] {
-        len |= u64::from(b & 0x7F) << shift;
-        shift += 7;
-    }
-    // The reference pinned a 24-byte tail, but the tail is whatever follows
-    // the JSON: the 2026-10-27 capture carried 24 bytes, the 10-29 one 20.
-    // Sixteen is the least the end-anchored tail reads need.
-    if i + len as usize + 16 > tmpl.len() {
-        return Err("0x90 template is too short for its own length".into());
-    }
-    Ok((i, start, len as usize))
 }
 
-/// The 0x90 join body: the template with its JSON re-sealed around this
-/// session's values. The tail is everything after the JSON — 24 bytes in
-/// the 2026-10-27 capture the reference pinned, 20 in the 10-29 one — and
-/// is spliced verbatim. `body` is what [`seal`] takes; `json` is the JSON
-/// that went in.
-pub fn build_90(
-    tmpl: &[u8],
-    join_script: &Value,
-    reply: &Value,
-) -> Result<(Vec<u8>, String), String> {
-    let (json_off, leb_off, json_len) = split_90(tmpl)?;
-    let tail_off = json_off + json_len;
-    let tmpl_json = std::str::from_utf8(&tmpl[json_off..tail_off])
-        .map_err(|_| "0x90 template JSON is not UTF-8".to_string())?;
-    let mut doc: Map<String, Value> = serde_json::from_str(tmpl_json)
-        .map_err(|_| "0x90 template JSON does not parse".to_string())?;
+/// The 0x90 join body, built from scratch: header, flag list, the
+/// session document sealed around this session's values, build-constant
+/// tail. `body` is what [`seal`] takes; `json` is the document that went
+/// in. No captured bytes anywhere — the shape was learned from one, the
+/// values are this session's.
+pub fn build_90(join_script: &Value, reply: &Value) -> Result<(Vec<u8>, String), String> {
+    let mut doc = session_doc_90();
     merge_into(&mut doc, join_script);
-    // Identity fields the join script does not carry stay on the template's
-    // values — which belong to whoever that capture was taken as. Pin the
-    // appearance id to the joining user; the native's is UserId.
+    // Identity fields the join script does not carry stay neutral —
+    // never another session's. Pin the appearance id to the joining
+    // user; the native's is UserId.
     if let Some(uid) = join_script.get("UserId") {
         if join_script.get("CharacterAppearanceId").is_none() {
             doc.insert("CharacterAppearanceId".into(), uid.clone());
@@ -532,6 +629,14 @@ pub fn build_90(
             doc.insert(key.into(), Value::String(value_to_string(sv)));
         }
     }
+    // The avatar-fetch URL the native builds from the joining user.
+    let uid = doc.get("UserId").and_then(Value::as_u64).unwrap_or(0);
+    doc.insert(
+        "CharacterAppearance".into(),
+        Value::String(format!(
+            "https://api.roblox.com/v1.1/avatar-fetch/?placeId=1818&userId={uid}"
+        )),
+    );
     if let Value::Object(_) = reply {
         match reply.get("joinTicket") {
             Some(jt) if jt.is_object() => {
@@ -548,14 +653,24 @@ pub fn build_90(
                     serde_json::to_string(&Value::Object(inner)).map_err(|e| e.to_string())?;
                 doc.insert("__joinTicket".into(), Value::String(dumped));
             }
-            _ => return Err("join reply has no joinTicket (0x90 keeps the template's)".into()),
+            _ => return Err("join reply has no joinTicket".into()),
         }
     }
     let json = serde_json::to_string(&Value::Object(doc)).map_err(|e| e.to_string())?;
-    let mut body = Vec::with_capacity(leb_off + json.len() + 25);
-    body.extend_from_slice(&tmpl[..leb_off]);
+    let mut body = Vec::with_capacity(HEADER_90.len() + 2048 + json.len() + TAIL_90.len());
+    body.extend_from_slice(&HEADER_90);
+    body.extend_from_slice(
+        &u16::try_from(FFLAGS_90.len())
+            .expect("the flag list fits a u16")
+            .to_le_bytes(),
+    );
+    for name in FFLAGS_90 {
+        // The native length-prefixes each name with one byte; every name
+        // is far under 128, so the LEB put_string writes matches it.
+        put_string(&mut body, name);
+    }
     put_string(&mut body, &json);
-    body.extend_from_slice(&tmpl[tail_off..]);
+    body.extend_from_slice(&TAIL_90);
     Ok((body, json))
 }
 
@@ -755,53 +870,32 @@ mod tests {
         assert!(!is_challenge(&[0x9B; 12]));
     }
 
-    fn template_90(json: &str) -> Vec<u8> {
-        let mut t = vec![0x01, 0x02, 0x03];
-        put_leb(&mut t, json.len() as u64);
-        t.extend_from_slice(json.as_bytes());
-        let mut tail = [0u8; 24];
-        tail[8..12].copy_from_slice(&0x0000_ABCDu32.to_le_bytes());
-        tail[12..16].copy_from_slice(&0x1122_3344u32.to_le_bytes());
-        t.extend_from_slice(&tail);
-        t
-    }
-
     #[test]
-    fn build_90_without_substitutions_is_the_template() {
-        // What proves the JSON re-serialisation keeps the native's exact
-        // formatting: nothing to change means nothing changes.
-        let tmpl = template_90(r#"{"UserId":123,"Name":"Template"}"#);
-        let (body, json) = build_90(&tmpl, &Value::Null, &Value::Null).expect("builds");
-        assert_eq!(body, tmpl);
-        assert_eq!(json, r#"{"UserId":123,"Name":"Template"}"#);
-    }
-
-    #[test]
-    fn build_90_splices_the_session_values() {
-        let tmpl = template_90(r#"{"UserId":123,"Name":"Template"}"#);
-        let js: Value =
-            serde_json::from_str(r#"{"UserId":456,"RandomSeed1":"seed%20one"}"#).unwrap();
+    fn build_90_lays_out_the_native_shape() {
+        let js: Value = serde_json::from_str(
+            r#"{"UserId":456,"RandomSeed1":"seed one","APIsecurityToken":"tok"}"#,
+        )
+        .unwrap();
         let reply: Value = serde_json::from_str(
             r#"{"joinTicket":{"SerializedClientFields":"a","EncryptedServerFields":"b"}}"#,
         )
         .unwrap();
-        let (body, json) = build_90(&tmpl, &js, &reply).expect("builds");
-        assert!(json.contains(r#""UserId":456"#));
-        assert!(json.contains(r#""RandomSeed1":"seed%20one""#));
-        assert!(json.contains(r#""CharacterAppearanceId":456"#));
-        assert!(json.contains(
-            r#""__joinTicket":"{\"SerializedClientFields\":\"a\",\"EncryptedServerFields\":\"b\"}""#
-        ));
-        // Prefix, LEB and the 24-byte tail are spliced, not re-encoded.
-        assert_eq!(&body[..3], &[0x01, 0x02, 0x03]);
-        assert_eq!(&body[body.len() - 24..], &tmpl[tmpl.len() - 24..]);
-        // The LEB in front of the JSON still decodes to the JSON length.
+        let (body, json) = build_90(&js, &reply).expect("builds");
+        // Header, flag count, the flags themselves.
+        assert_eq!(&body[..8], &HEADER_90);
+        assert_eq!(&body[8..10], &(FFLAGS_90.len() as u16).to_le_bytes());
+        let mut p = 10usize;
+        for name in FFLAGS_90 {
+            assert_eq!(body[p], name.len() as u8);
+            assert_eq!(&body[p + 1..p + 1 + name.len()], name.as_bytes());
+            p += 1 + name.len();
+        }
+        // The LEB in front of the JSON decodes to the JSON length.
         let mut len = 0u64;
         let mut shift = 0u32;
-        let mut i = 3usize;
         loop {
-            let b = body[i];
-            i += 1;
+            let b = body[p];
+            p += 1;
             len |= u64::from(b & 0x7F) << shift;
             shift += 7;
             if b & 0x80 == 0 {
@@ -809,41 +903,50 @@ mod tests {
             }
         }
         assert_eq!(len as usize, json.len());
-        assert_eq!(&body[i..i + json.len()], json.as_bytes());
+        assert_eq!(&body[p..p + json.len()], json.as_bytes());
+        // The build-constant tail, verbatim.
+        assert_eq!(&body[body.len() - 20..], &TAIL_90);
+        // The session values landed: the id, the appearance id pinned to
+        // it, the URL built from it, the token pair, the folded ticket.
+        assert!(json.contains(r#""UserId":456"#));
+        assert!(json.contains(r#""CharacterAppearanceId":456"#));
+        assert!(json.contains(r#""RandomSeed1":"seed one""#));
+        assert!(json.contains(r#""APIsecurityToken":"tok""#));
+        assert!(json.contains(
+            r#""CharacterAppearance":"https://api.roblox.com/v1.1/avatar-fetch/?placeId=1818&userId=456""#
+        ));
+        assert!(json.contains(
+            r#""__joinTicket":"{\"SerializedClientFields\":\"a\",\"EncryptedServerFields\":\"b\"}""#
+        ));
+        // The tail's build constants read back off the built body, the
+        // same reads the join flow does for the 0x8a key and the 0x92.
+        assert_eq!(
+            tail2_from_90_template(&body),
+            Some(u32::from_le_bytes([0x8E, 0x78, 0xB1, 0x51]))
+        );
+        assert_eq!(v9_from_90_template(&body), Some(0xC858_88C9));
         // An object reply without a joinTicket is an error, not a guess.
-        let err = build_90(&tmpl, &Value::Null, &serde_json::json!({}));
+        let err = build_90(&js, &serde_json::json!({}));
         assert!(err.is_err());
     }
 
     #[test]
-    fn build_90_keeps_template_order_and_kinds() {
-        let tmpl = template_90(r#"{"UserId":1,"A":1,"B":"x","C":{"D":true,"E":2}}"#);
-        let js: Value = serde_json::from_str(r#"{"C":{"E":9},"B":{"z":1},"F":0}"#).unwrap();
-        let (_, json) = build_90(&tmpl, &js, &Value::Null).unwrap();
-        // Order: template keys, nested; B (a string field) stringifies the
-        // object; F is not in the template so it never appears; the join
-        // script has no UserId, so the template's stays.
-        assert_eq!(
-            json,
-            r#"{"UserId":1,"A":1,"B":"{\"z\":1}","C":{"D":true,"E":9}}"#
-        );
-    }
-
-    #[test]
-    fn build_90_handles_the_shorter_newer_tail() {
-        // The 2026-10-29 capture carries a 20-byte tail; the tail is the
-        // remainder after the JSON, so both builds splice verbatim.
-        let json = r#"{"UserId":7,"Name":"T"}"#;
-        let mut t = vec![0x01];
-        put_leb(&mut t, json.len() as u64);
-        t.extend_from_slice(json.as_bytes());
-        t.extend_from_slice(&[0xEE; 20]);
-        let (body, _) = build_90(&t, &Value::Null, &Value::Null).expect("builds");
-        assert_eq!(body, t);
-        let js: Value = serde_json::from_str(r#"{"UserId":8}"#).unwrap();
-        let (body, json2) = build_90(&t, &js, &Value::Null).expect("builds");
-        assert!(json2.contains(r#""UserId":8"#));
-        assert_eq!(&body[body.len() - 20..], &[0xEE; 20]);
+    fn build_90_keeps_wire_order_and_kinds() {
+        // A script that carries a subset: the doc's key order stays the
+        // skeleton's, the kinds are preserved, and a key the skeleton
+        // does not carry never appears.
+        let js: Value = serde_json::from_str(r#"{"UserId":8,"VerifiedAMP":11}"#).unwrap();
+        let (_, json) = build_90(&js, &Value::Null).unwrap();
+        let doc: Value = serde_json::from_str(&json).unwrap();
+        let keys: Vec<String> = doc.as_object().unwrap().keys().cloned().collect();
+        let want: Vec<String> = session_doc_90().keys().cloned().collect();
+        assert_eq!(keys, want);
+        assert!(json.contains(r#""VerifiedAMP":11"#));
+        // A string field stays a string, a null reply keeps the empty
+        // pre-seated ticket, and an unknown key never lands.
+        assert!(json.contains(r#""AgeChecked":"1""#));
+        assert!(json.contains(r#""__joinTicket"":"""#));
+        assert!(!json.contains("NeverHeardOfIt"));
     }
 
     #[test]

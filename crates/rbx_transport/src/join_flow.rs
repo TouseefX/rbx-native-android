@@ -97,8 +97,6 @@ pub struct FlowInputs<'a> {
     /// The place id — a 64-bit one: live ids sit well past `u32`; 0 =
     /// take `js`'s `PlaceId`.
     pub place: u64,
-    /// The captured 0x90 template (>=64B, or the join is held).
-    pub tmpl_90: &'a [u8],
     /// The captured 0x8a session template.
     pub tmpl_8a: &'a [u8],
     /// The caller's random draw for the `0x92` (the reference mixes
@@ -205,19 +203,10 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
         }
     }
 
-    // The 0x90 join body: built from the template, sealed with the
-    // build-constant envelope key. A missing template (<64B) holds the
+    // The 0x90 join body: built from scratch, sealed with the
+    // build-constant envelope key. A reply without a ticket holds the
     // whole join — a server that never sees a join never challenges.
-    let tmpl_90 = inputs.tmpl_90;
-    if tmpl_90.len() < 64 {
-        steps.push(Step::Skipped {
-            what: "0x90",
-            why: "no template (need >=64B) — join body held back".to_string(),
-        });
-        client.end_join_flow();
-        return steps;
-    }
-    let (body90, _json) = match join_msg::build_90(tmpl_90, inputs.js, inputs.reply) {
+    let (body90, _json) = match join_msg::build_90(inputs.js, inputs.reply) {
         Ok(v) => v,
         Err(e) => {
             steps.push(Step::Skipped {
@@ -231,8 +220,8 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
     let msg = join_msg::sealed_message(0x90, &body90, &join_msg::KEY_90, join_msg::STATE_90);
     steps.push(sent(client, "0x90", &msg));
 
-    // The 0x92's v9 is a build constant living in the template's tail.
-    let v9 = join_msg::v9_from_90_template(tmpl_90).unwrap_or(0);
+    // The 0x92's v9 is a build constant living in the body's tail.
+    let v9 = join_msg::v9_from_90_template(&body90).unwrap_or(0);
     if opts.join_extra {
         let msg = join_msg::build_92(inputs.rng32, v9);
         steps.push(sent(client, "0x92", &msg));
@@ -271,7 +260,7 @@ pub fn send_join_flow(client: &mut Client, inputs: &FlowInputs, opts: &FlowOptio
                         .and_then(Value::as_u64)
                         .unwrap_or(0)
                 };
-                let t2 = join_msg::tail2_from_90_template(tmpl_90).unwrap_or(0);
+                let t2 = join_msg::tail2_from_90_template(&body90).unwrap_or(0);
                 // The key is the string's first 16 bytes, verbatim —
                 // the native uses the ASCII digits as the AES key.
                 let key_str = join_msg::key_8a(place_id, t2);
@@ -336,41 +325,15 @@ mod tests {
 
     /// A 0x90 template: 3 prefix bytes, LEB length, JSON, 24-byte tail
     /// with the build constants where the reference reads them.
-    fn template_90() -> Vec<u8> {
-        let json = br#"{"UserId":1,"A":1,"B":"x","C":{"D":true,"E":2}}"#;
-        let mut t = vec![0x01, 0x02, 0x03];
-        let mut leb = Vec::new();
-        let mut n = json.len() as u64;
-        loop {
-            let mut b = (n & 0x7F) as u8;
-            n >>= 7;
-            if n != 0 {
-                b |= 0x80;
-            }
-            leb.push(b);
-            if n == 0 {
-                break;
-            }
-        }
-        t.extend_from_slice(&leb);
-        t.extend_from_slice(json);
-        let mut tail = [0u8; 24];
-        tail[8..12].copy_from_slice(&0x0000_ABCDu32.to_le_bytes());
-        tail[12..16].copy_from_slice(&0x1122_3344u32.to_le_bytes());
-        t.extend_from_slice(&tail);
-        t
-    }
-
     fn join_script() -> Value {
         json!({"UserId": 5, "ClientTicket": "ticket-part-1|ticket-part-2", "PlaceId": 1818})
     }
 
-    fn inputs<'a>(js: &'a Value, tmpl_90: &'a [u8], reply: &'a Value) -> FlowInputs<'a> {
+    fn inputs<'a>(js: &'a Value, reply: &'a Value) -> FlowInputs<'a> {
         FlowInputs {
             js,
             reply,
             place: 1818,
-            tmpl_90,
             tmpl_8a: b"",
             rng32: 0x1234_5678,
         }
@@ -380,12 +343,12 @@ mod tests {
     /// steps plus everything the server delivered *ordered*, as
     /// (id, ordering) — the MTU ladder's pads and pings are sequenced
     /// and unreliable by design, so they never take an ordering slot.
-    fn run(js: &Value, tmpl_90: &[u8], opts: &FlowOptions) -> (Vec<Step>, Vec<(u8, u32)>) {
+    fn run(js: &Value, opts: &FlowOptions) -> (Vec<Step>, Vec<(u8, u32)>) {
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
         let reply = Value::Null;
-        let steps = send_join_flow(&mut client, &inputs(js, tmpl_90, &reply), opts);
+        let steps = send_join_flow(&mut client, &inputs(js, &reply), opts);
         let mut delivered = Vec::new();
         for wire in client.take_sends() {
             if let Some(plain) = server.open(&wire) {
@@ -401,7 +364,7 @@ mod tests {
 
     #[test]
     fn the_burst_lands_each_message_at_its_native_index() {
-        let (steps, delivered) = run(&join_script(), &template_90(), &FlowOptions::default());
+        let (steps, delivered) = run(&join_script(), &FlowOptions::default());
         assert!(steps.iter().all(Step::sent), "nothing may skip: {steps:?}");
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
@@ -421,18 +384,15 @@ mod tests {
     }
 
     #[test]
-    fn the_92_carries_the_template_tail_constants() {
-        // v9 = tail[3] ^ (u16(tail[2]) | 0x22640000) = 0x33469889 here.
+    fn the_92_carries_the_build_constant_tail() {
+        // v9 = tail[3] ^ (u16(tail[2]) | 0x22640000) over the built
+        // body's tail: 0xEA3CF047 ^ 0x2264788E = 0xC85888C9.
         let mut client = Client::new(config());
         let mut server = Server::new(client.public());
         handshake(&mut client, &mut server);
         let js = join_script();
         let reply = Value::Null;
-        let steps = send_join_flow(
-            &mut client,
-            &inputs(&js, &template_90(), &reply),
-            &FlowOptions::default(),
-        );
+        let steps = send_join_flow(&mut client, &inputs(&js, &reply), &FlowOptions::default());
         assert!(steps.iter().all(Step::sent));
         let mut got = Vec::new();
         for wire in client.take_sends() {
@@ -441,12 +401,20 @@ mod tests {
             }
         }
         let m92 = got.iter().find(|m| m.id == 0x92).expect("the 0x92 arrives");
-        assert_eq!(m92.payload, join_msg::build_92(0x1234_5678, 0x3346_9889));
+        assert_eq!(m92.payload, join_msg::build_92(0x1234_5678, 0xC858_88C9));
     }
 
     #[test]
-    fn a_missing_90_template_holds_the_rest_of_the_join() {
-        let (steps, delivered) = run(&join_script(), b"", &FlowOptions::default());
+    fn a_reply_without_a_ticket_holds_the_rest_of_the_join() {
+        let mut client = Client::new(config());
+        let mut server = Server::new(client.public());
+        handshake(&mut client, &mut server);
+        let js = join_script();
+        let steps = send_join_flow(
+            &mut client,
+            &inputs(&js, &serde_json::json!({})),
+            &FlowOptions::default(),
+        );
         assert_eq!(steps.len(), 3);
         assert_eq!(steps[0].what(), "0x13");
         assert!(steps[0].sent());
@@ -456,6 +424,16 @@ mod tests {
         assert!(!steps[2].sent());
         // The 0x13 and the ladder went out before the hold; nothing
         // ordered may follow them.
+        let mut delivered = Vec::new();
+        for wire in client.take_sends() {
+            if let Some(plain) = server.open(&wire) {
+                for m in server.rx.on_datagram(&plain) {
+                    if m.ordered {
+                        delivered.push((m.id, m.ordering));
+                    }
+                }
+            }
+        }
         assert_eq!(delivered, vec![(0x13, 0)]);
     }
 
@@ -470,7 +448,7 @@ mod tests {
         handshake(&mut client, &mut server);
         let js = join_script();
         let reply = Value::Null;
-        let steps = send_join_flow(&mut client, &inputs(&js, &template_90(), &reply), &opts);
+        let steps = send_join_flow(&mut client, &inputs(&js, &reply), &opts);
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
             [
@@ -528,7 +506,7 @@ mod tests {
             a7,
             ..FlowOptions::default()
         };
-        let (steps, delivered) = run(&join_script(), &template_90(), &opts);
+        let (steps, delivered) = run(&join_script(), &opts);
         assert!(steps.iter().all(Step::sent), "nothing may skip: {steps:?}");
         assert_eq!(delivered[1], (0xA7, 1));
         assert_eq!(delivered[2], (0x90, 2));
@@ -542,7 +520,7 @@ mod tests {
             a7,
             ..FlowOptions::default()
         };
-        let (steps, delivered) = run(&join_script(), &template_90(), &opts);
+        let (steps, delivered) = run(&join_script(), &opts);
         assert_eq!(steps[2].what(), "0xA7");
         assert!(!steps[2].sent());
         assert_eq!(
@@ -554,7 +532,7 @@ mod tests {
     #[test]
     fn no_8a_without_a_ticket_and_the_next_message_takes_its_slot() {
         let js = json!({"UserId": 5, "PlaceId": 1818}); // no ClientTicket
-        let (steps, delivered) = run(&js, &template_90(), &FlowOptions::default());
+        let (steps, delivered) = run(&js, &FlowOptions::default());
         assert!(!steps.iter().all(Step::sent));
         assert_eq!(
             steps.iter().map(Step::what).collect::<Vec<_>>(),
@@ -576,11 +554,7 @@ mod tests {
         let mut client = Client::new(config());
         let js = join_script();
         let reply = Value::Null;
-        let steps = send_join_flow(
-            &mut client,
-            &inputs(&js, &template_90(), &reply),
-            &FlowOptions::default(),
-        );
+        let steps = send_join_flow(&mut client, &inputs(&js, &reply), &FlowOptions::default());
         assert_eq!(steps.len(), 1);
         assert_eq!(steps[0].what(), "join burst");
         assert!(!steps[0].sent());
