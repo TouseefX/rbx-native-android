@@ -957,7 +957,7 @@ mod tests {
         // A string field stays a string, a null reply keeps the empty
         // pre-seated ticket, and an unknown key never lands.
         assert!(json.contains(r#""AgeChecked":"1""#));
-        assert!(json.contains(r#""__joinTicket"":"""#));
+        assert!(json.contains(r#""__joinTicket":"""#));
         assert!(!json.contains("NeverHeardOfIt"));
     }
 
