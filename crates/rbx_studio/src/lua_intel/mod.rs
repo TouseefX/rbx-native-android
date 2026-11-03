@@ -135,11 +135,8 @@ impl ProjectIndex {
             };
             referent.hash(hasher);
             instance.name().hash(hasher);
-            instance.class().as_str().hash(hasher);
-            if matches!(
-                instance.class().as_str(),
-                "Script" | "LocalScript" | "ModuleScript"
-            ) {
+            instance.class().hash(hasher);
+            if matches!(instance.class(), "Script" | "LocalScript" | "ModuleScript") {
                 if let Some(source) = overrides.get(&referent) {
                     source.hash(hasher);
                 } else {
@@ -229,16 +226,13 @@ impl ProjectIndex {
             }
         }
 
-        let is_script = matches!(
-            instance.class().as_str(),
-            "Script" | "LocalScript" | "ModuleScript"
-        );
+        let is_script = matches!(instance.class(), "Script" | "LocalScript" | "ModuleScript");
         let source = is_script.then(|| get_source(dom, referent).unwrap_or_default());
         if let Some(source) = &source {
             self.script_sources.insert(referent, source.clone());
         }
 
-        if instance.class().as_str() == "ModuleScript" {
+        if instance.class() == "ModuleScript" {
             let source = source.unwrap_or_default();
             let members = exported_members(&source);
             let full_key = normalize_path(&path.join("/"));
@@ -1789,7 +1783,7 @@ pub fn semantic_diagnostics(source: &str) -> Vec<ProjectDiagnostic> {
     diagnostics
 }
 
-fn quoted_call_arguments<'a>(line: &'a str, call: &str) -> impl Iterator<Item = &'a str> {
+fn quoted_call_arguments<'a>(line: &'a str, call: &'a str) -> impl Iterator<Item = &'a str> {
     line.match_indices(call).filter_map(move |(position, _)| {
         let rest = line[position + call.len()..].trim_start();
         let quote = rest.chars().next()?;
@@ -2912,7 +2906,7 @@ fn next_token<'a>(source: &'a str, index: &mut usize, line: &mut usize) -> Optio
     loop {
         let i = *index;
         let &byte = match bytes.get(i) {
-            Some(&byte) => &byte,
+            Some(byte) => byte,
             _ => return None,
         };
         match byte {
@@ -3163,7 +3157,7 @@ fn parse_parameters(source: &str, open: usize, line: &mut usize) -> (Vec<RawBind
     while i < source.len() {
         i = skip_whitespace(source, i, line);
         let &byte = match bytes.get(i) {
-            Some(&byte) => &byte,
+            Some(byte) => byte,
             _ => break,
         };
         match byte {
@@ -3865,8 +3859,8 @@ fn local_bindings_at(
     let mut names: Vec<RawBinding> = Vec::new();
     let mut expect_name = false;
     let mut for_vars: Vec<RawBinding> = Vec::new();
-    /// None = not in a for header; Some(false) = headers still collecting the
-    /// loop variables; Some(true) = variables collected, awaiting `do`.
+    // None = not in a for header; Some(false) = headers still collecting the
+    // loop variables; Some(true) = variables collected, awaiting `do`.
     let mut in_for_header: Option<bool> = None;
 
     while let Some(token) = next_token(source, &mut cursor, &mut line) {
@@ -6906,7 +6900,7 @@ value:BetaMethod("#;
     fn service_and_instance_paths_complete_and_infer() {
         let dom = test_place_dom();
         let index = ProjectIndex::build(&dom);
-        let service = test_child_ref(&dom, dom_root(dom), "ServerScriptService");
+        let service = test_child_ref(&dom, dom_root(&dom), "ServerScriptService");
         let script = test_child_ref(&dom, service, "Main");
 
         // `game.ReplicatedStorage` / `game.ServerStorage` complete from the

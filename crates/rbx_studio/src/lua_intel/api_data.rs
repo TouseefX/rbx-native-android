@@ -15410,7 +15410,7 @@ pub static CLASSES: &[ApiClass] = &[
 
 ];
 
-pub static ENUMS: &[(&'static str, &'static [&'static str])] = &[
+pub static ENUMS: &[(&str, &[&str])] = &[
     ("AccessModifierType", &["Allow", "Deny"]),
     (
         "AccessoryType",
@@ -19476,7 +19476,7 @@ pub static ENUMS: &[(&'static str, &'static [&'static str])] = &[
     ("ZIndexBehavior", &["Global", "Sibling"]),
 ];
 
-pub static LIBRARIES: &[(&'static str, &'static [ApiMember])] = &[
+pub static LIBRARIES: &[(&str, &[ApiMember])] = &[
     (
         "bit32",
         &[
@@ -19674,7 +19674,7 @@ pub static LIBRARIES: &[(&'static str, &'static [ApiMember])] = &[
 
 /// Global value -> API type used for member completion/type inference.
 /// "@enum" and "@lib:<name>" are handled specially by the completion engine.
-pub static GLOBAL_TYPES: &[(&'static str, &'static str)] = &[
+pub static GLOBAL_TYPES: &[(&str, &str)] = &[
     ("Enum", "@enum"),
     ("game", "DataModel"),
     ("Instance", "Instance"),
@@ -20766,7 +20766,7 @@ pub static GLOBAL_TYPES: &[(&'static str, &'static str)] = &[
 
 /// Bare identifiers that are always in scope (stock Luau + Roblox globals +
 /// datatypes), label -> (detail, insertion_text?).
-pub static BARE_GLOBALS: &[(&'static str, &'static str, &'static str)] = &[
+pub static BARE_GLOBALS: &[(&str, &str, &str)] = &[
     ("assert", "Luau builtin", "assert()"),
     ("collectgarbage", "Luau GC control", "collectgarbage()"),
     (
