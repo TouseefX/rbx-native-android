@@ -6729,7 +6729,7 @@ value:BetaMethod("#;
         );
         assert_eq!(
             members.get("AddItem").map(String::as_str),
-            Some("function AddItem(player: Player, item: Item): boolean")
+            Some("function AddItem(player: Player, item: Item) : boolean")
         );
         assert!(members.contains_key("MaxSlots"));
         assert!(members.contains_key("Remove"));
