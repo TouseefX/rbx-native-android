@@ -9,7 +9,7 @@
 //! Member kinds: 0 property (dot) · 1 method (colon) · 2 static (dot)
 //!               3 event (dot) · 4 callback (dot)
 
-#![allow(dead_code)]
+#![allow(dead_code, clippy::items_after_test_module)]
 
 /// (name, detail, kind, api_type · '' = primitive/unknown · "Enum:X" = enum)
 pub type ApiMember = (&'static str, &'static str, u8, &'static str);

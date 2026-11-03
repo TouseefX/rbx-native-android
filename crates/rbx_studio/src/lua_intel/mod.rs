@@ -164,8 +164,10 @@ impl ProjectIndex {
         index.walk(dom, dom_root(dom), &mut Vec::new());
         for (referent, source) in overrides {
             index.script_sources.insert(referent, source.to_string());
-            if index.module_sources.contains_key(&referent) {
-                index.module_sources.insert(referent, source.to_string());
+            if let std::collections::hash_map::Entry::Occupied(mut entry) =
+                index.module_sources.entry(referent)
+            {
+                entry.insert(source.to_string());
                 index
                     .module_member_paths
                     .insert(referent, returned_member_paths(source));
@@ -236,7 +238,7 @@ impl ProjectIndex {
             let source = source.unwrap_or_default();
             let members = exported_members(&source);
             let full_key = normalize_path(&path.join("/"));
-            let name_key = normalize_path(&instance.name());
+            let name_key = normalize_path(instance.name());
             self.modules.insert(full_key.clone(), members.clone());
             self.modules.insert(name_key.clone(), members);
             self.module_refs.insert(full_key, referent);
@@ -1393,6 +1395,7 @@ impl ProjectIndex {
 
     /// `Alias.member(args).prefix`: members of what the module call yields
     /// (`StatsRegistry.Get(player).Kil` -> `KillCount`).
+    #[allow(clippy::too_many_arguments)]
     fn module_call_completions(
         &self,
         current_script: Ref,
@@ -1733,7 +1736,7 @@ pub fn semantic_diagnostics(source: &str) -> Vec<ProjectDiagnostic> {
                                 let expected = data_type;
                                 let rhs = rhs.trim();
                                 let mismatch = (expected.contains("Bool")
-                                    && matches!(rhs, "true" | "false") == false
+                                    && !matches!(rhs, "true" | "false")
                                     && is_literal(rhs))
                                     || (expected.contains("String")
                                         && !is_string_literal(rhs)
@@ -2653,6 +2656,9 @@ fn lexical_completions(source_before_cursor: &str) -> Vec<Completion> {
 struct LocalBinding {
     name: String,
     detail: String,
+    /// Source line the binding was declared on, kept for the editor's future
+    /// go-to-definition jumps; the completion engine itself does not read it.
+    #[allow(dead_code)]
     line: usize,
     /// Roblox class when the binding's type is known (`Instance.new("Part")`
     /// or a typed annotation such as `local part: BasePart`).
@@ -3583,21 +3589,19 @@ fn infer_step(
     // A value with a DataModel location resolves children exactly.
     if let Some(path) = inferred.path.clone() {
         // `x.Parent` climbs the tree.
-        if member == "Parent" && !is_call {
-            if !path.is_empty() {
-                let parent = path
-                    .rsplit_once('/')
-                    .map(|(head, _)| head.to_string())
-                    .unwrap_or_default();
-                inferred.path = Some(parent.clone());
-                inferred.class = Some(
-                    index
-                        .dom_class_at_path(&parent)
-                        .unwrap_or("Instance")
-                        .to_string(),
-                );
-                return true;
-            }
+        if member == "Parent" && !is_call && !path.is_empty() {
+            let parent = path
+                .rsplit_once('/')
+                .map(|(head, _)| head.to_string())
+                .unwrap_or_default();
+            inferred.path = Some(parent.clone());
+            inferred.class = Some(
+                index
+                    .dom_class_at_path(&parent)
+                    .unwrap_or("Instance")
+                    .to_string(),
+            );
+            return true;
         }
         // `x:WaitForChild("Name")` / `x:FindFirstChild("Name")` with a
         // literal resolves the real child's class.
@@ -4244,9 +4248,9 @@ fn nested_member_expression_at_end(source: &str) -> Option<(&str, String, &str, 
         .trim_end_matches(char::is_whitespace)
         .rsplit(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || matches!(c, '.' | ':')))
         .next()?;
-    let last_separator = tail.rfind(|c| c == '.' || c == ':')?;
+    let last_separator = tail.rfind(['.', ':'])?;
     let separator = tail.as_bytes()[last_separator] as char;
-    let parts: Vec<&str> = tail.split(|c| c == '.' || c == ':').collect();
+    let parts: Vec<&str> = tail.split(['.', ':']).collect();
     if parts.len() < 3 || !is_identifier(parts[0]) {
         return None;
     }
@@ -4375,7 +4379,7 @@ fn contains_identifier(line: &str, needle: &str) -> bool {
 }
 
 fn require_string_at_cursor(source_before_cursor: &str) -> Option<&str> {
-    let quote = source_before_cursor.rfind(|c| c == '"' || c == '\'')?;
+    let quote = source_before_cursor.rfind(['"', '\''])?;
     let before_quote = source_before_cursor[..quote].trim_end();
     if !before_quote.ends_with("require(") {
         return None;
@@ -4747,6 +4751,7 @@ fn constructed_object_members_for_returned_class(source: &str) -> BTreeMap<Strin
 
 /// Infer the public shape of objects produced by the common Roblox/Luau OOP
 /// pattern (`Class.__index = Class`, `Class.new`, `setmetatable`, and `self.x`).
+#[cfg(test)]
 fn constructed_object_members(source: &str) -> BTreeMap<String, String> {
     let mut result = BTreeMap::new();
     let mut classes = std::collections::BTreeSet::new();
@@ -6892,7 +6897,7 @@ value:BetaMethod("#;
             .find(|child| dom.get(**child).expect("test child").name() == name)
             // `find` narrows the item to `&Ref`, so one deref is enough here;
             // the `**` above is inside `find`, whose closure takes `&&Ref`.
-            .map(|child| *child)
+            .copied()
             .expect("test child missing")
     }
 
