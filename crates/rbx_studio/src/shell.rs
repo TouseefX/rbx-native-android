@@ -150,6 +150,7 @@ use crate::menu_bar::MenuBar;
 use crate::pacing::UnfocusedFps;
 use crate::properties::{self, Properties};
 use crate::save::Format;
+use crate::script_editor::intel::Intel;
 use crate::script_editor::ScriptEditor;
 use crate::settings::{DraggerSettings, Settings};
 use crate::tokens;
@@ -364,6 +365,9 @@ pub(crate) struct Shell {
     covered: HashSet<Ref>,
     /// Every script open in the Script Editor panel; see `shell::scripts`.
     scripts: ScriptEditor,
+    /// The offline completion index behind tabs without a language server;
+    /// see `script_editor::intel`.
+    intel: Intel,
     /// Each open tab's Graph side, once shown, see `shell::script_graph`.
     graphs: std::collections::HashMap<Ref, script_graph::GraphEditor>,
     /// Breakpoints and the debug run, if any, see `shell::debugging`.
@@ -915,6 +919,7 @@ impl Shell {
             hovered: Vec::new(),
             covered: HashSet::new(),
             scripts: ScriptEditor::default(),
+            intel: Intel::default(),
             graphs: std::collections::HashMap::new(),
             debug: debugging::Debugging::default(),
             lsp: luau_lsp::Session::default(),

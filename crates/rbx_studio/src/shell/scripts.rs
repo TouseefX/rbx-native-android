@@ -16,7 +16,7 @@ use rbx_dom::Ref;
 
 use crate::explorer;
 use crate::script_editor::tabs::{Opened, View};
-use crate::script_editor::{goto, highlight, source, OpenScript};
+use crate::script_editor::{goto, highlight, intel, source, OpenScript};
 
 use super::Shell;
 
@@ -129,7 +129,19 @@ impl Shell {
                 .searchable(true)
                 .default_value(seed);
             state.set_highlighter_factory(highlight::factory(), cx);
-            state.lsp_mut().definition_provider = Some(Rc::new(goto::Declarations));
+            {
+                let lsp = state.lsp_mut();
+                lsp.definition_provider = Some(Rc::new(goto::Declarations));
+                // Offline completions from the project index: all a tab has
+                // before the language server comes up, and all it ever has
+                // on Android, where none is spawned. `attach_luau_lsp`
+                // overwrites this slot when the server does.
+                lsp.completion_provider = Some(Rc::new(intel::provider(reference)));
+                // The engine's labels and details run long ("Part property ·
+                // Vector3", "../Inventory"); the kit's 320 px default
+                // truncates them.
+                lsp.completion_menu.max_width = px(480.);
+            }
             state
         });
         let subscription = cx.subscribe(&state, move |shell, _, event: &InputEvent, cx| {
@@ -229,6 +241,11 @@ impl Shell {
             return;
         }
         self.notice_luau_lsp_dom_change(cx);
+        // Reconciled here like the tabs below: one fingerprint check per
+        // panel render keeps the offline completion index honest with every
+        // DOM path that can touch a script, typing, undo, a rename, the
+        // Command Bar, a fresh place, without a hook on each of them.
+        self.intel.refresh(&self.dom);
         let Shell {
             scripts,
             dom,

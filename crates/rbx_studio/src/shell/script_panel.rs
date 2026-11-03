@@ -18,7 +18,7 @@ use gpui_kit::*;
 use rbx_dom::Ref;
 
 use crate::script_editor::tabs::View;
-use crate::script_editor::{find, outline, source};
+use crate::script_editor::{find, intel, outline, source};
 
 use super::Shell;
 use crate::shortcuts::Command;
@@ -80,11 +80,59 @@ impl Shell {
                     View::Graph => this.child(self.graph_view(active, window, cx)),
                 }
             }))
+            .when(view == View::Code, |this| {
+                this.children(self.signature_help(active, cx))
+            })
             .child(self.script_status_bar(active, view, window, cx))
             .when(view == View::Code, |this| {
                 this.children(self.breakpoint_overlay(cx))
             })
             .into_any_element()
+    }
+
+    /// The signature-help line: the call around the caret with the parameter
+    /// being filled emphasized, between the code and the status line. Only
+    /// while the caret sits inside a call's parentheses, which is exactly
+    /// when `signature_help_at` answers.
+    fn signature_help(&self, active: Ref, cx: &App) -> Option<AnyElement> {
+        let open = self.scripts.open.get(&active)?;
+        let state = open.state.read(cx);
+        let source = state.value().to_string();
+        let caret = state.cursor();
+        let help =
+            intel::index().signature_help_at(active, &source, intel::char_count(&source, caret))?;
+        let (name, parameters) = intel::signature_pieces(&help);
+        let mut line: Vec<AnyElement> = Vec::with_capacity(parameters.len() * 2 + 2);
+        line.push(format!("{name}(").into_any_element());
+        for (index, (parameter, active_parameter)) in parameters.iter().enumerate() {
+            if index > 0 {
+                line.push(", ".into_any_element());
+            }
+            line.push(if *active_parameter {
+                div()
+                    .text_color(crate::tokens::text_strong())
+                    .child(parameter.clone())
+                    .into_any_element()
+            } else {
+                parameter.clone().into_any_element()
+            });
+        }
+        line.push(")".into_any_element());
+        Some(
+            h_flex()
+                .w_full()
+                .h(px(24.0))
+                .flex_none()
+                .items_center()
+                .px(px(12.0))
+                .border_t_1()
+                .border_color(crate::tokens::border())
+                .font_family(crate::tokens::font_mono())
+                .text_size(crate::tokens::text_xs())
+                .text_color(crate::tokens::text_muted())
+                .children(line)
+                .into_any_element(),
+        )
     }
 
     pub(super) fn set_script_view(
