@@ -50,6 +50,10 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import com.google.androidgamesdk.GameActivity
 
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+
 class MainActivity : GameActivity() {
 
     /** The software keyboard's proxy, non-null once shown the first time. */
@@ -59,12 +63,12 @@ class MainActivity : GameActivity() {
      * How much of a desktop the screen shows, emulator-style: the window's
      * logical size is the physical surface divided by the scale passed with
      * it, so dividing the density by this zoom widens the logical viewport
-     * from the phone-native ~411px to ~720px — most of the desktop layout
+     * from the phone-native ~411px to ~620px — most of the desktop layout
      * fits on screen at once while touch targets stay large enough to hit.
      * Touches divide by the same scale, so input stays aligned. 1f restores
      * phone-native sizing; larger values zoom out further.
      */
-    private val desktopZoom = 1.75f
+    private val desktopZoom = 1.5f
 
     /** Hands surfaces to the editor's render thread, beside GameActivity's
      *  own callback (whose Rust side is inert). */
@@ -102,6 +106,28 @@ class MainActivity : GameActivity() {
         // initializeNativeCode (the render thread is starting), and built
         // its InputEnabledSurfaceView; watch that surface's holder.
         mSurfaceView?.holder?.addCallback(surfaceCallback)
+        hideSystemBars()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // The bars sneak back on focus changes (and some rotations);
+        // the editor is the whole screen, so put them away again.
+        if (hasFocus) hideSystemBars()
+    }
+
+    /**
+     * Hides the status and navigation bars, transiently: a swipe from an
+     * edge floats either back over the app instead of pushing it around,
+     * and it leaves again on its own. Re-hidden whenever focus returns,
+     * because the system restores them on some events.
+     */
+    private fun hideSystemBars() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     override fun onDestroy() {
