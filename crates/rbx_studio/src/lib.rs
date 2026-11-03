@@ -129,6 +129,7 @@ mod launcher;
 mod layers;
 mod localization;
 mod login_flow;
+pub mod lua_intel;
 mod luau_lsp;
 mod mcp;
 mod menu_bar;
