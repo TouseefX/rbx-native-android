@@ -15,13 +15,13 @@
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
-[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
-[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
 [1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
+[1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
@@ -36,197 +36,218 @@
 [1m[92m    Checking[0m gpui-component v0.6.2
 [1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:15413:23
-      [1m[94m|[0m
-[1m[94m15413[0m [1m[94m|[0m pub static ENUMS: &[(&'static str, &'static [&'static str])] = &[
-      [1m[94m|[0m                      [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-      [1m[94m= [0m[1mnote[0m: `-D clippy::redundant-static-lifetimes` implied by `-D warnings`
-      [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::redundant_static_lifetimes)]`
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:15413:37
-      [1m[94m|[0m
-[1m[94m15413[0m [1m[94m|[0m pub static ENUMS: &[(&'static str, &'static [&'static str])] = &[
-      [1m[94m|[0m                                    [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m---------------[0m [1m[94mhelp: consider removing `'static`: `&[&'static str]`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:15413:47
-      [1m[94m|[0m
-[1m[94m15413[0m [1m[94m|[0m pub static ENUMS: &[(&'static str, &'static [&'static str])] = &[
-      [1m[94m|[0m                                              [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:19479:27
-      [1m[94m|[0m
-[1m[94m19479[0m [1m[94m|[0m pub static LIBRARIES: &[(&'static str, &'static [ApiMember])] = &[
-      [1m[94m|[0m                          [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:19479:41
-      [1m[94m|[0m
-[1m[94m19479[0m [1m[94m|[0m pub static LIBRARIES: &[(&'static str, &'static [ApiMember])] = &[
-      [1m[94m|[0m                                        [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m------------[0m [1m[94mhelp: consider removing `'static`: `&[ApiMember]`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:19677:30
-      [1m[94m|[0m
-[1m[94m19677[0m [1m[94m|[0m pub static GLOBAL_TYPES: &[(&'static str, &'static str)] = &[
-      [1m[94m|[0m                             [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:19677:44
-      [1m[94m|[0m
-[1m[94m19677[0m [1m[94m|[0m pub static GLOBAL_TYPES: &[(&'static str, &'static str)] = &[
-      [1m[94m|[0m                                           [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:20769:30
-      [1m[94m|[0m
-[1m[94m20769[0m [1m[94m|[0m pub static BARE_GLOBALS: &[(&'static str, &'static str, &'static str)] = &[
-      [1m[94m|[0m                             [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:20769:44
-      [1m[94m|[0m
-[1m[94m20769[0m [1m[94m|[0m pub static BARE_GLOBALS: &[(&'static str, &'static str, &'static str)] = &[
-      [1m[94m|[0m                                           [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: statics have by default a `'static` lifetime[0m
-     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:20769:58
-      [1m[94m|[0m
-[1m[94m20769[0m [1m[94m|[0m pub static BARE_GLOBALS: &[(&'static str, &'static str, &'static str)] = &[
-      [1m[94m|[0m                                                         [1m[94m-[0m[1m[91m^^^^^^^[0m[1m[94m----[0m [1m[94mhelp: consider removing `'static`: `&str`[0m
-      [1m[94m|[0m
-      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_static_lifetimes
-
-[1m[91merror[0m[1m: unused doc comment[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:3868:5
+[1m[91merror[0m[1m: field `line` is never read[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:2656:5
      [1m[94m|[0m
-[1m[94m3868[0m [1m[94m|[0m [1m[91m/[0m     /// None = not in a for header; Some(false) = headers still collecting the
-[1m[94m3869[0m [1m[94m|[0m [1m[91m|[0m     /// loop variables; Some(true) = variables collected, awaiting `do`.
-     [1m[94m|[0m [1m[91m|________________________________________________________________________^[0m
-[1m[94m3870[0m [1m[94m|[0m       let mut in_for_header: Option<bool> = None;
-     [1m[94m|[0m       [1m[94m-------------------------------------------[0m [1m[94mrustdoc does not generate documentation for statements[0m
+[1m[94m2653[0m [1m[94m|[0m struct LocalBinding {
+     [1m[94m|[0m        [1m[94m------------[0m [1m[94mfield in this struct[0m
+[1m[94m...[0m
+[1m[94m2656[0m [1m[94m|[0m     line: usize,
+     [1m[94m|[0m     [1m[91m^^^^[0m
      [1m[94m|[0m
-     [1m[94m= [0m[1mhelp[0m: use `//` for a plain comment
-     [1m[94m= [0m[1mnote[0m: `-D unused-doc-comments` implied by `-D warnings`
-     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_doc_comments)]`
+     [1m[94m= [0m[1mnote[0m: `LocalBinding` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+     [1m[94m= [0m[1mnote[0m: `-D dead-code` implied by `-D warnings`
+     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[expect(dead_code)]` or `#[allow(dead_code)]`
 
-[1m[91merror[E0700][0m[1m: hidden type for `impl std::iter::Iterator<Item = &'a str>` captures lifetime that does not appear in bounds[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:1793:5
+[1m[91merror[0m[1m: function `constructed_object_members` is never used[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:4750:4
      [1m[94m|[0m
-[1m[94m1792[0m [1m[94m|[0m   fn quoted_call_arguments<'a>(line: &'a str, call: &str) -> impl Iterator<Item = &'a str> {
-     [1m[94m|[0m                                                     [1m[94m----[0m     [1m[94m-----------------------------[0m [1m[94mopaque type defined here[0m
-     [1m[94m|[0m                                                     [1m[94m|[0m
-     [1m[94m|[0m                                                     [1m[94mhidden type `std::iter::FilterMap<std::str::MatchIndices<'a, &str>, {closure@...}>` captures the anonymous lifetime defined here[0m
-[1m[94m1793[0m [1m[94m|[0m [1m[91m/[0m     line.match_indices(call).filter_map(move |(position, _)| {
-[1m[94m1794[0m [1m[94m|[0m [1m[91m|[0m         let rest = line[position + call.len()..].trim_start();
-[1m[94m1795[0m [1m[94m|[0m [1m[91m|[0m         let quote = rest.chars().next()?;
-[1m[94m1796[0m [1m[94m|[0m [1m[91m|[0m         if !matches!(quote, '"' | '\'') {
+[1m[94m4750[0m [1m[94m|[0m fn constructed_object_members(source: &str) -> BTreeMap<String, String> {
+     [1m[94m|[0m    [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[91merror[0m[1m: usage of `contains_key` followed by `insert` on a `HashMap`[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:167:13
+    [1m[94m|[0m
+[1m[94m167[0m [1m[94m|[0m [1m[91m/[0m             if index.module_sources.contains_key(&referent) {
+[1m[94m168[0m [1m[94m|[0m [1m[91m|[0m                 index.module_sources.insert(referent, source.to_string());
+[1m[94m169[0m [1m[94m|[0m [1m[91m|[0m                 index
+[1m[94m170[0m [1m[94m|[0m [1m[91m|[0m                     .module_member_paths
+[1m[94m...[0m   [1m[91m|[0m
+[1m[94m195[0m [1m[94m|[0m [1m[91m|[0m             }
+    [1m[94m|[0m [1m[91m|_____________^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#map_entry
+    [1m[94m= [0m[1mnote[0m: `-D clippy::map-entry` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::map_entry)]`
+[1m[96mhelp[0m: try
+    [1m[94m|[0m
+[1m[94m167[0m [92m~ [0m            [92mif let std::collections::hash_map::Entry::Occupied(mut e) = index.module_sources.entry(referent) {[0m
+[1m[94m168[0m [92m+                 e.insert(source.to_string());[0m
+[1m[94m169[0m [92m+                 index[0m
+[1m[94m170[0m [92m+                     .module_member_paths[0m
+[1m[94m171[0m [92m+                     .insert(referent, returned_member_paths(source));[0m
+[1m[94m172[0m [92m+                 let type_blocks = module_type_blocks(source);[0m
+[1m[94m173[0m [92m+                 let (member_returns, index_result) = module_signature_info(source, &type_blocks);[0m
+[1m[94m174[0m [92m+                 index.module_types.insert(referent, type_blocks);[0m
+[1m[94m175[0m [92m+                 index.module_member_returns.insert(referent, member_returns);[0m
+[1m[94m176[0m [92m+                 if let Some(result) = index_result {[0m
+[1m[94m177[0m [92m+                     index.module_index_results.insert(referent, result);[0m
+[1m[94m178[0m [92m+                 } else {[0m
+[1m[94m179[0m [92m+                     index.module_index_results.remove(&referent);[0m
+[1m[94m180[0m [92m+                 }[0m
+[1m[94m181[0m [92m+                 if let Some(callable) = module_callable_return(source) {[0m
+[1m[94m182[0m [92m+                     index.module_callable_returns.insert(referent, callable);[0m
+[1m[94m183[0m [92m+                 } else {[0m
+[1m[94m184[0m [92m+                     index.module_callable_returns.remove(&referent);[0m
+[1m[94m185[0m [92m+                 }[0m
+[1m[94m186[0m [92m+                 let members = exported_members(source);[0m
+[1m[94m187[0m [92m+                 let keys: Vec<String> = index[0m
+[1m[94m188[0m [92m+                     .module_refs[0m
+[1m[94m189[0m [92m+                     .iter()[0m
+[1m[94m190[0m [92m+                     .filter_map(|(key, value)| (*value == referent).then_some(key.clone()))[0m
+[1m[94m191[0m [92m+                     .collect();[0m
+[1m[94m192[0m [92m+                 for key in keys {[0m
+[1m[94m193[0m [92m+                     index.modules.insert(key, members.clone());[0m
+[1m[94m194[0m [92m+                 }[0m
+[1m[94m195[0m [92m+             }[0m
+    [1m[94m|[0m
+
+[1m[91merror[0m[1m: this expression creates a reference which is immediately dereferenced by the compiler[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:239:43
+    [1m[94m|[0m
+[1m[94m239[0m [1m[94m|[0m             let name_key = normalize_path(&instance.name());
+    [1m[94m|[0m                                           [1m[91m^^^^^^^^^^^^^^^^[0m [1m[91mhelp: change this to: `instance.name()`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borrow
+    [1m[94m= [0m[1mnote[0m: `-D clippy::needless-borrow` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::needless_borrow)]`
+
+[1m[91merror[0m[1m: this function has too many arguments (8/7)[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:1396:5
+     [1m[94m|[0m
+[1m[94m1396[0m [1m[94m|[0m [1m[91m/[0m     fn module_call_completions(
+[1m[94m1397[0m [1m[94m|[0m [1m[91m|[0m         &self,
+[1m[94m1398[0m [1m[94m|[0m [1m[91m|[0m         current_script: Ref,
+[1m[94m1399[0m [1m[94m|[0m [1m[91m|[0m         source: &str,
 [1m[94m...[0m    [1m[91m|[0m
-[1m[94m1801[0m [1m[94m|[0m [1m[91m|[0m         Some(&value[..end])
-[1m[94m1802[0m [1m[94m|[0m [1m[91m|[0m     })
-     [1m[94m|[0m [1m[91m|______^[0m
+[1m[94m1404[0m [1m[94m|[0m [1m[91m|[0m         separator: char,
+[1m[94m1405[0m [1m[94m|[0m [1m[91m|[0m     ) -> Vec<Completion> {
+     [1m[94m|[0m [1m[91m|________________________^[0m
      [1m[94m|[0m
-[1m[96mhelp[0m: add a `use<...>` bound to explicitly capture `'_`
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#too_many_arguments
+     [1m[94m= [0m[1mnote[0m: `-D clippy::too-many-arguments` implied by `-D warnings`
+     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+[1m[91merror[0m[1m: equality checks against false can be replaced by a negation[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:1736:40
      [1m[94m|[0m
-[1m[94m1792[0m [1m[94m| [0mfn quoted_call_arguments<'a>(line: &'a str, call: &str) -> impl Iterator<Item = &'a str>[92m + use<'a, '_>[0m {
-     [1m[94m|[0m                                                                                          [92m+++++++++++++[0m
-
-[1m[91merror[E0658][0m[1m: use of unstable library feature `str_as_str`[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:138:30
-    [1m[94m|[0m
-[1m[94m138[0m [1m[94m|[0m             instance.class().as_str().hash(hasher);
-    [1m[94m|[0m                              [1m[91m^^^^^^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: see issue #130366 <https://github.com/rust-lang/rust/issues/130366> for more information
-
-[1m[91merror[E0658][0m[1m: use of unstable library feature `str_as_str`[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:140:34
-    [1m[94m|[0m
-[1m[94m140[0m [1m[94m|[0m                 instance.class().as_str(),
-    [1m[94m|[0m                                  [1m[91m^^^^^^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: see issue #130366 <https://github.com/rust-lang/rust/issues/130366> for more information
-
-[1m[91merror[E0658][0m[1m: use of unstable library feature `str_as_str`[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:233:30
-    [1m[94m|[0m
-[1m[94m233[0m [1m[94m|[0m             instance.class().as_str(),
-    [1m[94m|[0m                              [1m[91m^^^^^^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: see issue #130366 <https://github.com/rust-lang/rust/issues/130366> for more information
-
-[1m[91merror[E0658][0m[1m: use of unstable library feature `str_as_str`[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:241:29
-    [1m[94m|[0m
-[1m[94m241[0m [1m[94m|[0m         if instance.class().as_str() == "ModuleScript" {
-    [1m[94m|[0m                             [1m[91m^^^^^^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: see issue #130366 <https://github.com/rust-lang/rust/issues/130366> for more information
-
-[1m[91merror[E0308][0m[1m: mismatched types[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:6909:53
+[1m[94m1736[0m [1m[94m|[0m [1m[94m...[0m                   && matches!(rhs, "true" | "false") == false
+     [1m[94m|[0m                          [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: try: `!matches!(rhs, "true" | "false")`[0m
      [1m[94m|[0m
-[1m[94m6909[0m [1m[94m|[0m         let service = test_child_ref(&dom, dom_root(dom), "ServerScriptService");
-     [1m[94m|[0m                                            [1m[94m--------[0m [1m[91m^^^[0m [1m[91mexpected `&WeakDom`, found `WeakDom`[0m
-     [1m[94m|[0m                                            [1m[94m|[0m
-     [1m[94m|[0m                                            [1m[94marguments to this function are incorrect[0m
-     [1m[94m|[0m
-[1m[92mnote[0m: function defined here
-    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:21:4
-     [1m[94m|[0m
-[1m[94m  21[0m [1m[94m|[0m fn dom_root(dom: &WeakDom) -> Ref {
-     [1m[94m|[0m    [1m[92m^^^^^^^^[0m [1m[94m-------------[0m
-[1m[96mhelp[0m: consider borrowing here
-     [1m[94m|[0m
-[1m[94m6909[0m [1m[94m| [0m        let service = test_child_ref(&dom, dom_root([92m&[0mdom), "ServerScriptService");
-     [1m[94m|[0m                                                     [92m+[0m
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#bool_comparison
+     [1m[94m= [0m[1mnote[0m: `-D clippy::bool-comparison` implied by `-D warnings`
+     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::bool_comparison)]`
 
-[1m[91merror[E0597][0m[1m: `byte` does not live long enough[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:2915:28
+[1m[91merror[0m[1m: this `if` statement can be collapsed[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:3586:9
      [1m[94m|[0m
-[1m[94m2915[0m [1m[94m|[0m             Some(&byte) => &byte,
-     [1m[94m|[0m                   [1m[94m----[0m     [1m[91m^^^^[0m[1m[94m-[0m
-     [1m[94m|[0m                   [1m[94m|[0m        [1m[91m|[0m   [1m[94m|[0m
-     [1m[94m|[0m                   [1m[94m|[0m        [1m[91m|[0m   [1m[94m`byte` dropped here while still borrowed[0m
-     [1m[94m|[0m                   [1m[94m|[0m        [1m[91mborrowed value does not live long enough[0m
-     [1m[94m|[0m                   [1m[94mbinding `byte` declared here[0m
-
-[1m[91merror[E0597][0m[1m: `byte` does not live long enough[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:3166:28
+[1m[94m3586[0m [1m[94m|[0m [1m[91m/[0m         if member == "Parent" && !is_call {
+[1m[94m3587[0m [1m[94m|[0m [1m[91m|[0m             if !path.is_empty() {
+[1m[94m3588[0m [1m[94m|[0m [1m[91m|[0m                 let parent = path
+[1m[94m3589[0m [1m[94m|[0m [1m[91m|[0m                     .rsplit_once('/')
+[1m[94m...[0m    [1m[91m|[0m
+[1m[94m3601[0m [1m[94m|[0m [1m[91m|[0m         }
+     [1m[94m|[0m [1m[91m|_________^[0m
      [1m[94m|[0m
-[1m[94m3166[0m [1m[94m|[0m             Some(&byte) => &byte,
-     [1m[94m|[0m                   [1m[94m----[0m     [1m[91m^^^^[0m[1m[94m-[0m
-     [1m[94m|[0m                   [1m[94m|[0m        [1m[91m|[0m   [1m[94m|[0m
-     [1m[94m|[0m                   [1m[94m|[0m        [1m[91m|[0m   [1m[94m`byte` dropped here while still borrowed[0m
-     [1m[94m|[0m                   [1m[94m|[0m        [1m[91mborrowed value does not live long enough[0m
-     [1m[94m|[0m                   [1m[94mbinding `byte` declared here[0m
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#collapsible_if
+     [1m[94m= [0m[1mnote[0m: `-D clippy::collapsible-if` implied by `-D warnings`
+     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+[1m[96mhelp[0m: collapse nested if block
+     [1m[94m|[0m
+[1m[94m3586[0m [92m~ [0m        if member == "Parent" && !is_call
+[1m[94m3587[0m [92m~ [0m            [92m&&[0m !path.is_empty() {
+[1m[94m3588[0m [1m[94m|[0m                 let parent = path
+ [1m[94m...[0m
+[1m[94m3599[0m [1m[94m|[0m                 return true;
+[1m[94m3600[0m [92m~ [0m            }
+     [1m[94m|[0m
 
-[1mSome errors have detailed explanations: E0597, E0658, E0700.[0m
-[1mFor more information about an error, try `rustc --explain E0597`.[0m
-[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 18 previous errors
+[1m[91merror[0m[1m: this manual char comparison can be written more succinctly[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:4247:37
+     [1m[94m|[0m
+[1m[94m4247[0m [1m[94m|[0m     let last_separator = tail.rfind(|c| c == '.' || c == ':')?;
+     [1m[94m|[0m                                     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using an array of `char`: `['.', ':']`[0m
+     [1m[94m|[0m
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#manual_pattern_char_comparison
+     [1m[94m= [0m[1mnote[0m: `-D clippy::manual-pattern-char-comparison` implied by `-D warnings`
+     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::manual_pattern_char_comparison)]`
+
+[1m[91merror[0m[1m: this manual char comparison can be written more succinctly[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:4249:39
+     [1m[94m|[0m
+[1m[94m4249[0m [1m[94m|[0m     let parts: Vec<&str> = tail.split(|c| c == '.' || c == ':').collect();
+     [1m[94m|[0m                                       [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using an array of `char`: `['.', ':']`[0m
+     [1m[94m|[0m
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#manual_pattern_char_comparison
+
+[1m[91merror[0m[1m: this manual char comparison can be written more succinctly[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:4378:44
+     [1m[94m|[0m
+[1m[94m4378[0m [1m[94m|[0m     let quote = source_before_cursor.rfind(|c| c == '"' || c == '\'')?;
+     [1m[94m|[0m                                            [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using an array of `char`: `['"', '\'']`[0m
+     [1m[94m|[0m
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#manual_pattern_char_comparison
+
+[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 10 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1mSome errors have detailed explanations: E0308, E0597, E0658, E0700.[0m
-[1mFor more information about an error, try `rustc --explain E0308`.[0m
-[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 19 previous errors
+[1m[91merror[0m[1m: items after a test module[0m
+     [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/api_data.rs:23259:1
+      [1m[94m|[0m
+[1m[94m23259[0m [1m[94m|[0m mod global_value_tests {
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m...[0m
+[1m[94m23273[0m [1m[94m|[0m pub fn enum_items(name: &str) -> Option<&'static [&'static str]> {
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m...[0m
+[1m[94m23281[0m [1m[94m|[0m pub fn members_of(owner: &str) -> Vec<ApiMember> {
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m...[0m
+[1m[94m23301[0m [1m[94m|[0m pub fn member_type(owner: &str, member: &str) -> Option<&'static str> {
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m...[0m
+[1m[94m23328[0m [1m[94m|[0m pub fn kind_matches_separator(kind: u8, separator: char) -> bool {
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m...[0m
+[1m[94m23335[0m [1m[94m|[0m pub const KIND_PROPERTY: u8 = 0;
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m23336[0m [1m[94m|[0m pub const KIND_METHOD: u8 = 1;
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m23337[0m [1m[94m|[0m pub const KIND_STATIC: u8 = 2;
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m23338[0m [1m[94m|[0m pub const KIND_EVENT: u8 = 3;
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m23339[0m [1m[94m|[0m pub const KIND_CALLBACK: u8 = 4;
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m23340[0m [1m[94m|[0m pub const KIND_FIELD: u8 = 5;
+      [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+      [1m[94m|[0m
+      [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#items_after_test_module
+      [1m[94m= [0m[1mnote[0m: `-D clippy::items-after-test-module` implied by `-D warnings`
+      [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::items_after_test_module)]`
+      [1m[94m= [0m[1mhelp[0m: move the items to before the test module was defined
+
+[1m[91merror[0m[1m: you are using an explicit closure for copying elements[0m
+    [1m[94m--> [0mcrates/rbx_studio/src/lua_intel/mod.rs:6888:9
+     [1m[94m|[0m
+[1m[94m6888[0m [1m[94m|[0m [1m[91m/[0m         dom.get(parent)
+[1m[94m6889[0m [1m[94m|[0m [1m[91m|[0m             .expect("test parent")
+[1m[94m6890[0m [1m[94m|[0m [1m[91m|[0m             .children()
+[1m[94m6891[0m [1m[94m|[0m [1m[91m|[0m             .iter()
+[1m[94m...[0m    [1m[91m|[0m
+[1m[94m6895[0m [1m[94m|[0m [1m[91m|[0m             .map(|child| *child)
+     [1m[94m|[0m [1m[91m|________________________________^[0m
+     [1m[94m|[0m
+     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#map_clone
+     [1m[94m= [0m[1mnote[0m: `-D clippy::map-clone` implied by `-D warnings`
+     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::map_clone)]`
+[1m[96mhelp[0m: consider calling the dedicated `copied` method
+     [1m[94m|[0m
+[1m[94m6888[0m [92m~ [0m        [92mdom.get(parent)[0m
+[1m[94m6889[0m [92m+             .expect("test parent")[0m
+[1m[94m6890[0m [92m+             .children()[0m
+[1m[94m6891[0m [92m+             .iter()[0m
+[1m[94m6892[0m [92m+             .find(|child| dom.get(**child).expect("test child").name() == name).copied()[0m
+     [1m[94m|[0m
+
+[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 11 previous errors
 fmt=0 clippy=101 test=0
