@@ -349,7 +349,7 @@ impl WeakDom {
             .map(|instance| {
                 slot + instance.class().len()
                     + instance.name().len()
-                    + instance.children().len() * std::mem::size_of::<Ref>()
+                    + std::mem::size_of_val(instance.children())
                     + instance
                         .properties()
                         .iter()
