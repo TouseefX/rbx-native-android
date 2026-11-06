@@ -63,18 +63,33 @@ pub(crate) fn install() {
     install_native();
 }
 
-/// The crash file's path, formatted and leaked once so the signal
-/// handler below can read it without allocating.
+/// The crash file's path, formatted and leaked once (NUL-terminated, for
+/// `open`) so the signal handler below can read it without allocating.
 #[cfg(target_os = "android")]
 static PATH: std::sync::atomic::AtomicPtr<u8> =
     std::sync::atomic::AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 static PATH_LEN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
+#[cfg(target_os = "android")]
+const SIGNALS: [i32; 5] = [
+    libc::SIGSEGV,
+    libc::SIGBUS,
+    libc::SIGILL,
+    libc::SIGFPE,
+    libc::SIGABRT,
+];
+
+/// What each signal's handler was before ours: on Android, bionic's
+/// debuggerd handler, which is what writes the tombstone and the
+/// `Fatal signal` lines in logcat. Ours hands the signal back to it.
+#[cfg(target_os = "android")]
+static mut PREVIOUS: [libc::sigaction; 5] = unsafe { std::mem::zeroed() };
+
 /// Catches the signals that take the process without unwinding, so a
-/// native crash leaves the same report a panic does — and then
-/// re-raises, with `SA_RESETHAND` having restored the default action,
-/// so Android's own tombstone and crash dialog still happen.
+/// native crash leaves the same report a panic does — and then passes
+/// the signal on to the handler that was there before, so Android's own
+/// tombstone still happens.
 ///
 /// `SIGKILL`, the low-memory killer's signal, cannot be caught: an app
 /// that vanishes with no report and no dialog is that, and the answer
@@ -83,24 +98,22 @@ static PATH_LEN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize
 fn install_native() {
     if let Some(dir) = store_dir() {
         let path = dir.join(CRASH_LOG).to_string_lossy().into_owned();
-        let bytes: &'static [u8] = Box::leak(path.into_bytes().into_boxed_slice());
+        // `open` wants a C string: the NUL has to be there.
+        let mut bytes = path.into_bytes();
+        bytes.push(0);
+        let bytes: &'static [u8] = Box::leak(bytes.into_boxed_slice());
         PATH.store(
             bytes.as_ptr() as *mut u8,
             std::sync::atomic::Ordering::Release,
         );
-        PATH_LEN.store(bytes.len(), std::sync::atomic::Ordering::Release);
+        PATH_LEN.store(bytes.len() - 1, std::sync::atomic::Ordering::Release);
         unsafe {
-            for signal in [
-                libc::SIGSEGV,
-                libc::SIGBUS,
-                libc::SIGILL,
-                libc::SIGFPE,
-                libc::SIGABRT,
-            ] {
+            for (index, signal) in SIGNALS.into_iter().enumerate() {
                 let mut action: libc::sigaction = std::mem::zeroed();
                 action.sa_sigaction = caught as libc::sighandler_t;
-                action.sa_flags = libc::SA_SIGINFO | libc::SA_RESETHAND;
-                libc::sigaction(signal, &action, std::ptr::null_mut());
+                action.sa_flags = libc::SA_SIGINFO | libc::SA_ONSTACK;
+                libc::sigemptyset(&mut action.sa_mask);
+                libc::sigaction(signal, &action, std::ptr::addr_of_mut!(PREVIOUS[index]));
             }
         }
     }
@@ -109,38 +122,74 @@ fn install_native() {
 #[cfg(not(target_os = "android"))]
 fn install_native() {}
 
-/// Async-signal-safe or it is not here: no allocation, no `format!`,
-/// only `clock_gettime`, `open`, `write`, `close` and `raise` — the
-/// same first line of epoch seconds `take_last_crash` splits on, then
-/// what the signal was and where it landed.
+/// Async-signal-safe or it is not here: no allocation, no `format!`.
+/// Writes the report, restores the previous handler, and makes sure it
+/// sees the signal: a fault re-fires on return by itself, a signal that
+/// was sent (`abort()`, `raise()`) has to be sent again.
 #[cfg(target_os = "android")]
 unsafe extern "C" fn caught(signal: i32, info: *mut libc::siginfo_t, _: *mut libc::c_void) {
-    let fault = unsafe { (*info).si_addr() } as usize;
-    let mut now = libc::timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
+    unsafe { write_report(signal, info) };
+    let Some(index) = SIGNALS.iter().position(|&s| s == signal) else {
+        unsafe {
+            libc::signal(signal, libc::SIG_DFL);
+            libc::raise(signal);
+        }
+        return;
     };
-    unsafe { libc::clock_gettime(libc::CLOCK_REALTIME, &mut now) };
+    unsafe {
+        let previous = std::ptr::addr_of!(PREVIOUS[index]).read();
+        libc::sigaction(signal, &previous, std::ptr::null_mut());
+        if (*info).si_code <= 0 {
+            libc::syscall(
+                libc::SYS_tgkill,
+                libc::getpid(),
+                libc::syscall(libc::SYS_gettid),
+                signal,
+            );
+        }
+    }
+}
+
+/// Appends rather than truncates, so a panic report the hook already wrote
+/// keeps its message and backtrace. Only a fresh file gets the epoch line
+/// `take_last_crash` splits on.
+#[cfg(target_os = "android")]
+unsafe fn write_report(signal: i32, info: *mut libc::siginfo_t) {
+    let path = PATH.load(std::sync::atomic::Ordering::Relaxed);
+    if path.is_null() || PATH_LEN.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+        return;
+    }
+    let fault = unsafe { (*info).si_addr() } as usize;
+    let fd = unsafe {
+        libc::open(
+            path.cast(),
+            libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
+            0o600,
+        )
+    };
+    if fd < 0 {
+        return;
+    }
     let mut line = [0u8; 96];
     let mut len = 0;
-    push_decimal(&mut line, &mut len, now.tv_sec as u64);
-    push_bytes(&mut line, &mut len, b"\nnative signal ");
+    if unsafe { libc::lseek(fd, 0, libc::SEEK_END) } <= 0 {
+        let mut now = libc::timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        unsafe { libc::clock_gettime(libc::CLOCK_REALTIME, &mut now) };
+        push_decimal(&mut line, &mut len, now.tv_sec as u64);
+        push_bytes(&mut line, &mut len, b"\n");
+    }
+    push_bytes(&mut line, &mut len, b"native signal ");
     push_decimal(&mut line, &mut len, signal as u64);
     push_bytes(&mut line, &mut len, b" at 0x");
     push_hex(&mut line, &mut len, fault);
     push_bytes(&mut line, &mut len, b"\n");
-    let path = PATH.load(std::sync::atomic::Ordering::Relaxed);
-    let path_len = PATH_LEN.load(std::sync::atomic::Ordering::Relaxed);
-    if !path.is_null() && path_len > 0 {
-        let fd = unsafe { libc::open(path, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o600) };
-        if fd >= 0 {
-            unsafe {
-                libc::write(fd, line.as_ptr().cast(), len);
-                libc::close(fd);
-            }
-        }
+    unsafe {
+        libc::write(fd, line.as_ptr().cast(), len);
+        libc::close(fd);
     }
-    unsafe { libc::raise(signal) };
 }
 
 #[cfg(target_os = "android")]
