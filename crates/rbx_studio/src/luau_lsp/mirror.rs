@@ -16,7 +16,6 @@ use std::path::{Path, PathBuf};
 use lsp_types::FileChangeType;
 use rbx_dom::{Ref, WeakDom};
 use rbx_reflection::ReflectionDatabase;
-use serde_json::{json, Map, Value};
 
 use crate::script_editor::source;
 
@@ -66,7 +65,7 @@ impl Mirror {
     ) -> io::Result<Vec<(PathBuf, FileChangeType)>> {
         fs::create_dir_all(&self.root)?;
         let mut scripts = HashMap::new();
-        let sourcemap = sourcemap(dom, db, &mut scripts).to_string();
+        let sourcemap = sourcemap(dom, db, &mut scripts);
 
         let mut changes = Vec::new();
         for (&reference, text) in &scripts {
@@ -113,38 +112,90 @@ fn file_name(reference: Ref) -> String {
 /// The whole tree under a `DataModel` root, collecting every script's source
 /// into `scripts` on the way. Non-scripts are kept too, they are what gives
 /// `workspace.Part` a type (Rojo's `--include-non-scripts`).
-fn sourcemap(dom: &WeakDom, db: &ReflectionDatabase, scripts: &mut HashMap<Ref, String>) -> Value {
-    let children: Vec<Value> = dom
+///
+/// Emitted as a stream of text over an explicit work stack rather than a
+/// recursive walk building a `serde_json::Value` tree: the recursion, the
+/// tree's serialization and the tree's drop all nest as deep as the place
+/// does, and `sync` runs on the app thread the moment a script opens. A
+/// joined place with a deep chain in it — rigs and their bones, nested
+/// models — overflowed the phone's smaller stack right here, the process
+/// aborting with no panic and no dialog: the script editor's silent crash.
+/// The tree's depth now costs the call stack nothing.
+fn sourcemap(dom: &WeakDom, db: &ReflectionDatabase, scripts: &mut HashMap<Ref, String>) -> String {
+    let mut out = String::from("{\"name\":\"game\",\"className\":\"DataModel\"");
+    let roots: Vec<Ref> = dom
         .root_refs()
         .iter()
-        .filter_map(|&child| node(dom, db, child, scripts))
+        .copied()
+        .filter(|&reference| dom.get(reference).is_some())
         .collect();
-    json!({"name": "game", "className": "DataModel", "children": children})
+    if roots.is_empty() {
+        out.push('}');
+        return out;
+    }
+    out.push_str(",\"children\":[");
+
+    /// One unit of work: open an instance's object (`first` holds off the
+    /// comma an earlier sibling already wrote), or close the children array
+    /// or the object an open left pending.
+    enum Step {
+        Open(Ref, bool),
+        CloseArray,
+        CloseObject,
+    }
+    let mut stack = vec![Step::CloseObject, Step::CloseArray];
+    for (index, &root) in roots.iter().enumerate().rev() {
+        stack.push(Step::Open(root, index == 0));
+    }
+    while let Some(step) = stack.pop() {
+        match step {
+            Step::CloseArray => out.push(']'),
+            Step::CloseObject => out.push('}'),
+            Step::Open(reference, first) => {
+                let Some(instance) = dom.get(reference) else {
+                    continue;
+                };
+                if !first {
+                    out.push(',');
+                }
+                out.push_str("{\"name\":");
+                quoted(&mut out, instance.name());
+                out.push_str(",\"className\":");
+                quoted(&mut out, instance.class());
+                if source::is_script_class(db, instance.class()) {
+                    scripts.insert(reference, source::read(dom, reference).unwrap_or_default());
+                    out.push_str(",\"filePaths\":[");
+                    quoted(&mut out, &file_name(reference));
+                    out.push(']');
+                }
+                let children: Vec<Ref> = instance
+                    .children()
+                    .iter()
+                    .copied()
+                    .filter(|&child| dom.get(child).is_some())
+                    .collect();
+                if children.is_empty() {
+                    out.push('}');
+                    continue;
+                }
+                out.push_str(",\"children\":[");
+                stack.push(Step::CloseObject);
+                stack.push(Step::CloseArray);
+                for (index, &child) in children.iter().enumerate().rev() {
+                    stack.push(Step::Open(child, index == 0));
+                }
+            }
+        }
+    }
+    out
 }
 
-fn node(
-    dom: &WeakDom,
-    db: &ReflectionDatabase,
-    reference: Ref,
-    scripts: &mut HashMap<Ref, String>,
-) -> Option<Value> {
-    let instance = dom.get(reference)?;
-    let mut out = Map::new();
-    out.insert("name".into(), instance.name().into());
-    out.insert("className".into(), instance.class().into());
-    if source::is_script_class(db, instance.class()) {
-        scripts.insert(reference, source::read(dom, reference).unwrap_or_default());
-        out.insert("filePaths".into(), json!([file_name(reference)]));
-    }
-    let children: Vec<Value> = instance
-        .children()
-        .iter()
-        .filter_map(|&child| node(dom, db, child, scripts))
-        .collect();
-    if !children.is_empty() {
-        out.insert("children".into(), children.into());
-    }
-    Some(out.into())
+/// `text` as a quoted JSON string, escapes and all. Serializing a bare
+/// string cannot fail; the fallback is only so nothing on this path can
+/// panic.
+fn quoted(out: &mut String, text: &str) {
+    let quoted = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
+    out.push_str(&quoted);
 }
 
 #[cfg(test)]

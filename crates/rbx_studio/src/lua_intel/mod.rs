@@ -129,22 +129,32 @@ impl ProjectIndex {
             overrides: &HashMap<Ref, &str>,
             hasher: &mut impl Hasher,
         ) {
-            let instance = match dom.get(referent) {
-                Some(instance) => instance,
-                _ => return,
-            };
-            referent.hash(hasher);
-            instance.name().hash(hasher);
-            instance.class().hash(hasher);
-            if matches!(instance.class(), "Script" | "LocalScript" | "ModuleScript") {
-                if let Some(source) = overrides.get(&referent) {
-                    source.hash(hasher);
-                } else {
-                    get_source(dom, referent).unwrap_or_default().hash(hasher);
+            // Iterative, and in the same pre-order, children-in-order
+            // sequence the recursive original hashed, so fingerprints are
+            // unchanged. A place can nest deeper than a phone's app-thread
+            // stack can hold (the mirror's walk over the same trees was the
+            // script editor's silent crash), so no walk of the place
+            // recurses; this one runs after every DOM change (see
+            // `script_editor::intel`).
+            let mut stack = vec![referent];
+            while let Some(current) = stack.pop() {
+                let instance = match dom.get(current) {
+                    Some(instance) => instance,
+                    _ => continue,
+                };
+                current.hash(hasher);
+                instance.name().hash(hasher);
+                instance.class().hash(hasher);
+                if matches!(instance.class(), "Script" | "LocalScript" | "ModuleScript") {
+                    if let Some(source) = overrides.get(&current) {
+                        source.hash(hasher);
+                    } else {
+                        get_source(dom, current).unwrap_or_default().hash(hasher);
+                    }
                 }
-            }
-            for &child in instance.children() {
-                walk(dom, child, overrides, hasher);
+                for &child in instance.children().iter().rev() {
+                    stack.push(child);
+                }
             }
         }
         walk(dom, dom_root(dom), &overrides, &mut hasher);
@@ -200,69 +210,95 @@ impl ProjectIndex {
     }
 
     fn walk(&mut self, dom: &WeakDom, referent: Ref, path: &mut Vec<String>) {
-        let instance = match dom.get(referent) {
-            Some(instance) => instance,
-            _ => return,
-        };
-        let is_root = referent == dom_root(dom);
-        if !is_root {
-            path.push(instance.name().to_string());
-            self.paths.insert(referent, path.join("/"));
-        }
-        // Path-based intelligence: every node's class plus the parent->child
-        // links, so `game.ReplicatedStorage.ClientRenderRequest` resolves to
-        // the real instance's class without annotations.
-        if is_root {
-            self.path_refs.insert(String::new(), referent);
-        } else {
-            self.path_refs.insert(path.join("/"), referent);
-        }
-        self.instance_classes
-            .insert(referent, instance.class().to_string());
-        for &child in instance.children() {
-            if let Some(node) = dom.get(child) {
-                self.instance_children
-                    .entry(referent)
-                    .or_default()
-                    .push((node.name().to_string(), child));
-            }
+        /// One frame of the work stack below: entering a subtree, or leaving
+        /// one and popping the name its entry pushed (`pushed` is false for
+        /// the root, which names no path).
+        enum Frame {
+            Enter(Ref),
+            Leave { pushed: bool },
         }
 
-        let is_script = matches!(instance.class(), "Script" | "LocalScript" | "ModuleScript");
-        let source = is_script.then(|| get_source(dom, referent).unwrap_or_default());
-        if let Some(source) = &source {
-            self.script_sources.insert(referent, source.clone());
-        }
+        // Iterative, and in the same pre-order, children-in-order sequence
+        // the recursive original visited. A place can nest deeper than a
+        // phone's app-thread stack can hold (the mirror's walk over the same
+        // trees was the script editor's silent crash), so no walk of the
+        // place recurses.
+        let root = dom_root(dom);
+        let mut stack = vec![Frame::Leave { pushed: false }, Frame::Enter(referent)];
+        while let Some(frame) = stack.pop() {
+            match frame {
+                Frame::Enter(reference) => {
+                    let instance = match dom.get(reference) {
+                        Some(instance) => instance,
+                        _ => continue,
+                    };
+                    let is_root = reference == root;
+                    if !is_root {
+                        path.push(instance.name().to_string());
+                        self.paths.insert(reference, path.join("/"));
+                    }
+                    // Path-based intelligence: every node's class plus the parent->child
+                    // links, so `game.ReplicatedStorage.ClientRenderRequest` resolves to
+                    // the real instance's class without annotations.
+                    if is_root {
+                        self.path_refs.insert(String::new(), reference);
+                    } else {
+                        self.path_refs.insert(path.join("/"), reference);
+                    }
+                    self.instance_classes
+                        .insert(reference, instance.class().to_string());
+                    for &child in instance.children() {
+                        if let Some(node) = dom.get(child) {
+                            self.instance_children
+                                .entry(reference)
+                                .or_default()
+                                .push((node.name().to_string(), child));
+                        }
+                    }
 
-        if instance.class() == "ModuleScript" {
-            let source = source.unwrap_or_default();
-            let members = exported_members(&source);
-            let full_key = normalize_path(&path.join("/"));
-            let name_key = normalize_path(instance.name());
-            self.modules.insert(full_key.clone(), members.clone());
-            self.modules.insert(name_key.clone(), members);
-            self.module_refs.insert(full_key, referent);
-            self.module_refs.entry(name_key).or_insert(referent);
-            self.module_member_paths
-                .insert(referent, returned_member_paths(&source));
-            let type_blocks = module_type_blocks(&source);
-            let (member_returns, index_result) = module_signature_info(&source, &type_blocks);
-            self.module_types.insert(referent, type_blocks);
-            self.module_member_returns.insert(referent, member_returns);
-            if let Some(result) = index_result {
-                self.module_index_results.insert(referent, result);
-            }
-            if let Some(callable) = module_callable_return(&source) {
-                self.module_callable_returns.insert(referent, callable);
-            }
-            self.module_sources.insert(referent, source);
-        }
+                    let is_script =
+                        matches!(instance.class(), "Script" | "LocalScript" | "ModuleScript");
+                    let source = is_script.then(|| get_source(dom, reference).unwrap_or_default());
+                    if let Some(source) = &source {
+                        self.script_sources.insert(reference, source.clone());
+                    }
 
-        for &child in instance.children() {
-            self.walk(dom, child, path);
-        }
-        if !is_root {
-            path.pop();
+                    if instance.class() == "ModuleScript" {
+                        let source = source.unwrap_or_default();
+                        let members = exported_members(&source);
+                        let full_key = normalize_path(&path.join("/"));
+                        let name_key = normalize_path(instance.name());
+                        self.modules.insert(full_key.clone(), members.clone());
+                        self.modules.insert(name_key.clone(), members);
+                        self.module_refs.insert(full_key, reference);
+                        self.module_refs.entry(name_key).or_insert(reference);
+                        self.module_member_paths
+                            .insert(reference, returned_member_paths(&source));
+                        let type_blocks = module_type_blocks(&source);
+                        let (member_returns, index_result) =
+                            module_signature_info(&source, &type_blocks);
+                        self.module_types.insert(reference, type_blocks);
+                        self.module_member_returns.insert(reference, member_returns);
+                        if let Some(result) = index_result {
+                            self.module_index_results.insert(reference, result);
+                        }
+                        if let Some(callable) = module_callable_return(&source) {
+                            self.module_callable_returns.insert(reference, callable);
+                        }
+                        self.module_sources.insert(reference, source);
+                    }
+
+                    stack.push(Frame::Leave { pushed: !is_root });
+                    for &child in instance.children().iter().rev() {
+                        stack.push(Frame::Enter(child));
+                    }
+                }
+                Frame::Leave { pushed } => {
+                    if pushed {
+                        path.pop();
+                    }
+                }
+            }
         }
     }
 
@@ -7186,5 +7222,52 @@ Players:GetPlayerFromCharacter(
         // function, so it must not be treated as callable either.
         let registry = "const StatsRegistry = {}\nreturn StatsRegistry";
         assert!(module_callable_return(registry).is_none());
+    }
+
+    #[test]
+    fn a_deep_place_fingerprints_without_a_call_stack() {
+        // The fingerprint walk used to recurse per instance: a hundred
+        // thousand levels of nested models is far past what any default
+        // thread stack can hold, and a joined place with a deep chain in it
+        // would have aborted the process here. The walk holds its own stack
+        // now, over the same pre-order sequence, so the fingerprint still
+        // moves when the deep end of the tree does.
+        let mut dom = WeakDom::new();
+        let mut current = dom.new_instance("DataModel", "game", None);
+        for index in 0..100_000 {
+            current = dom.new_instance("Model", &format!("M{index}"), Some(current));
+        }
+        let fingerprint = ProjectIndex::fingerprint(&dom, std::iter::empty());
+        dom.set_name(current, "Different").unwrap();
+        assert_ne!(
+            fingerprint,
+            ProjectIndex::fingerprint(&dom, std::iter::empty())
+        );
+    }
+
+    #[test]
+    fn the_index_walks_a_deep_place() {
+        // Two thousand levels is past what the recursive walk could rely on
+        // a small stack for, and shallow enough that the paths it builds
+        // stay cheap; the module at the bottom must still land in the index
+        // under its whole path, exactly as a shallow one does.
+        let mut dom = WeakDom::new();
+        let mut current = dom.new_instance("DataModel", "game", None);
+        let mut expected = String::new();
+        for index in 0..2_000 {
+            let name = format!("M{index}");
+            if !expected.is_empty() {
+                expected.push('/');
+            }
+            expected.push_str(&name);
+            current = dom.new_instance("Model", &name, Some(current));
+        }
+        let script = dom.new_instance("ModuleScript", "Deep", Some(current));
+        expected.push_str("/Deep");
+        let _ = dom.set_property(script, "Source", Variant::String("return {}".into()));
+
+        let index = ProjectIndex::build(&dom);
+        assert_eq!(index.path_refs.get(&expected), Some(&script));
+        assert!(index.script_sources.contains_key(&script));
     }
 }

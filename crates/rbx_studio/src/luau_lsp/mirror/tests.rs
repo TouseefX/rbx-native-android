@@ -110,3 +110,47 @@ fn dropping_the_mirror_removes_its_folder() {
     drop(mirror);
     assert!(!root.exists());
 }
+
+#[test]
+fn a_place_nested_deeper_than_any_call_stack_still_syncs() {
+    // The mirror's walk used to recurse per instance, and built a tree of
+    // JSON values that nested as deep on top of that: a joined place with a
+    // deep chain in it overflowed the phone's smaller stack the moment a
+    // script opened — the editor's silent crash. The sourcemap is a stream
+    // over a work stack now, and a hundred thousand levels is just text.
+    let mut dom = WeakDom::new();
+    let mut current = dom.new_instance("DataModel", "game", None);
+    for index in 0..100_000 {
+        current = dom.new_instance("Model", &format!("M{index}"), Some(current));
+    }
+    let script = dom.new_instance("ModuleScript", "Deep", Some(current));
+    let _ = dom.set_property(script, "Source", Variant::String("return 1".into()));
+
+    let db = ReflectionDatabase::embedded();
+    let mut mirror = Mirror::new(scratch("deep"));
+    let changes = mirror.sync(&dom, &db).unwrap();
+    assert_eq!(
+        changes.len(),
+        2,
+        "the script and the sourcemap: {changes:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(mirror.path_of(script)).unwrap(),
+        "return 1"
+    );
+
+    // Not parsed into a `Value` on purpose: a JSON reader nests as deep as
+    // the text does, and this text is a hundred thousand levels deep. What
+    // is checked is what any reader would find on the way down.
+    let sourcemap = fs::read_to_string(mirror.root().join(SOURCEMAP)).unwrap();
+    assert!(sourcemap.starts_with("{\"name\":\"game\",\"className\":\"DataModel\""));
+    assert!(sourcemap.contains("\"Deep\""));
+    assert_eq!(
+        sourcemap.matches('{').count(),
+        sourcemap.matches('}').count()
+    );
+    assert_eq!(
+        sourcemap.matches('[').count(),
+        sourcemap.matches(']').count()
+    );
+}
