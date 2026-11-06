@@ -76,3 +76,27 @@ pub enum Variant {
         raw: Vec<u8>,
     },
 }
+
+impl Variant {
+    /// The bytes this value retains: its inline size, plus the heap the arms
+    /// that carry any hold. The inline size is counted in full for every arm,
+    /// so the sum errs high rather than low — it is what the undo history
+    /// budgets its retained snapshots by (see `WeakDom::retained_bytes`), and
+    /// an underestimate there is what a phone runs out of memory for.
+    pub fn retained_bytes(&self) -> usize {
+        let heap = match self {
+            Variant::String(text) => text.len(),
+            Variant::NumberSequence(sequence) => {
+                sequence.keypoints.len() * std::mem::size_of::<NumberSequenceKeypoint>()
+            }
+            Variant::ColorSequence(sequence) => {
+                sequence.keypoints.len() * std::mem::size_of::<ColorSequenceKeypoint>()
+            }
+            Variant::Font(font) => font.family.len(),
+            Variant::Content(Content::Uri(uri)) => uri.len(),
+            Variant::Unknown { raw, .. } => raw.len(),
+            _ => 0,
+        };
+        std::mem::size_of::<Variant>() + heap
+    }
+}

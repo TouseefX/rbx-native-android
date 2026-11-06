@@ -38,6 +38,15 @@ const MENU_VARIABLE: &str = "RBX_STUDIO_GRAPH_MENU";
 /// closing a tab) flushes first, so this only sets undo granularity.
 const COMMIT_DELAY: Duration = Duration::from_millis(400);
 
+/// How long a pause in typing still counts as the same undo step. The
+/// debounce above already makes a run of keystrokes one write; this makes
+/// the writes on either side of a short pause one *step*, re-recording the
+/// log against the one snapshot the streak began with. Without it every
+/// pause in typing minted another whole-place snapshot for the undo stack,
+/// which is what a phone-sized machine ran out of memory for while editing
+/// (see `crate::history`'s budget).
+const STREAK_WINDOW: Duration = Duration::from_secs(30);
+
 impl Shell {
     /// Opens `reference`, an instance in the tree the Explorer shows, in
     /// the script editor, or brings its existing tab to the front. Anything
@@ -348,7 +357,15 @@ impl Shell {
         // See `shell::history`: the snapshot is of the tree as it stood
         // before the write, and is only pushed once the write has landed.
         self.dom.take_changes();
-        let before = self.dom.clone();
+        // A typing streak is one undo step: while the entry on top of the
+        // undo stack is this script's own last `Source` write and the pause
+        // since was short, this write continues it, re-recording the log
+        // against the snapshot that already holds the tree as it stood
+        // before the streak began, and taking no snapshot of its own.
+        let streak =
+            self.history
+                .continues_streak(reference, source::SOURCE_PROPERTY, STREAK_WINDOW);
+        let before = if streak { None } else { Some(self.dom.clone()) };
         if !source::write(&mut self.dom, reference, &text) {
             // Nothing reached the DOM. The referent stopped resolving between
             // the guard above and here, a tab outlives its script for the
@@ -359,7 +376,15 @@ impl Shell {
             self.mark_synced(reference, text);
             return;
         }
-        self.push_history_snapshot(before);
+        if let Some(before) = before {
+            self.push_history_snapshot(before);
+        } else {
+            // The streak's snapshot is already on the stack; of
+            // `push_history_snapshot`'s effects, the ones that are about the
+            // write rather than the snapshot still owe this commit their
+            // bookkeeping.
+            self.recovery.changed();
+        }
         // Not reflected in the viewport, but a selected script's `Source`
         // row reads the DOM too.
         self.properties.dom_changed(&[]);
@@ -368,7 +393,11 @@ impl Shell {
         // rather than a full reload, but only if the log that write produced
         // is attached to the snapshot (see `shell::history`).
         let changes = self.dom.take_changes();
-        self.record_history_change(changes);
+        if streak {
+            self.history.record_continued_change(changes);
+        } else {
+            self.record_history_change(changes);
+        }
         self.mark_synced(reference, text);
         cx.notify();
     }

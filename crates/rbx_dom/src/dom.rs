@@ -332,6 +332,32 @@ impl WeakDom {
             None => self.root_refs.retain(|&r| r != child),
         }
     }
+
+    /// A close over-estimate of the bytes this tree occupies, so the undo
+    /// history can budget what it retains (see `rbx_studio`'s
+    /// `crate::history`): every instance counts its slot in `instances`, its
+    /// slot in `parents`, and some map and allocator slack in full, plus the
+    /// heap its strings and raw values carry (see `Variant::retained_bytes`).
+    /// Errs high rather than low; a `Clone` of this DOM has to allocate at
+    /// least this much again.
+    pub fn retained_bytes(&self) -> usize {
+        let slot = std::mem::size_of::<Instance>()
+            + std::mem::size_of::<(Ref, Ref)>()
+            + 4 * std::mem::size_of::<usize>();
+        self.instances
+            .values()
+            .map(|instance| {
+                slot + instance.class().len()
+                    + instance.name().len()
+                    + instance.children().len() * std::mem::size_of::<Ref>()
+                    + instance
+                        .properties()
+                        .iter()
+                        .map(|(name, value)| name.len() + value.retained_bytes())
+                        .sum::<usize>()
+            })
+            .sum()
+    }
 }
 
 #[cfg(test)]
@@ -439,5 +465,28 @@ mod tests {
     fn parent_of_an_unknown_referent_is_none() {
         let dom = WeakDom::new();
         assert_eq!(dom.parent(Ref::new(7)), None);
+    }
+
+    #[test]
+    fn retained_bytes_counts_what_the_tree_carries() {
+        let bare = WeakDom::new();
+        let mut loaded = WeakDom::new();
+        let script = loaded.new_instance("ModuleScript", "Counter", None);
+        loaded
+            .set_property(script, "Source", Variant::String("x".repeat(100_000)))
+            .unwrap();
+
+        let grown = loaded.retained_bytes() - bare.retained_bytes();
+        // One instance, and the source it carries, at the least.
+        assert!(
+            grown >= 100_000 + std::mem::size_of::<Instance>(),
+            "one instance with a 100 KB source must count at least itself and the source, counted {grown}"
+        );
+        // Writing a second 100 KB source must grow the count by its bytes.
+        let other = loaded.new_instance("ModuleScript", "Other", None);
+        loaded
+            .set_property(other, "Source", Variant::String("y".repeat(100_000)))
+            .unwrap();
+        assert!(loaded.retained_bytes() >= grown + bare.retained_bytes() + 100_000);
     }
 }

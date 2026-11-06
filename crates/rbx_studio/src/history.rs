@@ -5,21 +5,39 @@
 //! `Change` log that mutation went on to produce (see [`History::record_changes`]).
 //!
 //! Keeping a full [`WeakDom`] clone per entry rather than a diff is the same
-//! trade `shell::command` already makes for a script run: places are small
-//! enough in practice that a clone is cheap, and a diff format would have to
-//! track every mutation path (script, property edit, insert, delete)
+//! trade `shell::command` already makes for a script run: a diff format would
+//! have to track every mutation path (script, property edit, insert, delete)
 //! separately instead of once, here. The `Change` log carried alongside each
 //! snapshot is that same log, not a second one: every mutation path already
 //! writes to `WeakDom`'s own change log (`shell::command`'s `reflect_changes`
 //! hands it to the viewport), so recording it here costs nothing beyond
 //! draining it at the right two moments.
+//!
+//! Whole-place clones are only cheap while the place is small or the machine
+//! is roomy, and neither holds on a phone: fifty snapshots of a joined game
+//! is gigabytes, and the kernel's low-memory killer ends the process with no
+//! panic and no dialog — the script editor's silent crash on the device. So
+//! the stack is bounded twice over: by steps ([`DEFAULT_CAP`]) and by bytes
+//! ([`RETAINED_BUDGET`], an over-estimate via `WeakDom::retained_bytes`), and
+//! script typing, the one mutation path that fires per pause in typing,
+//! coalesces into one step per streak (see [`History::continues_streak`])
+//! instead of minting a snapshot each.
+
+use std::time::{Duration, Instant};
 
 use gpui_kit::Modifiers;
-use rbx_dom::{Change, WeakDom};
+use rbx_dom::{Change, Ref, WeakDom};
 
 /// How many undo steps are kept before the oldest is dropped, bounds memory
 /// rather than growing the stack for the length of a whole editing session.
 pub(crate) const DEFAULT_CAP: usize = 50;
+
+/// How much each stack may retain, in `WeakDom::retained_bytes`'s estimate.
+/// A step is always kept no matter what it cost, so undo of the last action
+/// exists; past that, the oldest snapshots go first once the bytes are over.
+/// Small places never reach it and keep their full [`DEFAULT_CAP`] steps;
+/// large ones trade depth for the process staying alive.
+const RETAINED_BUDGET: usize = 128 * 1024 * 1024;
 
 /// What Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z do, the window-level shortcuts this
 /// module owns.
@@ -64,6 +82,14 @@ pub(crate) fn action_for(key: &str, modifiers: Modifiers) -> Option<Action> {
 struct Entry {
     dom: WeakDom,
     changes: Vec<Change>,
+    /// When the entry was last written to: pushed, or continued by
+    /// [`History::record_continued_change`]. Read by
+    /// [`History::continues_streak`] to decide whether a script's next
+    /// debounced write still belongs to this step.
+    at: Instant,
+    /// `dom.retained_bytes()`, taken once at construction so the budget
+    /// never re-walks a tree to know what it is holding.
+    bytes: usize,
 }
 
 /// A bounded stack of DOM snapshots either side of the current state: `undo`
@@ -72,6 +98,10 @@ pub(crate) struct History {
     undo: Vec<Entry>,
     redo: Vec<Entry>,
     cap: usize,
+    /// See [`RETAINED_BUDGET`]; the bytes each stack currently holds.
+    budget: usize,
+    undo_bytes: usize,
+    redo_bytes: usize,
     /// Moves on every push, undo and redo, every way the DOM changes goes
     /// through one of the three, so a reader that only needs to know
     /// *whether* the tree moved since it last looked (`luau-lsp`'s copy of
@@ -81,10 +111,20 @@ pub(crate) struct History {
 
 impl History {
     pub(crate) fn new(cap: usize) -> Self {
+        History::with_limits(cap, RETAINED_BUDGET)
+    }
+
+    /// [`History::new`] with the budget the tests can reach: real places
+    /// would need gigabytes to cross [`RETAINED_BUDGET`], and the tests have
+    /// neither the time nor the memory to build one.
+    pub(crate) fn with_limits(cap: usize, budget: usize) -> Self {
         History {
             undo: Vec::new(),
             redo: Vec::new(),
             cap,
+            budget,
+            undo_bytes: 0,
+            redo_bytes: 0,
             revision: 0,
         }
     }
@@ -92,17 +132,30 @@ impl History {
     /// Snapshots `dom` onto the undo stack right before a mutation is
     /// applied to it, and clears the redo stack: a new action invalidates
     /// whatever could have been redone. Drops the oldest snapshot once the
-    /// stack exceeds `cap`, so the stack never grows past it.
+    /// stack exceeds `cap` steps or the budget's bytes, so the stack never
+    /// grows past either.
     pub(crate) fn push(&mut self, dom: WeakDom) {
-        if self.undo.len() >= self.cap {
-            self.undo.remove(0);
-        }
+        let bytes = dom.retained_bytes();
+        self.undo_bytes += bytes;
         self.undo.push(Entry {
             dom,
             changes: Vec::new(),
+            at: Instant::now(),
+            bytes,
         });
         self.redo.clear();
+        self.redo_bytes = 0;
+        self.trim();
         self.revision += 1;
+    }
+
+    /// Drops the oldest undo snapshots over the limits. One entry always
+    /// stays: whatever a step cost, undo of the last action must exist.
+    fn trim(&mut self) {
+        while self.undo.len() > 1 && (self.undo.len() > self.cap || self.undo_bytes > self.budget) {
+            self.undo_bytes -= self.undo[0].bytes;
+            self.undo.remove(0);
+        }
     }
 
     pub(crate) fn revision(&self) -> u64 {
@@ -119,6 +172,50 @@ impl History {
         }
     }
 
+    /// [`History::record_changes`] for a write that continued the top
+    /// entry's step rather than starting one of its own (a typing streak,
+    /// see [`History::continues_streak`]): the log is re-recorded against
+    /// the snapshot already there, the tree as it stood before the streak
+    /// began, and `revision` moves, because the tree changed without a
+    /// `push`.
+    pub(crate) fn record_continued_change(&mut self, changes: Vec<Change>) {
+        if let Some(entry) = self.undo.last_mut() {
+            entry.changes = changes;
+            entry.at = Instant::now();
+        }
+        self.revision += 1;
+    }
+
+    /// Whether the entry on top of the undo stack is `script`'s typing
+    /// streak: its whole log is one write of `property` on `script`, and the
+    /// last write to it was within `within`. `shell::scripts`'s debounced
+    /// write asks before taking a snapshot: a commit that continues the
+    /// streak re-records the log against the snapshot already there instead
+    /// of minting another whole-place copy, which is what typing a pause at
+    /// a time used to do to the memory of a phone-sized machine.
+    pub(crate) fn continues_streak(&self, script: Ref, property: &str, within: Duration) -> bool {
+        self.continues_streak_at(script, property, within, Instant::now())
+    }
+
+    /// [`History::continues_streak`] with the clock handed in, so a test can
+    /// let a streak expire without sleeping.
+    fn continues_streak_at(
+        &self,
+        script: Ref,
+        property: &str,
+        within: Duration,
+        now: Instant,
+    ) -> bool {
+        let Some(entry) = self.undo.last() else {
+            return false;
+        };
+        now.duration_since(entry.at) <= within
+            && matches!(
+                entry.changes.as_slice(),
+                [Change::Property { referent, name }] if *referent == script && name.as_str() == property
+            )
+    }
+
     /// Pops the last snapshot, pushes `current` onto the redo stack, paired
     /// with the same `Change` log, since redoing this step reapplies exactly
     /// the mutation undoing it just reverted, and returns the popped DOM
@@ -126,11 +223,17 @@ impl History {
     /// nothing to undo, a no-op that leaves both stacks untouched.
     pub(crate) fn undo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
         let previous = self.undo.pop()?;
+        self.undo_bytes -= previous.bytes;
         self.revision += 1;
+        let bytes = current.retained_bytes();
+        self.redo_bytes += bytes;
         self.redo.push(Entry {
             dom: current,
             changes: previous.changes.clone(),
+            at: Instant::now(),
+            bytes,
         });
+        self.trim_redo();
         Some((previous.dom, previous.changes))
     }
 
@@ -140,12 +243,28 @@ impl History {
     /// plus that log.
     pub(crate) fn redo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
         let next = self.redo.pop()?;
+        self.redo_bytes -= next.bytes;
         self.revision += 1;
+        let bytes = current.retained_bytes();
+        self.undo_bytes += bytes;
         self.undo.push(Entry {
             dom: current,
             changes: next.changes.clone(),
+            at: Instant::now(),
+            bytes,
         });
+        self.trim();
         Some((next.dom, next.changes))
+    }
+
+    /// [`History::trim`] for the redo stack: past the budget the oldest
+    /// redos go, with no floor, since a step that can no longer be reached
+    /// again is the cheapest thing an out-of-memory machine can lose.
+    fn trim_redo(&mut self) {
+        while !self.redo.is_empty() && self.redo_bytes > self.budget {
+            self.redo_bytes -= self.redo[0].bytes;
+            self.redo.remove(0);
+        }
     }
 }
 
@@ -295,5 +414,127 @@ mod tests {
         assert_eq!(history.revision(), 3);
         assert!(history.redo(named("b")).is_none());
         assert_eq!(history.revision(), 3);
+    }
+
+    fn script_with_source(size: usize) -> (WeakDom, rbx_dom::Ref) {
+        let mut dom = WeakDom::new();
+        let script = dom.new_instance("ModuleScript", "Counter", None);
+        dom.set_property(script, "Source", rbx_dom::Variant::String("x".repeat(size)))
+            .unwrap();
+        (dom, script)
+    }
+
+    #[test]
+    fn the_undo_stack_is_bounded_by_bytes_as_well_as_steps() {
+        // Each snapshot carries a 24 KB source; the step cap would hold ten
+        // of them, the budget two. Bytes bind first, the oldest go, and the
+        // latest always stays.
+        let mut history = History::with_limits(10, 64 * 1024);
+        for _ in 0..5 {
+            let (dom, _) = script_with_source(24 * 1024);
+            history.push(dom);
+        }
+        assert_eq!(history.undo.len(), 2, "the budget, not the cap, binds");
+        assert!(history.undo_bytes <= 64 * 1024);
+        assert!(history.undo.first().unwrap().bytes > 24 * 1024);
+
+        // Undo twice works; the third has nothing left to undo.
+        assert!(history.undo(named("now")).is_some());
+        assert!(history.undo(named("now")).is_some());
+        assert!(history.undo(named("now")).is_none());
+    }
+
+    #[test]
+    fn one_huge_snapshot_is_still_kept_alone() {
+        // A budget of nothing still keeps the last step: undo of the most
+        // recent action must exist whatever it cost.
+        let mut history = History::with_limits(DEFAULT_CAP, 0);
+        for _ in 0..3 {
+            let (dom, _) = script_with_source(1024);
+            history.push(dom);
+        }
+        assert_eq!(history.undo.len(), 1);
+        assert!(history.undo(named("now")).is_some());
+    }
+
+    #[test]
+    fn a_typing_streak_is_one_step_not_one_per_pause() {
+        let (mut dom, script) = script_with_source(16);
+        let mut history = History::new(DEFAULT_CAP);
+        let window = Duration::from_secs(30);
+        let write_source = |dom: &mut WeakDom, text: &str| {
+            dom.set_property(script, "Source", rbx_dom::Variant::String(text.into()))
+                .unwrap();
+        };
+        let logged = |dom: &mut WeakDom| dom.take_changes();
+
+        // The first pause in a streak: `commit_script`'s snapshot path.
+        history.push(dom.clone());
+        write_source(&mut dom, "print(2)\n");
+        history.record_changes(logged(&mut dom));
+
+        // The pauses after it, within the window: the write continues the
+        // step, and no further snapshot is taken.
+        assert!(history.continues_streak(script, "Source", window));
+        write_source(&mut dom, "print(3)\n");
+        history.record_continued_change(logged(&mut dom));
+        assert_eq!(history.undo.len(), 1, "the streak added no snapshot");
+        assert!(history.continues_streak(script, "Source", window));
+        assert_eq!(
+            history.revision(),
+            2,
+            "a continued write moves revision too"
+        );
+
+        // One undo steps over the whole streak back to before it began; one
+        // redo reinstates the streak's last text, not its first.
+        let (previous, changes) = history.undo(dom.clone()).expect("the streak to undo");
+        assert_eq!(
+            changes,
+            vec![Change::Property {
+                referent: script,
+                name: "Source".to_string()
+            }]
+        );
+        assert_eq!(
+            previous.get(script).unwrap().properties().get("Source"),
+            Some(&rbx_dom::Variant::String("x".repeat(16).into()))
+        );
+        let (next, _) = history.redo(previous).expect("the streak to redo");
+        assert_eq!(
+            next.get(script).unwrap().properties().get("Source"),
+            Some(&rbx_dom::Variant::String("print(3)\n".into()))
+        );
+    }
+
+    #[test]
+    fn a_streak_only_continues_its_own_step_and_only_while_fresh() {
+        let (mut dom, script) = script_with_source(16);
+        let mut history = History::new(DEFAULT_CAP);
+        history.push(dom.clone());
+        let window = Duration::from_secs(30);
+
+        // Nothing recorded yet: the top entry's log is not the streak.
+        assert!(!history.continues_streak(script, "Source", window));
+        dom.take_changes();
+        dom.set_property(
+            script,
+            "Source",
+            rbx_dom::Variant::String("print(2)\n".into()),
+        )
+        .unwrap();
+        history.record_changes(dom.take_changes());
+
+        // Someone else's step, or another property, or a stale window: no.
+        assert!(!history.continues_streak(rbx_dom::Ref::new(99), "Source", window));
+        assert!(!history.continues_streak(script, "Health", window));
+        let far = Instant::now() + window + window;
+        assert!(!history.continues_streak_at(script, "Source", window, far));
+        // The streak itself: yes.
+        assert!(history.continues_streak(script, "Source", window));
+
+        // A step pushed on top ends it, wherever its own log points.
+        history.push(named("a drag"));
+        assert!(!history.continues_streak(script, "Source", window));
     }
 }

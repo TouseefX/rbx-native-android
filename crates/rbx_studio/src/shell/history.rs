@@ -56,13 +56,19 @@ impl Shell {
     /// (`Shell::apply_edit`), which can be refused or change nothing. A
     /// snapshot pushed for a write that never happened is a Ctrl+Z that
     /// reverts nothing, having cleared the redo stack to offer it.
+    ///
+    /// A script editor's `Source` write only lands here for the *first*
+    /// commit of a typing streak; the rest continue the step in place (see
+    /// `History::continues_streak`), which is what keeps a long editing
+    /// session from minting a whole-place snapshot per pause in typing.
     pub(super) fn push_history_snapshot(&mut self, mut before: WeakDom) {
         // The fitting preview is never a step (see `ugc::fitting`).
         super::ugc::strip_preview(&mut before);
         // Plugin edits made before this one are a step of their own, below.
         self.commit_plugin_step();
         // Every recorded edit lands here, including the ones (a script
-        // editor's `Source` write) that never reach `reflect_changes`.
+        // editor's first `Source` write in a streak) that never reach
+        // `reflect_changes`.
         self.recovery.changed();
         self.history.push(before);
     }
