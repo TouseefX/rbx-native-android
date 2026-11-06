@@ -182,6 +182,18 @@ where
     STARTED.get_or_init(move || {
         std::thread::Builder::new()
             .name("gpui-main".into())
+            // The desktop platforms run the application on the process's
+            // main thread, which the OS gives an 8 MiB stack; a Rust
+            // spawned thread's default is a quarter of that. Every bit of
+            // editor code — the lexers, the intelligence engine, the
+            // element tree — is written and tested against the desktop
+            // budget, so the Android app thread gets the same 8 MiB rather
+            // than a quarter of it: something that recurses deeply enough
+            // to overflow here would have overflowed on the phone while
+            // the desktop ran it fine, with nothing in the code different.
+            // The pages are reserved, not committed; an idle stack costs
+            // address space only.
+            .stack_size(8 * 1024 * 1024)
             .spawn(move || render_thread(launch.take().expect("launch closure")))
             .expect("spawn gpui-main");
     });
