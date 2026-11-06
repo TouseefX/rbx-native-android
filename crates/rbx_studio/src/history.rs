@@ -498,7 +498,7 @@ mod tests {
         );
         assert_eq!(
             previous.get(script).unwrap().properties().get("Source"),
-            Some(&rbx_dom::Variant::String("x".repeat(16).into()))
+            Some(&rbx_dom::Variant::String("x".repeat(16)))
         );
         let (next, _) = history.redo(previous).expect("the streak to redo");
         assert_eq!(
