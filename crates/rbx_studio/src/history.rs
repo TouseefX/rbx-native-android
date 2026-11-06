@@ -468,7 +468,9 @@ mod tests {
         };
         let logged = |dom: &mut WeakDom| dom.take_changes();
 
-        // The first pause in a streak: `commit_script`'s snapshot path.
+        // The first pause in a streak: `commit_script`'s snapshot path,
+        // drain first, push, write, record.
+        dom.take_changes();
         history.push(dom.clone());
         write_source(&mut dom, "print(2)\n");
         history.record_changes(logged(&mut dom));
