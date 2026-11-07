@@ -63,11 +63,22 @@ fn field_of_view(camera: &Instance) -> f32 {
     }
 }
 
+/// `workspace`'s `CurrentCamera`, or — for the many files whose writer
+/// serialized the `Camera` child but not the `Ref` pointing at it — its
+/// first `Camera` child, the same one Studio itself would load the view
+/// from. `None` when neither is there, [`PlaceCamera::from_dom`]'s cue
+/// that the place has to be framed another way (and see
+/// [`write_pose`]'s note on never leaving a stray second `Camera` behind:
+/// the fallback only ever names a camera that already exists).
 fn current_camera(dom: &WeakDom) -> Option<Ref> {
     let workspace = workspace_ref(dom)?;
     match dom.get(workspace)?.properties().get("CurrentCamera") {
         Some(Variant::Ref(referent)) => Some(*referent),
-        _ => None,
+        _ => dom
+            .children(workspace)
+            .iter()
+            .find(|referent| dom.get(**referent).is_some_and(|c| c.class() == "Camera"))
+            .copied(),
     }
 }
 
@@ -83,16 +94,14 @@ fn workspace_ref(dom: &WeakDom) -> Option<Ref> {
 }
 
 /// `workspace`'s `CurrentCamera`, but only when it actually resolves to a
-/// `Camera` instance, the same standard [`PlaceCamera::from_dom`] reads by
-/// (a `Ref` pointing at something else, or at nothing, is treated as no
-/// camera at all), mirrored here so [`write_pose`] reuses one instead of
-/// leaving a stray second `Camera` behind every time it runs.
-fn existing_camera(dom: &WeakDom, workspace: Ref) -> Option<Ref> {
-    let Some(Variant::Ref(referent)) = dom.get(workspace)?.properties().get("CurrentCamera") else {
-        return None;
-    };
-    let camera = dom.get(*referent)?;
-    (camera.class() == "Camera").then_some(*referent)
+/// `Camera` instance, with [`current_camera`]'s child fallback for a file
+/// that serialized its `Camera` but not the `Ref`, mirrored here so
+/// [`write_pose`] reuses one instead of leaving a stray second `Camera`
+/// behind every time it runs.
+fn existing_camera(dom: &WeakDom) -> Option<Ref> {
+    let referent = current_camera(dom)?;
+    let camera = dom.get(referent)?;
+    (camera.class() == "Camera").then_some(referent)
 }
 
 /// Mirrors a free-flight [`Pose`] into `Workspace.CurrentCamera.CFrame` and
@@ -110,7 +119,7 @@ pub(crate) fn write_pose(dom: &mut WeakDom, pose: Pose) {
     let Some(workspace) = workspace_ref(dom) else {
         return;
     };
-    let camera = existing_camera(dom, workspace).unwrap_or_else(|| {
+    let camera = existing_camera(dom).unwrap_or_else(|| {
         let camera = dom.new_instance("Camera", "Camera", Some(workspace));
         let _ = dom.set_property(workspace, "CurrentCamera", Variant::Ref(camera));
         camera

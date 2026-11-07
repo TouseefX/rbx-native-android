@@ -312,6 +312,19 @@ impl Headless {
         self.from = Viewpoint::Free(pose);
     }
 
+    /// Opens at the spawn view the windowed viewer starts at: the scene's own
+    /// centre, raised clear of the ground, looking flat along -Z. What a host
+    /// with no saved camera of its own frames the place with — a still,
+    /// steerable view, never the hands-free orbit, which on a phone reads as
+    /// a camera drifting away on its own.
+    pub fn spawn_at(&mut self) {
+        let pose = camera::Camera::spawn_pose(&self.bounds);
+        self.controller =
+            Controller::new(Start::Pose(pose), &self.bounds, None, DEFAULT_SENSITIVITY);
+        self.controller.set_feel(self.feel);
+        self.from = Viewpoint::Free(pose);
+    }
+
     /// Redraws every following frame at `level`, leaving the camera and the place
     /// itself alone.
     ///

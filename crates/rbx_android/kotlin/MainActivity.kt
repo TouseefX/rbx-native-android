@@ -32,6 +32,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
@@ -102,6 +103,10 @@ class MainActivity : GameActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The editor is a desktop layout: lock the app to landscape (either
+        // of the two, the sensor picks between them) so it is never laid
+        // out for a portrait window it does not fit.
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         // GameActivity's onCreate has loaded the library, run
         // initializeNativeCode (the render thread is starting), and built
         // its InputEnabledSurfaceView; watch that surface's holder.

@@ -85,10 +85,12 @@ android:
           # surface re-attaches to it, so nothing needs recreating here.
           config_changes: "orientation|keyboardHidden|keyboard|screenSize|screenLayout|smallestScreenSize|locale|layoutDirection|fontScale|density|uiMode"
           launch_mode: "singleTask"
-          # The IME proxy is resized through GameActivity's own
-          # SOFT_INPUT_ADJUST_RESIZE; adjustNothing keeps the surface from
-          # being relaid out under the keyboard.
-          window_soft_input_mode: "adjustNothing"
+          # adjustResize: when the software keyboard shows, the window (and
+          # with it the SurfaceView, and with that the whole GPUI layout —
+          # see surfaceChanged → handle_resize) shrinks to what is left above
+          # it, so the script editor's caret is never hidden under the IME,
+          # which in landscape covered more than half the screen.
+          window_soft_input_mode: "adjustResize"
           hardware_accelerated: true
           exported: true
           # xbuild automatically appends:

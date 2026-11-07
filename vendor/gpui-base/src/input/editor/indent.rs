@@ -205,6 +205,21 @@ impl<M: InputModeKind> InputBaseState<M> {
         if M::accept_inline_completion(self, window, cx) {
             return;
         }
+        // rbx-native addition: with a completion menu open, Tab accepts its
+        // selection the way Enter does — Studio's and VS Code's own binding —
+        // before it indents. The context-menu path is a no-op that answers
+        // false when no menu is open, so plain Tab still indents.
+        if M::handle_context_menu_action(
+            self,
+            Box::new(crate::input::Enter {
+                secondary: false,
+                shift: false,
+            }),
+            window,
+            cx,
+        ) {
+            return;
+        }
         self.indent(false, window, cx);
     }
 

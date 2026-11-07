@@ -65,8 +65,21 @@ The two selection methods exist because the script editor's Ctrl+D / Shift+Alt+L
 to the next / every match of the selection) has to add selections, and
 upstream keeps the selection list private (still true in 0.6.6).
 
+And two completion fixes, marked the same way. In
+`src/input/base/state.rs`, `replace_and_mark_text_in_range` (the IME's
+marked-text insert) now reports the composition to
+`InputModeKind::on_text_typed` exactly as the committed-text path always
+did: a soft keyboard keeps every in-progress word as marked text, so
+without it the completion menu never followed a word being typed on
+Android — it opened on the committed dot and then sat stuck at whatever
+was last committed. And in `src/input/editor/indent.rs`, `indent_inline`
+(Tab) first offers a primary `Enter` to the context-menu action path,
+which the completion menu's handler accepts: with a menu open, Tab picks
+its selection, Studio's and VS Code's own binding, and with none it
+indents as before.
+
 To upgrade GPUI Kit: re-copy the matching `gpui-base` from
-`~/.cargo/registry/src/*/`, re-apply the two methods, the two diagnostic fixes, the tree changes (selection by id, the focus cursor) and the gutter slot, and bump the version.
+`~/.cargo/registry/src/*/`, re-apply the two methods, the two diagnostic fixes, the tree changes (selection by id, the focus cursor), the gutter slot and the two completion fixes, and bump the version.
 Delete this directory and the patch once upstream has an equivalent.
 
 And `src/occlusion.rs` (new, marked "rbx-native addition"): a per-window

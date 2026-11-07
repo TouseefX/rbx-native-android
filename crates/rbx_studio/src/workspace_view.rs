@@ -71,6 +71,11 @@ pub(crate) use terrain::{Dial, TerrainInput, TerrainPhase};
 // How long a speed change stays on screen, matching the standalone viewer's
 // title bar.
 const SPEED_LABEL: Duration = Duration::from_millis(1500);
+/// How long after a pan's release its fling momentum may keep arriving
+/// without a fresh packet before the look is ended for it: a fling ticks
+/// once a frame, so anything this quiet is a lift that never flung (see
+/// `fling_deadline` and the scroll listener in `render`).
+const FLING_LINGER: Duration = Duration::from_millis(250);
 // How much camera zoom a pinch's fractional step is worth in wheel notches:
 // a full spread (delta 1.0) zooms as far as three wheel steps.
 const PINCH_ZOOM_NOTCHES: f32 = 3.;
@@ -259,11 +264,17 @@ pub(crate) struct WorkspaceView {
     looking: bool,
     /// Whether the look in progress is a touch pan rather than the right
     /// button: touch pans reach the scroll listener as pixel scrolls that
-    /// carry a touch phase (`Started`..`Ended`), the desktop wheel reports
-    /// none distinct from the default `Moved`, so this is what tells a
-    /// finger turning the camera from a wheel zooming it (see the scroll
-    /// listener in `render`).
+    /// carry a touch phase (`Started` first, `Ended` or `Cancelled` last,
+    /// momentum's tail between them), the desktop wheel reports none
+    /// distinct from the default `Moved`, so this is what tells a finger
+    /// turning the camera from a wheel zooming it (see the scroll listener
+    /// in `render`).
     touch_look: bool,
+    /// The instant until which scroll packets without a finger down may
+    /// still be a released pan's fling momentum, turning the camera through
+    /// the still-held look button (see the scroll listener in `render`).
+    /// `None` while a finger is down, or when no look is in progress.
+    fling_deadline: Option<Instant>,
     /// The latest un-resolved cursor position from an ordinary move,
     /// waiting for `advance` to decide it's due (see `hover::due`) and cast
     /// a ray against the DOM. Cleared, not just left to resolve stale, at
@@ -453,10 +464,13 @@ impl WorkspaceView {
     ) -> Self {
         let Opened { mut viewer, dom } = opened;
         // A file with no camera of its own still has to be shown somehow: the
-        // viewer then orbits its bounds until the first input, exactly as
-        // `rbxview --orbit` does.
-        if let Some(camera) = camera {
-            viewer.open_at(camera.eye, camera.look_at, camera.fov_degrees);
+        // spawn view the windowed viewer opens at, standing over the scene's
+        // own centre — never the hands-free orbit, which reads on a touch
+        // device as a camera rotating and drifting away on its own until it
+        // is touched.
+        match camera {
+            Some(camera) => viewer.open_at(camera.eye, camera.look_at, camera.fov_degrees),
+            None => viewer.spawn_at(),
         }
         viewer.set_selection(&selected);
         let outlined = selected;
@@ -521,6 +535,7 @@ impl WorkspaceView {
             lock: PointerLock::new(),
             looking: false,
             touch_look: false,
+            fling_deadline: None,
             hover_pending: None,
             hover_part: None,
             drag_pending: None,
@@ -627,6 +642,13 @@ impl WorkspaceView {
     /// long the loop should wait before looking again.
     fn advance(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Duration {
         let now = Instant::now();
+
+        // A released pan's fling ticks once a frame, so a linger this quiet
+        // means the lift never flung: end the look its finger left behind
+        // (see `fling_deadline`).
+        if self.fling_deadline.is_some_and(|deadline| now >= deadline) {
+            self.end_look();
+        }
 
         // `render` not having run since the last tick may mean the dock
         // switched away to another tab: `viewport`'s size would otherwise sit
@@ -829,10 +851,20 @@ impl WorkspaceView {
     /// lost focus, window deactivated, because each of those otherwise leaves
     /// the cursor hidden with the camera still turning.
     fn end_look(&mut self) {
+        self.fling_deadline = None;
+        self.release_look();
+        self.pump.input(CameraInput::LookButton(false));
+    }
+
+    /// `end_look` minus letting the look button go, for a touch pan whose
+    /// finger has lifted but whose fling momentum is still to come: the
+    /// button stays held so the momentum keeps turning the camera, while
+    /// everything else about the look — the pointer lock, the hover
+    /// suppression — ends now (see the scroll listener in `render`).
+    fn release_look(&mut self) {
         self.lock.release();
         self.cursor = None;
         self.looking = false;
-        self.pump.input(CameraInput::LookButton(false));
     }
 
     /// Reports the motion since the last move. Whether it turns the view is the
@@ -1286,11 +1318,12 @@ impl Render for WorkspaceView {
             // Not straight to the camera: a `ScrollingFrame` under the
             // cursor takes the notch first (see `scroll`). A finger pan on
             // the viewport itself is not a zoom either: it arrives here as a
-            // pixel scroll carrying a touch phase (`Started` first, `Ended`
-            // or `Cancelled` last, momentum's tail included) and turns the
-            // camera instead, Roblox-mobile style, so the release's fling
-            // spins it on. The desktop wheel reports no distinct phase, so
-            // it keeps zooming.
+            // pixel scroll carrying a touch phase (`Started` first, then
+            // `Moved`, and after the finger lifts, the recognizer's fling
+            // momentum as more `Moved` packets ending in one last `Ended`)
+            // and turns the camera instead, Roblox-mobile style, so the
+            // release's fling spins it on. The desktop wheel reports no
+            // distinct phase, so it keeps zooming.
             .on_scroll_wheel(cx.listener(|view, event: &ScrollWheelEvent, window, cx| {
                 view.note_input();
                 let delta = event.delta.pixel_delta(px(1.));
@@ -1309,12 +1342,39 @@ impl Render for WorkspaceView {
                     TouchPhase::Ended | TouchPhase::Cancelled => {
                         if view.touch_look {
                             view.touch_look = false;
+                            // The finger is up, but its fling may follow: the
+                            // look button stays held so the momentum's
+                            // `Moved` packets keep turning the camera, and
+                            // everything else about a look ends now. The
+                            // recognizer ends a fling with one more `Ended`,
+                            // which is the one that lets the button go; a
+                            // lift too slow to fling sends nothing further,
+                            // so `advance` ends the linger instead (a fling
+                            // ticks every frame, far inside the window).
+                            view.release_look();
+                            view.fling_deadline = Some(Instant::now() + FLING_LINGER);
+                            return;
+                        }
+                        if view.fling_deadline.take().is_some() {
+                            // The fling's own last packet: the gesture is over.
                             view.end_look();
                             return;
                         }
                     }
                     TouchPhase::Moved => {
                         if view.touch_look {
+                            view.pump.input(CameraInput::MouseLook {
+                                dx: f32::from(delta.x),
+                                dy: f32::from(delta.y),
+                            });
+                            return;
+                        }
+                        if view.fling_deadline.is_some() {
+                            // The fling's momentum, still turning the camera
+                            // through the held look button, never the wheel:
+                            // as pixels it would read as hundreds of notches
+                            // and dolly the camera hundreds of studs.
+                            view.fling_deadline = Some(Instant::now() + FLING_LINGER);
                             view.pump.input(CameraInput::MouseLook {
                                 dx: f32::from(delta.x),
                                 dy: f32::from(delta.y),

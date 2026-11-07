@@ -4144,6 +4144,17 @@ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
         if new_text.is_empty() {
             self.undo_manager.commit_transaction();
         }
+        // rbx-native addition: an IME composition is typing too. Soft
+        // keyboards (Gboard and its autocorrect bar most prominently) keep
+        // every in-progress word as marked text and only commit it on
+        // punctuation or space, so without this the completion menu never
+        // followed a word being typed — it opened on the committed dot and
+        // then sat stuck at whatever was last committed, unaware of the
+        // letters composing after it. An empty `new_text` is the
+        // composition being cancelled, which is not typing.
+        if !new_text.is_empty() && !self.silent_replace_text {
+            M::on_text_typed(self, &range, new_text, window, cx);
+        }
         cx.notify();
     }
 
