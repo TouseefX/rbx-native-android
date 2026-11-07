@@ -531,32 +531,41 @@ pub(crate) fn window_topbar(
             .w(WINDOW_ACTIONS_WIDTH)
             .h_full()
             .justify_end()
-            .child(titlebar_button(
-                None,
-                "window-minimize",
-                IconName::Minus,
-                "Minimize",
-                false,
-                |_, window, _| window.minimize_window(),
-            ))
-            .when(resizable, |this| {
+            // Android's window has no minimize, zoom or close of its own —
+            // the system's home and back are the only way out — so every
+            // window that wears this bar (the launcher, Game Settings,
+            // Studio Settings…) drew three dead buttons there, the same
+            // story as [`Shell::topbar`]'s own block. The block keeps its
+            // width either way: the title is centred against it and the
+            // logo mirrors it.
+            .when(!cfg!(target_os = "android"), |this| {
                 this.child(titlebar_button(
                     None,
-                    "window-maximize",
-                    IconName::Square,
-                    "Maximize",
+                    "window-minimize",
+                    IconName::Minus,
+                    "Minimize",
                     false,
-                    |_, window, _| window.zoom_window(),
+                    |_, window, _| window.minimize_window(),
                 ))
-            })
-            .child(titlebar_button(
-                None,
-                "window-close",
-                IconName::X,
-                "Close",
-                true,
-                move |_, window, cx| on_close(window, cx),
-            )),
+                .when(resizable, |this| {
+                    this.child(titlebar_button(
+                        None,
+                        "window-maximize",
+                        IconName::Square,
+                        "Maximize",
+                        false,
+                        |_, window, _| window.zoom_window(),
+                    ))
+                })
+                .child(titlebar_button(
+                    None,
+                    "window-close",
+                    IconName::X,
+                    "Close",
+                    true,
+                    move |_, window, cx| on_close(window, cx),
+                ))
+            }),
     )
 }
 

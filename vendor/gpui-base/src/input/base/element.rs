@@ -2581,6 +2581,18 @@ impl<M: InputModeKind> Element for TextElement<M> {
                 );
             }
 
+            // rbx-native addition: a viewport that shrank — the Android soft
+            // keyboard lifting the editor, the surface inset to clear the
+            // IME — can leave the caret below the fold: the scroll offset
+            // stays valid, clamped only against the end of the content, so
+            // nothing else moves it. Reveal the caret the way the
+            // caret-move paths do, and the line being typed stays on
+            // screen. Plain scrolling changes no geometry, so a deliberate
+            // scroll away from the caret is never fought.
+            if geometry_changed {
+                state.scroll_to(state.cursor(), None, cx);
+            }
+
             // Layout consumers need changed geometry, not another notification
             // for every paint of an unchanged input.
             if geometry_changed {
