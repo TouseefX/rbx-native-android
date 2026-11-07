@@ -948,7 +948,23 @@ mod tests {
             redone.get(script).unwrap().properties().get("Source"),
             Some(&rbx_dom::Variant::String("print(2)\n".into()))
         );
-        assert!(!matches!(history.redo_step(redone), Stepped::Unchanged(_)));
+
+        // The cycle repeats: undo puts the old text back again, redo the
+        // new, and only once the redo stack is spent does a redo leave
+        // the tree alone.
+        let (mut undone, writes) = property_step(history.undo_step(redone));
+        apply(&mut undone, &writes);
+        assert_eq!(
+            undone.get(script).unwrap().properties().get("Source"),
+            Some(&rbx_dom::Variant::String("print(1)\n".into()))
+        );
+        let (mut redone, writes) = property_step(history.redo_step(undone));
+        apply(&mut redone, &writes);
+        assert_eq!(
+            redone.get(script).unwrap().properties().get("Source"),
+            Some(&rbx_dom::Variant::String("print(2)\n".into()))
+        );
+        assert!(matches!(history.redo_step(redone), Stepped::Unchanged(_)));
     }
 
     /// A property that was absent before the step: undo removes it again
