@@ -112,25 +112,37 @@ class MainActivity : GameActivity() {
         // initializeNativeCode (the render thread is starting), and built
         // its InputEnabledSurfaceView; watch that surface's holder.
         mSurfaceView?.holder?.addCallback(surfaceCallback)
-        // The keyboard must not cover the editor. GameActivity lays its
-        // surface out edge to edge — the window never resizes for the IME,
-        // whatever the manifest's soft-input mode asks — so the surface
-        // itself is inset here by whatever the window shows of the keyboard
-        // and the display's cutouts: `surfaceChanged` then hands the
-        // smaller window to the render thread and the whole editor relayouts
-        // above the keyboard (see `handle_resize`).
+        // The keyboard must not cover the editor. GameActivity's base class
+        // asks for SOFT_INPUT_ADJUST_RESIZE itself, but that only resized
+        // windows that fit system windows: this one is edge to edge
+        // (setDecorFitsSystemWindows below, which GameActivity's own insets
+        // comment asks for), so the IME is handed to the view as insets
+        // instead of resizing anything. A SurfaceView's surface fills the
+        // view's layout bounds — setPadding does NOT shrink it — so what
+        // moves and shrinks here is the view, by margins: `surfaceChanged`
+        // then hands the smaller window to the render thread and the whole
+        // editor relayouts above the keyboard (see `handle_resize`). The
+        // display's cutout insets the same way, keeping the surface off the
+        // camera hole in landscape; the system bars are hidden and only
+        // ever float over transiently, so they are not inset for.
         WindowCompat.setDecorFitsSystemWindows(window, false)
         mSurfaceView?.let { surface ->
             ViewCompat.setOnApplyWindowInsetsListener(surface) { view, insets ->
                 val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-                val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                 val cutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
-                view.setPadding(
-                    maxOf(bars.left, cutout.left),
-                    maxOf(bars.top, cutout.top),
-                    maxOf(bars.right, cutout.right),
-                    maxOf(ime.bottom, bars.bottom, cutout.bottom),
-                )
+                val params = view.layoutParams as? ViewGroup.MarginLayoutParams
+                    ?: ViewGroup.MarginLayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                params.leftMargin = maxOf(cutout.left, ime.left)
+                params.topMargin = maxOf(cutout.top, ime.top)
+                params.rightMargin = maxOf(cutout.right, ime.right)
+                params.bottomMargin = maxOf(cutout.bottom, ime.bottom)
+                // Re-assigning the same mutated object alone relayouts
+                // nothing; ask for the layout explicitly.
+                view.layoutParams = params
+                view.requestLayout()
                 insets
             }
         }
@@ -183,12 +195,13 @@ class MainActivity : GameActivity() {
         // should handle it instead).
         val count = event.pointerCount
         if (count == 0) return false
-        // The surface's content is inset by whatever padding the insets
-        // listener above set (the keyboard, a display cutout), so the
-        // surface's own origin sits that far into the view the event's
+        // The surface sits wherever the insets listener above placed its
+        // view (margins for the keyboard, a display cutout), so the
+        // surface's own origin is that far into the window the event's
         // coordinates are relative to.
-        val offsetX = mSurfaceView?.paddingLeft ?: 0
-        val offsetY = mSurfaceView?.paddingTop ?: 0
+        val view = mSurfaceView
+        val offsetX = view?.left ?: 0
+        val offsetY = view?.top ?: 0
         val ids = IntArray(count)
         val xs = FloatArray(count)
         val ys = FloatArray(count)
