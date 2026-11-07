@@ -201,7 +201,7 @@ fn a_pose_with_zero_yaw_and_pitch_builds_the_identity_rotation() {
 #[test]
 fn a_written_pose_round_trips_through_place_camera() {
     let mut dom = WeakDom::new();
-    let workspace = insert(&mut dom, 1, "Workspace");
+    insert(&mut dom, 1, "Workspace");
 
     write_pose(
         &mut dom,
@@ -258,7 +258,7 @@ fn a_near_vertical_pose_still_round_trips() {
 #[test]
 fn write_pose_reuses_the_existing_camera_across_calls() {
     let mut dom = WeakDom::new();
-    let workspace = insert(&mut dom, 1, "Workspace");
+    insert(&mut dom, 1, "Workspace");
 
     write_pose(&mut dom, pose([0.0, 0.0, 0.0], 0.0, 0.0, 70.0));
     let first = existing_camera(&dom).expect("the first write's camera");
@@ -277,7 +277,7 @@ fn write_pose_reuses_the_existing_camera_across_calls() {
 #[test]
 fn write_pose_creates_a_camera_when_the_place_has_none() {
     let mut dom = WeakDom::new();
-    let workspace = insert(&mut dom, 1, "Workspace");
+    insert(&mut dom, 1, "Workspace");
     assert_eq!(existing_camera(&dom), None);
 
     write_pose(&mut dom, pose([1.0, 2.0, 3.0], 0.0, 0.0, 70.0));

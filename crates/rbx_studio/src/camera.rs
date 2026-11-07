@@ -78,7 +78,7 @@ fn current_camera(dom: &WeakDom) -> Option<Ref> {
             .get(workspace)?
             .children()
             .iter()
-            .find(|referent| dom.get(*referent).is_some_and(|c| c.class() == "Camera"))
+            .find(|referent| dom.get(**referent).is_some_and(|c| c.class() == "Camera"))
             .copied(),
     }
 }
