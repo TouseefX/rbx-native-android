@@ -239,7 +239,7 @@ impl Shell {
     /// `dom` was copied may live on outside it (a plugin's parked widgets,
     /// see `shell::plugins`), and its allocator must never hand their
     /// referents out again.
-    fn install(&mut self, dom: WeakDom, floor: Ref, changes: &[Change], cx: &mut Context<Self>) {
+    fn install(&mut self, dom: WeakDom, floor: u32, changes: &[Change], cx: &mut Context<Self>) {
         self.dom = dom;
         self.dom.raise_next_ref(floor);
         self.history_installs += 1;

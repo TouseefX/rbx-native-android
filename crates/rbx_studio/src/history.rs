@@ -519,6 +519,14 @@ mod tests {
         dom
     }
 
+    fn root_name(dom: &WeakDom) -> String {
+        dom.root_refs()
+            .first()
+            .and_then(|r| dom.get(*r))
+            .map(|instance| instance.name().to_string())
+            .expect("a root instance")
+    }
+
     /// The snapshot half of what a step hands back, as the shell's snapshot
     /// arm consumes it.
     fn snapshot_step(step: Stepped) -> (WeakDom, Vec<Change>) {
@@ -797,13 +805,13 @@ mod tests {
 
         // One undo steps over the whole streak back to before it began; one
         // redo reinstates the streak's last text, not its first.
-        let (undone, writes) = property_step(history.undo_step(dom.clone()));
+        let (mut undone, writes) = property_step(history.undo_step(dom.clone()));
         apply(&mut undone, &writes);
         assert_eq!(
             undone.get(script).unwrap().properties().get("Source"),
             Some(&rbx_dom::Variant::String("x".repeat(16)))
         );
-        let (redone, writes) = property_step(history.redo_step(undone));
+        let (mut redone, writes) = property_step(history.redo_step(undone));
         apply(&mut redone, &writes);
         assert_eq!(
             redone.get(script).unwrap().properties().get("Source"),
@@ -917,7 +925,7 @@ mod tests {
 
         // Undo hands the caller's own tree back with the old value to
         // apply; no snapshot is installed, the tree never changed identity.
-        let (undone, writes) = property_step(history.undo_step(dom.clone()));
+        let (mut undone, writes) = property_step(history.undo_step(dom.clone()));
         apply(&mut undone, &writes);
         assert_eq!(
             undone.get(script).unwrap().properties().get("Source"),
@@ -925,7 +933,7 @@ mod tests {
         );
 
         // Redo reapplies the new value the same way.
-        let (redone, writes) = property_step(history.redo_step(undone));
+        let (mut redone, writes) = property_step(history.redo_step(undone));
         apply(&mut redone, &writes);
         assert_eq!(
             redone.get(script).unwrap().properties().get("Source"),
@@ -954,7 +962,7 @@ mod tests {
         }]);
         dom.take_changes();
 
-        let (undone, writes) = property_step(history.undo_step(dom));
+        let (mut undone, writes) = property_step(history.undo_step(dom));
         apply(&mut undone, &writes);
         assert_eq!(
             undone.get(part).unwrap().properties().get("Transparency"),
@@ -962,7 +970,7 @@ mod tests {
             "undo removes what the step created"
         );
 
-        let (redone, writes) = property_step(history.redo_step(undone));
+        let (mut redone, writes) = property_step(history.redo_step(undone));
         apply(&mut redone, &writes);
         assert_eq!(
             redone.get(part).unwrap().properties().get("Transparency"),
@@ -976,7 +984,7 @@ mod tests {
             old: Some(Variant::Float32(0.5)),
             new: None,
         }]);
-        let (undone, writes) = property_step(history.undo_step(redone));
+        let (mut undone, writes) = property_step(history.undo_step(redone));
         apply(&mut undone, &writes);
         assert!(undone
             .get(part)
@@ -984,7 +992,7 @@ mod tests {
             .properties()
             .get("Transparency")
             .is_some());
-        let (redone, writes) = property_step(history.redo_step(undone));
+        let (mut redone, writes) = property_step(history.redo_step(undone));
         apply(&mut redone, &writes);
         assert!(redone
             .get(part)
@@ -1025,7 +1033,7 @@ mod tests {
 
         // Undo the property step: the tree is handed back, the write
         // applied, and the rename from the snapshot step survives.
-        let (current, writes) = property_step(history.undo_step(dom));
+        let (mut current, writes) = property_step(history.undo_step(dom));
         apply(&mut current, &writes);
         assert_eq!(
             current.get(part).unwrap().properties().get("Transparency"),
@@ -1040,7 +1048,7 @@ mod tests {
         // Redo both, in order, ending where the edits left off.
         let (current, _) = snapshot_step(history.redo_step(previous));
         assert_eq!(current.get(part).unwrap().name(), "Renamed");
-        let (current, writes) = property_step(history.redo_step(current));
+        let (mut current, writes) = property_step(history.redo_step(current));
         apply(&mut current, &writes);
         assert_eq!(
             current.get(part).unwrap().properties().get("Transparency"),
