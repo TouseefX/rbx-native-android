@@ -121,6 +121,29 @@ fn a_place_without_a_camera_has_no_viewpoint() {
 }
 
 #[test]
+fn a_camera_child_stands_in_for_a_missing_current_camera() {
+    // The shape many writers leave: the `Camera` under `Workspace` was
+    // serialized, the `Ref` naming it was not. The child is the view, the
+    // same one Studio itself loads.
+    let identity = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    let mut dom = WeakDom::new();
+    let workspace = insert(&mut dom, 1, "Workspace");
+    let camera = insert(&mut dom, 2, "Camera");
+    dom.set_parent(camera, Some(workspace));
+    set(
+        &mut dom,
+        camera,
+        "CFrame",
+        cframe([0.0, 5.0, 0.0], identity),
+    );
+
+    let camera = PlaceCamera::from_dom(&dom).expect("the child camera's view");
+
+    assert_eq!(camera.eye, [0.0, 5.0, 0.0]);
+    assert_eq!(camera.look_at, [0.0, 5.0, -1.0]);
+}
+
+#[test]
 fn a_current_camera_pointing_elsewhere_has_no_viewpoint() {
     let identity = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
     let dom = place("Part", Some(cframe([0.0, 5.0, 0.0], identity)));
@@ -185,7 +208,7 @@ fn a_written_pose_round_trips_through_place_camera() {
         pose([10.0, 20.0, -30.0], std::f32::consts::FRAC_PI_2, 0.0, 90.0),
     );
 
-    let camera_ref = existing_camera(&dom, workspace).expect("write_pose made a Camera");
+    let camera_ref = existing_camera(&dom).expect("write_pose made a Camera");
     assert_eq!(dom.get(camera_ref).expect("the camera").class(), "Camera");
 
     let camera = PlaceCamera::from_dom(&dom).expect("write_pose's own camera");
@@ -238,10 +261,10 @@ fn write_pose_reuses_the_existing_camera_across_calls() {
     let workspace = insert(&mut dom, 1, "Workspace");
 
     write_pose(&mut dom, pose([0.0, 0.0, 0.0], 0.0, 0.0, 70.0));
-    let first = existing_camera(&dom, workspace).expect("the first write's camera");
+    let first = existing_camera(&dom).expect("the first write's camera");
 
     write_pose(&mut dom, pose([5.0, 0.0, 0.0], 1.0, 0.0, 70.0));
-    let second = existing_camera(&dom, workspace).expect("the second write's camera");
+    let second = existing_camera(&dom).expect("the second write's camera");
 
     assert_eq!(first, second);
     let camera = PlaceCamera::from_dom(&dom).expect("the reused camera");
@@ -255,7 +278,7 @@ fn write_pose_reuses_the_existing_camera_across_calls() {
 fn write_pose_creates_a_camera_when_the_place_has_none() {
     let mut dom = WeakDom::new();
     let workspace = insert(&mut dom, 1, "Workspace");
-    assert_eq!(existing_camera(&dom, workspace), None);
+    assert_eq!(existing_camera(&dom), None);
 
     write_pose(&mut dom, pose([1.0, 2.0, 3.0], 0.0, 0.0, 70.0));
 
