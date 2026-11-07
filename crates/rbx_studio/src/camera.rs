@@ -126,8 +126,12 @@ pub(crate) fn write_pose(dom: &mut WeakDom, pose: Pose) {
         camera
     });
 
-    let _ = dom.set_property(camera, "CFrame", Variant::CFrame(cframe_from_pose(pose)));
-    let _ = dom.set_property(camera, "FieldOfView", Variant::Float32(pose.fov_degrees));
+    // Quiet: a flight is not an edit (this whole function deliberately never
+    // goes near `History::push`), and a counted write here would run the
+    // completion index's whole-tree fingerprint walk on the next panel
+    // render, a few times a second for as long as the camera moves.
+    let _ = dom.set_property_quiet(camera, "CFrame", Variant::CFrame(cframe_from_pose(pose)));
+    let _ = dom.set_property_quiet(camera, "FieldOfView", Variant::Float32(pose.fov_degrees));
 }
 
 /// Builds the `CFrameData` a place would need to reopen at exactly this

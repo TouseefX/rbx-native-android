@@ -52,6 +52,7 @@ import android.widget.EditText
 import com.google.androidgamesdk.GameActivity
 
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
@@ -111,6 +112,28 @@ class MainActivity : GameActivity() {
         // initializeNativeCode (the render thread is starting), and built
         // its InputEnabledSurfaceView; watch that surface's holder.
         mSurfaceView?.holder?.addCallback(surfaceCallback)
+        // The keyboard must not cover the editor. GameActivity lays its
+        // surface out edge to edge — the window never resizes for the IME,
+        // whatever the manifest's soft-input mode asks — so the surface
+        // itself is inset here by whatever the window shows of the keyboard
+        // and the display's cutouts: `surfaceChanged` then hands the
+        // smaller window to the render thread and the whole editor relayouts
+        // above the keyboard (see `handle_resize`).
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        mSurfaceView?.let { surface ->
+            ViewCompat.setOnApplyWindowInsetsListener(surface) { view, insets ->
+                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+                val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                val cutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+                view.setPadding(
+                    maxOf(bars.left, cutout.left),
+                    maxOf(bars.top, cutout.top),
+                    maxOf(bars.right, cutout.right),
+                    maxOf(ime.bottom, bars.bottom, cutout.bottom),
+                )
+                insets
+            }
+        }
         hideSystemBars()
     }
 
@@ -160,19 +183,23 @@ class MainActivity : GameActivity() {
         // should handle it instead).
         val count = event.pointerCount
         if (count == 0) return false
+        // The surface's content is inset by whatever padding the insets
+        // listener above set (the keyboard, a display cutout), so the
+        // surface's own origin sits that far into the view the event's
+        // coordinates are relative to.
+        val offsetX = mSurfaceView?.paddingLeft ?: 0
+        val offsetY = mSurfaceView?.paddingTop ?: 0
         val ids = IntArray(count)
         val xs = FloatArray(count)
         val ys = FloatArray(count)
         for (i in 0 until count) {
             ids[i] = event.getPointerId(i)
-            // getX/getY already are physical pixels relative to this view,
-            // which is the surface's coordinate space: pass them through
-            // unchanged, the host divides by the density to get GPUI's
-            // logical pixels. (Scaling here too landed every touch at
-            // density× its logical position — off-window for most of the
-            // screen.)
-            xs[i] = event.getX(i)
-            ys[i] = event.getY(i)
+            // getX/getY are physical pixels relative to this view, the
+            // host divides by the density to get GPUI's logical pixels.
+            // (Scaling here too landed every touch at density× its logical
+            // position — off-window for most of the screen.)
+            xs[i] = event.getX(i) - offsetX
+            ys[i] = event.getY(i) - offsetY
         }
         return nativeMotion(event.actionMasked, event.actionIndex, ids, xs, ys)
     }
@@ -451,6 +478,34 @@ class MainActivity : GameActivity() {
                     }
                     if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
                         if (event.action == KeyEvent.ACTION_DOWN) commitText("\n", 1)
+                        return true
+                    }
+                    // While the soft keyboard (or a Bluetooth one through the
+                    // focused IME proxy) sends keys here, the editor never
+                    // sees them as the key events the app's own key path
+                    // delivers — an EditText swallows Tab as focus
+                    // navigation and the arrows as its own (invisible)
+                    // caret, so a completion menu open in the editor could
+                    // not be picked with Tab or walked with the arrows.
+                    // Forward them the way MainActivity.onKeyDown would
+                    // have, had the proxy not held focus.
+                    if (event.keyCode == KeyEvent.KEYCODE_TAB ||
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+                        event.keyCode == KeyEvent.KEYCODE_MOVE_HOME ||
+                        event.keyCode == KeyEvent.KEYCODE_MOVE_END
+                    ) {
+                        if (event.action == KeyEvent.ACTION_DOWN ||
+                            event.action == KeyEvent.ACTION_UP
+                        ) {
+                            nativeKey(
+                                event.keyCode,
+                                if (event.action == KeyEvent.ACTION_DOWN) 0 else 1,
+                                event.metaState
+                            )
+                        }
                         return true
                     }
                     return super.sendKeyEvent(event)

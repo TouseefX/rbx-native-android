@@ -72,6 +72,34 @@ impl WeakDom {
         name: &str,
         value: Variant,
     ) -> Result<Option<Variant>, DomError> {
+        self.set_property_inner(referent, name, value, false)
+    }
+
+    /// [`WeakDom::set_property`] without the mutation count: a write whose
+    /// readers are the change log's — the render thread's DOM mirror, the
+    /// file a later save writes — but that is no edit, so the counter-stamped
+    /// observers must not wake for it. The editor's camera-pose mirroring is
+    /// the caller: a few writes a second while the camera flies, none of them
+    /// an edit, and each one would otherwise run the completion index's
+    /// whole-tree fingerprint walk (see `script_editor::intel`) on the next
+    /// panel render, which on a large place is a visible stall.
+    pub fn set_property_quiet(
+        &mut self,
+        referent: Ref,
+        name: &str,
+        value: Variant,
+    ) -> Result<Option<Variant>, DomError> {
+        self.set_property_inner(referent, name, value, true)
+    }
+
+    /// `set_property`'s body; see the two public wrappers for when `quiet`.
+    fn set_property_inner(
+        &mut self,
+        referent: Ref,
+        name: &str,
+        value: Variant,
+        quiet: bool,
+    ) -> Result<Option<Variant>, DomError> {
         let instance = self
             .instances
             .get_mut(&referent)
@@ -81,10 +109,15 @@ impl WeakDom {
         // read as an edit: editors push an undo step (clearing redo) for every
         // logged change.
         if old.as_ref() != instance.properties().get(name) {
-            self.log(Change::Property {
+            let change = Change::Property {
                 referent,
                 name: name.to_string(),
-            });
+            };
+            if quiet {
+                self.log_quiet(change);
+            } else {
+                self.log(change);
+            }
         }
         Ok(old)
     }
@@ -219,6 +252,13 @@ impl WeakDom {
 
     fn log(&mut self, change: Change) {
         self.mutations += 1;
+        self.changes.push(change);
+    }
+
+    /// [`WeakDom::log`] without the counter: the change still reaches every
+    /// reader of the log, but the counter-stamped observers (see
+    /// [`WeakDom::mutations`]) sleep on.
+    fn log_quiet(&mut self, change: Change) {
         self.changes.push(change);
     }
 
@@ -488,5 +528,38 @@ mod tests {
             .set_property(other, "Source", Variant::String("y".repeat(100_000)))
             .unwrap();
         assert!(loaded.retained_bytes() >= grown + bare.retained_bytes() + 100_000);
+    }
+
+    #[test]
+    fn quiet_set_property_logs_the_change_without_waking_the_counter() {
+        let mut dom = WeakDom::new();
+        let camera = dom.new_instance("Camera", "Camera", None);
+        dom.take_changes();
+        let before = dom.mutations();
+
+        dom.set_property_quiet(camera, "FieldOfView", Variant::Float64(70.))
+            .unwrap();
+
+        // Change-log readers still see it; counter-stamped observers
+        // (the intel's fingerprint, the co-edit trigger) keep sleeping.
+        assert_eq!(dom.mutations(), before);
+        assert_eq!(
+            dom.take_changes(),
+            vec![Change::Property {
+                referent: camera,
+                name: "FieldOfView".to_string()
+            }]
+        );
+
+        // A no-op write stays out of the log even in the quiet form.
+        dom.set_property_quiet(camera, "FieldOfView", Variant::Float64(70.))
+            .unwrap();
+        assert_eq!(dom.mutations(), before);
+        assert!(dom.take_changes().is_empty());
+
+        // The loud form still counts, so the two are never confused.
+        dom.set_property(camera, "FieldOfView", Variant::Float64(60.))
+            .unwrap();
+        assert_eq!(dom.mutations(), before + 1);
     }
 }

@@ -168,34 +168,41 @@ impl Shell {
                 .h_full()
                 .justify_end()
                 .children(strip)
-                .child(window_button(
-                    &self.tab_order.claim(cx),
-                    "window-minimize",
-                    IconName::Minus,
-                    "Minimize",
-                    false,
-                    |window| window.minimize_window(),
-                ))
-                .child(window_button(
-                    &self.tab_order.claim(cx),
-                    "window-maximize",
-                    IconName::Square,
-                    "Maximize",
-                    false,
-                    |window| window.zoom_window(),
-                ))
-                .child(titlebar_button(
-                    Some(&self.tab_order.claim(cx)),
-                    "window-close",
-                    IconName::X,
-                    "Close",
-                    true,
-                    cx.listener(|shell, _, window, cx| {
-                        if shell.request_quit(cx) {
-                            window.remove_window();
-                        }
-                    }),
-                )),
+                // Android's window has no minimize, zoom or close of its own
+                // — the system's home and back are the only way out — and
+                // the buttons' calls are no-ops there, so the phone drew
+                // three dead buttons. The block keeps its width either way:
+                // the title is centred against it and the logo mirrors it.
+                .when(!cfg!(target_os = "android"), |this| {
+                    this.child(window_button(
+                        &self.tab_order.claim(cx),
+                        "window-minimize",
+                        IconName::Minus,
+                        "Minimize",
+                        false,
+                        |window| window.minimize_window(),
+                    ))
+                    .child(window_button(
+                        &self.tab_order.claim(cx),
+                        "window-maximize",
+                        IconName::Square,
+                        "Maximize",
+                        false,
+                        |window| window.zoom_window(),
+                    ))
+                    .child(titlebar_button(
+                        Some(&self.tab_order.claim(cx)),
+                        "window-close",
+                        IconName::X,
+                        "Close",
+                        true,
+                        cx.listener(|shell, _, window, cx| {
+                            if shell.request_quit(cx) {
+                                window.remove_window();
+                            }
+                        }),
+                    ))
+                }),
         )
     }
 
