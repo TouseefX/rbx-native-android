@@ -5,13 +5,13 @@
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
-[1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
+[1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
@@ -19,8 +19,8 @@
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
 [1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
 [1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
@@ -36,186 +36,27 @@
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[E0425][0m[1m: cannot find function `root_name` in this scope[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:567:20
+[1m[91merror[0m[1m: methods `undo` and `redo` are never used[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:432:19
     [1m[94m|[0m
-[1m[94m567[0m [1m[94m|[0m         assert_eq!(root_name(&undone), "Before");
-    [1m[94m|[0m                    [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
+[1m[94m158[0m [1m[94m|[0m impl History {
+    [1m[94m|[0m [1m[94m------------[0m [1m[94mmethods in this implementation[0m
+[1m[94m...[0m
+[1m[94m432[0m [1m[94m|[0m     pub(crate) fn undo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
+    [1m[94m|[0m                   [1m[91m^^^^[0m
+[1m[94m...[0m
+[1m[94m446[0m [1m[94m|[0m     pub(crate) fn redo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
+    [1m[94m|[0m                   [1m[91m^^^^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `-D dead-code` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[expect(dead_code)]` or `#[allow(dead_code)]`
 
-[1m[91merror[E0425][0m[1m: cannot find function `root_name` in this scope[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:570:20
+[1m[91merror[0m[1m: function `apply_writes` is never used[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:473:4
     [1m[94m|[0m
-[1m[94m570[0m [1m[94m|[0m         assert_eq!(root_name(&redone), "After");
-    [1m[94m|[0m                    [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
+[1m[94m473[0m [1m[94m|[0m fn apply_writes(dom: &mut WeakDom, writes: &[(Ref, String, Option<Variant>)]) {
+    [1m[94m|[0m    [1m[91m^^^^^^^^^^^^[0m
 
-[1m[91merror[E0425][0m[1m: cannot find function `root_name` in this scope[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:582:20
-    [1m[94m|[0m
-[1m[94m582[0m [1m[94m|[0m         assert_eq!(root_name(&top), "Three");
-    [1m[94m|[0m                    [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
-
-[1m[91merror[E0425][0m[1m: cannot find function `root_name` in this scope[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:585:13
-    [1m[94m|[0m
-[1m[94m585[0m [1m[94m|[0m             root_name(&next),
-    [1m[94m|[0m             [1m[91m^^^^^^^^^[0m [1m[91mnot found in this scope[0m
-
-[1m[91merror[E0308][0m[1m: mismatched types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/shell/history.rs:154:40
-    [1m[94m|[0m
-[1m[94m154[0m [1m[94m|[0m                 self.install(previous, floor, &[changes, gone].concat(), cx);
-    [1m[94m|[0m                      [1m[94m-------[0m           [1m[91m^^^^^[0m [1m[91mexpected `Ref`, found `u32`[0m
-    [1m[94m|[0m                      [1m[94m|[0m
-    [1m[94m|[0m                      [1m[94marguments to this method are incorrect[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: method defined here
-   [1m[94m--> [0mcrates/rbx_studio/src/shell/history.rs:242:8
-    [1m[94m|[0m
-[1m[94m242[0m [1m[94m|[0m     fn install(&mut self, dom: WeakDom, floor: Ref, changes: &[Change], cx: &mut Context<Self>) {
-    [1m[94m|[0m        [1m[92m^^^^^^^[0m                          [1m[94m----------[0m
-
-[1m[91merror[E0308][0m[1m: mismatched types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/shell/history.rs:182:36
-    [1m[94m|[0m
-[1m[94m182[0m [1m[94m|[0m                 self.install(next, floor, &[changes, gone].concat(), cx);
-    [1m[94m|[0m                      [1m[94m-------[0m       [1m[91m^^^^^[0m [1m[91mexpected `Ref`, found `u32`[0m
-    [1m[94m|[0m                      [1m[94m|[0m
-    [1m[94m|[0m                      [1m[94marguments to this method are incorrect[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: method defined here
-   [1m[94m--> [0mcrates/rbx_studio/src/shell/history.rs:242:8
-    [1m[94m|[0m
-[1m[94m242[0m [1m[94m|[0m     fn install(&mut self, dom: WeakDom, floor: Ref, changes: &[Change], cx: &mut Context<Self>) {
-    [1m[94m|[0m        [1m[92m^^^^^^^[0m                          [1m[94m----------[0m
-
-[1m[91merror[E0308][0m[1m: mismatched types[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/shell/history.rs:244:33
-    [1m[94m|[0m
-[1m[94m244[0m [1m[94m|[0m         self.dom.raise_next_ref(floor);
-    [1m[94m|[0m                  [1m[94m--------------[0m [1m[91m^^^^^[0m [1m[91mexpected `u32`, found `Ref`[0m
-    [1m[94m|[0m                  [1m[94m|[0m
-    [1m[94m|[0m                  [1m[94marguments to this method are incorrect[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: method defined here
-   [1m[94m--> [0mcrates/rbx_dom/src/dom.rs:216:12
-    [1m[94m|[0m
-[1m[94m216[0m [1m[94m|[0m     pub fn raise_next_ref(&mut self, floor: u32) {
-    [1m[94m|[0m            [1m[92m^^^^^^^^^^^^^^[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `undone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:801:15
-    [1m[94m|[0m
-[1m[94m801[0m [1m[94m|[0m         apply(&mut undone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m800[0m [1m[94m| [0m        let ([92mmut [0mundone, writes) = property_step(history.undo_step(dom.clone()));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `redone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:807:15
-    [1m[94m|[0m
-[1m[94m807[0m [1m[94m|[0m         apply(&mut redone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m806[0m [1m[94m| [0m        let ([92mmut [0mredone, writes) = property_step(history.redo_step(undone));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `undone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:921:15
-    [1m[94m|[0m
-[1m[94m921[0m [1m[94m|[0m         apply(&mut undone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m920[0m [1m[94m| [0m        let ([92mmut [0mundone, writes) = property_step(history.undo_step(dom.clone()));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `redone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:929:15
-    [1m[94m|[0m
-[1m[94m929[0m [1m[94m|[0m         apply(&mut redone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m928[0m [1m[94m| [0m        let ([92mmut [0mredone, writes) = property_step(history.redo_step(undone));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `undone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:958:15
-    [1m[94m|[0m
-[1m[94m958[0m [1m[94m|[0m         apply(&mut undone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m957[0m [1m[94m| [0m        let ([92mmut [0mundone, writes) = property_step(history.undo_step(dom));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `redone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:966:15
-    [1m[94m|[0m
-[1m[94m966[0m [1m[94m|[0m         apply(&mut redone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m965[0m [1m[94m| [0m        let ([92mmut [0mredone, writes) = property_step(history.redo_step(undone));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `undone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:980:15
-    [1m[94m|[0m
-[1m[94m980[0m [1m[94m|[0m         apply(&mut undone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m979[0m [1m[94m| [0m        let ([92mmut [0mundone, writes) = property_step(history.undo_step(redone));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `redone` as mutable, as it is not declared as mutable[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/history.rs:988:15
-    [1m[94m|[0m
-[1m[94m988[0m [1m[94m|[0m         apply(&mut redone, &writes);
-    [1m[94m|[0m               [1m[91m^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-    [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-    [1m[94m|[0m
-[1m[94m987[0m [1m[94m| [0m        let ([92mmut [0mredone, writes) = property_step(history.redo_step(undone));
-    [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `current` as mutable, as it is not declared as mutable[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/history.rs:1029:15
-     [1m[94m|[0m
-[1m[94m1029[0m [1m[94m|[0m         apply(&mut current, &writes);
-     [1m[94m|[0m               [1m[91m^^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-     [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-     [1m[94m|[0m
-[1m[94m1028[0m [1m[94m| [0m        let ([92mmut [0mcurrent, writes) = property_step(history.undo_step(dom));
-     [1m[94m|[0m              [92m+++[0m
-
-[1m[91merror[E0596][0m[1m: cannot borrow `current` as mutable, as it is not declared as mutable[0m
-    [1m[94m--> [0mcrates/rbx_studio/src/history.rs:1044:15
-     [1m[94m|[0m
-[1m[94m1044[0m [1m[94m|[0m         apply(&mut current, &writes);
-     [1m[94m|[0m               [1m[91m^^^^^^^^^^^^[0m [1m[91mcannot borrow as mutable[0m
-     [1m[94m|[0m
-[1m[96mhelp[0m: consider changing this to be mutable
-     [1m[94m|[0m
-[1m[94m1043[0m [1m[94m| [0m        let ([92mmut [0mcurrent, writes) = property_step(history.redo_step(current));
-     [1m[94m|[0m              [92m+++[0m
-
-[1mFor more information about this error, try `rustc --explain E0308`.[0m
-[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 3 previous errors
+[1m[91merror[0m: could not compile `rbx_studio` (lib) due to 2 previous errors
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1mSome errors have detailed explanations: E0308, E0425, E0596.[0m
-[1mFor more information about an error, try `rustc --explain E0308`.[0m
-[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 17 previous errors
 fmt=0 clippy=101 test=0
