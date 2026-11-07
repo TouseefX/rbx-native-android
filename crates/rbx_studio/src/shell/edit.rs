@@ -21,8 +21,9 @@ use gpui_kit::component::select::{SearchableVec, SelectEvent, SelectState};
 use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::component::IndexPath;
 use gpui_kit::*;
-use rbx_dom::WeakDom;
+use rbx_dom::{Ref, Variant, WeakDom};
 
+use crate::history::PropertyWrite;
 use crate::properties::{
     self, edit::NAME_PROPERTY, slider_range, EditKind, Field, FieldGroup, FieldKind, PropertyRow,
 };
@@ -641,6 +642,26 @@ impl Shell {
         cx.notify();
     }
 
+    /// The value `name` holds on every selected instance right now (`None`
+    /// where it is absent): the half of a Properties edit's inverse that has
+    /// to be read before the write, since the write overwrites it (see
+    /// `apply_edit`).
+    fn selected_olds(&self, name: &str) -> Vec<(Ref, Option<Variant>)> {
+        self.selected_all()
+            .iter()
+            .copied()
+            .map(|referent| {
+                (
+                    referent,
+                    self.dom
+                        .get(referent)
+                        .and_then(|instance| instance.properties().get(name))
+                        .cloned(),
+                )
+            })
+            .collect()
+    }
+
     /// Writes one edit to every selected instance through the Command Bar's
     /// own take/put-back path, as one undo step however many there are, then
     /// reflects it exactly as a script's mutation would: the Properties panel
@@ -691,11 +712,16 @@ impl Shell {
             return result;
         }
 
-        // See `shell::history`: snapshotted before the write below, and
-        // pushed only once it wrote something (see `push_history_snapshot`).
+        // See `shell::history`: the step's inverse is read before the write
+        // and filed only once the write has landed, like the snapshot this
+        // path used to take. Each selected instance's current value of the
+        // property is what undo puts back; the value the write leaves is
+        // read back after it. A whole-place snapshot here was a second copy
+        // of the place per click — the same out-of-memory abort a script
+        // commit's snapshot was (see `history::PropertyWrite`).
         let before = push.then(|| {
             self.dom.take_changes();
-            self.dom.clone()
+            self.selected_olds(name)
         });
         let selection = self.selected_all().to_vec();
         let mut dom = std::mem::replace(&mut self.dom, WeakDom::new());
@@ -707,11 +733,23 @@ impl Shell {
         let changes = self.dom.take_changes();
         self.reflect_changes(&changes, cx);
         match before {
-            Some(_) if changes.is_empty() => {}
-            Some(before) => {
-                self.push_history_snapshot(before);
-                self.record_history_change(changes);
+            Some(olds) if !changes.is_empty() => {
+                let writes = olds
+                    .into_iter()
+                    .map(|(referent, old)| PropertyWrite {
+                        referent,
+                        name: name.to_owned(),
+                        old,
+                        new: self
+                            .dom
+                            .get(referent)
+                            .and_then(|instance| instance.properties().get(name))
+                            .cloned(),
+                    })
+                    .collect();
+                self.push_property_writes(writes);
             }
+            Some(_) => {}
             None => self.record_history_change(changes),
         }
         result?;

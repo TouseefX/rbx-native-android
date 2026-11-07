@@ -20,9 +20,10 @@
 //! editor's behalf.
 
 use gpui_kit::Context;
-use rbx_dom::{Change, WeakDom};
+use rbx_dom::{Change, Ref, Variant, WeakDom};
 
-use crate::history;
+use crate::history::{self, PropertyWrite, Stepped};
+use crate::properties::edit::NAME_PROPERTY;
 
 use super::Shell;
 
@@ -73,6 +74,24 @@ impl Shell {
         self.history.push(before);
     }
 
+    /// [`Shell::push_history_snapshot`] for an edit that is property
+    /// writes: the step files each write's old and new values as its own
+    /// inverse (see `history::PropertyWrite`) instead of a snapshot of the
+    /// tree. A script's debounced `Source` write and a Properties-panel
+    /// commit fire per pause in typing and per click, and a whole-place
+    /// snapshot per step was a second copy of a joined game in memory —
+    /// the allocation of it is what the phone died on. The live tree's
+    /// fitting preview is left exactly where it is: the step installs no
+    /// tree, so none of `install`'s preview bookkeeping is owed.
+    pub(super) fn push_property_writes(&mut self, writes: Vec<PropertyWrite>) {
+        // Plugin edits made before this one are a step of their own, below.
+        self.commit_plugin_step();
+        // Every recorded edit lands here, snapshots and property steps
+        // alike (see `Shell::push_history_snapshot`).
+        self.recovery.changed();
+        self.history.push_properties(writes);
+    }
+
     /// The snapshot [`Shell::push_history_snapshot`] takes, drained of the
     /// stale change log like [`Shell::push_history`], for a mutation that may
     /// write nothing (an equal value, a refused name).
@@ -117,10 +136,28 @@ impl Shell {
         // the pending write would then land on top of the undone DOM.
         self.commit_plugin_step();
         self.flush_script_edits(cx);
-        let (current, gone) = self.history_copy();
-        if let Some((previous, changes)) = self.history.undo(current) {
-            self.install(previous, &[changes, gone].concat(), cx);
-            self.autorig_follow_history(cx);
+        if !self.history.can_undo() {
+            return;
+        }
+        // The live tree is taken out by value — the redo stack keeps it —
+        // rather than cloned first: a copy of the place per Ctrl+Z was the
+        // same out-of-memory abort the per-commit snapshots were. The
+        // fitting preview is stripped in place on the way past, and the
+        // viewport told: installing any step takes the preview out, and the
+        // Fitting Tool builds it again (see `history_installs`).
+        let floor = self.dom.next_ref();
+        let mut current = std::mem::replace(&mut self.dom, WeakDom::new());
+        let gone = super::ugc::strip_preview(&mut current);
+        match self.history.undo_step(current) {
+            Stepped::Unchanged(dom) => self.dom = dom,
+            Stepped::Snapshot(previous, changes) => {
+                self.install(previous, floor, &[changes, gone].concat(), cx);
+                self.autorig_follow_history(cx);
+            }
+            Stepped::Property(dom, writes) => {
+                self.dom = dom;
+                self.apply_history_writes(writes, &gone, cx);
+            }
         }
     }
 
@@ -132,21 +169,59 @@ impl Shell {
         }
         self.commit_plugin_step();
         self.flush_script_edits(cx);
-        let (current, gone) = self.history_copy();
-        if let Some((next, changes)) = self.history.redo(current) {
-            self.install(next, &[changes, gone].concat(), cx);
-            self.autorig_follow_history(cx);
+        if !self.history.can_redo() {
+            return;
+        }
+        // See `undo`: the tree moves, it is not copied.
+        let floor = self.dom.next_ref();
+        let mut current = std::mem::replace(&mut self.dom, WeakDom::new());
+        let gone = super::ugc::strip_preview(&mut current);
+        match self.history.redo_step(current) {
+            Stepped::Unchanged(dom) => self.dom = dom,
+            Stepped::Snapshot(next, changes) => {
+                self.install(next, floor, &[changes, gone].concat(), cx);
+                self.autorig_follow_history(cx);
+            }
+            Stepped::Property(dom, writes) => {
+                self.dom = dom;
+                self.apply_history_writes(writes, &gone, cx);
+            }
         }
     }
 
-    /// `self.dom` as the redo (or undo) stack keeps it, without the fitting
-    /// preview, and the preview's removals: installing any step takes the
-    /// preview out, and the viewport has to be told. The Fitting Tool builds
-    /// it again (see `history_installs`).
-    fn history_copy(&self) -> (WeakDom, Vec<Change>) {
-        let mut dom = self.dom.clone();
-        let gone = super::ugc::strip_preview(&mut dom);
-        (dom, gone)
+    /// Applies a property step's writes to the live tree — each write's
+    /// `old` for an undo, its `new` for a redo — and reflects them exactly
+    /// the way the forward edit reflected itself: the same `Change` log a
+    /// property write produces, the Properties panel re-reading the DOM,
+    /// and the Explorer rebuilt when the step wrote a `Name`. No tree is
+    /// installed, so none of `install`'s referent-floor or selection
+    /// bookkeeping is owed: the tree never changed identity, only values
+    /// on it.
+    fn apply_history_writes(
+        &mut self,
+        writes: Vec<(Ref, String, Option<Variant>)>,
+        gone: &[Change],
+        cx: &mut Context<Self>,
+    ) {
+        let mut renamed = false;
+        for (referent, name, value) in writes {
+            renamed |= name == NAME_PROPERTY;
+            match value {
+                Some(value) => {
+                    let _ = self.dom.set_property(referent, &name, value);
+                }
+                None => {
+                    let _ = self.dom.remove_property(referent, &name);
+                }
+            }
+        }
+        let changes = self.dom.take_changes();
+        self.reflect_changes(&[changes, gone.to_vec()].concat(), cx);
+        self.properties.dom_changed(&[]);
+        if renamed {
+            self.rebuild_explorer(cx);
+        }
+        cx.notify();
     }
 
     /// Installs `dom` as the canonical tree and reflects it in the viewport
@@ -158,11 +233,13 @@ impl Shell {
     /// selected rather than just its anchor. The selection settles before
     /// the viewport is told, since what the viewport refreshes on this side
     /// depends on it.
-    fn install(&mut self, dom: WeakDom, changes: &[Change], cx: &mut Context<Self>) {
-        // Instances allocated after `dom` was copied may live on outside it
-        // (a plugin's parked widgets, see `shell::plugins`): its allocator
-        // must never hand their referents out again.
-        let floor = self.dom.next_ref();
+    ///
+    /// `floor` is the referent the tree being replaced had reached, read
+    /// before it was taken out (see `undo`): instances allocated after
+    /// `dom` was copied may live on outside it (a plugin's parked widgets,
+    /// see `shell::plugins`), and its allocator must never hand their
+    /// referents out again.
+    fn install(&mut self, dom: WeakDom, floor: Ref, changes: &[Change], cx: &mut Context<Self>) {
         self.dom = dom;
         self.dom.raise_next_ref(floor);
         self.history_installs += 1;
@@ -220,7 +297,7 @@ impl Shell {
 mod tests {
     use rbx_dom::{CFrameData, Change, Ref, Variant, Vector3Data, WeakDom};
 
-    use crate::history::{History, DEFAULT_CAP};
+    use crate::history::{History, PropertyWrite, DEFAULT_CAP};
     use crate::script_editor::source;
 
     fn write(referent: Ref, name: &str) -> Change {
@@ -534,11 +611,22 @@ mod tests {
         .unwrap();
 
         let mut history = History::new(DEFAULT_CAP);
-        // `shell::scripts::commit_script`, in the order it runs.
+        // `shell::scripts::commit_script`, in the order it runs: drain, read
+        // the old value, write, file the write as its own inverse (see
+        // `history::PropertyWrite` — no whole-place snapshot).
         dom.take_changes();
-        history.push(dom.clone());
+        let old = dom
+            .get(script)
+            .and_then(|instance| instance.properties().get(source::SOURCE_PROPERTY))
+            .cloned();
         assert!(source::write(&mut dom, script, "print(2)\n"));
-        history.record_changes(dom.take_changes());
+        history.push_properties(vec![PropertyWrite {
+            referent: script,
+            name: source::SOURCE_PROPERTY.to_owned(),
+            old,
+            new: Some(Variant::String("print(2)\n".into())),
+        }]);
+        dom.take_changes();
 
         // What the tab holds on screen once its own debounced write landed.
         let synced = "print(2)\n";

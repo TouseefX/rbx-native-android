@@ -22,11 +22,24 @@
 //! script typing, the one mutation path that fires per pause in typing,
 //! coalesces into one step per streak (see [`History::continues_streak`])
 //! instead of minting a snapshot each.
+//!
+//! And the budget bounds what the stack holds, not what taking a snapshot
+//! costs: the clone is a second copy of the place for as long as it is being
+//! made, on top of the first, before `push` can measure and trim anything.
+//! The two paths that fire per keystroke and per click cannot afford that at
+//! all — a script editor's debounced `Source` write and a Properties-panel
+//! commit file their steps as the writes themselves (see [`PropertyWrite`]
+//! and [`History::push_properties`]): the value each write replaced and the
+//! value it left, `old` and `new`, which undo and redo apply directly to the
+//! live tree. One property reverts without the tree ever being copied, and
+//! the transient that ran the phone out of memory is never allocated. The
+//! rarer, wider mutations — inserts, deletes, drags, script runs — keep
+//! their snapshots.
 
 use std::time::{Duration, Instant};
 
 use gpui_kit::Modifiers;
-use rbx_dom::{Change, Ref, WeakDom};
+use rbx_dom::{Change, Ref, Variant, WeakDom};
 
 /// How many undo steps are kept before the oldest is dropped, bounds memory
 /// rather than growing the stack for the length of a whole editing session.
@@ -66,30 +79,63 @@ pub(crate) fn action_for(key: &str, modifiers: Modifiers) -> Option<Action> {
     }
 }
 
-/// One snapshot on either stack: the DOM as it stood at that point, plus the
-/// `Change` log the mutation right after it went on to produce. Handed by
-/// `shell::history::install` to `shell::command`'s `reflect_changes`: the
-/// same path an ordinary edit's viewport reflection takes, so the viewport
-/// patches exactly the instances the step touched, without re-diffing two
-/// `WeakDom` trees to find them.
-///
-/// `changes` starts empty and is filled in once, after the fact, by
-/// [`History::record_changes`], `push` runs *before* the mutation it
-/// snapshots, so the log it produces isn't known yet. An entry whose
-/// mutation never actually changed anything (a Properties-panel commit that
-/// failed validation, say) simply keeps the empty log `push` left it with,
-/// and reflecting an empty log is a no-op.
+/// One property write, filed as its own inverse: what the property held
+/// before the step (`old`) and what the step left it holding (`new`),
+/// `None` on either side for a property that was absent. Undo applies
+/// `old` back — removing the property when it was absent — redo applies
+/// `new`, and neither direction ever holds a copy of the tree: a
+/// whole-place snapshot per script commit was the second copy of the
+/// place that ran the phone out of memory (see the module doc).
+#[derive(Clone, Debug)]
+pub(crate) struct PropertyWrite {
+    pub(crate) referent: Ref,
+    pub(crate) name: String,
+    pub(crate) old: Option<Variant>,
+    pub(crate) new: Option<Variant>,
+}
+
+/// What one step hands back to the shell's undo and redo. The DOM the
+/// caller passes in is consumed onto the opposite stack for a snapshot
+/// step and handed straight back otherwise, so every variant carries the
+/// DOM the caller should end up holding.
+pub(crate) enum Stepped {
+    /// A snapshot step: the tree as it stood before the step for an undo,
+    /// as it stands now for a redo, plus the log to reflect against it.
+    Snapshot(WeakDom, Vec<Change>),
+    /// A property step: the caller's own tree back, untouched, plus the
+    /// writes to apply to it — each write's `old` for an undo, its `new`
+    /// for a redo, with `None` removing the property.
+    Property(WeakDom, Vec<(Ref, String, Option<Variant>)>),
+    /// No step to take: the caller's tree, unchanged.
+    Unchanged(WeakDom),
+}
+
+/// One step on either stack.
 struct Entry {
-    dom: WeakDom,
-    changes: Vec<Change>,
+    /// What the step is: a whole tree, or property writes that are their
+    /// own inverse. See [`Step`].
+    step: Step,
     /// When the entry was last written to: pushed, or continued by
-    /// [`History::record_continued_change`]. Read by
+    /// [`History::continue_streak`]. Read by
     /// [`History::continues_streak`] to decide whether a script's next
     /// debounced write still belongs to this step.
     at: Instant,
-    /// `dom.retained_bytes()`, taken once at construction so the budget
-    /// never re-walks a tree to know what it is holding.
+    /// What the entry retains: `dom.retained_bytes()` for a snapshot, the
+    /// writes' values for a property step (see [`write_bytes`]), taken
+    /// once at construction so the budget never re-walks a tree to know
+    /// what it is holding.
     bytes: usize,
+}
+
+/// The two kinds of step the stacks hold.
+enum Step {
+    /// The DOM as it stood before the mutation, plus the `Change` log that
+    /// mutation went on to produce (see [`History::record_changes`]):
+    /// what a snapshot step's undo hands back to install.
+    Snapshot { dom: WeakDom, changes: Vec<Change> },
+    /// The writes of a property step, each its own inverse: undo applies
+    /// `old`, redo applies `new`, and no tree is held at all.
+    Properties { writes: Vec<PropertyWrite> },
 }
 
 /// A bounded stack of DOM snapshots either side of the current state: `undo`
@@ -138,8 +184,32 @@ impl History {
         let bytes = dom.retained_bytes();
         self.undo_bytes += bytes;
         self.undo.push(Entry {
-            dom,
-            changes: Vec::new(),
+            step: Step::Snapshot {
+                dom,
+                changes: Vec::new(),
+            },
+            at: Instant::now(),
+            bytes,
+        });
+        self.redo.clear();
+        self.redo_bytes = 0;
+        self.trim();
+        self.revision += 1;
+    }
+
+    /// Files `writes` as one undo step that is its own inverse: undo
+    /// applies each write's `old`, redo its `new`, and the step never
+    /// holds a copy of the tree. For the edits this exists for — a
+    /// script's `Source` on a typing debounce, a Properties-panel commit
+    /// over a selection — a whole-place snapshot cost a second copy of
+    /// the place per step, transiently two while it was taken, which on
+    /// a device-sized place is the difference between an undo history
+    /// and an out-of-memory abort (see the module doc).
+    pub(crate) fn push_properties(&mut self, writes: Vec<PropertyWrite>) {
+        let bytes = writes.iter().map(write_bytes).sum();
+        self.undo_bytes += bytes;
+        self.undo.push(Entry {
+            step: Step::Properties { writes },
             at: Instant::now(),
             bytes,
         });
@@ -158,32 +228,62 @@ impl History {
         }
     }
 
+    /// Whether [`History::undo`] has a step to take. The shell asks before
+    /// taking its DOM out to hand over: a no-op undo must not cost the
+    /// live tree its fitting preview (see `shell::history`).
+    pub(crate) fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
+
+    /// [`History::can_undo`] for the redo stack.
+    pub(crate) fn can_redo(&self) -> bool {
+        !self.redo.is_empty()
+    }
+
     pub(crate) fn revision(&self) -> u64 {
         self.revision
     }
 
-    /// Attaches `changes` to the entry `push` most recently added, see
-    /// [`Entry`]'s doc comment. A no-op if nothing has been pushed yet
-    /// (should not happen given `Shell::push_history`'s own call sites, but
-    /// costs nothing to guard).
+    /// Attaches `changes` to the snapshot entry `push` most recently
+    /// added, see [`Entry`]'s doc comment. A no-op if nothing has been
+    /// pushed yet (should not happen given `Shell::push_history`'s own
+    /// call sites, but costs nothing to guard), and a no-op on a property
+    /// step, which reflects what undo applies rather than a log.
     pub(crate) fn record_changes(&mut self, changes: Vec<Change>) {
         if let Some(entry) = self.undo.last_mut() {
-            entry.changes = changes;
+            if let Step::Snapshot { changes: log, .. } = &mut entry.step {
+                *log = changes;
+            }
         }
     }
 
-    /// [`History::record_changes`] for a write that continued the top
-    /// entry's step rather than starting one of its own (a typing streak,
-    /// see [`History::continues_streak`]): the log is re-recorded against
-    /// the snapshot already there, the tree as it stood before the streak
-    /// began, and `revision` moves, because the tree changed without a
-    /// `push`.
-    pub(crate) fn record_continued_change(&mut self, changes: Vec<Change>) {
+    /// A typing streak's latest commit, recorded against the step already
+    /// on top of the undo stack: for a property step the write's `new`
+    /// becomes `value` — its `old` still standing from before the streak
+    /// began — and for a snapshot step the log is re-recorded against the
+    /// tree as it stood before the streak began (a Properties-panel
+    /// `Source` edit continued from the editor lands there). `revision`
+    /// moves either way: the tree changed without a push.
+    pub(crate) fn continue_streak(
+        &mut self,
+        script: Ref,
+        property: &str,
+        value: Option<Variant>,
+        changes: Vec<Change>,
+    ) {
         if let Some(entry) = self.undo.last_mut() {
-            entry.changes = changes;
+            match &mut entry.step {
+                Step::Properties { writes } => match writes.as_mut_slice() {
+                    [write] if write.referent == script && write.name == property => {
+                        write.new = value;
+                    }
+                    _ => {}
+                },
+                Step::Snapshot { changes: log, .. } => *log = changes,
+            }
             entry.at = Instant::now();
+            self.revision += 1;
         }
-        self.revision += 1;
     }
 
     /// Whether the entry on top of the undo stack is `script`'s typing
@@ -209,52 +309,150 @@ impl History {
         let Some(entry) = self.undo.last() else {
             return false;
         };
-        now.duration_since(entry.at) <= within
-            && matches!(
-                entry.changes.as_slice(),
-                [Change::Property { referent, name }] if *referent == script && name.as_str() == property
-            )
+        if now.duration_since(entry.at) > within {
+            return false;
+        }
+        match &entry.step {
+            // A property step is the streak's own shape: one write to the
+            // script's property.
+            Step::Properties { writes } => matches!(
+                writes.as_slice(),
+                [write] if write.referent == script && write.name == property
+            ),
+            // A snapshot step qualifies by its log: the same single write,
+            // filed the Properties-panel way.
+            Step::Snapshot { changes, .. } => matches!(
+                changes.as_slice(),
+                [Change::Property { referent, name }]
+                    if *referent == script && name.as_str() == property
+            ),
+        }
     }
 
-    /// Pops the last snapshot, pushes `current` onto the redo stack, paired
-    /// with the same `Change` log, since redoing this step reapplies exactly
-    /// the mutation undoing it just reverted, and returns the popped DOM
-    /// plus that log, for the caller to classify and install. `None` with
-    /// nothing to undo, a no-op that leaves both stacks untouched.
-    pub(crate) fn undo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
-        let previous = self.undo.pop()?;
+    /// Pops the last step. A snapshot step consumes `current` onto the redo
+    /// stack — paired with the same `Change` log, since redoing it reapplies
+    /// exactly the mutation undoing it just reverted — and hands the popped
+    /// DOM plus that log back for the caller to install. A property step
+    /// hands `current` straight back with each write's `old` to apply to it,
+    /// and files the writes swapped — `new` where `old` stood — onto the
+    /// redo stack for the redo to apply back. [`Stepped::Unchanged`] with
+    /// nothing to undo, a no-op that leaves both stacks and the DOM alone.
+    pub(crate) fn undo_step(&mut self, current: WeakDom) -> Stepped {
+        let Some(previous) = self.undo.pop() else {
+            return Stepped::Unchanged(current);
+        };
         self.undo_bytes -= previous.bytes;
         self.revision += 1;
-        let bytes = current.retained_bytes();
-        self.redo_bytes += bytes;
-        self.redo.push(Entry {
-            dom: current,
-            changes: previous.changes.clone(),
-            at: Instant::now(),
-            bytes,
-        });
-        self.trim_redo();
-        Some((previous.dom, previous.changes))
+        match previous.step {
+            Step::Snapshot { dom, changes } => {
+                let bytes = current.retained_bytes();
+                self.redo_bytes += bytes;
+                self.redo.push(Entry {
+                    step: Step::Snapshot {
+                        dom: current,
+                        changes: changes.clone(),
+                    },
+                    at: Instant::now(),
+                    bytes,
+                });
+                self.trim_redo();
+                Stepped::Snapshot(dom, changes)
+            }
+            Step::Properties { writes } => {
+                let undone = writes
+                    .iter()
+                    .map(|write| (write.referent, write.name.clone(), write.old.clone()))
+                    .collect();
+                self.redo_bytes += previous.bytes;
+                self.redo.push(Entry {
+                    step: Step::Properties {
+                        writes: swapped(&writes),
+                    },
+                    at: Instant::now(),
+                    bytes: previous.bytes,
+                });
+                self.trim_redo();
+                Stepped::Property(current, undone)
+            }
+        }
     }
 
-    /// Symmetric to [`History::undo`]: pops the last undone snapshot, pushes
-    /// `current` back onto the undo stack (with the same log, for the same
-    /// reason `undo` carries it onto `redo`), and returns the popped DOM
-    /// plus that log.
-    pub(crate) fn redo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
-        let next = self.redo.pop()?;
+    /// Symmetric to [`History::undo_step`]: pops the last undone step,
+    /// snapshot or property, files `current` (or the swapped writes) back
+    /// onto the undo stack, and hands back what the caller should hold and
+    /// apply.
+    pub(crate) fn redo_step(&mut self, current: WeakDom) -> Stepped {
+        let Some(next) = self.redo.pop() else {
+            return Stepped::Unchanged(current);
+        };
         self.redo_bytes -= next.bytes;
         self.revision += 1;
-        let bytes = current.retained_bytes();
-        self.undo_bytes += bytes;
-        self.undo.push(Entry {
-            dom: current,
-            changes: next.changes.clone(),
-            at: Instant::now(),
-            bytes,
-        });
-        self.trim();
-        Some((next.dom, next.changes))
+        match next.step {
+            Step::Snapshot { dom, changes } => {
+                let bytes = current.retained_bytes();
+                self.undo_bytes += bytes;
+                self.undo.push(Entry {
+                    step: Step::Snapshot {
+                        dom: current,
+                        changes: changes.clone(),
+                    },
+                    at: Instant::now(),
+                    bytes,
+                });
+                self.trim();
+                Stepped::Snapshot(dom, changes)
+            }
+            Step::Properties { writes } => {
+                let redone = writes
+                    .iter()
+                    .map(|write| (write.referent, write.name.clone(), write.new.clone()))
+                    .collect();
+                self.undo_bytes += next.bytes;
+                self.undo.push(Entry {
+                    step: Step::Properties {
+                        writes: swapped(&writes),
+                    },
+                    at: Instant::now(),
+                    bytes: next.bytes,
+                });
+                self.trim();
+                Stepped::Property(current, redone)
+            }
+        }
+    }
+
+    /// [`History::undo_step`] with the property half applied on the way
+    /// out: a property step's writes are applied to the caller's own tree
+    /// — which is handed back — and the log they produce returned beside
+    /// it, so a caller that only wants "the tree as it stood, and the log
+    /// to reflect against it" sees one shape whatever kind the step was.
+    /// The shell's undo uses [`History::undo_step`] directly instead,
+    /// applying the writes through the live tree's own reflection path.
+    /// `None` with nothing to undo, as ever a no-op.
+    pub(crate) fn undo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
+        match self.undo_step(current) {
+            Stepped::Snapshot(dom, changes) => Some((dom, changes)),
+            Stepped::Property(mut dom, writes) => {
+                apply_writes(&mut dom, &writes);
+                let changes = dom.take_changes();
+                Some((dom, changes))
+            }
+            Stepped::Unchanged(_) => None,
+        }
+    }
+
+    /// [`History::redo`]'s shape over [`History::redo_step`]: the property
+    /// half applied, the log it produces returned.
+    pub(crate) fn redo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
+        match self.redo_step(current) {
+            Stepped::Snapshot(dom, changes) => Some((dom, changes)),
+            Stepped::Property(mut dom, writes) => {
+                apply_writes(&mut dom, &writes);
+                let changes = dom.take_changes();
+                Some((dom, changes))
+            }
+            Stepped::Unchanged(_) => None,
+        }
     }
 
     /// [`History::trim`] for the redo stack: past the budget the oldest
@@ -268,6 +466,49 @@ impl History {
     }
 }
 
+/// Applies property-step writes to a tree: what [`History::undo`] and
+/// [`History::redo`] do with the property half of what a step hands back,
+/// applying each write's `old` (or `new`) and letting the tree's own change
+/// log say what was touched.
+fn apply_writes(dom: &mut WeakDom, writes: &[(Ref, String, Option<Variant>)]) {
+    for (referent, name, value) in writes {
+        match value {
+            Some(value) => {
+                let _ = dom.set_property(*referent, name, value.clone());
+            }
+            None => {
+                let _ = dom.remove_property(*referent, name);
+            }
+        }
+    }
+}
+
+/// The same writes with `old` and `new` exchanged: what undoing a property
+/// step files onto the redo stack, and what redoing one files back onto
+/// undo, so each direction's step is the other's inverse.
+fn swapped(writes: &[PropertyWrite]) -> Vec<PropertyWrite> {
+    writes
+        .iter()
+        .map(|write| PropertyWrite {
+            referent: write.referent,
+            name: write.name.clone(),
+            old: write.new.clone(),
+            new: write.old.clone(),
+        })
+        .collect()
+}
+
+/// What one property write retains: the write's own size plus its two
+/// values', in `Variant::retained_bytes`' over-estimating spirit, so a
+/// history of big scripts stays inside [`RETAINED_BUDGET`] the same way a
+/// history of snapshots does.
+fn write_bytes(write: &PropertyWrite) -> usize {
+    std::mem::size_of::<PropertyWrite>()
+        + write.name.len()
+        + write.old.as_ref().map_or(0, Variant::retained_bytes)
+        + write.new.as_ref().map_or(0, Variant::retained_bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,12 +519,41 @@ mod tests {
         dom
     }
 
-    fn root_name(dom: &WeakDom) -> String {
-        dom.root_refs()
-            .first()
-            .and_then(|r| dom.get(*r))
-            .map(|instance| instance.name().to_string())
-            .expect("a root instance")
+    /// The snapshot half of what a step hands back, as the shell's snapshot
+    /// arm consumes it.
+    fn snapshot_step(step: Stepped) -> (WeakDom, Vec<Change>) {
+        match step {
+            Stepped::Snapshot(dom, changes) => (dom, changes),
+            Stepped::Property(..) | Stepped::Unchanged(..) => {
+                panic!("expected a snapshot step")
+            }
+        }
+    }
+
+    /// The property half of what a step hands back, as the shell's property
+    /// arm consumes it.
+    fn property_step(step: Stepped) -> (WeakDom, Vec<(Ref, String, Option<Variant>)>) {
+        match step {
+            Stepped::Property(dom, writes) => (dom, writes),
+            Stepped::Snapshot(..) | Stepped::Unchanged(..) => {
+                panic!("expected a property step")
+            }
+        }
+    }
+
+    /// `Shell::apply_history_writes`: what the shell does with the writes a
+    /// property step hands back.
+    fn apply(dom: &mut WeakDom, writes: &[(Ref, String, Option<Variant>)]) {
+        for (referent, name, value) in writes {
+            match value {
+                Some(value) => {
+                    dom.set_property(*referent, name, value.clone()).unwrap();
+                }
+                None => {
+                    dom.remove_property(*referent, name).unwrap();
+                }
+            }
+        }
     }
 
     #[test]
@@ -293,10 +563,10 @@ mod tests {
         let after = named("After");
 
         history.push(before);
-        let (undone, _) = history.undo(after.clone()).expect("something to undo");
+        let (undone, _) = snapshot_step(history.undo_step(after.clone()));
         assert_eq!(root_name(&undone), "Before");
 
-        let (redone, _) = history.redo(undone).expect("something to redo");
+        let (redone, _) = snapshot_step(history.redo_step(undone));
         assert_eq!(root_name(&redone), "After");
     }
 
@@ -308,11 +578,9 @@ mod tests {
         history.push(named("Three"));
 
         assert_eq!(history.undo.len(), 2);
-        let (top, _) = history.undo(named("Current")).expect("something to undo");
+        let (top, _) = snapshot_step(history.undo_step(named("Current")));
         assert_eq!(root_name(&top), "Three");
-        let (next, _) = history
-            .undo(named("Current"))
-            .expect("still something to undo");
+        let (next, _) = snapshot_step(history.undo_step(named("Current")));
         assert_eq!(
             root_name(&next),
             "Two",
@@ -324,7 +592,7 @@ mod tests {
     fn a_new_push_clears_the_redo_stack() {
         let mut history = History::new(DEFAULT_CAP);
         history.push(named("Before"));
-        let (undone, _) = history.undo(named("After")).expect("something to undo");
+        let (undone, _) = snapshot_step(history.undo_step(named("After")));
         assert!(!history.redo.is_empty());
 
         history.push(undone);
@@ -344,14 +612,14 @@ mod tests {
         };
         history.record_changes(vec![change.clone()]);
 
-        let (undone, changes) = history.undo(named("After")).expect("something to undo");
+        let (undone, changes) = snapshot_step(history.undo_step(named("After")));
         assert_eq!(
             changes,
             vec![change.clone()],
             "the log recorded before undo travels with the snapshot"
         );
 
-        let (_, changes) = history.redo(undone).expect("something to redo");
+        let (_, changes) = snapshot_step(history.redo_step(undone));
         assert_eq!(
             changes,
             vec![change],
@@ -369,7 +637,10 @@ mod tests {
     #[test]
     fn undo_with_an_empty_stack_is_a_no_op() {
         let mut history = History::new(DEFAULT_CAP);
-        assert!(history.undo(named("Current")).is_none());
+        assert!(matches!(
+            history.undo_step(named("Current")),
+            Stepped::Unchanged(_)
+        ));
         assert!(history.undo.is_empty());
         assert!(history.redo.is_empty());
     }
@@ -377,7 +648,10 @@ mod tests {
     #[test]
     fn redo_with_an_empty_stack_is_a_no_op() {
         let mut history = History::new(DEFAULT_CAP);
-        assert!(history.redo(named("Current")).is_none());
+        assert!(matches!(
+            history.redo_step(named("Current")),
+            Stepped::Unchanged(_)
+        ));
     }
 
     #[test]
@@ -406,13 +680,19 @@ mod tests {
     #[test]
     fn revision_moves_on_every_change_and_not_on_a_no_op() {
         let mut history = History::new(DEFAULT_CAP);
-        assert!(history.undo(named("a")).is_none());
+        assert!(matches!(
+            history.undo_step(named("a")),
+            Stepped::Unchanged(_)
+        ));
         assert_eq!(history.revision(), 0);
         history.push(named("a"));
-        history.undo(named("b"));
-        history.redo(named("a"));
+        history.undo_step(named("b"));
+        history.redo_step(named("a"));
         assert_eq!(history.revision(), 3);
-        assert!(history.redo(named("b")).is_none());
+        assert!(matches!(
+            history.redo_step(named("b")),
+            Stepped::Unchanged(_)
+        ));
         assert_eq!(history.revision(), 3);
     }
 
@@ -439,9 +719,18 @@ mod tests {
         assert!(history.undo.first().unwrap().bytes > 24 * 1024);
 
         // Undo twice works; the third has nothing left to undo.
-        assert!(history.undo(named("now")).is_some());
-        assert!(history.undo(named("now")).is_some());
-        assert!(history.undo(named("now")).is_none());
+        assert!(!matches!(
+            history.undo_step(named("now")),
+            Stepped::Unchanged(_)
+        ));
+        assert!(!matches!(
+            history.undo_step(named("now")),
+            Stepped::Unchanged(_)
+        ));
+        assert!(matches!(
+            history.undo_step(named("now")),
+            Stepped::Unchanged(_)
+        ));
     }
 
     #[test]
@@ -454,7 +743,10 @@ mod tests {
             history.push(dom);
         }
         assert_eq!(history.undo.len(), 1);
-        assert!(history.undo(named("now")).is_some());
+        assert!(!matches!(
+            history.undo_step(named("now")),
+            Stepped::Unchanged(_)
+        ));
     }
 
     #[test]
@@ -468,19 +760,34 @@ mod tests {
         };
         let logged = |dom: &mut WeakDom| dom.take_changes();
 
-        // The first pause in a streak: `commit_script`'s snapshot path,
-        // drain first, push, write, record.
+        // The first pause in a streak: `commit_script`'s property path —
+        // drain, read the old value, write, file the write as its own
+        // inverse.
         dom.take_changes();
-        history.push(dom.clone());
+        let old = dom
+            .get(script)
+            .and_then(|instance| instance.properties().get("Source"))
+            .cloned();
         write_source(&mut dom, "print(2)\n");
-        history.record_changes(logged(&mut dom));
+        history.push_properties(vec![PropertyWrite {
+            referent: script,
+            name: "Source".to_string(),
+            old,
+            new: Some(rbx_dom::Variant::String("print(2)\n".into())),
+        }]);
+        logged(&mut dom);
 
         // The pauses after it, within the window: the write continues the
-        // step, and no further snapshot is taken.
+        // step, and nothing new is filed.
         assert!(history.continues_streak(script, "Source", window));
         write_source(&mut dom, "print(3)\n");
-        history.record_continued_change(logged(&mut dom));
-        assert_eq!(history.undo.len(), 1, "the streak added no snapshot");
+        history.continue_streak(
+            script,
+            "Source",
+            Some(rbx_dom::Variant::String("print(3)\n".into())),
+            logged(&mut dom),
+        );
+        assert_eq!(history.undo.len(), 1, "the streak added no step");
         assert!(history.continues_streak(script, "Source", window));
         assert_eq!(
             history.revision(),
@@ -490,21 +797,16 @@ mod tests {
 
         // One undo steps over the whole streak back to before it began; one
         // redo reinstates the streak's last text, not its first.
-        let (previous, changes) = history.undo(dom.clone()).expect("the streak to undo");
+        let (undone, writes) = property_step(history.undo_step(dom.clone()));
+        apply(&mut undone, &writes);
         assert_eq!(
-            changes,
-            vec![Change::Property {
-                referent: script,
-                name: "Source".to_string()
-            }]
-        );
-        assert_eq!(
-            previous.get(script).unwrap().properties().get("Source"),
+            undone.get(script).unwrap().properties().get("Source"),
             Some(&rbx_dom::Variant::String("x".repeat(16)))
         );
-        let (next, _) = history.redo(previous).expect("the streak to redo");
+        let (redone, writes) = property_step(history.redo_step(undone));
+        apply(&mut redone, &writes);
         assert_eq!(
-            next.get(script).unwrap().properties().get("Source"),
+            redone.get(script).unwrap().properties().get("Source"),
             Some(&rbx_dom::Variant::String("print(3)\n".into()))
         );
     }
@@ -516,7 +818,8 @@ mod tests {
         history.push(dom.clone());
         let window = Duration::from_secs(30);
 
-        // Nothing recorded yet: the top entry's log is not the streak.
+        // Nothing recorded yet: the top snapshot entry's log is not the
+        // streak.
         assert!(!history.continues_streak(script, "Source", window));
         dom.take_changes();
         dom.set_property(
@@ -532,11 +835,217 @@ mod tests {
         assert!(!history.continues_streak(script, "Health", window));
         let far = Instant::now() + window + window;
         assert!(!history.continues_streak_at(script, "Source", window, far));
-        // The streak itself: yes.
+        // The streak itself: yes — a snapshot step qualifies by its log, a
+        // property step by its write.
         assert!(history.continues_streak(script, "Source", window));
 
         // A step pushed on top ends it, wherever its own log points.
         history.push(named("a drag"));
         assert!(!history.continues_streak(script, "Source", window));
+
+        // A property step to another script or another property is not
+        // this streak's continuation either.
+        history.push_properties(vec![PropertyWrite {
+            referent: script,
+            name: "Source".to_string(),
+            old: None,
+            new: None,
+        }]);
+        assert!(history.continues_streak(script, "Source", window));
+        history.push_properties(vec![PropertyWrite {
+            referent: script,
+            name: "Health".to_string(),
+            old: None,
+            new: None,
+        }]);
+        assert!(!history.continues_streak(script, "Source", window));
+    }
+
+    /// The regression the device crash fixed: a script's step costs its
+    /// text, not the place. A snapshot of the same tree would have put the
+    /// tree's whole retained size on the stack's books.
+    #[test]
+    fn a_property_step_costs_its_values_not_the_place() {
+        let (dom, _) = script_with_source(64 * 1024);
+        let tree_bytes = dom.retained_bytes();
+        let mut history = History::with_limits(DEFAULT_CAP, 16 * 1024 * 1024);
+        history.push_properties(vec![PropertyWrite {
+            referent: rbx_dom::Ref::new(1),
+            name: "Source".to_string(),
+            old: Some(rbx_dom::Variant::String("x".repeat(16))),
+            new: Some(rbx_dom::Variant::String("y".repeat(16))),
+        }]);
+        assert!(
+            history.undo_bytes < tree_bytes,
+            "a property step must not retain the place: {} vs the tree's {}",
+            history.undo_bytes,
+            tree_bytes
+        );
+        assert_eq!(
+            history.undo_bytes,
+            std::mem::size_of::<PropertyWrite>()
+                + "Source".len()
+                + 32
+                + 2 * std::mem::size_of::<Variant>(),
+            "the two texts, twice the enum, and the write itself"
+        );
+
+        // And it undoes: the stack was never trimmed by the tree's size,
+        // only by the writes'.
+        assert!(!matches!(history.undo_step(dom), Stepped::Unchanged(_)));
+    }
+
+    #[test]
+    fn a_property_step_undoes_and_redoes_without_ever_holding_the_tree() {
+        let mut dom = WeakDom::new();
+        let script = dom.new_instance("ModuleScript", "Counter", None);
+        dom.set_property(
+            script,
+            "Source",
+            rbx_dom::Variant::String("print(1)\n".into()),
+        )
+        .unwrap();
+        dom.take_changes();
+
+        let mut history = History::new(DEFAULT_CAP);
+        history.push_properties(vec![PropertyWrite {
+            referent: script,
+            name: "Source".to_string(),
+            old: Some(rbx_dom::Variant::String("print(1)\n".into())),
+            new: Some(rbx_dom::Variant::String("print(2)\n".into())),
+        }]);
+
+        // Undo hands the caller's own tree back with the old value to
+        // apply; no snapshot is installed, the tree never changed identity.
+        let (undone, writes) = property_step(history.undo_step(dom.clone()));
+        apply(&mut undone, &writes);
+        assert_eq!(
+            undone.get(script).unwrap().properties().get("Source"),
+            Some(&rbx_dom::Variant::String("print(1)\n".into()))
+        );
+
+        // Redo reapplies the new value the same way.
+        let (redone, writes) = property_step(history.redo_step(undone));
+        apply(&mut redone, &writes);
+        assert_eq!(
+            redone.get(script).unwrap().properties().get("Source"),
+            Some(&rbx_dom::Variant::String("print(2)\n".into()))
+        );
+        assert!(!matches!(history.redo_step(redone), Stepped::Unchanged(_)));
+    }
+
+    /// A property that was absent before the step: undo removes it again
+    /// rather than writing some value, and a step that removed a property
+    /// has it redone as a removal.
+    #[test]
+    fn an_absent_property_is_undone_as_an_absence_and_redone_as_one() {
+        let mut dom = WeakDom::new();
+        let part = dom.new_instance("Part", "Part", None);
+        dom.take_changes();
+
+        let mut history = History::new(DEFAULT_CAP);
+        dom.set_property(part, "Transparency", Variant::Float32(0.5))
+            .unwrap();
+        history.push_properties(vec![PropertyWrite {
+            referent: part,
+            name: "Transparency".to_string(),
+            old: None,
+            new: Some(Variant::Float32(0.5)),
+        }]);
+        dom.take_changes();
+
+        let (undone, writes) = property_step(history.undo_step(dom));
+        apply(&mut undone, &writes);
+        assert_eq!(
+            undone.get(part).unwrap().properties().get("Transparency"),
+            None,
+            "undo removes what the step created"
+        );
+
+        let (redone, writes) = property_step(history.redo_step(undone));
+        apply(&mut redone, &writes);
+        assert_eq!(
+            redone.get(part).unwrap().properties().get("Transparency"),
+            Some(&Variant::Float32(0.5))
+        );
+
+        // A step that removed a property, redone, removes it again.
+        history.push_properties(vec![PropertyWrite {
+            referent: part,
+            name: "Transparency".to_string(),
+            old: Some(Variant::Float32(0.5)),
+            new: None,
+        }]);
+        let (undone, writes) = property_step(history.undo_step(redone));
+        apply(&mut undone, &writes);
+        assert!(undone
+            .get(part)
+            .unwrap()
+            .properties()
+            .get("Transparency")
+            .is_some());
+        let (redone, writes) = property_step(history.redo_step(undone));
+        apply(&mut redone, &writes);
+        assert!(redone
+            .get(part)
+            .unwrap()
+            .properties()
+            .get("Transparency")
+            .is_none());
+    }
+
+    /// Both kinds of step share the stacks: undo walks back through
+    /// property steps and snapshot steps in the order they were filed, and
+    /// redo walks the same way forward.
+    #[test]
+    fn snapshot_and_property_steps_undo_in_order() {
+        let mut dom = WeakDom::new();
+        let part = dom.new_instance("Part", "Part", None);
+        dom.set_property(part, "Transparency", Variant::Float32(0.0))
+            .unwrap();
+        dom.take_changes();
+
+        let mut history = History::new(DEFAULT_CAP);
+
+        // A structural step: the part is renamed through a snapshot.
+        history.push(dom.clone());
+        dom.set_name(part, "Renamed").unwrap();
+        history.record_changes(dom.take_changes());
+
+        // A property step on top of it.
+        dom.set_property(part, "Transparency", Variant::Float32(0.5))
+            .unwrap();
+        history.push_properties(vec![PropertyWrite {
+            referent: part,
+            name: "Transparency".to_string(),
+            old: Some(Variant::Float32(0.0)),
+            new: Some(Variant::Float32(0.5)),
+        }]);
+        dom.take_changes();
+
+        // Undo the property step: the tree is handed back, the write
+        // applied, and the rename from the snapshot step survives.
+        let (current, writes) = property_step(history.undo_step(dom));
+        apply(&mut current, &writes);
+        assert_eq!(
+            current.get(part).unwrap().properties().get("Transparency"),
+            Some(&Variant::Float32(0.0))
+        );
+        assert_eq!(current.get(part).unwrap().name(), "Renamed");
+
+        // Undo the snapshot step: the pre-rename tree is installed.
+        let (previous, _) = snapshot_step(history.undo_step(current));
+        assert_eq!(previous.get(part).unwrap().name(), "Part");
+
+        // Redo both, in order, ending where the edits left off.
+        let (current, _) = snapshot_step(history.redo_step(previous));
+        assert_eq!(current.get(part).unwrap().name(), "Renamed");
+        let (current, writes) = property_step(history.redo_step(current));
+        apply(&mut current, &writes);
+        assert_eq!(
+            current.get(part).unwrap().properties().get("Transparency"),
+            Some(&Variant::Float32(0.5))
+        );
+        assert!(matches!(history.redo_step(current), Stepped::Unchanged(_)));
     }
 }

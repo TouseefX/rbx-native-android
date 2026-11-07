@@ -12,9 +12,10 @@ use std::time::Duration;
 
 use gpui_kit::component::input::{EditorState, InputEvent};
 use gpui_kit::*;
-use rbx_dom::Ref;
+use rbx_dom::{Ref, Variant};
 
 use crate::explorer;
+use crate::history::PropertyWrite;
 use crate::script_editor::tabs::{Opened, View};
 use crate::script_editor::{goto, highlight, intel, source, OpenScript};
 
@@ -354,18 +355,25 @@ impl Shell {
             return;
         }
 
-        // See `shell::history`: the snapshot is of the tree as it stood
-        // before the write, and is only pushed once the write has landed.
+        // See `shell::history`: the step is filed once the write has landed.
         self.dom.take_changes();
         // A typing streak is one undo step: while the entry on top of the
         // undo stack is this script's own last `Source` write and the pause
-        // since was short, this write continues it, re-recording the log
-        // against the snapshot that already holds the tree as it stood
-        // before the streak began, and taking no snapshot of its own.
+        // since was short, this write continues it, its `old` still standing
+        // from before the streak began, and files no step of its own.
         let streak =
             self.history
                 .continues_streak(reference, source::SOURCE_PROPERTY, STREAK_WINDOW);
-        let before = if streak { None } else { Some(self.dom.clone()) };
+        // The step's inverse: what `Source` held before the write, and the
+        // text the write leaves behind. One property pair, not a snapshot of
+        // the tree — the snapshot was a second copy of the place in memory
+        // while it was taken, and on a joined game the allocation of it is
+        // what took the process down (see `history::PropertyWrite`).
+        let old = self
+            .dom
+            .get(reference)
+            .and_then(|instance| instance.properties().get(source::SOURCE_PROPERTY))
+            .cloned();
         if !source::write(&mut self.dom, reference, &text) {
             // Nothing reached the DOM. The referent stopped resolving between
             // the guard above and here, a tab outlives its script for the
@@ -376,28 +384,29 @@ impl Shell {
             self.mark_synced(reference, text);
             return;
         }
-        if let Some(before) = before {
-            self.push_history_snapshot(before);
-        } else {
-            // The streak's snapshot is already on the stack; of
-            // `push_history_snapshot`'s effects, the ones that are about the
-            // write rather than the snapshot still owe this commit their
-            // bookkeeping.
+        let changes = self.dom.take_changes();
+        if streak {
+            self.history.continue_streak(
+                reference,
+                source::SOURCE_PROPERTY,
+                Some(Variant::String(text.clone())),
+                changes,
+            );
+            // The step is already on the stack; of `push_property_writes`'
+            // effects, the ones that are about the write rather than the
+            // step still owe this commit their bookkeeping.
             self.recovery.changed();
+        } else {
+            self.push_property_writes(vec![PropertyWrite {
+                referent: reference,
+                name: source::SOURCE_PROPERTY.to_owned(),
+                old,
+                new: Some(Variant::String(text.clone())),
+            }]);
         }
         // Not reflected in the viewport, but a selected script's `Source`
         // row reads the DOM too.
         self.properties.dom_changed(&[]);
-        // A `Source` write is exactly one property write, so undoing it takes
-        // the same fast in-place viewport patch every other single edit does
-        // rather than a full reload, but only if the log that write produced
-        // is attached to the snapshot (see `shell::history`).
-        let changes = self.dom.take_changes();
-        if streak {
-            self.history.record_continued_change(changes);
-        } else {
-            self.record_history_change(changes);
-        }
         self.mark_synced(reference, text);
         cx.notify();
     }

@@ -342,7 +342,7 @@ impl FittingWindow {
     }
 
     /// After an undo or redo: the step took the preview out (see
-    /// `Shell::history_copy`), so it is built again where the camera is,
+    /// `Shell::undo`), so it is built again where the camera is,
     /// unless the step brought a generated item back.
     fn follow_history(&mut self, cx: &mut Context<Self>) {
         let installs = self.shell.read(cx).history_installs;
