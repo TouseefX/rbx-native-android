@@ -103,8 +103,9 @@ pub(crate) enum Stepped {
     /// as it stands now for a redo, plus the log to reflect against it.
     Snapshot(WeakDom, Vec<Change>),
     /// A property step: the caller's own tree back, untouched, plus the
-    /// writes to apply to it — each write's `old` for an undo, its `new`
-    /// for a redo, with `None` removing the property.
+    /// writes to apply to it, each carrying the value this direction sets
+    /// — with `None` removing the property (see [`History::redo_step`] for
+    /// how the stacks orient an entry).
     Property(WeakDom, Vec<(Ref, String, Option<Variant>)>),
     /// No step to take: the caller's tree, unchanged.
     Unchanged(WeakDom),
@@ -377,10 +378,12 @@ impl History {
         }
     }
 
-    /// Symmetric to [`History::undo_step`]: pops the last undone step,
-    /// snapshot or property, files `current` (or the swapped writes) back
-    /// onto the undo stack, and hands back what the caller should hold and
-    /// apply.
+    /// Pops the last undone step and hands back what to apply. The entry
+    /// popped from a stack is always oriented for the direction it is
+    /// popped in: the value to set for that direction stands in its
+    /// `old`, and the step is filed onto the opposite stack swapped, so
+    /// the next pop in the other direction finds its value in `old` too.
+    /// Symmetric to [`History::undo_step`] in every other respect.
     pub(crate) fn redo_step(&mut self, current: WeakDom) -> Stepped {
         let Some(next) = self.redo.pop() else {
             return Stepped::Unchanged(current);
@@ -405,7 +408,7 @@ impl History {
             Step::Properties { writes } => {
                 let redone = writes
                     .iter()
-                    .map(|write| (write.referent, write.name.clone(), write.new.clone()))
+                    .map(|write| (write.referent, write.name.clone(), write.old.clone()))
                     .collect();
                 self.undo_bytes += next.bytes;
                 self.undo.push(Entry {
