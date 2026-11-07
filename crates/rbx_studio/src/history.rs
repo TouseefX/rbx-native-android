@@ -427,8 +427,11 @@ impl History {
     /// it, so a caller that only wants "the tree as it stood, and the log
     /// to reflect against it" sees one shape whatever kind the step was.
     /// The shell's undo uses [`History::undo_step`] directly instead,
-    /// applying the writes through the live tree's own reflection path.
+    /// applying the writes through the live tree's own reflection path,
+    /// so this applied shape is the test modules' convenience — every
+    /// non-test caller stepped over to `undo_step` with it.
     /// `None` with nothing to undo, as ever a no-op.
+    #[cfg(test)]
     pub(crate) fn undo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
         match self.undo_step(current) {
             Stepped::Snapshot(dom, changes) => Some((dom, changes)),
@@ -441,8 +444,10 @@ impl History {
         }
     }
 
-    /// [`History::redo`]'s shape over [`History::redo_step`]: the property
-    /// half applied, the log it produces returned.
+    /// [`History::undo`]'s shape over [`History::redo_step`]: the property
+    /// half applied, the log it produces returned. Test modules' convenience,
+    /// like [`History::undo`].
+    #[cfg(test)]
     pub(crate) fn redo(&mut self, current: WeakDom) -> Option<(WeakDom, Vec<Change>)> {
         match self.redo_step(current) {
             Stepped::Snapshot(dom, changes) => Some((dom, changes)),
@@ -469,7 +474,8 @@ impl History {
 /// Applies property-step writes to a tree: what [`History::undo`] and
 /// [`History::redo`] do with the property half of what a step hands back,
 /// applying each write's `old` (or `new`) and letting the tree's own change
-/// log say what was touched.
+/// log say what was touched. Test-module convenience, like them.
+#[cfg(test)]
 fn apply_writes(dom: &mut WeakDom, writes: &[(Ref, String, Option<Variant>)]) {
     for (referent, name, value) in writes {
         match value {
