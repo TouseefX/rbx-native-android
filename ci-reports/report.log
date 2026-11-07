@@ -6,118 +6,77 @@
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
 [1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
-[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
+[1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
+[1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
-[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
+[1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
-[1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
-[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
-[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m    Checking[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
 [1m[92m    Checking[0m rbx_ugc v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_ugc)
-[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
-[1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
-[1m[92m    Checking[0m gpui-pre-linux v0.3.5
 [1m[92m    Checking[0m gpui-kit-assets v0.6.4
+[1m[92m    Checking[0m gpui-pre-linux v0.3.5
+[1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
+[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[E0599][0m[1m: no method named `children` found for reference `&rbx_dom::WeakDom` in the current scope[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/camera.rs:78:14
-   [1m[94m|[0m
-[1m[94m77[0m [1m[94m|[0m           _ => dom
-   [1m[94m|[0m [1m[94m ______________-[0m
-[1m[94m78[0m [1m[94m|[0m [1m[94m|[0m             .children(workspace)
-   [1m[94m|[0m [1m[94m|[0m             [1m[94m-[0m[1m[91m^^^^^^^^[0m [1m[91mmethod not found in `&rbx_dom::WeakDom`[0m
-   [1m[94m|[0m [1m[94m|_____________|[0m
-   [1m[94m|[0m
+[1m[91merror[E0308][0m[1m: mismatched types[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/camera.rs:81:38
+    [1m[94m|[0m
+[1m[94m 81[0m [1m[94m|[0m             .find(|referent| dom.get(*referent).is_some_and(|c| c.class() == "Camera"))
+    [1m[94m|[0m                                  [1m[94m---[0m [1m[91m^^^^^^^^^[0m [1m[91mexpected `Ref`, found `&Ref`[0m
+    [1m[94m|[0m                                  [1m[94m|[0m
+    [1m[94m|[0m                                  [1m[94marguments to this method are incorrect[0m
+    [1m[94m|[0m
+[1m[92mnote[0m: method defined here
+   [1m[94m--> [0mcrates/rbx_dom/src/dom.rs:245:12
+    [1m[94m|[0m
+[1m[94m245[0m [1m[94m|[0m     pub fn get(&self, referent: Ref) -> Option<&Instance> {
+    [1m[94m|[0m            [1m[92m^^^[0m
+[1m[96mhelp[0m: consider dereferencing the borrow
+    [1m[94m|[0m
+[1m[94m 81[0m [1m[94m| [0m            .find(|referent| dom.get([92m*[0m*referent).is_some_and(|c| c.class() == "Camera"))
+    [1m[94m|[0m                                      [92m+[0m
 
-[1m[91merror[E0061][0m[1m: this function takes 1 argument but 2 arguments were supplied[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:188:22
+[1m[91merror[0m[1m: unused variable: `workspace`[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:204:9
     [1m[94m|[0m
-[1m[94m188[0m [1m[94m|[0m     let camera_ref = existing_camera(&dom, workspace).expect("write_pose made a Camera");
-    [1m[94m|[0m                      [1m[91m^^^^^^^^^^^^^^^[0m       [1m[94m---------[0m [1m[94munexpected argument #2 of type `rbx_dom::Ref`[0m
+[1m[94m204[0m [1m[94m|[0m     let workspace = insert(&mut dom, 1, "Workspace");
+    [1m[94m|[0m         [1m[91m^^^^^^^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_workspace`[0m
     [1m[94m|[0m
-[1m[92mnote[0m: function defined here
-   [1m[94m--> [0mcrates/rbx_studio/src/camera.rs:101:4
-    [1m[94m|[0m
-[1m[94m101[0m [1m[94m|[0m fn existing_camera(dom: &WeakDom) -> Option<Ref> {
-    [1m[94m|[0m    [1m[92m^^^^^^^^^^^^^^^[0m
-[1m[96mhelp[0m: remove the extra argument
-    [1m[94m|[0m
-[1m[94m188[0m [91m- [0m    let camera_ref = existing_camera(&dom[91m, workspace[0m).expect("write_pose made a Camera");
-[1m[94m188[0m [92m+ [0m    let camera_ref = existing_camera(&dom).expect("write_pose made a Camera");
-    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `-D unused-variables` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_variables)]`
 
-[1m[91merror[E0061][0m[1m: this function takes 1 argument but 2 arguments were supplied[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:241:17
+[1m[91merror[0m[1m: unused variable: `workspace`[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:261:9
     [1m[94m|[0m
-[1m[94m241[0m [1m[94m|[0m     let first = existing_camera(&dom, workspace).expect("the first write's camera");
-    [1m[94m|[0m                 [1m[91m^^^^^^^^^^^^^^^[0m       [1m[94m---------[0m [1m[94munexpected argument #2 of type `rbx_dom::Ref`[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: function defined here
-   [1m[94m--> [0mcrates/rbx_studio/src/camera.rs:101:4
-    [1m[94m|[0m
-[1m[94m101[0m [1m[94m|[0m fn existing_camera(dom: &WeakDom) -> Option<Ref> {
-    [1m[94m|[0m    [1m[92m^^^^^^^^^^^^^^^[0m
-[1m[96mhelp[0m: remove the extra argument
-    [1m[94m|[0m
-[1m[94m241[0m [91m- [0m    let first = existing_camera(&dom[91m, workspace[0m).expect("the first write's camera");
-[1m[94m241[0m [92m+ [0m    let first = existing_camera(&dom).expect("the first write's camera");
-    [1m[94m|[0m
+[1m[94m261[0m [1m[94m|[0m     let workspace = insert(&mut dom, 1, "Workspace");
+    [1m[94m|[0m         [1m[91m^^^^^^^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_workspace`[0m
 
-[1m[91merror[E0061][0m[1m: this function takes 1 argument but 2 arguments were supplied[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:244:18
+[1m[91merror[0m[1m: unused variable: `workspace`[0m
+   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:280:9
     [1m[94m|[0m
-[1m[94m244[0m [1m[94m|[0m     let second = existing_camera(&dom, workspace).expect("the second write's camera");
-    [1m[94m|[0m                  [1m[91m^^^^^^^^^^^^^^^[0m       [1m[94m---------[0m [1m[94munexpected argument #2 of type `rbx_dom::Ref`[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: function defined here
-   [1m[94m--> [0mcrates/rbx_studio/src/camera.rs:101:4
-    [1m[94m|[0m
-[1m[94m101[0m [1m[94m|[0m fn existing_camera(dom: &WeakDom) -> Option<Ref> {
-    [1m[94m|[0m    [1m[92m^^^^^^^^^^^^^^^[0m
-[1m[96mhelp[0m: remove the extra argument
-    [1m[94m|[0m
-[1m[94m244[0m [91m- [0m    let second = existing_camera(&dom[91m, workspace[0m).expect("the second write's camera");
-[1m[94m244[0m [92m+ [0m    let second = existing_camera(&dom).expect("the second write's camera");
-    [1m[94m|[0m
+[1m[94m280[0m [1m[94m|[0m     let workspace = insert(&mut dom, 1, "Workspace");
+    [1m[94m|[0m         [1m[91m^^^^^^^^^[0m [1m[91mhelp: if this is intentional, prefix it with an underscore: `_workspace`[0m
 
-[1m[91merror[E0061][0m[1m: this function takes 1 argument but 2 arguments were supplied[0m
-   [1m[94m--> [0mcrates/rbx_studio/src/camera/tests.rs:258:16
-    [1m[94m|[0m
-[1m[94m258[0m [1m[94m|[0m     assert_eq!(existing_camera(&dom, workspace), None);
-    [1m[94m|[0m                [1m[91m^^^^^^^^^^^^^^^[0m       [1m[94m---------[0m [1m[94munexpected argument #2 of type `rbx_dom::Ref`[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: function defined here
-   [1m[94m--> [0mcrates/rbx_studio/src/camera.rs:101:4
-    [1m[94m|[0m
-[1m[94m101[0m [1m[94m|[0m fn existing_camera(dom: &WeakDom) -> Option<Ref> {
-    [1m[94m|[0m    [1m[92m^^^^^^^^^^^^^^^[0m
-[1m[96mhelp[0m: remove the extra argument
-    [1m[94m|[0m
-[1m[94m258[0m [91m- [0m    assert_eq!(existing_camera(&dom[91m, workspace[0m), None);
-[1m[94m258[0m [92m+ [0m    assert_eq!(existing_camera(&dom), None);
-    [1m[94m|[0m
-
-[1mFor more information about this error, try `rustc --explain E0599`.[0m
+[1mFor more information about this error, try `rustc --explain E0308`.[0m
 [1m[91merror[0m: could not compile `rbx_studio` (lib) due to 1 previous error
 [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1mSome errors have detailed explanations: E0061, E0599.[0m
-[1mFor more information about an error, try `rustc --explain E0061`.[0m
-[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 5 previous errors
+[1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 4 previous errors
 fmt=0 clippy=101 test=0
