@@ -914,7 +914,14 @@ fn coalesce(commands: Vec<Command>) -> Vec<Command> {
 
 fn apply(command: Command, rendering: &mut Rendering<'_>) -> bool {
     match command {
-        Command::Input(event) => rendering.viewer.input(event),
+        Command::Input(event) => {
+            // Camera input is proof the panel is on screen — its listeners
+            // only fire for a mounted view — so a presence verdict that hid
+            // it in the meantime (see `presence`'s grace) is revoked here,
+            // not left standing until some unrelated notification repaints.
+            *rendering.visible = true;
+            rendering.viewer.input(event)
+        }
         Command::Wheel { at, scroll, camera } => {
             match rendering.viewer.gui_scroll_target(at, scroll.axis) {
                 Some(target) => rendering.scrolls.push(Scroll::of(target, scroll)),

@@ -2556,8 +2556,9 @@ impl<M: InputModeKind> Element for TextElement<M> {
         }
 
         self.state.update(cx, |state, cx| {
-            let geometry_changed = state.last_bounds != Some(bounds)
-                || state.input_bounds != input_bounds
+            let viewport_resized =
+                state.last_bounds != Some(bounds) || state.input_bounds != input_bounds;
+            let geometry_changed = viewport_resized
                 || state.scroll_size != prepaint.scroll_size
                 || state.last_layout.as_ref().is_none_or(|layout| {
                     layout.cursor_bounds != prepaint.last_layout.cursor_bounds
@@ -2581,15 +2582,19 @@ impl<M: InputModeKind> Element for TextElement<M> {
                 );
             }
 
-            // rbx-native addition: a viewport that shrank — the Android soft
-            // keyboard lifting the editor, the surface inset to clear the
-            // IME — can leave the caret below the fold: the scroll offset
-            // stays valid, clamped only against the end of the content, so
-            // nothing else moves it. Reveal the caret the way the
-            // caret-move paths do, and the line being typed stays on
-            // screen. Plain scrolling changes no geometry, so a deliberate
-            // scroll away from the caret is never fought.
-            if geometry_changed {
+            // rbx-native addition: a viewport that changed size — the
+            // Android soft keyboard lifting the editor, the surface inset
+            // to clear the IME — can leave the caret below the fold: the
+            // scroll offset stays valid, clamped only against the end of
+            // the content, so nothing else moves it. Reveal the caret the
+            // way the caret-move paths do, and the line being typed stays
+            // on screen. Only a size change reaches here: cursor and
+            // content churn must not (typing already reveals its own
+            // caret, and a reveal on every cursor move is a notify per
+            // keystroke for nothing), and plain scrolling changes no
+            // geometry, so a deliberate scroll away from the caret is
+            // never fought.
+            if viewport_resized {
                 state.scroll_to(state.cursor(), None, cx);
             }
 

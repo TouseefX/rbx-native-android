@@ -27,6 +27,19 @@
 /// repainting for it, short enough that switching tabs away stops the render
 /// thread within about a frame.
 pub(super) const HIDDEN_AFTER_MISSES: u32 = super::POLLS_PER_FRAME;
+/// How many ticks past the first one the probe keeps being repeated before the
+/// panel is finally declared hidden.
+///
+/// One probe is one repaint *request*, and a window under load takes far
+/// longer than a single tick to answer it: on a phone whose viewer frames run
+/// long, the answer to the first probe routinely arrived a tick or three after
+/// the panel had already been given up on. A hidden panel stops the very
+/// frames whose absence was the only evidence for it, so the state sustains
+/// itself and the viewport stands frozen until some unrelated notification
+/// happens to repaint the window. The grace keeps asking: a mounted panel
+/// answers within a few ticks and stays, a switched-away one is out eight
+/// repaints of a window once, not a busy loop.
+pub(super) const PROBE_GRACE: u32 = 8;
 
 /// What one tick's paint check means for the panel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,11 +64,12 @@ pub(super) fn presence(painted: bool, missed: u32, visible: bool) -> Presence {
     let missed = missed.saturating_add(1);
     Presence {
         missed,
-        visible: visible && missed <= HIDDEN_AFTER_MISSES,
-        // Exactly once, on the last tick before giving up: repainting on every
-        // tick of a genuinely hidden panel would be a busy loop over a window
-        // nobody is looking at.
-        probe: visible && missed == HIDDEN_AFTER_MISSES,
+        visible: visible && missed <= HIDDEN_AFTER_MISSES + PROBE_GRACE,
+        // From the first tick that would give up, through the grace run:
+        // each is one repaint request a mounted panel may still answer.
+        probe: visible
+            && missed >= HIDDEN_AFTER_MISSES
+            && missed < HIDDEN_AFTER_MISSES + PROBE_GRACE,
     }
 }
 
@@ -83,7 +97,9 @@ mod tests {
             visible: true,
             probe: false,
         };
-        for _ in 0..=HIDDEN_AFTER_MISSES {
+        // Through the whole grace run: hidden only once the probes have had
+        // their say and nothing answered.
+        for _ in 0..=(HIDDEN_AFTER_MISSES + PROBE_GRACE) {
             state = presence(false, state.missed, state.visible);
         }
         assert!(
@@ -93,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn the_last_tick_before_giving_up_asks_for_a_repaint() {
+    fn the_first_tick_that_would_give_up_asks_for_a_repaint() {
         // The whole point: a render thread stalled on a scene rebuild looks
         // exactly like a switched-away tab, and without this probe the panel
         // would be declared hidden, which stops the very frames whose absence
@@ -131,11 +147,32 @@ mod tests {
 
     #[test]
     fn a_hidden_panel_is_not_probed_over_and_over() {
-        let mut state = presence(false, HIDDEN_AFTER_MISSES, true);
+        // Past the whole grace run is where hiding finally lands.
+        let mut state = presence(false, HIDDEN_AFTER_MISSES + PROBE_GRACE, true);
         assert!(!state.visible);
         for _ in 0..50 {
             state = presence(false, state.missed, state.visible);
             assert!(!state.probe, "repainting a window nobody is looking at");
+        }
+    }
+
+    #[test]
+    fn a_mounted_panel_that_answers_late_stays_visible() {
+        // The phone case that wrote the grace: a viewer frame that runs long
+        // means the probe's repaint lands a tick or three after it was asked
+        // for. Giving up on the first unanswered probe turned one slow frame
+        // into a permanently hidden panel — the viewport stood frozen, and
+        // nothing but an unrelated notification ever brought it back.
+        let mut state = Presence {
+            missed: 0,
+            visible: true,
+            probe: false,
+        };
+        for tick in 0..200 {
+            // Answers only every third probe: always late, never too late.
+            let painted = state.probe && tick % 3 == 0;
+            state = presence(painted, state.missed, state.visible);
+            assert!(state.visible, "went hidden while mounted on tick {tick}");
         }
     }
 
