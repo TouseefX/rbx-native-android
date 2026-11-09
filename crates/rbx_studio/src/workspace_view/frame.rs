@@ -74,6 +74,30 @@ pub(super) fn device_pixels(logical: Pixels, scale: f32) -> u32 {
     (f32::from(logical) * scale).round().max(0.0) as u32
 }
 
+/// The pixels the viewer renders the panel at.
+///
+/// Every frame travels through system memory (see the module this serves:
+/// render, read back, upload), and a phone both pays that trip on a
+/// tile-based GPU and holds the whole pipeline in one small device, so
+/// Android renders at half the panel's pixels and GPUI scales the image up
+/// to the panel's rect (`ObjectFit::Fill` paints it there whatever the
+/// image's own size): a quarter of the bytes in both directions and a
+/// quarter of the fill. The aspect ratio is kept, so the camera, and with
+/// it every pointer mapping, sees the same picture; the letterboxed box
+/// and the picking stay in panel pixels, which is what they always worked
+/// in.
+#[cfg(target_os = "android")]
+pub(super) fn render_size(size: (u32, u32)) -> (u32, u32) {
+    ((size.0 / 2).max(1), (size.1 / 2).max(1))
+}
+
+/// The panel's own pixels, 1:1 with what is shown: a desktop's GPU and bus
+/// carry the round trip without help.
+#[cfg(not(target_os = "android"))]
+pub(super) fn render_size(size: (u32, u32)) -> (u32, u32) {
+    size
+}
+
 /// Wraps a rendered frame in the image GPUI uploads. See
 /// [`crate::render_image`] for why the colour channels need swapping.
 pub(super) fn render_image(pixels: Vec<u8>, width: u32, height: u32) -> Option<Arc<RenderImage>> {
@@ -91,6 +115,12 @@ mod tests {
         assert_eq!(device_pixels(px(100.0), 1.0), 100);
         assert_eq!(device_pixels(px(100.0), 1.5), 150);
         assert_eq!(device_pixels(px(0.0), 2.0), 0);
+    }
+
+    #[test]
+    fn a_desktop_renders_the_panels_own_pixels() {
+        assert_eq!(render_size((1500, 860)), (1500, 860));
+        assert_eq!(render_size((0, 0)), (0, 0));
     }
 
     // render_image() is a thin wrapper: its behaviour (the BGRA swap, the

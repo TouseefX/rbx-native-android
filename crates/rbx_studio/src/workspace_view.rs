@@ -55,7 +55,7 @@ use crate::settle::Settle;
 use crate::transform::{self, Targets, Transform};
 use crate::{display, pacing, tokens};
 pub(crate) use canvas::{Canvas, CanvasUpdated};
-use frame::{device_pixels, render_image, Viewport};
+use frame::{device_pixels, render_image, render_size, Viewport};
 use gizmo::Drag;
 use input::{camera_key, chorded, tool_key, Layout};
 pub(crate) use joints::JointPhase;
@@ -480,7 +480,7 @@ impl WorkspaceView {
         // flashing the default for one.
         viewer.set_selection_occluded(selection_occluded);
 
-        let full_interval = pacing::frame_interval(display::refresh_hz());
+        let full_interval = pacing::viewport_interval(display::refresh_hz());
         let pacing = pacing::FocusPacing::new(unfocused_fps);
         // A freshly opened window is focused (see `FocusPacing::new`), so the
         // loop opens at the full rate; `pacing` only starts mattering once
@@ -684,7 +684,7 @@ impl WorkspaceView {
         let size = self.viewport.get().size;
         if self.sized != size {
             self.sized = size;
-            self.pump.resize(size);
+            self.pump.resize(render_size(size));
             self.send_lines();
         }
 

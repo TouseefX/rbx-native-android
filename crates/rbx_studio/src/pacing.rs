@@ -29,6 +29,24 @@ const FALLBACK_HZ: f32 = 60.0;
 const HZ: RangeInclusive<f32> = 1.0..=1000.0;
 const FPS_VARIABLE: &str = "RBX_STUDIO_FPS";
 
+/// The full-focus budget the 3D loop paces itself to.
+///
+/// Android is capped below the display's rate whatever the panel runs at:
+/// every frame there crosses system memory twice (read back out of the
+/// viewer's device, uploaded into GPUI's — see `workspace_view`'s doc
+/// comment) on a phone-sized GPU, and a round trip that cannot fit inside
+/// one refresh shows up as the viewport standing still while the rest of
+/// the window keeps drawing. `RBX_STUDIO_FPS` still wins: it is the
+/// override, and a display pinned by it is pinned on purpose.
+pub(crate) fn viewport_interval(refresh_hz: Option<f32>) -> Duration {
+    let interval = frame_interval(refresh_hz);
+    #[cfg(target_os = "android")]
+    let cap = Duration::from_millis(25);
+    #[cfg(not(target_os = "android"))]
+    let cap = Duration::ZERO;
+    interval.max(cap)
+}
+
 /// The frame budget the render loop paces itself to, `refresh_hz` being what the
 /// hardware reported, if anything.
 pub(crate) fn frame_interval(refresh_hz: Option<f32>) -> Duration {
@@ -157,7 +175,10 @@ impl FocusPacing {
 mod tests {
     use std::time::Duration;
 
-    use super::{interval, parse_hz, target_interval, FocusPacing, UnfocusedFps, FALLBACK_HZ};
+    use super::{
+        interval, parse_hz, target_interval, viewport_interval, FocusPacing, UnfocusedFps,
+        FALLBACK_HZ,
+    };
 
     fn millis(interval: Duration) -> f32 {
         interval.as_secs_f32() * 1000.0
@@ -168,6 +189,16 @@ mod tests {
         assert!((millis(interval(60.0)) - 16.667).abs() < 0.01);
         assert!((millis(interval(75.0)) - 13.333).abs() < 0.01);
         assert!((millis(interval(144.0)) - 6.944).abs() < 0.01);
+    }
+
+    #[test]
+    fn the_viewport_budget_is_the_refresh_on_a_desktop() {
+        // On a desktop the cap is nothing: the panel's own rate stands,
+        // whatever it is (Android's 25 ms floor cannot be tested from a
+        // build that is not for Android; the cap is one `max`).
+        assert_eq!(viewport_interval(None), interval(FALLBACK_HZ));
+        assert_eq!(viewport_interval(Some(144.0)), interval(144.0));
+        assert_eq!(viewport_interval(Some(30.0)), interval(30.0));
     }
 
     // A rate of zero would divide by zero, and a negative one would run the
