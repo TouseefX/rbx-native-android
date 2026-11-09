@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn a_hidden_panel_comes_back_as_soon_as_it_paints_again() {
-        let hidden = presence(false, HIDDEN_AFTER_MISSES, true);
+        let hidden = presence(false, HIDDEN_AFTER_MISSES + PROBE_GRACE, true);
         assert!(!hidden.visible);
 
         let back = presence(true, hidden.missed, hidden.visible);
