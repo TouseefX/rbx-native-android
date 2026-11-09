@@ -68,8 +68,7 @@ pub(super) fn presence(painted: bool, missed: u32, visible: bool) -> Presence {
         // From the first tick that would give up, through the grace run:
         // each is one repaint request a mounted panel may still answer.
         probe: visible
-            && missed >= HIDDEN_AFTER_MISSES
-            && missed < HIDDEN_AFTER_MISSES + PROBE_GRACE,
+            && (HIDDEN_AFTER_MISSES..HIDDEN_AFTER_MISSES + PROBE_GRACE).contains(&missed),
     }
 }
 
