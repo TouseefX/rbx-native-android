@@ -108,7 +108,7 @@ pub(super) fn render_image(pixels: Vec<u8>, width: u32, height: u32) -> Option<A
 mod tests {
     use gpui_kit::px;
 
-    use super::{device_pixels, Viewport};
+    use super::{device_pixels, render_size, Viewport};
 
     #[test]
     fn device_pixels_scale_logical_ones() {
