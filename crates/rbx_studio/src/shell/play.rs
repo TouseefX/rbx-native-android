@@ -280,6 +280,13 @@ impl Shell {
             cx.notify();
             return;
         }
+        // The place a test publishes is read from `dom` below, but a script
+        // tab's text only reaches `Source` on its own debounce — and one
+        // typed into during a test not until the test stops. Pressing Play
+        // inside that window would publish the pre-edit place, and the test
+        // would run the old code with nothing on screen saying so. Flush
+        // first, as save, export and the debugger's runs already do.
+        self.flush_script_edits(cx);
         self.play.attempt += 1;
         let attempt = self.play.attempt;
         self.play.phase = Phase::Starting("Checking for Roblox\u{2026}");
