@@ -126,6 +126,16 @@ impl CommandBar {
         &self.feedback
     }
 
+    /// Whether the bar's field is the focused one: a window too short for
+    /// chrome (see `shell::short_window`) keeps the bar exactly while it is
+    /// the thing being typed in, never while something else is.
+    pub(crate) fn focused(&self, window: &Window, cx: &App) -> bool {
+        self.input
+            .read(cx)
+            .focus_handle(cx)
+            .contains_focused(window, cx)
+    }
+
     /// The bar as it sits at the bottom of the window. The design frame has
     /// no command bar, so this borrows a dock's own furniture, the 5px
     /// inset and the `chrome` field, rather than inventing a third look

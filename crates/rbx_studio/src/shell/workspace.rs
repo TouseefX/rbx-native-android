@@ -28,6 +28,7 @@ use crate::tokens;
 use super::chrome::{self, Document, Drag};
 use super::layout::{Edge, Home, Landing, Panel};
 use super::menu::{self, MenuId};
+use super::short_window;
 use super::Shell;
 
 /// The most of the window's width one side dock may occupy.
@@ -60,7 +61,16 @@ impl Shell {
 
         let left = self.dock_edge(Edge::Left, limit, window, cx);
         let right = self.dock_edge(Edge::Right, limit, window, cx);
-        let bottom = self.dock_edge(Edge::Bottom, limit, window, cx);
+        // A short window (see `short_window`) gives the document every
+        // pixel it has: the bottom dock would take most of what is left —
+        // its default alone is taller than the whole workspace — and
+        // Output's job while typing is already done by the command bar's
+        // inline line.
+        let bottom = if short_window(window) {
+            Vec::new()
+        } else {
+            self.dock_edge(Edge::Bottom, limit, window, cx)
+        };
 
         // Bottom is a sibling of the left/document/right row, not a child of
         // its document column: Output reads as the floor the whole

@@ -2062,6 +2062,33 @@ impl Shell {
     }
 }
 
+/// The least height worth giving the document while every row of chrome is
+/// shown; below it, the rows go instead (see [`short_window`]). A landscape
+/// phone with no keyboard open sits not far above this, so nothing changes
+/// there.
+const MIN_DOCUMENT_ROW: f32 = 80.;
+
+/// Whether the window is too short for the rows of chrome to leave the
+/// document anything to show in: the Android soft keyboard's share of a
+/// landscape phone — the surface is inset to clear the IME, so this window
+/// is what is left above the keyboard — or a desktop window dragged right
+/// down.
+///
+/// [`Shell::render`] answers by clearing every row but the top bar: the
+/// script panel carries its own tab strip, so the document tabs are spare,
+/// and the command bar keeps its place while its field is the one being
+/// typed in. The workspace (`shell::workspace`) drops its bottom dock the
+/// same way. Every row's height is a fixed token, so this is a pure
+/// function of the window's size: no hysteresis is needed.
+pub(in crate::shell) fn short_window(window: &Window) -> bool {
+    let chrome = tokens::topbar_height()
+        + tokens::menu_bar_height()
+        + tokens::tabs_height()
+        + tokens::ribbon_tabs_height()
+        + tokens::ribbon_height();
+    f32::from(window.viewport_size().height) < f32::from(chrome) + MIN_DOCUMENT_ROW
+}
+
 impl Render for Shell {
     /// The shell, top to bottom: the title bar, the menu strip, document
     /// tabs (Row A), the
@@ -2115,6 +2142,14 @@ impl Render for Shell {
         // An increment set from Settings has to reach the popover's text.
         self.snap_fields.sync(self.transform, window, cx);
         self.sync_argon_fields(window, cx);
+        // A window too short for chrome (see `short_window`) clears every
+        // row but the top bar, so the document — the script editor, when
+        // the keyboard is open for it — gets the room the rows were taking.
+        let short = short_window(window);
+        // The one row that stays while short, but only while it is the
+        // thing being typed in: hiding the bar its field is focused in
+        // would hide the very line the keyboard is open to type.
+        let command_kept = !short || self.command_bar.focused(window, cx);
         v_flex()
             .size_full()
             .bg(tokens::black())
@@ -2200,35 +2235,37 @@ impl Render for Shell {
             )
             .children(self.theme_background(false))
             .child(self.topbar(cx))
-            .children(self.credential_notice(cx))
-            .child(crate::menu_bar::bar(&self.menu_bar))
-            .children(self.places_bar(cx))
-            .child(self.document_tabs(cx))
-            .child(self.ribbon_tabs(cx))
-            .child(self.ribbon(cx))
+            .children((!short).then(|| self.credential_notice(cx)).flatten())
+            .children((!short).then(|| crate::menu_bar::bar(&self.menu_bar)))
+            .children((!short).then(|| self.places_bar(cx)).flatten())
+            .children((!short).then(|| self.document_tabs(cx)))
+            .children((!short).then(|| self.ribbon_tabs(cx)))
+            .children((!short).then(|| self.ribbon(cx)))
             .child(self.workspace(window, cx))
-            .children((!self.layout.command_bar_hidden()).then(|| {
-                div()
-                    // Studio's keys (see `command_bar`), captured before the
-                    // field's own: its Ctrl+Enter would insert a line first.
-                    .capture_action(cx.listener(|shell, enter: &Enter, _, cx| {
-                        if enter.secondary {
-                            shell.run_typed_command(cx);
-                            cx.stop_propagation();
-                        }
-                    }))
-                    .capture_key_down(cx.listener(|shell, event: &KeyDownEvent, window, cx| {
-                        if let Some(older) = crate::command_bar::history_key(&event.keystroke) {
-                            shell.walk_command_history(older, window, cx);
-                            cx.stop_propagation();
-                        }
-                    }))
-                    .child(self.command_bar.render(
-                        self.tab_order.next(),
-                        self.output_collapsed,
-                        cx,
-                    ))
-            }))
+            .children(
+                (!self.layout.command_bar_hidden() && command_kept).then(|| {
+                    div()
+                        // Studio's keys (see `command_bar`), captured before the
+                        // field's own: its Ctrl+Enter would insert a line first.
+                        .capture_action(cx.listener(|shell, enter: &Enter, _, cx| {
+                            if enter.secondary {
+                                shell.run_typed_command(cx);
+                                cx.stop_propagation();
+                            }
+                        }))
+                        .capture_key_down(cx.listener(|shell, event: &KeyDownEvent, window, cx| {
+                            if let Some(older) = crate::command_bar::history_key(&event.keystroke) {
+                                shell.walk_command_history(older, window, cx);
+                                cx.stop_propagation();
+                            }
+                        }))
+                        .child(self.command_bar.render(
+                            self.tab_order.next(),
+                            self.output_collapsed,
+                            cx,
+                        ))
+                }),
+            )
             // Painted at the window's root rather than inside the Explorer:
             // a popup nested in the tree's own scrolled, virtualised list
             // is clipped by it.
