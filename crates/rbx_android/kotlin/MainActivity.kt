@@ -48,6 +48,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import android.widget.EditText
 import com.google.androidgamesdk.GameActivity
 
@@ -279,8 +280,16 @@ class MainActivity : GameActivity() {
 
     fun gpuiHideKeyboard(session: Long) {
         // rbx-native diagnostics (temporary): the losing-focus counterpart.
+        // The toast is the phone-readable half: a keyboard that closes
+        // WITHOUT it was dismissed by the system or the IME itself, not by
+        // the editor giving up text focus — tell them apart before hunting.
         Log.i("rbxstudio", "rbx_android: gpuiHideKeyboard session=$session")
         runOnUiThread {
+            Toast.makeText(
+                this@MainActivity,
+                "rbx-native: keyboard hidden (editor lost text focus)",
+                Toast.LENGTH_SHORT
+            ).show()
             val input = this.input ?: return@runOnUiThread
             input.reset(session)
             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
