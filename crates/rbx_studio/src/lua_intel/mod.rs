@@ -4432,10 +4432,9 @@ fn require_string_at_cursor(source_before_cursor: &str) -> Option<&str> {
 /// project index reads them the same way (`quoted_call_arguments`).
 fn service_string_at_cursor(source_before_cursor: &str) -> Option<&str> {
     let quote = source_before_cursor.rfind(['"', '\''])?;
-    let call = source_before_cursor[..quote]
-        .rsplit(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || matches!(c, '.' | ':')))
-        .next()?;
-    call.ends_with(":GetService(")
+    let before_quote = source_before_cursor[..quote].trim_end();
+    before_quote
+        .ends_with(":GetService(")
         .then(|| &source_before_cursor[quote + 1..])
 }
 
