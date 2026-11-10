@@ -376,6 +376,9 @@ impl ProjectIndex {
         if let Some(typed) = require_string_at_cursor(&source[..cursor_byte]) {
             return self.complete_require_path(current_script, typed);
         }
+        if let Some(typed) = service_string_at_cursor(&source[..cursor_byte]) {
+            return service_name_completions(typed);
+        }
         if let Some((alias, prefix, separator)) =
             module_index_expression_at_end(&source[..cursor_byte])
         {
@@ -4423,6 +4426,38 @@ fn require_string_at_cursor(source_before_cursor: &str) -> Option<&str> {
     Some(&source_before_cursor[quote + 1..])
 }
 
+/// The typed text inside a `GetService("` string at the cursor, if the
+/// cursor sits in one. Any receiver counts — `game:GetService(`,
+/// `Game:GetService(` — they all name a service the same way, and the
+/// project index reads them the same way (`quoted_call_arguments`).
+fn service_string_at_cursor(source_before_cursor: &str) -> Option<&str> {
+    let quote = source_before_cursor.rfind(['"', '\''])?;
+    let call = source_before_cursor[..quote]
+        .rsplit(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || matches!(c, '.' | ':')))
+        .next()?;
+    call.ends_with(":GetService(")
+        .then(|| &source_before_cursor[quote + 1..])
+}
+
+/// Service names for the string `GetService` takes: the engine's service
+/// classes out of the generated API table, matched by prefix like every
+/// other completion here.
+fn service_name_completions(prefix: &str) -> Vec<Completion> {
+    let lower = prefix.to_ascii_lowercase();
+    api::GLOBAL_TYPES
+        .iter()
+        .filter(|(name, _)| name.to_ascii_lowercase().starts_with(&lower))
+        .filter(|(name, _)| schema::class_is_service(name))
+        .take(12)
+        .map(|(name, _)| Completion {
+            label: name.to_string(),
+            detail: format!("{name} service"),
+            insert_text: name.to_string(),
+            replace_chars: prefix.chars().count(),
+        })
+        .collect()
+}
+
 fn relative_module_path(from_dir: &str, target: &str) -> String {
     let from: Vec<&str> = from_dir
         .split('/')
@@ -6070,6 +6105,52 @@ mod tests {
         let suggestions = index.complete_at(NO_REF, "game:F", 6);
         assert!(suggestions.iter().any(|item| item.label == "FindService"));
         assert!(!suggestions.iter().any(|item| item.label == "game"));
+    }
+
+    #[test]
+    fn completes_service_names_inside_getservice() {
+        let index = ProjectIndex::default();
+        let source = "local rs = game:GetService(\"Repl";
+        let suggestions = index.complete_at(NO_REF, source, source.chars().count());
+        assert!(
+            suggestions
+                .iter()
+                .any(|item| item.label == "ReplicatedStorage"),
+            "{suggestions:?}"
+        );
+        // A class that is not a service is never a `GetService` answer.
+        assert!(
+            !suggestions.iter().any(|item| item.label == "Part"),
+            "{suggestions:?}"
+        );
+    }
+
+    #[test]
+    fn getservice_offers_only_services_before_any_letter() {
+        let index = ProjectIndex::default();
+        let source = "game:GetService(\"";
+        let suggestions = index.complete_at(NO_REF, source, source.chars().count());
+        assert!(!suggestions.is_empty(), "{suggestions:?}");
+        assert!(
+            suggestions
+                .iter()
+                .all(|item| schema::class_is_service(&item.label)),
+            "{suggestions:?}"
+        );
+        // A typed prefix narrows to its own matches, wherever they sit in
+        // the alphabet.
+        let typed = "game:GetService(\"Play";
+        let narrowed = index.complete_at(NO_REF, typed, typed.chars().count());
+        assert!(
+            narrowed.iter().any(|item| item.label == "Players"),
+            "{narrowed:?}"
+        );
+    }
+
+    #[test]
+    fn a_plain_string_is_not_a_getservice_call() {
+        assert_eq!(service_string_at_cursor("local s = \"Repl"), None);
+        assert_eq!(service_string_at_cursor("game:FindService(\"Rep"), None);
     }
 
     #[test]

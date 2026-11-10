@@ -111,12 +111,14 @@ impl CompletionProvider for IntelProvider {
     }
 
     /// The same contract the language-server path keeps: an identifier
-    /// character, or a member separator, re-opens the menu.
+    /// character, a member separator, or the quote that opens a string the
+    /// engine completes the inside of (`require("`, `GetService("`)
+    /// re-opens the menu.
     fn is_completion_trigger(&self, _offset: usize, new_text: &str, _cx: &mut App) -> bool {
         new_text
             .chars()
             .last()
-            .is_some_and(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | ':'))
+            .is_some_and(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | ':' | '"' | '\''))
     }
 }
 
