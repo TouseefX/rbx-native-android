@@ -13,7 +13,11 @@
 
 use gpui_kit::component::input::{Editor, EditorState};
 use gpui_kit::component::v_flex;
-use gpui_kit::*;
+use gpui_kit::{
+    div, point, px, relative, Context, Entity, IntoElement, ParentElement as _, Render,
+    ScrollDelta, ScrollWheelEvent, Styled as _, TestAppContext, TouchEvent, TouchId, TouchPhase,
+    VisualTestContext, Window,
+};
 
 /// The panel's own wrapper around the editor, as `shell::script_panel`
 /// builds it: a relative, flex-1, overflow-hidden hole the editor fills.
