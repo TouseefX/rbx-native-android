@@ -230,6 +230,11 @@ impl<M: InputModeKind> Element for EditorScrollbar<M> {
         let scroll_handle = state.scroll_handle.clone();
 
         if scroll_handle.offset() != snapshot.cursor_scroll_offset {
+            eprintln!(
+                "[SBAR] handle {:?} -> snapshot {:?}",
+                scroll_handle.offset(),
+                snapshot.cursor_scroll_offset
+            );
             scroll_handle.set_offset(snapshot.cursor_scroll_offset);
         }
 
@@ -502,6 +507,10 @@ impl<M: InputModeKind> TextElement<M> {
 
         let active_id = state.active_selection().id;
         let mut scroll_offset = state.scroll_handle.offset();
+        eprintln!(
+            "[LCUR] start handle={:?} deferred={:?}",
+            scroll_offset, state.deferred_scroll_offset
+        );
         let mut current_row = None;
         let mut cursor_infos: Vec<CursorRenderInfo> = Vec::with_capacity(state.selections.len());
 
@@ -2570,6 +2579,7 @@ impl<M: InputModeKind> Element for TextElement<M> {
             state.set_input_bounds(input_bounds, cx);
             state.last_selected_range = Some(selected_range);
             state.scroll_size = prepaint.scroll_size;
+            eprintln!("[TAIL] cso={:?}", prepaint.cursor_scroll_offset);
             state.update_scroll_offset(Some(prepaint.cursor_scroll_offset), cx);
             state.deferred_scroll_offset = None;
             // rbx-native addition: see `InputBaseState::reveal_range`.
