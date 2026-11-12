@@ -6,8 +6,9 @@
 //! the loss is somewhere between the raw touch and the editor's
 //! `on_scroll_wheel`. This renders the very widget `shell::script_panel`
 //! renders — the kit `Editor`, in the panel's own wrapper, focused the way a
-//! script being edited is — and walks the path in halves, so a failure names
-//! where it died:
+//! script being edited is — and walks the whole path in one pass, collecting
+//! what each step left behind before judging any of them, so one failing run
+//! reports the full picture:
 //!
 //! 1. an offset set directly on the state must survive a draw (the scroll
 //!    range is live and nothing in prepaint fights it);
@@ -23,7 +24,7 @@ use gpui_kit::component::input::{Editor, EditorState};
 use gpui_kit::component::v_flex;
 use gpui_kit::{
     div, point, px, relative, AppContext as _, Context, Entity, InteractiveElement as _,
-    IntoElement, ParentElement as _, Render, ScrollDelta, ScrollWheelEvent, Styled as _,
+    IntoElement, ParentElement as _, Pixels, Render, ScrollDelta, ScrollWheelEvent, Styled as _,
     TestAppContext, TouchEvent, TouchId, TouchPhase, VisualTestContext, Window,
 };
 
@@ -77,39 +78,48 @@ fn a_finger_pan_scrolls_the_script_editor(cx: &mut TestAppContext) {
         cx.update(|window, cx| window.draw(cx).clear(cx));
     };
     let offset = |cx: &mut VisualTestContext| cx.update(|_, cx| editor.read(cx).scroll_offset());
+    let rows = |cx: &mut VisualTestContext| cx.update(|_, cx| editor.read(cx).visible_row_range());
+    let caret = |cx: &mut VisualTestContext| cx.update(|_, cx| editor.read(cx).cursor_layout());
+    let to_top = |cx: &mut VisualTestContext| {
+        cx.update(|_, cx| {
+            editor.update(cx, |editor, cx| {
+                editor.set_scroll_offset(point(px(0.), px(0.)), cx)
+            });
+        });
+        draw(cx);
+    };
+
     // The editor is focused, the way a script being edited is on device.
     cx.update(|window, cx| {
         editor.update(cx, |editor, cx| editor.focus(window, cx));
     });
     draw(cx);
-
-    let rows = cx.update(|_, cx| editor.read(cx).visible_row_range());
+    let rows_before = rows(cx);
     let bounds = cx.update(|_, cx| editor.read(cx).input_bounds());
     assert!(
-        rows.as_ref().is_some_and(|rows| rows.end < LINES),
-        "{LINES} lines must overflow the 1920x1080 test window: rows={rows:?} bounds={bounds:?}"
+        rows_before.as_ref().is_some_and(|rows| rows.end < LINES),
+        "{LINES} lines must overflow the 1920x1080 test window: rows={rows_before:?} \
+         bounds={bounds:?}"
     );
 
-    // Half one: an offset set directly on the state survives a draw.
+    // Leg one: an offset set directly on the state, through one draw and
+    // then a second (a value that only survives the second draw is its own
+    // answer).
     cx.update(|_, cx| {
         editor.update(cx, |editor, cx| {
             editor.set_scroll_offset(point(px(0.), px(-40.)), cx)
         });
     });
+    let set_before_draw = offset(cx);
     draw(cx);
-    assert_eq!(
-        offset(cx).y,
-        px(-40.),
-        "an offset set directly must survive a draw: rows={rows:?} bounds={bounds:?}"
-    );
+    let set_after_draw = offset(cx);
+    let rows_after_set = rows(cx);
+    draw(cx);
+    let set_after_second_draw = offset(cx);
 
-    // Back to the top, then half two: a wheel event over the editor.
-    cx.update(|_, cx| {
-        editor.update(cx, |editor, cx| {
-            editor.set_scroll_offset(point(px(0.), px(0.)), cx)
-        });
-    });
-    draw(cx);
+    // Leg two: a wheel event over the editor.
+    to_top(cx);
+    let wheel_from = offset(cx);
     wheeled.set(0);
     cx.simulate_event(ScrollWheelEvent {
         position: point(px(50.), px(50.)),
@@ -118,20 +128,11 @@ fn a_finger_pan_scrolls_the_script_editor(cx: &mut TestAppContext) {
         touch_phase: TouchPhase::Moved,
     });
     draw(cx);
-    assert!(
-        offset(cx).y != px(0.),
-        "a wheel event over the editor must scroll it: the root saw {} wheel \
-         events bubble past, rows={rows:?} bounds={bounds:?}",
-        wheeled.get(),
-    );
+    let wheel_after = offset(cx);
+    let wheel_root_saw = wheeled.get();
 
-    // Back to the top, then half three: a raw finger pan past the slop.
-    cx.update(|_, cx| {
-        editor.update(cx, |editor, cx| {
-            editor.set_scroll_offset(point(px(0.), px(0.)), cx)
-        });
-    });
-    draw(cx);
+    // Leg three: a raw finger pan past the slop.
+    to_top(cx);
     let touch = |phase, y| TouchEvent {
         id: TouchId(0),
         phase,
@@ -147,10 +148,27 @@ fn a_finger_pan_scrolls_the_script_editor(cx: &mut TestAppContext) {
     }
     cx.simulate_event(touch(TouchPhase::Ended, 96.));
     draw(cx);
+    let pan_after = offset(cx);
+    let pan_rows = rows(cx);
+    let pan_root_saw = wheeled.get();
+
+    fn show(offset_y: Pixels) -> String {
+        format!("{offset_y:?}")
+    }
     assert!(
-        offset(cx).y != px(0.),
-        "a touch pan past the slop must scroll the script editor: the root saw \
-         {} wheel events bubble past, rows={rows:?} bounds={bounds:?}",
-        wheeled.get(),
+        set_after_draw.y == px(-40.) && wheel_after.y != px(0.) && pan_after.y != px(0.),
+        "the script editor does not scroll: a directly-set -40px read {} before the draw, \
+         {} after it and {} after a second (rows {rows_before:?} → {rows_after_set:?}, caret \
+         {:?}); a wheel event left {} (from {}, {} events bubbled past the root); a touch pan \
+         left {} (rows {pan_rows:?}, {} events past the root). bounds={bounds:?}",
+        show(set_before_draw.y),
+        show(set_after_draw.y),
+        show(set_after_second_draw.y),
+        caret(cx),
+        show(wheel_after.y),
+        show(wheel_from.y),
+        wheel_root_saw,
+        show(pan_after.y),
+        pan_root_saw,
     );
 }
