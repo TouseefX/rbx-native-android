@@ -100,6 +100,8 @@ mod script_finder;
 mod script_graph;
 mod script_panel;
 mod script_toolbar;
+#[cfg(test)]
+mod script_editor_scroll_tests;
 mod scripts;
 mod scroll;
 mod scrub;
