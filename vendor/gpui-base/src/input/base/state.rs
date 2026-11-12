@@ -2494,10 +2494,6 @@ impl<M: InputModeKind> InputBaseState<M> {
         offset: Option<Point<Pixels>>,
         cx: &mut Context<Self>,
     ) {
-        eprintln!(
-            "[USO] requested={offset:?} handle={:?}",
-            self.scroll_handle.offset()
-        );
         let mut offset = offset.unwrap_or(self.scroll_handle.offset());
         // In addition to left alignment, a cursor position will be reserved on the right side
         let safe_x_offset = if self.text_align == TextAlign::Left {

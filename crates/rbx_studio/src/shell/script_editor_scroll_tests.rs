@@ -131,7 +131,9 @@ fn a_finger_pan_scrolls_the_script_editor(cx: &mut TestAppContext) {
     let wheel_after = offset(cx);
     let wheel_root_saw = wheeled.get();
 
-    // Leg three: a raw finger pan past the slop.
+    // Leg three: a raw finger pan past the slop — the finger travels up the
+    // glass, the way a read-through flick does, so the content must follow
+    // it down.
     to_top(cx);
     let touch = |phase, y| TouchEvent {
         id: TouchId(0),
@@ -140,13 +142,13 @@ fn a_finger_pan_scrolls_the_script_editor(cx: &mut TestAppContext) {
         predicted_position: None,
         force: None,
     };
-    cx.simulate_event(touch(TouchPhase::Started, 30.));
+    cx.simulate_event(touch(TouchPhase::Started, 96.));
     draw(cx);
-    for y in [45., 70., 96.] {
+    for y in [70., 45., 30.] {
         cx.simulate_event(touch(TouchPhase::Moved, y));
         draw(cx);
     }
-    cx.simulate_event(touch(TouchPhase::Ended, 96.));
+    cx.simulate_event(touch(TouchPhase::Ended, 30.));
     draw(cx);
     let pan_after = offset(cx);
     let pan_rows = rows(cx);
@@ -156,7 +158,11 @@ fn a_finger_pan_scrolls_the_script_editor(cx: &mut TestAppContext) {
         format!("{offset_y:?}")
     }
     assert!(
-        set_after_draw.y == px(-40.) && wheel_after.y != px(0.) && pan_after.y != px(0.),
+        set_after_draw.y == px(-40.)
+            && set_after_second_draw.y == px(-40.)
+            && rows_after_set.as_ref() != rows_before.as_ref()
+            && wheel_after.y != px(0.)
+            && pan_after.y != px(0.),
         "the script editor does not scroll: a directly-set -40px read {} before the draw, \
          {} after it and {} after a second (rows {rows_before:?} → {rows_after_set:?}, caret \
          {:?}); a wheel event left {} (from {}, {} events bubbled past the root); a touch pan \
