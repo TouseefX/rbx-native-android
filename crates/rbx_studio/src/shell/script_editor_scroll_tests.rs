@@ -22,9 +22,9 @@ use std::rc::Rc;
 use gpui_kit::component::input::{Editor, EditorState};
 use gpui_kit::component::v_flex;
 use gpui_kit::{
-    div, point, px, relative, AppContext as _, Context, Entity, IntoElement, ParentElement as _,
-    Render, ScrollDelta, ScrollWheelEvent, Styled as _, TestAppContext, TouchEvent, TouchId,
-    TouchPhase, VisualTestContext, Window,
+    div, point, px, relative, AppContext as _, Context, Entity, InteractiveElement as _,
+    IntoElement, ParentElement as _, Render, ScrollDelta, ScrollWheelEvent, Styled as _,
+    TestAppContext, TouchEvent, TouchId, TouchPhase, VisualTestContext, Window,
 };
 
 const LINES: usize = 400;
