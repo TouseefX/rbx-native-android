@@ -1,66 +1,54 @@
 ## cargo fmt --check
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/shell.rs:96:
- mod rows;
- mod save;
- mod script_analysis;
-+#[cfg(test)]
-+mod script_editor_scroll_tests;
- mod script_finder;
- mod script_graph;
- mod script_panel;
-Diff in /home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio/src/shell.rs:102:
- mod script_toolbar;
--#[cfg(test)]
--mod script_editor_scroll_tests;
- mod scripts;
- mod scroll;
- mod scrub;
 ## cargo clippy
 [1m[92m    Updating[0m crates.io index
 [1m[92m    Checking[0m rbx_dom v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_dom)
 [1m[92m    Checking[0m rbx_cloud v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_cloud)
 [1m[92m   Compiling[0m rbx_loren v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_loren)
 [1m[92m    Checking[0m rbx_mesh v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_mesh)
-[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_reflection v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_reflection)
+[1m[92m    Checking[0m rbx_terrain v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_terrain)
 [1m[92m    Checking[0m rbx_assets v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_assets)
-[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
-[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
-[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_binary v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_binary)
 [1m[92m    Checking[0m rbx_xml v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_xml)
 [1m[92m    Checking[0m rbx_play v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_play)
+[1m[92m    Checking[0m rbx_materials v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_materials)
 [1m[92m    Checking[0m rbx_lua v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_lua)
 [1m[92m    Checking[0m rbx_presence v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_presence)
 [1m[92m    Checking[0m rbx_viewer v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_viewer)
+[1m[92m   Compiling[0m gpui-pre v0.3.5 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-pre)
 [1m[92m    Checking[0m rbx_animation v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_animation)
+[1m[92m   Compiling[0m rbx_figma v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_figma)
 [1m[92m    Checking[0m rbx_transport v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_transport)
 [1m[92m    Checking[0m rbx_autorig v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_autorig)
-[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
-[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m   Compiling[0m rbx_studio v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_studio)
+[1m[92m    Checking[0m rbx_audit v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_audit)
 [1m[92m    Checking[0m rbx_challenge v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_challenge)
+[1m[92m    Checking[0m rbx_parser_cli v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_parser_cli)
 [1m[92m    Checking[0m rbx_wasm v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_wasm)
 [1m[92m    Checking[0m rbx_import v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_import)
 [1m[92m    Checking[0m rbx_eyedropper v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_eyedropper)
 [1m[92m    Checking[0m rbx_ugc v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_ugc)
+[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-pre-wgpu v0.3.5
-[1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-base v0.6.2 (/home/runner/work/rbx-native-android/rbx-native-android/vendor/gpui-base)
 [1m[92m    Checking[0m gpui-pre-linux v0.3.5
+[1m[92m    Checking[0m gpui-kit-assets v0.6.4
 [1m[92m    Checking[0m gpui-pre-platform v0.3.5
 [1m[92m    Checking[0m gpui-component v0.6.2
-[1m[92m    Checking[0m rbx_replication v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_replication)
 [1m[92m    Checking[0m gpui-kit v0.6.2
-[1m[91merror[0m[1m: recursion limit reached while expanding `#[test]`[0m
-  [1m[94m--> [0mcrates/rbx_studio/src/shell/script_editor_scroll_tests.rs:37:1
+[1m[91merror[E0599][0m[1m: no method named `new` found for mutable reference `&mut gpui_kit::Context<'_, _>` in the current scope[0m
+  [1m[94m--> [0mcrates/rbx_studio/src/shell/script_editor_scroll_tests.rs:47:16
    [1m[94m|[0m
-[1m[94m37[0m [1m[94m|[0m #[gpui_kit::test]
-   [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^[0m
+[1m[94m47[0m [1m[94m|[0m             cx.new(|cx| EditorState::new(window, cx).default_value("local x = 1\n".repeat(400)));
+   [1m[94m|[0m                [1m[91m^^^[0m [1m[91mmethod not found in `&mut gpui_kit::Context<'_, _>`[0m
    [1m[94m|[0m
-   [1m[94m= [0m[1mhelp[0m: consider increasing the recursion limit by adding a `#![recursion_limit = "256"]` attribute to your crate (`rbx_studio`)
-   [1m[94m= [0m[1mnote[0m: this error originates in the attribute macro `test` (in Nightly builds, run with -Z macro-backtrace for more info)
+   [1m[94m= [0m[1mhelp[0m: items from traits can only be used if the trait is in scope
+[1m[96mhelp[0m: trait `AppContext` which provides `new` is implemented but not in scope; perhaps you want to import it
+   [1m[94m|[0m
+[1m[94m14[0m [92m+ use gpui_kit::AppContext;[0m
+   [1m[94m|[0m
 
+[1m[92m    Checking[0m rbx_android v0.1.0 (/home/runner/work/rbx-native-android/rbx-native-android/crates/rbx_android)
+[1mFor more information about this error, try `rustc --explain E0599`.[0m
 [1m[91merror[0m: could not compile `rbx_studio` (lib test) due to 1 previous error
-[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-fmt=1 clippy=101 test=0
+fmt=0 clippy=101 test=0
